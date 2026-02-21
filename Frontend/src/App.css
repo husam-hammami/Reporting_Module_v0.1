@@ -1,0 +1,124 @@
+/* Custom dropdown styles */
+.header-dropdown {
+  appearance: none;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.375rem;
+  color: white;
+  padding: 0.5rem 2rem 0.5rem 1rem;
+  min-width: 140px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+}
+
+.header-dropdown:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+.header-dropdown option {
+  background-color: #4B92FF;
+  color: white;
+}
+
+/* Theme Variables */
+:root {
+  /* Blue Theme */
+  --blue-primary: #4B92FF;
+  --blue-secondary: #6BA5FF;
+  --blue-accent: #EDF4FF;
+
+  /* Sky Blue Theme */
+  --skyblue-primary: #4BB5FF;
+  --skyblue-secondary: #6BC2FF;
+  --skyblue-accent: #EDF8FF;
+
+  /* Green Theme */
+  --green-primary: #4CAF50;
+  --green-secondary: #66BB6A;
+  --green-accent: #E8F5E9;
+
+  /* Grey Theme */
+  --grey-primary: #607D8B;
+  --grey-secondary: #78909C;
+  --grey-accent: #ECEFF1;
+
+  /* Default Theme (Blue) */
+  --primary-color: var(--blue-primary);
+  --secondary-color: var(--blue-secondary);
+  --accent-color: var(--blue-accent);
+}
+
+/* Theme Classes */
+[data-theme="blue"] {
+  --primary-color: var(--blue-primary);
+  --secondary-color: var(--blue-secondary);
+  --accent-color: var(--blue-accent);
+}
+
+[data-theme="skyblue"] {
+  --primary-color: var(--skyblue-primary);
+  --secondary-color: var(--skyblue-secondary);
+  --accent-color: var(--skyblue-accent);
+}
+
+[data-theme="green"] {
+  --primary-color: var(--green-primary);
+  --secondary-color: var(--green-secondary);
+  --accent-color: var(--green-accent);
+}
+
+[data-theme="grey"] {
+  --primary-color: var(--grey-primary);
+  --secondary-color: var(--grey-secondary);
+  --accent-color: var(--grey-accent);
+}
+
+/* Theme Utility Classes */
+.theme-bg {
+  background-color: var(--primary-color);
+  transition: background-color 0.3s ease;
+}
+
+.theme-text {
+  color: var(--primary-color);
+  transition: color 0.3s ease;
+}
+
+.theme-border {
+  border-color: var(--primary-color);
+  transition: border-color 0.3s ease;
+}
+
+.theme-bg-light {
+  background-color: var(--secondary-color);
+  transition: background-color 0.3s ease;
+}
+
+.theme-bg-accent {
+  background-color: var(--accent-color);
+  transition: background-color 0.3s ease;
+}
+
+/* Theme-specific dropdown backgrounds */
+.header-dropdown[data-theme="blue"] option {
+  background-color: var(--blue-primary);
+}
+
+.header-dropdown[data-theme="skyblue"] option {
+  background-color: var(--skyblue-primary);
+}
+
+.header-dropdown[data-theme="green"] option {
+  background-color: var(--green-primary);
+}
+
+.header-dropdown[data-theme="grey"] option {
+  background-color: var(--grey-primary);
+}

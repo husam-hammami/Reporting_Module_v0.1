@@ -1,0 +1,613 @@
+/**
+ * Report Builder — Design system
+ * Industrial, professional, elegant. Single source of truth for type, space, and color.
+ */
+
+/* ─── Tokens (scoped to report builder shell) ───────────────────── */
+.report-builder {
+  /* Type scale */
+  --rb-font-xs: 0.625rem;   /* 10px - captions, hints */
+  --rb-font-sm: 0.6875rem;  /* 11px - labels */
+  --rb-font-base: 0.75rem;  /* 12px - body */
+  --rb-font-md: 0.8125rem;  /* 13px - section titles */
+  --rb-font-lg: 0.9375rem;  /* 15px - page title */
+
+  /* Space scale (4px base) */
+  --rb-space-1: 0.25rem;   /* 4px */
+  --rb-space-2: 0.5rem;    /* 8px */
+  --rb-space-3: 0.75rem;   /* 12px */
+  --rb-space-4: 1rem;     /* 16px */
+  --rb-space-5: 1.25rem;  /* 20px */
+  --rb-space-6: 1.5rem;   /* 24px */
+
+  /* Surfaces - industrial neutral */
+  --rb-surface: hsl(210, 24%, 97%);
+  --rb-surface-dark: hsl(218, 47%, 9%);      /* #0b111e */
+  --rb-panel: hsl(0, 0%, 100%);
+  --rb-panel-dark: hsl(217, 39%, 13%);       /* #131b2d - widget/card */
+  --rb-canvas: hsl(216, 18%, 88%);           /* darkened 5% for page contrast */
+  --rb-canvas-dark: hsl(220, 50%, 7%);       /* darker desk */
+  --rb-input: hsl(0, 0%, 100%);
+  --rb-input-dark: hsl(217, 39%, 13%);       /* #131b2d */
+
+  /* Borders - subtle */
+  --rb-border: hsl(214, 18%, 86%);
+  --rb-border-dark: hsl(218, 25%, 20%);
+
+  /* Text */
+  --rb-text: hsl(214, 20%, 22%);
+  --rb-text-muted: hsl(214, 10%, 47%);
+  --rb-text-muted-dark: hsl(0, 0%, 63%);    /* #a0a0a0 */
+  --rb-text-inverse: hsl(0, 0%, 100%);      /* #ffffff */
+
+  /* Accent - mode-aware via --brand tokens */
+  --rb-accent: var(--brand);
+  --rb-accent-hover: var(--brand-hover);
+  --rb-accent-subtle: hsl(216, 60%, 94%);
+  --rb-accent-subtle-dark: hsl(220, 50%, 16%);
+
+  /* Status - muted industrial accents */
+  --rb-success: hsl(158, 50%, 38%);          /* muted forest green */
+  --rb-warning: hsl(38, 75%, 45%);           /* darker amber */
+  --rb-danger: hsl(0, 65%, 52%);             /* desaturated red */
+
+  /* Radius */
+  --rb-radius: 6px;
+  --rb-radius-lg: 8px;
+
+  /* Flat elevation - no gloss */
+  --rb-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --rb-elevation-2: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --rb-elevation-3: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --rb-shadow-inset: none;
+  --rb-silo-card-bg: rgba(255, 255, 255, 0.98);
+}
+
+.dark .report-builder {
+  --rb-surface: var(--rb-surface-dark);
+  --rb-panel: var(--rb-panel-dark);
+  --rb-canvas: var(--rb-canvas-dark);
+  --rb-input: var(--rb-input-dark);
+  --rb-border: var(--rb-border-dark);
+  --rb-text: var(--rb-text-inverse);
+  --rb-text-muted: var(--rb-text-muted-dark);
+  --rb-accent-subtle: var(--rb-accent-subtle-dark);
+  /* Dark mode: flat, no gloss */
+  --rb-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --rb-elevation-2: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --rb-elevation-3: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --rb-shadow-inset: none;
+  --rb-silo-card-bg: var(--rb-panel);
+}
+
+/* ─── Typography classes ────────────────────────────────────────── */
+.report-builder .rb-title {
+  font-size: var(--rb-font-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--rb-text);
+}
+
+.report-builder .rb-heading {
+  font-size: var(--rb-font-md);
+  font-weight: 600;
+  color: var(--rb-text);
+}
+
+.report-builder .rb-label {
+  font-size: var(--rb-font-sm);
+  font-weight: 500;
+  color: var(--rb-text-muted);
+}
+
+.report-builder .rb-body {
+  font-size: var(--rb-font-base);
+  color: var(--rb-text);
+}
+
+.report-builder .rb-caption {
+  font-size: var(--rb-font-xs);
+  color: var(--rb-text-muted);
+}
+
+/* ─── Component patterns ───────────────────────────────────────── */
+.report-builder .rb-input-base {
+  font-size: var(--rb-font-base);
+  padding: var(--rb-space-2) var(--rb-space-3);
+  border-radius: var(--rb-radius);
+  border: 1px solid var(--rb-border);
+  background: var(--rb-input);
+  color: var(--rb-text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.report-builder .rb-input-base::placeholder {
+  color: var(--rb-text-muted);
+}
+
+.report-builder .rb-input-base:focus {
+  outline: none;
+  border-color: var(--rb-accent);
+  box-shadow: 0 0 0 3px var(--rb-accent-subtle);
+}
+
+.report-builder .rb-btn-primary {
+  font-size: var(--rb-font-sm);
+  font-weight: 700;
+  padding: var(--rb-space-2) var(--rb-space-4);
+  border-radius: var(--rb-radius);
+  background: var(--rb-accent);
+  color: white;
+  transition: background 0.15s ease;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
+}
+
+.report-builder .rb-btn-primary:hover:not(:disabled) {
+  background: var(--rb-accent-hover);
+}
+
+/* Save Template = success green; Publish = accent blue */
+.report-builder .rb-btn-success {
+  font-size: var(--rb-font-sm);
+  font-weight: 700;
+  padding: var(--rb-space-2) var(--rb-space-4);
+  border-radius: var(--rb-radius);
+  background: var(--rb-success);
+  color: white;
+  transition: background 0.15s ease;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
+}
+.report-builder .rb-btn-success:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.report-builder .rb-btn-ghost {
+  font-size: var(--rb-font-sm);
+  font-weight: 500;
+  padding: var(--rb-space-2) var(--rb-space-3);
+  border-radius: var(--rb-radius);
+  color: var(--rb-text-muted);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.report-builder .rb-btn-ghost:hover {
+  color: var(--rb-text);
+  background: var(--rb-accent-subtle);
+}
+
+.report-builder .rb-panel-surface {
+  background: var(--rb-panel);
+  border-color: var(--rb-border);
+}
+
+/* Flat widget card - professional subtle lift on hover */
+.report-builder .rb-widget-card {
+  background: var(--rb-panel);
+  border: 1px solid var(--rb-border);
+  border-radius: var(--rb-radius-lg);
+  box-shadow: var(--rb-elevation-1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  will-change: transform;
+}
+.report-builder .rb-widget-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px var(--rb-border);
+  border-color: var(--rb-accent);
+}
+.dark .report-builder .rb-widget-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 0 1px var(--rb-border);
+}
+
+/* Silo widget: transparent to page background */
+.report-builder .rb-widget-card-transparent {
+  background: transparent;
+  border: none;
+  border-radius: var(--rb-radius-lg);
+  box-shadow: none;
+}
+.report-builder .rb-widget-card-transparent:hover {
+  box-shadow: none;
+}
+
+/* Table header - flat */
+.report-builder .rb-table-header-row {
+  box-shadow: none;
+}
+.dark .report-builder .rb-table-header-row {
+  box-shadow: none;
+}
+.report-builder .rb-table-body-row {
+  transition: background-color 0.15s ease;
+}
+.report-builder .rb-table-body-row:hover {
+  box-shadow: none;
+}
+
+.report-builder .rb-canvas-surface {
+  background: var(--rb-canvas);
+}
+
+.report-builder .rb-section-header {
+  font-size: var(--rb-font-sm);
+  font-weight: 600;
+  color: var(--rb-text-muted);
+  padding: var(--rb-space-2) var(--rb-space-4);
+  letter-spacing: 0.02em;
+}
+
+.report-builder .rb-badge {
+  font-size: var(--rb-font-xs);
+  font-weight: 500;
+  padding: var(--rb-space-1) var(--rb-space-2);
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+}
+
+.report-builder .rb-canvas-dots {
+  background-image: radial-gradient(circle at 1px 1px, hsl(214 16% 82% / 0.45) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+.dark .report-builder .rb-canvas-dots {
+  background-image: radial-gradient(circle at 1px 1px, hsl(218 25% 24% / 0.6) 1px, transparent 0);
+}
+
+/* Canvas - flat layout */
+.report-builder .rb-canvas-perspective {
+  perspective: none;
+}
+.report-builder .layout {
+  transform-style: flat;
+}
+
+/* Read-only layout (Reporting page): no resize handles, no drag cursor */
+.report-builder.rb-layout-readonly .react-grid-item,
+.report-builder .rb-layout-readonly .react-grid-item {
+  cursor: default !important;
+}
+.report-builder.rb-layout-readonly .react-grid-item > .react-resizable-handle,
+.report-builder .rb-layout-readonly .react-grid-item > .react-resizable-handle {
+  display: none !important;
+}
+
+/* ─── Phase 1: Page container ─────────────────────────────────── */
+.rb-page-container {
+  background: var(--rb-panel);
+  border: 1px solid var(--rb-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  min-height: 60vh;
+}
+
+/* Side panel directional shadows — elevation hierarchy */
+.rb-panel-left-shadow {
+  box-shadow: 4px 0 12px rgba(0,0,0,0.06);
+}
+.rb-panel-right-shadow {
+  box-shadow: -4px 0 12px rgba(0,0,0,0.06);
+}
+.dark .rb-panel-left-shadow { box-shadow: 4px 0 12px rgba(0,0,0,0.2); }
+.dark .rb-panel-right-shadow { box-shadow: -4px 0 12px rgba(0,0,0,0.2); }
+
+/* Widget card minimum height — allow ultra-compact widgets (dividers, thin headers) */
+.report-builder .react-grid-item {
+  min-height: 20px;
+}
+
+/* Style RGL resize handles to match design system */
+.report-builder .react-resizable-handle {
+  background: none;
+}
+.report-builder .react-resizable-handle::after {
+  border-color: var(--rb-accent) !important;
+  width: 7px !important;
+  height: 7px !important;
+}
+
+/* ─── Phase 2: Floating canvas toolbar ────────────────────────── */
+.rb-floating-toolbar {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 50; display: flex; align-items: center; gap: 2px;
+  padding: 4px 8px; border-radius: 9999px;
+  background: hsla(0,0%,100%,0.8); backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--rb-border); box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+.dark .rb-floating-toolbar {
+  background: hsla(218, 47%, 9%, 0.85);
+}
+.rb-floating-toolbar button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 6px;
+  color: var(--rb-text-muted); transition: color 0.15s, background 0.15s;
+}
+.rb-floating-toolbar button:hover:not(:disabled) {
+  color: var(--rb-text); background: var(--rb-accent-subtle);
+}
+.rb-floating-toolbar button:disabled {
+  opacity: 0.35; cursor: not-allowed;
+}
+.rb-floating-toolbar button.active {
+  color: var(--rb-accent); background: var(--rb-accent-subtle);
+}
+.rb-toolbar-divider {
+  width: 1px; height: 18px; background: var(--rb-border); margin: 0 4px;
+}
+.rb-toolbar-zoom-label {
+  font-size: var(--rb-font-xs); font-weight: 600;
+  color: var(--rb-text-muted); min-width: 36px; text-align: center;
+  user-select: none;
+}
+
+/* ─── Phase 3: Widget selection handles + mini-toolbar ────────── */
+.rb-selection-handle {
+  position: absolute; z-index: 20;
+  width: 8px; height: 8px;
+  background: var(--rb-accent); border: 1.5px solid var(--rb-panel);
+  border-radius: 2px; pointer-events: none;
+}
+.rb-widget-minitoolbar {
+  position: absolute; bottom: calc(100% + 6px);
+  left: 50%; transform: translateX(-50%); z-index: 30;
+  display: flex; align-items: center; gap: 2px;
+  padding: 3px 6px; border-radius: 9999px;
+  background: var(--rb-text);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.rb-widget-minitoolbar button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 4px;
+  color: var(--rb-text-inverse);
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.rb-widget-minitoolbar button:hover {
+  opacity: 1;
+}
+
+/* Drag handle — light style */
+.rb-drag-handle {
+  background: var(--rb-panel);
+  border: 1px solid var(--rb-border);
+  color: var(--rb-text-muted);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-radius: var(--rb-radius);
+  font-size: var(--rb-font-xs);
+}
+
+/* ─── Phase 4: Toolbox redesign ───────────────────────────────── */
+/* Toolbox header — tinted background */
+.rb-toolbox-header {
+  background: var(--rb-surface);
+  border-bottom: 1px solid var(--rb-border);
+}
+
+/* Section accordion headers — with left accent bar */
+.rb-toolbox-accordion-header {
+  width: 100%; display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px; font-size: 10px; font-weight: 600;
+  color: var(--rb-text-muted); letter-spacing: 0.05em;
+  text-transform: uppercase; cursor: pointer;
+  user-select: none;
+  border-left: 2px solid var(--rb-accent);
+}
+.rb-toolbox-accordion-header:hover {
+  color: var(--rb-text);
+}
+
+/* ─── Phase 5: Properties panel polish ────────────────────────── */
+/* Segmented control tabs */
+.rb-segmented-control {
+  display: inline-flex; padding: 2px; border-radius: 8px;
+  background: var(--rb-surface); border: 1px solid var(--rb-border);
+}
+.rb-segmented-control button {
+  padding: 6px 16px; border-radius: 6px; font-size: var(--rb-font-sm);
+  font-weight: 600; transition: all 0.15s;
+  color: var(--rb-text-muted);
+}
+.rb-segmented-control button.active {
+  background: var(--rb-accent-subtle); color: var(--rb-accent);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+/* Compact color picker groups */
+.rb-color-group {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.rb-color-swatch {
+  width: 20px; height: 20px; border-radius: 4px; cursor: pointer;
+  border: 1.5px solid var(--rb-border);
+  transition: border-color 0.15s, transform 0.15s;
+  padding: 0; background: transparent;
+}
+.rb-color-swatch:hover {
+  border-color: var(--rb-accent); transform: scale(1.15);
+}
+
+/* Threshold rules — colored left border */
+.rb-threshold-rule {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: var(--rb-radius);
+  background: var(--rb-surface);
+}
+
+/* ─── Phase 6: Formula editor polish ──────────────────────────── */
+/* Rich formula dropdown */
+.rb-formula-dropdown {
+  background: var(--rb-panel); border: 1px solid var(--rb-border);
+  border-radius: var(--rb-radius-lg);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  max-height: 240px; overflow-y: auto;
+}
+.rb-formula-dropdown-item {
+  padding: 10px 12px; cursor: pointer;
+  border-bottom: 1px solid var(--rb-border);
+  transition: background 0.1s;
+}
+.rb-formula-dropdown-item:last-child { border-bottom: none; }
+.rb-formula-dropdown-item:hover {
+  background: var(--rb-accent-subtle);
+}
+
+/* Formula validation blocks */
+.rb-formula-validation {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: var(--rb-radius);
+  font-size: var(--rb-font-xs);
+}
+.rb-formula-validation.error {
+  background: color-mix(in srgb, var(--rb-danger) 8%, transparent);
+  color: var(--rb-danger);
+}
+.rb-formula-validation.warning {
+  background: color-mix(in srgb, var(--rb-warning) 8%, transparent);
+  color: var(--rb-warning);
+}
+.rb-formula-validation.success {
+  background: color-mix(in srgb, var(--rb-success) 8%, transparent);
+  color: var(--rb-success);
+}
+
+/* Tag chips in formula display */
+.rb-formula-tag-chip {
+  display: inline-flex; padding: 1px 6px;
+  border-radius: 4px; font-size: var(--rb-font-xs);
+  font-family: monospace;
+  background: var(--rb-accent-subtle);
+  color: var(--rb-accent);
+  border: 1px solid color-mix(in srgb, var(--rb-accent) 20%, transparent);
+}
+
+/* ─── Phase 7: Engineering pages & global polish ─────────────── */
+/* Status badges — filled pills */
+.rb-status-badge-active {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 8px; border-radius: 9999px;
+  background: color-mix(in srgb, var(--rb-success) 15%, transparent);
+  color: #059669;
+}
+.dark .rb-status-badge-active {
+  background: color-mix(in srgb, var(--rb-success) 12%, transparent);
+  color: #34d399;
+}
+.rb-status-badge-off {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 8px; border-radius: 9999px;
+  background: hsl(214, 10%, 93%);
+  color: hsl(214, 10%, 47%);
+}
+.dark .rb-status-badge-off {
+  background: hsl(218, 25%, 18%);
+  color: hsl(0, 0%, 63%);
+}
+
+/* Two-tone mapping chips */
+.rb-mapping-chip {
+  display: inline-flex; align-items: center; gap: 0;
+  border-radius: 6px; overflow: hidden;
+  font-size: 11px; border: 1px solid var(--rb-border);
+}
+.rb-mapping-chip-input {
+  padding: 3px 8px;
+  background: var(--rb-surface);
+  font-family: monospace; font-weight: 600;
+  color: var(--rb-text);
+}
+.rb-mapping-chip-arrow {
+  padding: 3px 4px; color: var(--rb-text-muted);
+}
+.rb-mapping-chip-output {
+  padding: 3px 8px;
+  background: var(--rb-panel);
+  color: var(--rb-text);
+}
+
+/* Settings tab bar — improved hover/active */
+.rb-settings-tab {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; font-size: 12px;
+  font-weight: 500; color: var(--rb-text-muted);
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s;
+}
+.rb-settings-tab:hover {
+  color: var(--rb-text);
+  background: var(--rb-accent-subtle);
+  border-radius: 6px 6px 0 0;
+}
+.rb-settings-tab.active {
+  color: var(--rb-accent);
+  border-bottom-color: var(--rb-accent);
+  font-weight: 600;
+}
+
+/* Sidebar category headers */
+.rb-sidenav-category {
+  font-size: 9px; font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--rb-text-muted);
+  padding: 12px 12px 4px;
+  transition: opacity 0.2s, height 0.2s;
+}
+.rb-sidenav-category.collapsed {
+  opacity: 0; height: 0; padding: 0; overflow: hidden;
+}
+
+/* LIVE/DEMO indicator bar */
+.rb-env-indicator {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 3px; z-index: 9999;
+}
+.rb-env-indicator.live { background: var(--rb-success); }
+.rb-env-indicator.demo { background: var(--rb-warning); }
+
+/* ─── uPlot overrides — industrial dark theme ─────────────────── */
+.uplot-container .u-wrap {
+  font-family: monospace;
+}
+.uplot-container .u-legend {
+  font-size: 10px;
+  font-family: monospace;
+  padding: 4px 0 0;
+  line-height: 1.4;
+  text-align: left;
+}
+.uplot-container .u-legend .u-series {
+  padding: 1px 6px;
+}
+.uplot-container .u-legend .u-series .u-marker {
+  width: 10px;
+  height: 3px;
+  border-radius: 1px;
+}
+.uplot-container .u-legend .u-label {
+  font-size: 10px;
+  color: #9ca3af;
+}
+.dark .uplot-container .u-legend .u-label {
+  color: #9ca3af;
+}
+.uplot-container .u-legend .u-value {
+  font-size: 10px;
+  color: #64748b;
+}
+/* Crosshair lines */
+.uplot-container .u-cursor-x,
+.uplot-container .u-cursor-y {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+}
+.dark .uplot-container .u-cursor-x,
+.dark .uplot-container .u-cursor-y {
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+/* Selection highlight */
+.uplot-container .u-select {
+  background: rgba(37, 99, 171, 0.08) !important;
+}

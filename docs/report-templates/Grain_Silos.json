@@ -1,0 +1,1918 @@
+{
+  "name": "Grain_Silos",
+  "description": "Grain Terminal: Intake, Silo Status, Quality, Equipment, Energy, Alarms, Ops KPI, Maintenance.",
+  "is_default": true,
+  "layout_config": {
+    "schemaVersion": 2,
+    "widgets": [
+      {
+        "id": "w-grain-1-c9cffe",
+        "type": "kpi",
+        "x": 0,
+        "y": 0,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Intake Today",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Intake_Today",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "t",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-2-aacf65",
+        "type": "kpi",
+        "x": 2,
+        "y": 0,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Intake Week",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Intake_Week",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "t",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-3-e4718b",
+        "type": "kpi",
+        "x": 4,
+        "y": 0,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Intake Month",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Intake_Month",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "t",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-4-62b735",
+        "type": "kpi",
+        "x": 6,
+        "y": 0,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Outload Ship",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Outload_Ship",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "t",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-5-8f81aa",
+        "type": "kpi",
+        "x": 8,
+        "y": 0,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Outload Truck",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Outload_Truck",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "t",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-6-9ed984",
+        "type": "kpi",
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Outload Rail",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Outload_Rail",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "t",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-7-3beceb",
+        "type": "kpi",
+        "x": 0,
+        "y": 1,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Balance",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Balance_Tons",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "t",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-8-7f5916",
+        "type": "kpi",
+        "x": 2,
+        "y": 1,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Queue",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Queue_Status",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "",
+          "decimals": 0,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-9-f4d16c",
+        "type": "chart",
+        "x": 4,
+        "y": 1,
+        "w": 8,
+        "h": 2,
+        "config": {
+          "title": "Intake / Outload",
+          "chartType": "line",
+          "series": [
+            {
+              "label": "Intake_Today",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Intake_Today",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            },
+            {
+              "label": "Outload_Ship",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Outload_Ship",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            },
+            {
+              "label": "Outload_Truck",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Outload_Truck",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            }
+          ],
+          "timeRange": "1h",
+          "showLegend": true,
+          "showGrid": true,
+          "annotations": [],
+          "showCard": true,
+          "backgroundColor": "",
+          "gridColor": "",
+          "accentColor": ""
+        }
+      },
+      {
+        "id": "w-grain-10-6a34bf",
+        "type": "text",
+        "x": 0,
+        "y": 3,
+        "w": 12,
+        "h": 1,
+        "config": {
+          "content": "Silo Status & Capacity",
+          "fontSize": "16px",
+          "fontWeight": "700",
+          "fontStyle": "normal",
+          "align": "left",
+          "color": "",
+          "showCard": false
+        }
+      },
+      {
+        "id": "w-grain-11-55f794",
+        "type": "silo",
+        "x": 0,
+        "y": 4,
+        "w": 3,
+        "h": 2,
+        "config": {
+          "title": "S1",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Silo1_Level",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "capacityTag": "Silo1_Capacity",
+          "tonsTag": "Silo1_Tons",
+          "unit": "%",
+          "decimals": 1,
+          "zones": [
+            {
+              "from": 0,
+              "to": 70,
+              "color": "#22c55e"
+            },
+            {
+              "from": 70,
+              "to": 90,
+              "color": "#fbbf24"
+            },
+            {
+              "from": 90,
+              "to": 100,
+              "color": "#f87171"
+            }
+          ],
+          "showTons": true,
+          "showCapacity": false,
+          "showCard": true,
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-12-279399",
+        "type": "silo",
+        "x": 3,
+        "y": 4,
+        "w": 3,
+        "h": 2,
+        "config": {
+          "title": "S2",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Silo2_Level",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "capacityTag": "Silo2_Capacity",
+          "tonsTag": "Silo2_Tons",
+          "unit": "%",
+          "decimals": 1,
+          "zones": [
+            {
+              "from": 0,
+              "to": 70,
+              "color": "#22c55e"
+            },
+            {
+              "from": 70,
+              "to": 90,
+              "color": "#fbbf24"
+            },
+            {
+              "from": 90,
+              "to": 100,
+              "color": "#f87171"
+            }
+          ],
+          "showTons": true,
+          "showCapacity": false,
+          "showCard": true,
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-13-105728",
+        "type": "silo",
+        "x": 6,
+        "y": 4,
+        "w": 3,
+        "h": 2,
+        "config": {
+          "title": "S3",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Silo3_Level",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "capacityTag": "Silo3_Capacity",
+          "tonsTag": "Silo3_Tons",
+          "unit": "%",
+          "decimals": 1,
+          "zones": [
+            {
+              "from": 0,
+              "to": 70,
+              "color": "#22c55e"
+            },
+            {
+              "from": 70,
+              "to": 90,
+              "color": "#fbbf24"
+            },
+            {
+              "from": 90,
+              "to": 100,
+              "color": "#f87171"
+            }
+          ],
+          "showTons": true,
+          "showCapacity": false,
+          "showCard": true,
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-14-ce254f",
+        "type": "silo",
+        "x": 9,
+        "y": 4,
+        "w": 3,
+        "h": 2,
+        "config": {
+          "title": "S4",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Silo4_Level",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "capacityTag": "Silo4_Capacity",
+          "tonsTag": "Silo4_Tons",
+          "unit": "%",
+          "decimals": 1,
+          "zones": [
+            {
+              "from": 0,
+              "to": 70,
+              "color": "#22c55e"
+            },
+            {
+              "from": 70,
+              "to": 90,
+              "color": "#fbbf24"
+            },
+            {
+              "from": 90,
+              "to": 100,
+              "color": "#f87171"
+            }
+          ],
+          "showTons": true,
+          "showCapacity": false,
+          "showCard": true,
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-15-e5b4ca",
+        "type": "silo",
+        "x": 0,
+        "y": 6,
+        "w": 3,
+        "h": 2,
+        "config": {
+          "title": "S5",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Silo5_Level",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "capacityTag": "Silo5_Capacity",
+          "tonsTag": "Silo5_Tons",
+          "unit": "%",
+          "decimals": 1,
+          "zones": [
+            {
+              "from": 0,
+              "to": 70,
+              "color": "#22c55e"
+            },
+            {
+              "from": 70,
+              "to": 90,
+              "color": "#fbbf24"
+            },
+            {
+              "from": 90,
+              "to": 100,
+              "color": "#f87171"
+            }
+          ],
+          "showTons": true,
+          "showCapacity": false,
+          "showCard": true,
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-16-72f80d",
+        "type": "silo",
+        "x": 3,
+        "y": 6,
+        "w": 3,
+        "h": 2,
+        "config": {
+          "title": "S6",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Silo6_Level",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "capacityTag": "Silo6_Capacity",
+          "tonsTag": "Silo6_Tons",
+          "unit": "%",
+          "decimals": 1,
+          "zones": [
+            {
+              "from": 0,
+              "to": 70,
+              "color": "#22c55e"
+            },
+            {
+              "from": 70,
+              "to": 90,
+              "color": "#fbbf24"
+            },
+            {
+              "from": 90,
+              "to": 100,
+              "color": "#f87171"
+            }
+          ],
+          "showTons": true,
+          "showCapacity": false,
+          "showCard": true,
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-17-dbca14",
+        "type": "silo",
+        "x": 6,
+        "y": 6,
+        "w": 3,
+        "h": 2,
+        "config": {
+          "title": "S7",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Silo7_Level",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "capacityTag": "Silo7_Capacity",
+          "tonsTag": "Silo7_Tons",
+          "unit": "%",
+          "decimals": 1,
+          "zones": [
+            {
+              "from": 0,
+              "to": 70,
+              "color": "#22c55e"
+            },
+            {
+              "from": 70,
+              "to": 90,
+              "color": "#fbbf24"
+            },
+            {
+              "from": 90,
+              "to": 100,
+              "color": "#f87171"
+            }
+          ],
+          "showTons": true,
+          "showCapacity": false,
+          "showCard": true,
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-18-b4cb42",
+        "type": "silo",
+        "x": 9,
+        "y": 6,
+        "w": 3,
+        "h": 2,
+        "config": {
+          "title": "S8",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Silo8_Level",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "capacityTag": "Silo8_Capacity",
+          "tonsTag": "Silo8_Tons",
+          "unit": "%",
+          "decimals": 1,
+          "zones": [
+            {
+              "from": 0,
+              "to": 70,
+              "color": "#22c55e"
+            },
+            {
+              "from": 70,
+              "to": 90,
+              "color": "#fbbf24"
+            },
+            {
+              "from": 90,
+              "to": 100,
+              "color": "#f87171"
+            }
+          ],
+          "showTons": true,
+          "showCapacity": false,
+          "showCard": true,
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-19-5a43b3",
+        "type": "table",
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 2,
+        "config": {
+          "title": "Silo %",
+          "tableColumns": [
+            {
+              "label": "S1%",
+              "sourceType": "tag",
+              "tagName": "Silo1_Level",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "percentage",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S2%",
+              "sourceType": "tag",
+              "tagName": "Silo2_Level",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "percentage",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S3%",
+              "sourceType": "tag",
+              "tagName": "Silo3_Level",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "percentage",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S4%",
+              "sourceType": "tag",
+              "tagName": "Silo4_Level",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "percentage",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S5%",
+              "sourceType": "tag",
+              "tagName": "Silo5_Level",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "percentage",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S6%",
+              "sourceType": "tag",
+              "tagName": "Silo6_Level",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "percentage",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S7%",
+              "sourceType": "tag",
+              "tagName": "Silo7_Level",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "percentage",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S8%",
+              "sourceType": "tag",
+              "tagName": "Silo8_Level",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "percentage",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            }
+          ],
+          "summaryRows": [],
+          "striped": true,
+          "compact": true,
+          "showCard": true,
+          "headerBg": "",
+          "headerColor": "",
+          "rowBg": "",
+          "stripedRowBg": "",
+          "borderColor": ""
+        }
+      },
+      {
+        "id": "w-grain-20-c6be92",
+        "type": "chart",
+        "x": 6,
+        "y": 8,
+        "w": 6,
+        "h": 2,
+        "config": {
+          "title": "Silo Trend",
+          "chartType": "line",
+          "series": [
+            {
+              "label": "Silo1_Level",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Silo1_Level",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            },
+            {
+              "label": "Silo2_Level",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Silo2_Level",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            },
+            {
+              "label": "Silo3_Level",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Silo3_Level",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            },
+            {
+              "label": "Silo4_Level",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Silo4_Level",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            }
+          ],
+          "timeRange": "1h",
+          "showLegend": true,
+          "showGrid": true,
+          "annotations": [],
+          "showCard": true,
+          "backgroundColor": "",
+          "gridColor": "",
+          "accentColor": ""
+        }
+      },
+      {
+        "id": "w-grain-21-fa5979",
+        "type": "text",
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 1,
+        "config": {
+          "content": "Grain Quality",
+          "fontSize": "16px",
+          "fontWeight": "700",
+          "fontStyle": "normal",
+          "align": "left",
+          "color": "",
+          "showCard": false
+        }
+      },
+      {
+        "id": "w-grain-22-bca5cd",
+        "type": "kpi",
+        "x": 0,
+        "y": 11,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Moisture",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Moisture_Avg",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "%",
+          "decimals": 2,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-23-752f3e",
+        "type": "kpi",
+        "x": 4,
+        "y": 11,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Aeration",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Aeration_Status",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "",
+          "decimals": 0,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-24-64a60d",
+        "type": "kpi",
+        "x": 8,
+        "y": 11,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Quality Dev",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Quality_Deviation",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "",
+          "decimals": 0,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-25-7b3fd8",
+        "type": "table",
+        "x": 0,
+        "y": 12,
+        "w": 8,
+        "h": 1,
+        "config": {
+          "title": "Temp \u00b0C",
+          "tableColumns": [
+            {
+              "label": "S1",
+              "sourceType": "tag",
+              "tagName": "Silo1_Temp",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "\u00b0C",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S2",
+              "sourceType": "tag",
+              "tagName": "Silo2_Temp",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "\u00b0C",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S3",
+              "sourceType": "tag",
+              "tagName": "Silo3_Temp",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "\u00b0C",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S4",
+              "sourceType": "tag",
+              "tagName": "Silo4_Temp",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "\u00b0C",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S5",
+              "sourceType": "tag",
+              "tagName": "Silo5_Temp",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "\u00b0C",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S6",
+              "sourceType": "tag",
+              "tagName": "Silo6_Temp",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "\u00b0C",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S7",
+              "sourceType": "tag",
+              "tagName": "Silo7_Temp",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "\u00b0C",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "S8",
+              "sourceType": "tag",
+              "tagName": "Silo8_Temp",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "\u00b0C",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            }
+          ],
+          "summaryRows": [],
+          "striped": true,
+          "compact": true,
+          "showCard": true,
+          "headerBg": "",
+          "headerColor": "",
+          "rowBg": "",
+          "stripedRowBg": "",
+          "borderColor": ""
+        }
+      },
+      {
+        "id": "w-grain-26-80fc73",
+        "type": "chart",
+        "x": 8,
+        "y": 12,
+        "w": 4,
+        "h": 1,
+        "config": {
+          "title": "Silo Temps",
+          "chartType": "line",
+          "series": [
+            {
+              "label": "Silo1_Temp",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Silo1_Temp",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            },
+            {
+              "label": "Silo2_Temp",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Silo2_Temp",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            },
+            {
+              "label": "Silo3_Temp",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Silo3_Temp",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            },
+            {
+              "label": "Silo4_Temp",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Silo4_Temp",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            }
+          ],
+          "timeRange": "1h",
+          "showLegend": true,
+          "showGrid": true,
+          "annotations": [],
+          "showCard": true,
+          "backgroundColor": "",
+          "gridColor": "",
+          "accentColor": ""
+        }
+      },
+      {
+        "id": "w-grain-27-dae06d",
+        "type": "text",
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 1,
+        "config": {
+          "content": "Equipment",
+          "fontSize": "16px",
+          "fontWeight": "700",
+          "fontStyle": "normal",
+          "align": "left",
+          "color": "",
+          "showCard": false
+        }
+      },
+      {
+        "id": "w-grain-28-693561",
+        "type": "table",
+        "x": 0,
+        "y": 14,
+        "w": 8,
+        "h": 2,
+        "config": {
+          "title": "Equipment Status",
+          "tableColumns": [
+            {
+              "label": "Conv",
+              "sourceType": "tag",
+              "tagName": "Conveyor1_Status",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 0,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "Throughput",
+              "sourceType": "tag",
+              "tagName": "Conveyor1_Throughput",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "t/h",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "Elev",
+              "sourceType": "tag",
+              "tagName": "Elevator1_Running",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 0,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "Down %",
+              "sourceType": "tag",
+              "tagName": "Equipment_Downtime_Pct",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "percentage",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "Util %",
+              "sourceType": "tag",
+              "tagName": "Equipment_Utilization_Pct",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "percentage",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            }
+          ],
+          "summaryRows": [],
+          "striped": true,
+          "compact": true,
+          "showCard": true,
+          "headerBg": "",
+          "headerColor": "",
+          "rowBg": "",
+          "stripedRowBg": "",
+          "borderColor": ""
+        }
+      },
+      {
+        "id": "w-grain-29-e15325",
+        "type": "barchart",
+        "x": 8,
+        "y": 14,
+        "w": 4,
+        "h": 2,
+        "config": {
+          "title": "Throughput",
+          "chartType": "bar",
+          "series": [
+            {
+              "label": "Conveyor1_Throughput",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Conveyor1_Throughput",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "last"
+              },
+              "color": ""
+            }
+          ],
+          "timeRange": "1h",
+          "showLegend": true,
+          "showGrid": true,
+          "stacked": false,
+          "annotations": [],
+          "showCard": true,
+          "backgroundColor": "",
+          "gridColor": "",
+          "accentColor": ""
+        }
+      },
+      {
+        "id": "w-grain-30-006527",
+        "type": "text",
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 1,
+        "config": {
+          "content": "Energy & Utilities",
+          "fontSize": "16px",
+          "fontWeight": "700",
+          "fontStyle": "normal",
+          "align": "left",
+          "color": "",
+          "showCard": false
+        }
+      },
+      {
+        "id": "w-grain-31-773267",
+        "type": "kpi",
+        "x": 0,
+        "y": 17,
+        "w": 3,
+        "h": 1,
+        "config": {
+          "title": "Power In",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Power_Intake_Area",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "kW",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-32-37d3a5",
+        "type": "kpi",
+        "x": 3,
+        "y": 17,
+        "w": 3,
+        "h": 1,
+        "config": {
+          "title": "Power Stor",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Power_Storage_Area",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "kW",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-33-b0e2a3",
+        "type": "kpi",
+        "x": 6,
+        "y": 17,
+        "w": 3,
+        "h": 1,
+        "config": {
+          "title": "kWh/t",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Energy_Per_Ton",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "kWh/t",
+          "decimals": 2,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-34-ca1de2",
+        "type": "kpi",
+        "x": 9,
+        "y": 17,
+        "w": 3,
+        "h": 1,
+        "config": {
+          "title": "Peak",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Peak_Power_kW",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "kW",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-35-ac18c3",
+        "type": "table",
+        "x": 0,
+        "y": 18,
+        "w": 6,
+        "h": 1,
+        "config": {
+          "title": "Energy",
+          "tableColumns": [
+            {
+              "label": "Intake",
+              "sourceType": "tag",
+              "tagName": "Power_Intake_Area",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "kW",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "Storage",
+              "sourceType": "tag",
+              "tagName": "Power_Storage_Area",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "kW",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "kWh/t",
+              "sourceType": "tag",
+              "tagName": "Energy_Per_Ton",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 2,
+              "unit": "kWh/t",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            }
+          ],
+          "summaryRows": [],
+          "striped": true,
+          "compact": true,
+          "showCard": true,
+          "headerBg": "",
+          "headerColor": "",
+          "rowBg": "",
+          "stripedRowBg": "",
+          "borderColor": ""
+        }
+      },
+      {
+        "id": "w-grain-36-885792",
+        "type": "chart",
+        "x": 6,
+        "y": 18,
+        "w": 6,
+        "h": 1,
+        "config": {
+          "title": "Power",
+          "chartType": "line",
+          "series": [
+            {
+              "label": "Power_Intake_Area",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Power_Intake_Area",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            },
+            {
+              "label": "Power_Storage_Area",
+              "dataSource": {
+                "type": "tag",
+                "tagName": "Power_Storage_Area",
+                "formula": "",
+                "groupTags": [],
+                "aggregation": "avg"
+              },
+              "color": ""
+            }
+          ],
+          "timeRange": "1h",
+          "showLegend": true,
+          "showGrid": true,
+          "annotations": [],
+          "showCard": true,
+          "backgroundColor": "",
+          "gridColor": "",
+          "accentColor": ""
+        }
+      },
+      {
+        "id": "w-grain-37-bc86c9",
+        "type": "text",
+        "x": 0,
+        "y": 19,
+        "w": 12,
+        "h": 1,
+        "config": {
+          "content": "Alarms & Ops KPI",
+          "fontSize": "16px",
+          "fontWeight": "700",
+          "fontStyle": "normal",
+          "align": "left",
+          "color": "",
+          "showCard": false
+        }
+      },
+      {
+        "id": "w-grain-38-2ebbbc",
+        "type": "kpi",
+        "x": 0,
+        "y": 20,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Active",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Alarm_Active_Count",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "",
+          "decimals": 0,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-39-4d7b83",
+        "type": "kpi",
+        "x": 2,
+        "y": 20,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Critical",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Alarm_Critical_Count",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "",
+          "decimals": 0,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-40-fc152c",
+        "type": "kpi",
+        "x": 4,
+        "y": 20,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Response min",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Alarm_Response_Time_Avg",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "min",
+          "decimals": 1,
+          "showSparkline": false,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "left",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-41-c18a78",
+        "type": "stat",
+        "x": 6,
+        "y": 20,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Tons/day",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Tons_Per_Day",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "t",
+          "decimals": 1,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "center",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-42-b49d1c",
+        "type": "stat",
+        "x": 8,
+        "y": 20,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Avail %",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Terminal_Availability_Pct",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "%",
+          "decimals": 1,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "center",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-43-c8f818",
+        "type": "stat",
+        "x": 10,
+        "y": 20,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "OEE",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "OEE_Style",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "%",
+          "decimals": 1,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "center",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-44-bb4fe2",
+        "type": "table",
+        "x": 0,
+        "y": 21,
+        "w": 6,
+        "h": 1,
+        "config": {
+          "title": "Alarms",
+          "tableColumns": [
+            {
+              "label": "Active",
+              "sourceType": "tag",
+              "tagName": "Alarm_Active_Count",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 0,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "Critical",
+              "sourceType": "tag",
+              "tagName": "Alarm_Critical_Count",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 0,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "Response",
+              "sourceType": "tag",
+              "tagName": "Alarm_Response_Time_Avg",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            }
+          ],
+          "summaryRows": [],
+          "striped": true,
+          "compact": true,
+          "showCard": true,
+          "headerBg": "",
+          "headerColor": "",
+          "rowBg": "",
+          "stripedRowBg": "",
+          "borderColor": ""
+        }
+      },
+      {
+        "id": "w-grain-45-f6bfca",
+        "type": "stat",
+        "x": 6,
+        "y": 21,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Downtime %",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Downtime_Pct",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "%",
+          "decimals": 1,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "center",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-46-7e13b8",
+        "type": "stat",
+        "x": 8,
+        "y": 21,
+        "w": 2,
+        "h": 1,
+        "config": {
+          "title": "Losses %",
+          "dataSource": {
+            "type": "tag",
+            "tagName": "Losses_Pct",
+            "formula": "",
+            "groupTags": [],
+            "aggregation": "last"
+          },
+          "unit": "%",
+          "decimals": 2,
+          "thresholds": [],
+          "color": "#06b6d4",
+          "showCard": true,
+          "align": "center",
+          "showTitle": true
+        }
+      },
+      {
+        "id": "w-grain-47-36630c",
+        "type": "text",
+        "x": 0,
+        "y": 22,
+        "w": 12,
+        "h": 1,
+        "config": {
+          "content": "Maintenance",
+          "fontSize": "16px",
+          "fontWeight": "700",
+          "fontStyle": "normal",
+          "align": "left",
+          "color": "",
+          "showCard": false
+        }
+      },
+      {
+        "id": "w-grain-48-8752f1",
+        "type": "table",
+        "x": 0,
+        "y": 23,
+        "w": 12,
+        "h": 2,
+        "config": {
+          "title": "Maintenance",
+          "tableColumns": [
+            {
+              "label": "Run hrs",
+              "sourceType": "tag",
+              "tagName": "Running_Hours_Main",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 1,
+              "unit": "h",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "Cycles",
+              "sourceType": "tag",
+              "tagName": "StartStop_Cycles",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 0,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "Abnormal",
+              "sourceType": "tag",
+              "tagName": "Abnormal_Load_Count",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 0,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            },
+            {
+              "label": "Warnings",
+              "sourceType": "tag",
+              "tagName": "Early_Warning_Count",
+              "formula": "",
+              "groupTags": [],
+              "aggregation": "last",
+              "staticValue": "",
+              "format": "number",
+              "decimals": 0,
+              "unit": "",
+              "align": "left",
+              "width": 100,
+              "thresholds": []
+            }
+          ],
+          "summaryRows": [],
+          "striped": true,
+          "compact": true,
+          "showCard": true,
+          "headerBg": "",
+          "headerColor": "",
+          "rowBg": "",
+          "stripedRowBg": "",
+          "borderColor": ""
+        }
+      }
+    ],
+    "parameters": [],
+    "computedSignals": [],
+    "grid": {
+      "cols": 12,
+      "rowHeight": 40,
+      "pageMode": "a4"
+    }
+  }
+}

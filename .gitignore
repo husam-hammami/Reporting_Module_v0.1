@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node
+node_modules/
+npm-debug.log
+package-lock.json
+
+# Environment
+.env
+.env.local
+
+# Build files
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+# VITE_API_URL=http://100.118.31.61:5001
+# Local Netlify folder
+.netlify
+
+# Pipeline signal files
+.plan_a_done
+.plan_b1_done

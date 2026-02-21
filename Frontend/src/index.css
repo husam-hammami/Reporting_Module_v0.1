@@ -1,0 +1,354 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*{
+    /* transition: all 0.1s; */
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+}
+
+@layer base {
+    /* Dark mode styles */
+    .dark-style {
+      @apply dark:bg-zinc-700 dark:text-zinc-50 bg-zinc-100;
+    }
+  }
+
+  /* @tailwind base;
+  @tailwind components;
+  @tailwind utilities; */
+  
+  :root {
+    --background: hsl(0, 0%, 100%);
+    --foreground: hsl(214, 14%, 4%);
+    --muted: hsl(214, 12%, 96%);
+    --muted-foreground: hsl(214, 8%, 45%);
+    --popover: hsl(0, 0%, 100%);
+    --popover-foreground: hsl(214, 14%, 4%);
+    --card: hsl(0, 0%, 100%);
+    --card-foreground: hsl(214, 14%, 4%);
+    --border: hsl(214, 10%, 90%);
+    --input: hsl(214, 10%, 90%);
+    --primary: hsl(192, 82%, 31%);
+    --primary-foreground: hsl(0, 0%, 100%);
+    --secondary: hsl(214, 12%, 96%);
+    --secondary-foreground: hsl(214, 10%, 10%);
+    --accent: hsl(214, 12%, 96%);
+    --accent-foreground: hsl(214, 10%, 10%);
+    --destructive: hsl(0, 84.2%, 60.2%);
+    --destructive-foreground: hsl(0, 0%, 100%);
+    --ring: hsl(214, 14%, 4%);
+    --radius: 0.5rem;
+
+    /* Brand accent — industrial deep blue */
+    --brand: #2563ab;
+    --brand-hover: #1d4f8a;
+    --brand-subtle: #e8f0fb;
+    --brand-ring: rgba(37, 99, 171, 0.3);
+
+    /* Theme-specific custom properties */
+    --theme-primary: hsl(213, 94%, 68%);
+    --theme-secondary: hsl(213, 93%, 88%);
+    --theme-accent: hsl(213, 87%, 51%);
+    --theme-light: hsl(213, 100%, 97%);
+    --theme-dark: hsl(213, 78%, 33%);
+  }
+  
+  .dark {
+    /* Smart Factory theme - dark desaturated blue with vibrant accents */
+    --background: 218 47% 9%;        /* #0b111e - application background */
+    --foreground: 0 0% 100%;         /* #ffffff - primary text */
+    --muted: 217 39% 13%;           /* #131b2d - widget/card */
+    --muted-foreground: 0 0% 63%;   /* #a0a0a0 - secondary text */
+    --popover: 218 60% 8%;          /* #080f1a - sidebar/panels */
+    --popover-foreground: 0 0% 100%;
+    --card: 217 39% 13%;            /* #131b2d */
+    --card-foreground: 0 0% 100%;
+    --border: 218 25% 20%;           /* subtle borders */
+    --input: 217 39% 13%;
+    --primary: 217 80% 68%;         /* #60a5fa - softer blue accent */
+    --primary-foreground: 218 47% 9%;
+    --secondary: 217 39% 13%;
+    --secondary-foreground: 0 0% 100%;
+    --accent: 221 100% 55%;         /* #1a5cff - active nav blue */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;       /* #ef5350 */
+    --destructive-foreground: 0 0% 100%;
+    --ring: 217 80% 68%;
+    --radius: 0.5rem;
+
+    /* Brand accent — softer blue for dark mode */
+    --brand: #60a5fa;
+    --brand-hover: #4b8edf;
+    --brand-subtle: #1a2540;
+    --brand-ring: rgba(96, 165, 250, 0.3);
+  }
+  
+  @layer base {
+    * {
+      @apply border-border;
+    }
+  
+    body {
+      @apply font-sans antialiased bg-white dark:bg-[#0b111e] text-foreground;
+    }
+  }
+  
+  @layer utilities {
+    .dark-input-field .MuiOutlinedInput-root {
+      background-color: #131b2d !important;
+    }
+    
+    .dark-input-field .MuiOutlinedInput-root:hover {
+      background-color: #131b2d !important;
+    }
+    
+    .dark-input-field .MuiOutlinedInput-root.Mui-focused {
+      background-color: #131b2d !important;
+    }
+    
+    .theme-transition {
+      transition: all 0.3s ease-in-out;
+    }
+  
+    .kpi-card {
+      background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%);
+    }
+  
+    .chart-container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+    }
+  
+    .theme-bg {
+      background-color: var(--theme-primary);
+    }
+  
+    .theme-bg-light {
+      background-color: var(--theme-light);
+    }
+  
+    .theme-text {
+      color: var(--theme-primary);
+    }
+  
+    .theme-border {
+      border-color: var(--theme-primary);
+    }
+  
+    .status-indicator {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  
+    .fade-in-up {
+      animation: fadeInUp 0.6s ease-out;
+    }
+  
+    .loading-skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Chart canvas background in dark mode */
+    .dark canvas {
+      background-color: #131b2d !important;
+    }
+
+    /* Ensure Energy Report page background is solid in dark mode */
+    .dark .min-h-screen.bg-gradient-to-br {
+      background: #0b111e !important;
+      background-image: none !important;
+    }
+
+    /* Ensure Report page background is solid in dark mode */
+    .dark .min-h-screen.bg-zinc-100 {
+      background: #0b111e !important;
+    }
+
+    /* Ensure NewReport page background is solid in dark mode */
+    .dark .min-h-screen.bg-gradient-to-br {
+      background: #0b111e !important;
+      background-image: none !important;
+    }
+
+    /* Cyan checkbox styling for setpoint tables - Smart Factory theme */
+    input[type="checkbox"].checkbox-cyan {
+      accent-color: var(--brand) !important;
+      -webkit-appearance: checkbox !important;
+      appearance: checkbox !important;
+      width: 1rem !important;
+      height: 1rem !important;
+      cursor: not-allowed !important;
+    }
+
+    input[type="checkbox"].checkbox-cyan:checked {
+      accent-color: var(--brand) !important;
+      background-color: var(--brand) !important;
+      border-color: var(--brand) !important;
+    }
+
+    /* Force cyan color using filter for browsers that don't support accent-color */
+    input[type="checkbox"].checkbox-cyan:checked {
+      filter: none !important;
+    }
+
+    /* WebKit/Chrome specific */
+    input[type="checkbox"].checkbox-cyan::-webkit-appearance {
+      accent-color: var(--brand) !important;
+    }
+
+    input[type="checkbox"].checkbox-cyan:checked {
+      -webkit-appearance: checkbox !important;
+      accent-color: var(--brand) !important;
+    }
+
+    /* Firefox specific */
+    input[type="checkbox"].checkbox-cyan:checked {
+      accent-color: var(--brand) !important;
+    }
+
+    /* Custom checkbox using pseudo-elements as fallback */
+    input[type="checkbox"].checkbox-cyan {
+      position: relative;
+    }
+
+    input[type="checkbox"].checkbox-cyan:checked::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 0.5rem;
+      height: 0.5rem;
+      background-color: white;
+      border-radius: 1px;
+      clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    }
+  }
+  
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #report-print-section, #report-print-section * {
+    visibility: visible !important;
+  }
+  #report-print-section {
+    position: absolute !important;
+    left: 0; top: 0; width: 100vw;
+    background: white !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .print\\:hidden {
+    display: none !important;
+  }
+}
+
+/* ─────────────── Report Builder: react-grid-layout ─────────────── */
+
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+
+.react-grid-item.resizing {
+  z-index: 1;
+  will-change: width, height;
+  opacity: 0.9;
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 3;
+  will-change: transform;
+  opacity: 0.85;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(76, 224, 255, 0.4);
+  border-radius: 12px;
+}
+
+/* ── Resize handles: all edges and corners ── */
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.react-grid-item:hover > .react-resizable-handle {
+  opacity: 1;
+}
+
+/* Edge handles — thin strips along each side */
+.react-grid-item > .react-resizable-handle-s  { bottom: -3px; left: 8px; right: 8px; height: 6px; cursor: s-resize; }
+.react-grid-item > .react-resizable-handle-n  { top: -3px;    left: 8px; right: 8px; height: 6px; cursor: n-resize; }
+.react-grid-item > .react-resizable-handle-e  { right: -3px;  top: 8px;  bottom: 8px; width: 6px; cursor: e-resize; }
+.react-grid-item > .react-resizable-handle-w  { left: -3px;   top: 8px;  bottom: 8px; width: 6px; cursor: w-resize; }
+
+/* Corner handles — small squares at each corner */
+.react-grid-item > .react-resizable-handle-se { bottom: -3px; right: -3px;  width: 10px; height: 10px; cursor: se-resize; }
+.react-grid-item > .react-resizable-handle-sw { bottom: -3px; left: -3px;   width: 10px; height: 10px; cursor: sw-resize; }
+.react-grid-item > .react-resizable-handle-ne { top: -3px;    right: -3px;  width: 10px; height: 10px; cursor: ne-resize; }
+.react-grid-item > .react-resizable-handle-nw { top: -3px;    left: -3px;   width: 10px; height: 10px; cursor: nw-resize; }
+
+/* Visual indicator on SE corner */
+.react-grid-item > .react-resizable-handle-se::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid rgba(148, 163, 184, 0.4);
+  border-bottom: 2px solid rgba(148, 163, 184, 0.4);
+  border-radius: 0 0 2px 0;
+  transition: border-color 200ms ease;
+}
+.react-grid-item:hover > .react-resizable-handle-se::after {
+  border-color: rgba(76, 224, 255, 0.6);
+}
+
+/* Highlight edges on hover */
+.react-grid-item > .react-resizable-handle-s:hover,
+.react-grid-item > .react-resizable-handle-n:hover { background: rgba(76, 224, 255, 0.15); border-radius: 3px; }
+.react-grid-item > .react-resizable-handle-e:hover,
+.react-grid-item > .react-resizable-handle-w:hover { background: rgba(76, 224, 255, 0.15); border-radius: 3px; }
+.react-grid-item > .react-resizable-handle-se:hover,
+.react-grid-item > .react-resizable-handle-sw:hover,
+.react-grid-item > .react-resizable-handle-ne:hover,
+.react-grid-item > .react-resizable-handle-nw:hover { background: rgba(76, 224, 255, 0.25); border-radius: 2px; }
+
+.react-grid-placeholder {
+  background: rgba(76, 224, 255, 0.08) !important;
+  border: 2px dashed rgba(76, 224, 255, 0.3) !important;
+  border-radius: 12px !important;
+  opacity: 1 !important;
+  transition: all 150ms ease;
+}
+  

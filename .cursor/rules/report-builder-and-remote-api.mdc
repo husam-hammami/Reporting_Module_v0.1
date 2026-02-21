@@ -1,0 +1,15 @@
+---
+description: Do not break remote backend (VPN) connection or fall back to localStorage when the app is configured to use a remote report API.
+globs:
+alwaysApply: true
+---
+
+# Report builder and remote API
+
+The app is used with VPN and `VITE_API_URL` pointing at a remote backend. Preserve this behavior so the app always uses the real server when configured; do not introduce short timeouts or localhost/localStorage fallbacks that cause the app to ignore the server and show stale local data.
+
+- **Do not** add a custom timeout to `reportBuilderApi.get()` or `reportBuilderApi.list()` (e.g. 8s). Use the default axios timeout so the remote server has time to respond. See `Frontend/src/API/reportBuilderApi.js`.
+
+- **Do not** change `Frontend/src/API/axios.js` so that the app switches to localhost when `VITE_API_URL` is set to a remote URL. When `isExplicitRemoteUrl` is true: the startup probe must not run (or must not set fallback), and the response interceptor must not retry on localhost.
+
+- **Do not** fall back to localStorage for report/template data when `isExplicitRemoteApi()` is true. See `Frontend/src/Hooks/useReportBuilder.js`. Remote API = use server only; on failure show empty/error, not local data.
