@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal } from 'lucide-react';
+import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft } from 'lucide-react';
 import FormulaEditor from '../formulas/FormulaEditor';
 
 /* ── Shared UI primitives (Report Builder design system) ───────── */
@@ -855,16 +855,32 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
 
 /* ── Table Columns Section (Power BI–style, column-only) ──────── */
 
+const MAPPINGS_STORAGE_KEY = 'system_mappings_v2';
+
+function getMappingsFromStorage() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(MAPPINGS_STORAGE_KEY) : null;
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas = [] }) {
   const safeConfig = config || {};
   const columns = Array.isArray(safeConfig.tableColumns) ? safeConfig.tableColumns : [];
   const updateColumns = (newCols) => onUpdate({ tableColumns: newCols });
+  const mappings = getMappingsFromStorage();
+
   const getSourcePreview = (col) => {
     const src = col.sourceType || 'tag';
     if (src === 'tag') return col.tagName || 'Not configured';
     if (src === 'formula') return col.formula ? (col.formula.length > 34 ? `${col.formula.slice(0, 32)}...` : col.formula) : 'Not configured';
     if (src === 'group') return (col.groupTags || []).length ? `${col.groupTags.slice(0, 2).join(', ')}${col.groupTags.length > 2 ? ` +${col.groupTags.length - 2}` : ''}` : 'Not configured';
     if (src === 'static') return col.staticValue || 'Not configured';
+    if (src === 'mapping') return col.mappingName || 'Not configured';
     return 'Not configured';
   };
 
@@ -877,6 +893,7 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
       groupTags: [],
       aggregation: 'last',
       staticValue: '',
+      mappingName: '',
       unit: '',
       decimals: 1,
       align: 'left',
@@ -897,7 +914,7 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
     updateColumns(arr);
   };
 
-  const SOURCE_ICONS = { tag: Tag, formula: FunctionSquare, group: Grid3x3, static: Type };
+  const SOURCE_ICONS = { tag: Tag, formula: FunctionSquare, group: Grid3x3, static: Type, mapping: ArrowRightLeft };
 
   return (
     <Section icon={Database} title="Table Columns" defaultOpen={true}>
@@ -936,6 +953,7 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                   col.sourceType === 'tag' ? 'bg-[var(--rb-accent)]'
                   : col.sourceType === 'formula' ? 'bg-violet-500'
                   : col.sourceType === 'group' ? 'bg-amber-500'
+                  : col.sourceType === 'mapping' ? 'bg-teal-500'
                   : 'bg-[var(--rb-text-muted)]'
                 }`} />
                 <span className="flex-1 min-w-0 truncate">
@@ -969,6 +987,7 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                       { value: 'tag', label: 'Single Tag' },
                       { value: 'formula', label: 'Custom Formula' },
                       { value: 'group', label: 'Tag Group Aggregate' },
+                      { value: 'mapping', label: 'Mapping Tag' },
                       { value: 'static', label: 'Static Text' },
                     ]}
                   />
@@ -1035,6 +1054,24 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                       </div>
                     </Field>
                   </>
+                )}
+
+                {/* Mapping source */}
+                {col.sourceType === 'mapping' && (
+                  <Field label="Mapping">
+                    <SelectInput
+                      value={col.mappingName || ''}
+                      onChange={(v) => updateColumn(i, { mappingName: v })}
+                      options={[
+                        { value: '', label: '— Select a mapping —' },
+                        ...mappings.filter(m => m.is_active !== false).map(m => ({
+                          value: m.name || m.id || '',
+                          label: `${m.name || m.id || 'Unnamed'} → ${m.output_tag_name || ''}`,
+                        })),
+                      ]}
+                    />
+                    <p className="text-[10px] text-[var(--rb-text-muted)] mt-1">Lookup from Settings → Mappings</p>
+                  </Field>
                 )}
 
                 {/* Static source */}
@@ -1109,6 +1146,9 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
         </button>
         <button onClick={() => addColumn('group')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20">
           <Plus size={12} className="inline mr-1" /> Group
+        </button>
+        <button onClick={() => addColumn('mapping')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20">
+          <Plus size={12} className="inline mr-1" /> Mapping
         </button>
         <button onClick={() => addColumn('static')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-[var(--rb-surface)] text-[var(--rb-text-muted)] hover:bg-[var(--rb-border)]">
           <Plus size={12} className="inline mr-1" /> Static

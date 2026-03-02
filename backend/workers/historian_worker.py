@@ -6,6 +6,10 @@ Runs independently of Live Monitor layouts — data collection
 does not require any published layout.
 
 Controlled by env USE_CENTRAL_HISTORIAN (default: true).
+
+Uses a Postgres advisory lock (HISTORIAN_ADVISORY_LOCK_ID) so that only one
+writer inserts per second even if multiple processes/greenlets run the worker,
+preventing duplicate rows per tag per second.
 """
 
 import logging
@@ -20,6 +24,9 @@ from utils.tag_reader import read_all_tags
 from utils.historian_helpers import get_tag_metadata_map
 
 logger = logging.getLogger(__name__)
+
+# Advisory lock ID for tag_history writer (single writer per second across processes)
+HISTORIAN_ADVISORY_LOCK_ID = 0x68697374  # 'hist' in hex
 
 # Last value per tag_id for delta computation (counter tags)
 _last_tag_value = {}
@@ -106,14 +113,22 @@ def historian_worker():
             if hist_rows:
                 with closing(get_db_connection()) as hist_conn:
                     hist_cur = hist_conn.cursor()
-                    hist_cur.executemany(
-                        """INSERT INTO tag_history (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, "timestamp", order_name)
-                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                        hist_rows
-                    )
-                    hist_conn.commit()
-                if int(time.time()) % 30 == 0:
-                    logger.info(f"[Historian] Wrote {len(hist_rows)} tag values to tag_history")
+                    # Advisory lock: only one writer (across processes) inserts per cycle
+                    hist_cur.execute("SELECT pg_try_advisory_xact_lock(%s)", (HISTORIAN_ADVISORY_LOCK_ID,))
+                    row = hist_cur.fetchone()
+                    got_lock = (row[0] if isinstance(row, (list, tuple)) else list(row.values())[0]) if row else False
+                    if got_lock:
+                        hist_cur.executemany(
+                            """INSERT INTO tag_history (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, "timestamp", order_name)
+                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                            hist_rows
+                        )
+                        hist_conn.commit()
+                        if int(time.time()) % 30 == 0:
+                            logger.info(f"[Historian] Wrote {len(hist_rows)} tag values to tag_history")
+                    else:
+                        hist_conn.rollback()  # release any open transaction
+                    # else (no lock): another historian process holds the lock, skip insert this cycle
 
             # Sleep to maintain 1-second cycle
             elapsed = time.time() - loop_start

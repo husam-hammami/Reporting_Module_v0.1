@@ -59,7 +59,7 @@ function migrateV1toV2(config) {
       if (repaired.config.thresholds && !Array.isArray(repaired.config.thresholds)) {
         repaired.config.thresholds = [];
       }
-      // Table: ensure tableColumns is valid; clean up legacy tableRows
+      // Table: ensure tableColumns is valid; clean up legacy tableRows; ensure staticDataRows
       if (repaired.type === 'table' && repaired.config && typeof repaired.config === 'object') {
         delete repaired.config.tableRows; // legacy — column-only model now
         if (Array.isArray(repaired.config.tableColumns)) {
@@ -69,6 +69,7 @@ function migrateV1toV2(config) {
             format: c.format ?? 'number',
           }));
         }
+        repaired.config.staticDataRows = Array.isArray(repaired.config.staticDataRows) ? repaired.config.staticDataRows : [];
       }
       return repaired;
     }).filter(Boolean),

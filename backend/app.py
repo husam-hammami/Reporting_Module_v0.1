@@ -42,6 +42,9 @@ logging.basicConfig(
 
 # Initialize logger
 logger = logging.getLogger(__name__)
+
+# Guard: only one historian worker per process (avoids duplicate tag_history rows)
+_historian_worker_started = False
 logger.setLevel(logging.DEBUG)
 # Initialize the Flask application
 app = Flask(__name__, static_folder='frontend/dist')
@@ -806,11 +809,14 @@ logger.info("Starting dynamic monitoring system")
 # Dynamic tag monitor (for WebSocket data only, not storage)
 eventlet.spawn(dynamic_tag_realtime_monitor)
 
-# Universal historian worker (records ALL active PLC tags, independent of layouts)
+# Universal historian worker (records ALL active PLC tags, independent of layouts).
+# Only spawn once per process; advisory lock in worker ensures one writer per second across processes.
 try:
-    from workers.historian_worker import historian_worker
-    eventlet.spawn(historian_worker)
-    logger.info("Started universal historian worker")
+    if not _historian_worker_started:
+        from workers.historian_worker import historian_worker
+        eventlet.spawn(historian_worker)
+        _historian_worker_started = True
+        logger.info("Started universal historian worker")
 except Exception as e:
     logger.error(f"Could not start historian worker: {e}", exc_info=True)
 

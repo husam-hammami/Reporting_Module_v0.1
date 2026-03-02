@@ -6,8 +6,9 @@ Supports dynamic custom offsets (stored in config/emulator_custom_offsets.json) 
 
 import os
 import json
-import struct
 import math
+import random
+import struct
 import time
 import logging
 from threading import Lock
@@ -148,8 +149,8 @@ def _seed_db199_fcl():
         _register_sim((DB199, offset), 14.0, 0.5, '>f', 'sim')
     # Destination 528-535 (8 bytes): dest_no(2), bin_id(2), prd_code(4)
     _store[(DB199, 528)] = (1, '>h')
-    _store[(DB199, 530)] = (29, '>h')
-    _store[(DB199, 532)] = (1, '>i')
+    _register_sim((DB199, 530), 21, 61, '>h', 'id_range')   # bin_id: random 21-61
+    _register_sim((DB199, 532), 21, 61, '>i', 'id_range')   # prd_code: random 21-61
     # Run 526
     _store[(DB199, 526)] = (1, 'b')  # bool
     # Receiver 2 cumulative (DB2099 offset 108): read_dint_counter uses raw[::-1] then <i, so we store >i
@@ -159,13 +160,13 @@ def _seed_db199_fcl():
         _register_sim((DB2099, off), 12.0, 4.0, '>f', 'sim')
     # Cleaning scale bypass 710
     _store[(DB199, 710)] = (0, 'b')
-    # Active sources base 563, 525, 568, 584, 600 - 16 bytes each (simplify: first few reals)
+    # Active sources base 563, 525, 568, 584, 600 - 16 bytes each; bin_id and prd_code random 21-61
     for base in [563, 525, 568, 584, 600]:
         _store[(DB199, base)] = (1, 'b')
-        _store[(DB199, base + 2)] = (29 if base == 563 else 32, '>h')
+        _register_sim((DB199, base + 2), 21, 61, '>h', 'id_range')   # bin_id
         _store[(DB199, base + 4)] = (50.0, '>f')
         _store[(DB199, base + 8)] = (100.0, '>f')
-        _store[(DB199, base + 12)] = (1, '>i')
+        _register_sim((DB199, base + 12), 21, 61, '>i', 'id_range')   # prd_code
     # OS comment 616, 66 bytes - skip for now (zeros)
     # Job code 682
     _store[(DB199, 682)] = (1, '>h')
@@ -325,6 +326,9 @@ def _register_sim(key, base, amplitude, fmt, kind='sim'):
     elif kind == 'counter':
         t = time.time()
         _store[key] = (int(base + amplitude * (t % 3600) / 3600), fmt)
+    elif kind == 'id_range':
+        # base/min and amplitude/max for random int in [base, amplitude] (e.g. 21-61)
+        _store[key] = (random.randint(int(base), int(amplitude)), fmt)
     else:
         _store[key] = (base, fmt)
 
@@ -337,6 +341,8 @@ def _refresh_sim_values():
             _store[key] = (round(base + amplitude * math.sin(2 * math.pi * t / 60.0 + hash(key) % 100), 6), fmt)
         elif kind == 'counter':
             _store[key] = (int(base + amplitude * (t % 3600) / 3600), fmt)
+        elif kind == 'id_range':
+            _store[key] = (random.randint(int(base), int(amplitude)), fmt)
 
 
 def _seed_all():

@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaPlus, FaTrash, FaTimes } from 'react-icons/fa';
+import axios from '../../../API/axios';
+
+const TAGS_TIMEOUT_MS = 18000; // production / live PLC can be slow
 
 export default function MappingForm({ mapping, onSave, onCancel }) {
   const isEdit = !!mapping;
@@ -14,6 +17,61 @@ export default function MappingForm({ mapping, onSave, onCancel }) {
     return [{ input: '', output: '' }];
   });
   const [error, setError] = useState('');
+  const [tags, setTags] = useState([]);
+  const [tagsLoading, setTagsLoading] = useState(true);
+  const [tagsError, setTagsError] = useState(false);
+  const retryCountRef = useRef(0);
+  const willRetryRef = useRef(false);
+
+  const loadTags = useCallback(() => {
+    setTagsError(false);
+    setTagsLoading(true);
+    willRetryRef.current = false;
+    axios.get('/api/tags', { params: { is_active: 'true' }, timeout: TAGS_TIMEOUT_MS })
+      .then(res => {
+        const list = res.data?.tags ?? res.data ?? [];
+        setTags(Array.isArray(list) ? list : []);
+        setTagsError(false);
+      })
+      .catch(() => {
+        const retried = retryCountRef.current > 0;
+        if (!retried) {
+          retryCountRef.current = 1;
+          willRetryRef.current = true;
+          axios.get('/api/tags', { params: { is_active: 'true' }, timeout: TAGS_TIMEOUT_MS })
+            .then(res => {
+              const list = res.data?.tags ?? res.data ?? [];
+              setTags(Array.isArray(list) ? list : []);
+              setTagsError(false);
+            })
+            .catch(() => {
+              setTags(prev => (prev.length ? prev : []));
+              setTagsError(true);
+            })
+            .finally(() => {
+              setTagsLoading(false);
+              willRetryRef.current = false;
+            });
+          return;
+        }
+        setTags(prev => (prev.length ? prev : []));
+        setTagsError(true);
+      })
+      .finally(() => {
+        if (!willRetryRef.current) setTagsLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    loadTags();
+  }, [loadTags]);
+
+  const handleInputTagChange = (tagName) => {
+    setInputTag(tagName);
+    if (!isEdit && tagName && !outputTagName.trim()) {
+      setOutputTagName(tagName.replace(/\s+/g, '_') + '_Mapped');
+    }
+  };
 
   const addEntry = () => setEntries([...entries, { input: '', output: '' }]);
   const removeEntry = (i) => setEntries(entries.filter((_, j) => j !== i));
@@ -67,13 +125,36 @@ export default function MappingForm({ mapping, onSave, onCancel }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Input Tag <span className="text-[#dc2626]">*</span></label>
-              <input value={inputTag} onChange={e => setInputTag(e.target.value)} className={inputCls + ' font-mono'} placeholder="e.g. Sender1BinId" />
-              <p className="text-[10px] text-[#8898aa] mt-1">PLC tag whose value is looked up</p>
+              <select
+                value={inputTag}
+                onChange={e => handleInputTagChange(e.target.value)}
+                className={inputCls + ' font-mono'}
+                disabled={tagsLoading}
+              >
+                <option value="">{tagsLoading ? 'Loading tags…' : 'Select a tag…'}</option>
+                {tags.map(t => (
+                  <option key={t.id || t.tag_name} value={t.tag_name}>
+                    {t.display_name || t.tag_name}
+                  </option>
+                ))}
+                {inputTag && !tags.some(t => t.tag_name === inputTag) && (
+                  <option value={inputTag}>{inputTag}</option>
+                )}
+              </select>
+              <p className="text-[10px] text-[#8898aa] mt-1">Tag whose value is looked up (hour/live)</p>
+              {tagsError && (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                  Tags are loading slowly or could not be loaded.
+                  <button type="button" onClick={() => { retryCountRef.current = 0; loadTags(); }} className="ml-1.5 font-medium underline hover:no-underline">
+                    Retry
+                  </button>
+                </p>
+              )}
             </div>
             <div>
               <label className={labelCls}>Output Tag Name <span className="text-[#dc2626]">*</span></label>
               <input value={outputTagName} onChange={e => setOutputTagName(e.target.value)} className={inputCls + ' font-mono'} placeholder="e.g. Sender1_Material" />
-              <p className="text-[10px] text-[#8898aa] mt-1">New virtual tag for reports</p>
+              <p className="text-[10px] text-[#8898aa] mt-1">Virtual tag for reports (editable)</p>
             </div>
           </div>
 

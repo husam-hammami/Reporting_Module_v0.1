@@ -195,6 +195,7 @@ export const WIDGET_CATALOG = [
       title: 'Data Table',
       tableColumns: [],
       summaryRows: [],
+      staticDataRows: [],
       striped: true,
       compact: false,
       showCard: true,

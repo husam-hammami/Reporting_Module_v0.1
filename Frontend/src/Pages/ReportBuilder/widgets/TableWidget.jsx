@@ -4,6 +4,28 @@ import { Plus, Trash2, X, Settings2 } from 'lucide-react';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import FormulaEditor from '../formulas/FormulaEditor';
 
+const MAPPINGS_STORAGE_KEY = 'system_mappings_v2';
+
+function getMappingsFromStorage() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(MAPPINGS_STORAGE_KEY) : null;
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function resolveLookup(mapping, inputValue) {
+  if (inputValue == null) return mapping?.fallback || '—';
+  const key = String(Math.round(Number(inputValue)));
+  const mapped = mapping?.lookup?.[key];
+  if (mapped !== undefined && mapped !== null) return mapped;
+  // No mapping match: show raw tag value until it matches a map value
+  return inputValue;
+}
+
 /* ── Resolve a column's live value from PLC tags ───────────────── */
 
 function resolveColumnValue(col, tagValues) {
@@ -35,6 +57,14 @@ function resolveColumnValue(col, tagValues) {
     return vals.reduce((a, b) => a + b, 0) / vals.length; // avg
   }
 
+  if (src === 'mapping' && col.mappingName) {
+    const mappings = getMappingsFromStorage();
+    const mapping = mappings.find((m) => (m.name || m.id) === col.mappingName);
+    if (!mapping) return null;
+    const inputValue = tagValues?.[mapping.input_tag];
+    return resolveLookup(mapping, inputValue);
+  }
+
   if (src === 'static') return col.staticValue ?? '';
   return null;
 }
@@ -53,6 +83,7 @@ function getColumnHint(col) {
     const rest = col.groupTags.length > 2 ? ` +${col.groupTags.length - 2}` : '';
     return names ? `${names}${rest}` : `Group (${col.groupTags.length})`;
   }
+  if (src === 'mapping' && col.mappingName) return `Map: ${col.mappingName}`;
   if (src === 'static') return col.staticValue || '—';
   return null; // nothing configured
 }
@@ -61,6 +92,7 @@ function getSourceBadge(col) {
   const src = col.sourceType || 'tag';
   if (src === 'formula') return { label: 'FORMULA', cls: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20' };
   if (src === 'group') return { label: 'GROUP', cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' };
+  if (src === 'mapping') return { label: 'MAPPING', cls: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20' };
   if (src === 'static') return { label: 'STATIC', cls: 'bg-gray-500/10 text-gray-600 dark:text-gray-300 border-gray-400/20' };
   return { label: 'TAG', cls: 'bg-[#0e74901a] text-brand dark:text-cyan-400 border-[#0e749033]' };
 }
@@ -115,6 +147,19 @@ function computeAggregation(values, aggType) {
     case 'count': return nums.length;
     default: return nums.reduce((a, b) => a + b, 0);
   }
+}
+
+function defaultStaticCellConfig() {
+  return {
+    sourceType: 'static',
+    staticValue: '',
+    aggregation: 'last',
+    format: 'number',
+    decimals: 1,
+    groupTags: [],
+    mappingName: '',
+    formula: '',
+  };
 }
 
 /* ── Tag select (simple dropdown for inline editing) ───────────── */
@@ -207,6 +252,23 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const safeConfig = config || {};
   const columns = Array.isArray(safeConfig.tableColumns) ? safeConfig.tableColumns : [];
   const summaryRows = Array.isArray(safeConfig.summaryRows) ? safeConfig.summaryRows : [];
+  const rawStaticRows = Array.isArray(safeConfig.staticDataRows) ? safeConfig.staticDataRows : [];
+  const staticDataRows = useMemo(() => {
+    const n = columns.length;
+    if (n === 0) return [];
+    const def = defaultStaticCellConfig();
+    const normalizeCell = (cell) => {
+      if (cell != null && typeof cell === 'object' && cell.sourceType != null) {
+        return { ...def, ...cell };
+      }
+      return { ...def, sourceType: 'static', staticValue: String(cell ?? '') };
+    };
+    return rawStaticRows.map((row) => {
+      const arr = Array.isArray(row) ? [...row] : [];
+      while (arr.length < n) arr.push('');
+      return arr.slice(0, n).map(normalizeCell);
+    });
+  }, [rawStaticRows, columns.length]);
   const compact = safeConfig.compact || false;
   const striped = safeConfig.striped || false;
   const headerBg = safeConfig.headerBg || '';
@@ -223,6 +285,8 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   /* ── Editing state ── */
   const [editingCol, setEditingCol] = useState(null);
   const [draft, setDraft] = useState(null);
+  const [editingStaticCell, setEditingStaticCell] = useState(null);
+  const [draftStaticCell, setDraftStaticCell] = useState(null);
   const [showTotalsOptions, setShowTotalsOptions] = useState(false);
 
   const openEditor = useCallback((mode, index, colDef) => {
@@ -283,6 +347,47 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
     onUpdate(widgetId, { config: { ...safeConfig, summaryRows: newRows } });
   }, [onUpdate, widgetId, summaryRows, safeConfig]);
 
+  /* ── Static (simple) data row management ── */
+  const addStaticRow = useCallback(() => {
+    if (!onUpdate || !widgetId) return;
+    const newRow = columns.length ? columns.map(() => ({ ...defaultStaticCellConfig() })) : [];
+    const newRows = [...rawStaticRows, newRow];
+    onUpdate(widgetId, { config: { ...safeConfig, staticDataRows: newRows } });
+  }, [onUpdate, widgetId, rawStaticRows, safeConfig, columns.length]);
+
+  const removeStaticRow = useCallback((index) => {
+    if (!onUpdate || !widgetId) return;
+    const newRows = rawStaticRows.filter((_, i) => i !== index);
+    onUpdate(widgetId, { config: { ...safeConfig, staticDataRows: newRows } });
+  }, [onUpdate, widgetId, rawStaticRows, safeConfig]);
+
+  const updateStaticCellConfig = useCallback((rowIndex, colIndex, cellConfig) => {
+    if (!onUpdate || !widgetId) return;
+    const newRows = staticDataRows.map((row, ri) =>
+      ri !== rowIndex ? row : row.map((cell, ci) => (ci === colIndex ? cellConfig : cell))
+    );
+    onUpdate(widgetId, { config: { ...safeConfig, staticDataRows: newRows } });
+  }, [onUpdate, widgetId, staticDataRows, safeConfig]);
+
+  const openEditorForStaticCell = useCallback((rowIndex, colIndex) => {
+    const cellConfig = staticDataRows[rowIndex]?.[colIndex];
+    if (!cellConfig) return;
+    setEditingStaticCell({ rowIndex, colIndex });
+    setDraftStaticCell({ ...cellConfig });
+  }, [staticDataRows]);
+
+  const closeStaticCellEditor = useCallback(() => {
+    setEditingStaticCell(null);
+    setDraftStaticCell(null);
+  }, []);
+
+  const saveStaticCellConfig = useCallback(() => {
+    if (!editingStaticCell || !draftStaticCell) return;
+    const { rowIndex, colIndex } = editingStaticCell;
+    updateStaticCellConfig(rowIndex, colIndex, draftStaticCell);
+    closeStaticCellEditor();
+  }, [editingStaticCell, draftStaticCell, updateStaticCellConfig, closeStaticCellEditor]);
+
   /* ── Compute one row of live values ── */
   const rowValues = useMemo(() => {
     return columns.map((col) => resolveColumnValue(col, tagValues));
@@ -329,6 +434,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
             tagValues={tagValues}
             savedFormulas={savedFormulas}
             isNew={editingCol.mode === 'add'}
+            isStaticCell={false}
           />
         )}
       </div>
@@ -459,6 +565,66 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
               {canEdit && <td className={`px-2 ${cellPy} border-b`} style={{ borderColor: borderColor || 'var(--rb-border)' }} />}
             </tr>
 
+            {/* ── Static (configurable) data rows ── */}
+            {staticDataRows.map((rowCells, ri) => (
+              <tr
+                key={`static-${ri}`}
+                className="rb-table-body-row"
+                style={{
+                  backgroundColor: striped && (ri + 2) % 2 === 0 ? (stripedRowBg || 'var(--rb-panel)') : (rowBg || 'transparent'),
+                  borderColor: borderColor || 'var(--rb-border)',
+                }}
+              >
+                {columns.map((col, ci) => {
+                  const cellConfig = rowCells[ci];
+                  const rawValue = resolveColumnValue(cellConfig, tagValues);
+                  const formatted = formatCellDisplay(rawValue, cellConfig);
+                  const hint = getColumnHint(cellConfig);
+                  const badge = getSourceBadge(cellConfig);
+                  const hasValue = formatted.text !== null;
+                  const showResolvedValue = !!isPreview;
+                  const displayText = showResolvedValue
+                    ? (hasValue ? formatted.text : (hint || '—'))
+                    : (hint || 'Double-click to set');
+                  return (
+                    <td
+                      key={ci}
+                      onDoubleClick={canEdit ? () => openEditorForStaticCell(ri, ci) : undefined}
+                      className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${cellConfig?.sourceType !== 'static' ? 'font-mono tabular-nums' : ''}`}
+                      style={{
+                        borderColor: borderColor || 'var(--rb-border)',
+                        textAlign: col.align || 'left',
+                        ...(fitInContainer && { overflow: 'hidden', textOverflow: 'ellipsis' }),
+                      }}
+                      title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit cell') : undefined}
+                    >
+                      {showResolvedValue && formatted.type === 'boolean' ? (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded border border-[var(--rb-border)] bg-[var(--rb-input)]">
+                          {formatted.checked ? <span className="text-xs text-[var(--rb-accent)]">&#10003;</span> : null}
+                        </span>
+                      ) : (
+                        <span className={`${hasValue || showResolvedValue ? '' : 'rb-caption italic'} ${fitInContainer ? 'block truncate' : ''}`}>
+                          {displayText}
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
+                {canEdit && (
+                  <td className={`px-2 ${cellPy} border-b`} style={{ borderColor: borderColor || 'var(--rb-border)' }}>
+                    <button
+                      type="button"
+                      onClick={() => removeStaticRow(ri)}
+                      className="rb-btn-ghost p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
+                      title="Remove row"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+
             {/* ── Summary / aggregation rows ── */}
             {summaryData.map((sValues, si) => {
               const sr = summaryRows[si];
@@ -521,13 +687,22 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     {!showTotalsOptions ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowTotalsOptions(true)}
-                        className="rb-body inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--rb-accent)]/50 text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] transition-colors"
-                      >
-                        <Plus size={12} /> Add totals row
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={addStaticRow}
+                          className="rb-body inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--rb-border)] text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:border-[var(--rb-accent)]/50 hover:bg-[var(--rb-accent-subtle)] transition-colors"
+                        >
+                          <Plus size={12} /> New row
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowTotalsOptions(true)}
+                          className="rb-body inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--rb-accent)]/50 text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] transition-colors"
+                        >
+                          <Plus size={12} /> Add totals row
+                        </button>
+                      </>
                     ) : (
                       <>
                         <span className="rb-caption text-[var(--rb-text-muted)] mr-1">Choose aggregation</span>
@@ -577,6 +752,22 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
           tagValues={tagValues}
           savedFormulas={savedFormulas}
           isNew={editingCol.mode === 'add'}
+          isStaticCell={false}
+        />
+      )}
+      {/* ── Static cell editor (same panel, for row cells) ── */}
+      {editingStaticCell && draftStaticCell && (
+        <ColumnEditor
+          draft={draftStaticCell}
+          setDraft={setDraftStaticCell}
+          onSave={saveStaticCellConfig}
+          onCancel={closeStaticCellEditor}
+          onDelete={null}
+          tags={tags}
+          tagValues={tagValues}
+          savedFormulas={savedFormulas}
+          isNew={false}
+          isStaticCell={true}
         />
       )}
     </div>
@@ -589,7 +780,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
    Uses the full FormulaEditor for formula columns.
    ══════════════════════════════════════════════════════════════════ */
 
-function ColumnEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagValues, savedFormulas = [], isNew }) {
+function ColumnEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagValues, savedFormulas = [], isNew, isStaticCell = false }) {
   const safeTags = Array.isArray(tags) ? tags : [];
   const safeFormulas = Array.isArray(savedFormulas) ? savedFormulas : [];
   const [activePane, setActivePane] = useState('source');
@@ -619,7 +810,9 @@ function ColumnEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagVa
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--rb-border)] flex-shrink-0">
-          <h2 className="text-[15px] font-bold text-[var(--rb-text)]">{isNew ? 'Add Column' : 'Edit Column'}</h2>
+          <h2 className="text-[15px] font-bold text-[var(--rb-text)]">
+            {isStaticCell ? 'Edit cell' : (isNew ? 'Add Column' : 'Edit Column')}
+          </h2>
           <button onClick={onCancel} className="p-1.5 rounded-md text-[var(--rb-text-muted)] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors">
             <X size={16} />
           </button>
@@ -635,17 +828,20 @@ function ColumnEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagVa
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
           {activePane === 'source' ? (
             <>
-              <div>
-                <label className={labelCls}>Column Name</label>
-                <input type="text" value={draft.label || ''} onChange={(e) => patch({ label: e.target.value })} placeholder="e.g. Motor Speed" autoFocus className={inputCls} />
-              </div>
+              {!isStaticCell && (
+                <div>
+                  <label className={labelCls}>Column Name</label>
+                  <input type="text" value={draft.label || ''} onChange={(e) => patch({ label: e.target.value })} placeholder="e.g. Motor Speed" autoFocus className={inputCls} />
+                </div>
+              )}
 
               <div>
-                <label className={labelCls}>Data Type</label>
-                <div className="grid grid-cols-4 gap-2">
+                <label className={labelCls}>{isStaticCell ? 'Cell value type' : 'Data Type'}</label>
+                <div className="grid grid-cols-5 gap-2">
                   {typeBtn('tag', 'Tag', 'border-brand bg-brand-subtle text-brand')}
                   {typeBtn('formula', 'Formula', 'border-[#7c3aed] bg-[#f5f3ff] text-[#7c3aed]')}
                   {typeBtn('group', 'Group', 'border-[#d97706] bg-[#fffbeb] text-[#d97706]')}
+                  {typeBtn('mapping', 'Mapping', 'border-teal-500 bg-teal-500/10 text-teal-600 dark:text-teal-400')}
                   {typeBtn('static', 'Static', 'border-[#6b7f94] bg-[var(--rb-surface)] text-[#6b7f94]')}
                 </div>
               </div>
@@ -706,6 +902,22 @@ function ColumnEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagVa
                     </select>
                   </div>
                 </>
+              )}
+
+              {draft.sourceType === 'mapping' && (
+                <div>
+                  <label className={labelCls}>Mapping</label>
+                  <select
+                    value={draft.mappingName || ''}
+                    onChange={(e) => patch({ mappingName: e.target.value })}
+                    className={inputCls}
+                  >
+                    <option value="">— Select mapping —</option>
+                    {getMappingsFromStorage().map((m) => (
+                      <option key={m.id || m.name} value={m.name || m.id || ''}>{m.name || m.id || 'Unnamed'}</option>
+                    ))}
+                  </select>
+                </div>
               )}
 
               {draft.sourceType === 'static' && (

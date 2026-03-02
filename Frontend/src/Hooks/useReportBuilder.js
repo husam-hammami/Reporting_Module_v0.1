@@ -535,6 +535,16 @@ export function useReportCanvas(templateId) {
     setDirty(true);
   }, [pushToHistory]);
 
+  /** Table widget: grid height to fit header + 1 live row + static rows + summary rows + button row (builder). */
+  const getTableWidgetDesiredHeight = useCallback((config) => {
+    const c = config || {};
+    const staticCount = Array.isArray(c.staticDataRows) ? c.staticDataRows.length : 0;
+    const summaryCount = Array.isArray(c.summaryRows) ? c.summaryRows.length : 0;
+    const contentRows = 1 + 1 + staticCount + summaryCount + 1; // header + live + static + summary + "New row" row
+    const reservedGridRows = 2; // title + padding (≈56px at 40px/row)
+    return Math.max(2, reservedGridRows + contentRows);
+  }, []);
+
   const updateWidget = useCallback((widgetId, updates) => {
     setWidgets((prev) => {
       pushToHistory(prev);
@@ -544,11 +554,15 @@ export function useReportCanvas(templateId) {
         if (updates.config && typeof updates.config === 'object') {
           next.config = { ...(w.config || {}), ...updates.config };
         }
+        if (w.type === 'table' && next.config) {
+          const desiredH = getTableWidgetDesiredHeight(next.config);
+          next.h = desiredH;
+        }
         return next;
       });
     });
     setDirty(true);
-  }, [pushToHistory]);
+  }, [pushToHistory, getTableWidgetDesiredHeight]);
 
   const removeWidget = useCallback((widgetId) => {
     setWidgets((prev) => {
@@ -691,25 +705,45 @@ const DEMO_TAGS = [
   ...GRAIN_SILOS_TAGS,
 ];
 
+const TAGS_TIMEOUT_MS = 18000; // production / live backend can be slow
+
 export function useAvailableTags() {
-  const [tags, setTags] = useState(DEMO_TAGS); // instant
-  const [loading, setLoading] = useState(false);
+  const [tags, setTags] = useState(DEMO_TAGS); // instant fallback
+  const [loading, setLoading] = useState(true);
+  const retryCountRef = useRef(0);
 
   const fetchTags = useCallback(async () => {
-    try {
-      const res = await axios.get('/api/tags?is_active=true', { timeout: 3000 });
-      const data = res?.data;
-      if (data?.status === 'success' && Array.isArray(data.tags) && data.tags.length > 0) {
-        setTags(data.tags);
-      } else if (data?.status === 'success' && data.tags?.length === 0) {
-        try {
-          await axios.post('/api/tags/seed', {}, { timeout: 5000 });
-          const retry = await axios.get('/api/tags?is_active=true', { timeout: 3000 });
-          const retryData = retry?.data;
-          if (retryData?.status === 'success' && retryData.tags?.length > 0) setTags(retryData.tags);
-        } catch { /* keep DEMO_TAGS */ }
+    setLoading(true);
+    retryCountRef.current = 0;
+    const doFetch = async () => {
+      try {
+        const res = await axios.get('/api/tags?is_active=true', { timeout: TAGS_TIMEOUT_MS });
+        const data = res?.data;
+        if (data?.status === 'success' && Array.isArray(data.tags) && data.tags.length > 0) {
+          setTags(data.tags);
+          return true;
+        }
+        if (data?.status === 'success' && data.tags?.length === 0) {
+          try {
+            await axios.post('/api/tags/seed', {}, { timeout: 10000 });
+            const retry = await axios.get('/api/tags?is_active=true', { timeout: TAGS_TIMEOUT_MS });
+            const retryData = retry?.data;
+            if (retryData?.status === 'success' && retryData.tags?.length > 0) {
+              setTags(retryData.tags);
+              return true;
+            }
+          } catch { /* keep DEMO_TAGS */ }
+        }
+      } catch {
+        if (retryCountRef.current === 0) {
+          retryCountRef.current = 1;
+          return await doFetch();
+        }
       }
-    } catch { /* API unreachable, already showing DEMO_TAGS */ }
+      return false;
+    };
+    await doFetch();
+    setLoading(false);
   }, []);
 
   useEffect(() => { fetchTags(); }, [fetchTags]);

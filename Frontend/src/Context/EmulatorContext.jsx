@@ -56,6 +56,16 @@ function simpleHash(str) {
   return Math.abs(h);
 }
 
+const ID_LIKE_MIN = 21;
+const ID_LIKE_MAX = 61;
+const ID_LIKE_HOLD_MS = 4000;
+
+function isIdLikeTag(tagName) {
+  if (!tagName || typeof tagName !== 'string') return false;
+  const lower = tagName.toLowerCase();
+  return lower.includes('bin_id') || lower.includes('prd_code') || lower.endsWith('_id');
+}
+
 /** Build a simulation profile from tag metadata (unit, data_type, decimal_places). */
 function buildProfileFromTag(tag) {
   const unit = (tag.unit || '').trim();
@@ -67,6 +77,7 @@ function buildProfileFromTag(tag) {
     period: 180 + (simpleHash(tag.tag_name) % 120), // 180–300 s, deterministic per tag
     unit,
     decimals: tag.decimal_places ?? 2,
+    isIdLike: isIdLikeTag(tag.tag_name),
   };
 }
 
@@ -130,6 +141,7 @@ export const EmulatorProvider = ({ children }) => {
   const timerRef = useRef(null);
   const startTime = useRef(Date.now() - 30_000);  // offset so t starts ~30s — avoids sin(0)=0 glitch on chart
   const profilesRef = useRef({}); // { tagName: profile }
+  const idTagCacheRef = useRef({}); // { tagName: { value, until } } — random ID 21–61, refresh every N s
 
   // Persist settings
   useEffect(() => { localStorage.setItem(STORAGE_KEY, String(enabled)); }, [enabled]);
@@ -167,9 +179,21 @@ export const EmulatorProvider = ({ children }) => {
     const profiles = profilesRef.current;
     if (!profiles || Object.keys(profiles).length === 0) return;
     const t = (Date.now() - startTime.current) / 1000;
+    const now = Date.now();
+    const idCache = idTagCacheRef.current;
     const values = {};
     for (const [tagName, profile] of Object.entries(profiles)) {
-      values[tagName] = simulate(profile, t);
+      if (profile.isIdLike) {
+        let entry = idCache[tagName];
+        if (!entry || now >= entry.until) {
+          const value = ID_LIKE_MIN + Math.floor(Math.random() * (ID_LIKE_MAX - ID_LIKE_MIN + 1));
+          idCache[tagName] = { value, until: now + ID_LIKE_HOLD_MS };
+          entry = idCache[tagName];
+        }
+        values[tagName] = entry.value;
+      } else {
+        values[tagName] = simulate(profile, t);
+      }
     }
     // Derived: keep SiloN_Tons in sync with SiloN_Level * capacity
     for (let i = 1; i <= 8; i++) {

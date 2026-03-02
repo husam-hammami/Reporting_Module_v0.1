@@ -111,15 +111,32 @@ const TagManager = () => {
   // Alias for save/delete handlers that need to reload
   const loadTags = loadTagsFromAPI;
 
+  const BATCH_SIZE = 200;
   const loadTagValues = async (tagsToLoad) => {
     try {
       setTagValuesLoading(true);
       setTagValuesError(false);
-      const tagNames = tagsToLoad.filter(t => t.is_active && t.source_type === 'PLC').map(t => t.tag_name);
+      const tagNames = tagsToLoad
+        .filter(t => t.is_active && ['PLC', 'Manual', 'Formula'].includes(t.source_type))
+        .map(t => t.tag_name);
       if (tagNames.length === 0) { setTagValues({}); setTagValuesLoading(false); return; }
-      const response = await axios.post('/api/tags/get-values', { tag_names: tagNames.slice(0, 50) }, { timeout: 10000 });
-      if (response.data.status === 'success' && Object.keys(response.data.tag_values || {}).length > 0) {
-        setTagValues(prev => ({ ...prev, ...response.data.tag_values }));
+      const batches = [];
+      for (let i = 0; i < tagNames.length; i += BATCH_SIZE) {
+        batches.push(tagNames.slice(i, i + BATCH_SIZE));
+      }
+      const responses = await Promise.all(
+        batches.map((batch) =>
+          axios.post('/api/tags/get-values', { tag_names: batch }, { timeout: 15000 })
+        )
+      );
+      const merged = {};
+      for (const response of responses) {
+        if (response.data?.status === 'success' && response.data.tag_values) {
+          Object.assign(merged, response.data.tag_values);
+        }
+      }
+      if (Object.keys(merged).length > 0) {
+        setTagValues(prev => ({ ...prev, ...merged }));
         setTagValuesError(false);
       } else { setTagValuesError(true); }
     } catch { setTagValuesError(true); }
@@ -335,7 +352,7 @@ const TagManager = () => {
                     <td className="px-4 py-2.5 text-[#6b7f94]">{tag.data_type || '—'}</td>
                     <td className="px-4 py-2.5 text-[#6b7f94]">{tag.unit || '—'}</td>
                     <td className="px-4 py-2.5 font-mono text-[11px]">
-                      {tag.source_type === 'PLC' && tag.is_active ? (
+                      {['PLC', 'Manual', 'Formula'].includes(tag.source_type) && tag.is_active ? (
                         tagValues[tag.tag_name] != null
                           ? <span className="text-[#059669] dark:text-[#34d399]">{typeof tagValues[tag.tag_name] === 'number' ? tagValues[tag.tag_name].toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(tagValues[tag.tag_name])}{tag.unit ? ` ${tag.unit}` : ''}</span>
                           : tagValuesError && !tagValuesLoading

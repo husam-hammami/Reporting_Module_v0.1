@@ -15,7 +15,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 DB_CONFIG = {
     'dbname': os.getenv('POSTGRES_DB', 'dynamic_db_hercules'),
     'user': os.getenv('POSTGRES_USER', 'postgres'),
-    'password': os.getenv('POSTGRES_PASSWORD', ''),
+    'password': os.getenv('POSTGRES_PASSWORD', 'Hercules'),
     'host': os.getenv('DB_HOST', '127.0.0.1'),
     'port': os.getenv('DB_PORT', '5432'),
 }

@@ -4,10 +4,17 @@ Dynamic Archive Worker
 Archives data every hour for all published layouts.
 Aggregates second-by-second data into hourly summaries.
 Also aggregates universal historian rows (layout_id IS NULL) into tag_history_archive.
+
+Uses an advisory lock for the universal historian block so only one process archives
+per hour, and INSERT ... ON CONFLICT DO NOTHING to avoid duplicate rows if the
+worker runs twice.
 """
 
 import logging
 import os
+
+# Advisory lock ID for universal tag_history_archive writer (one writer per hour)
+ARCHIVE_ADVISORY_LOCK_ID = 0x61726368  # 'arch' in hex
 import eventlet
 import datetime
 import json
@@ -145,30 +152,37 @@ def dynamic_archive_worker():
                 try:
                     with closing(get_db_connection()) as conn:
                         cursor = conn.cursor(cursor_factory=RealDictCursor)
-                        cursor.execute("""
-                            SELECT tag_id, BOOL_OR(is_counter) AS is_counter,
-                                   CASE WHEN BOOL_OR(is_counter) THEN SUM(COALESCE(value_delta, 0))::double precision ELSE AVG(value)::double precision END AS agg_value,
-                                   CASE WHEN BOOL_OR(is_counter) THEN SUM(COALESCE(value_delta, 0))::double precision ELSE NULL END AS agg_delta
-                            FROM tag_history
-                            WHERE layout_id IS NULL AND "timestamp" >= %s AND "timestamp" < %s
-                            GROUP BY tag_id
-                        """, (hour_start, archive_hour))
-                        agg_rows = cursor.fetchall()
-                        if agg_rows:
-                            hist_rows = []
-                            for r in agg_rows:
-                                tag_id = r['tag_id']
-                                is_counter = bool(r.get('is_counter', False))
-                                agg_value = float(r['agg_value']) if r.get('agg_value') is not None else 0.0
-                                agg_delta = float(r['agg_delta']) if r.get('agg_delta') is not None else None
-                                hist_rows.append((None, tag_id, agg_value, None, agg_delta, is_counter, 'GOOD', archive_hour, None))
-                            cursor.executemany(
-                                """INSERT INTO tag_history_archive (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, archive_hour, order_name)
-                                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                                hist_rows
-                            )
-                            conn.commit()
-                            logger.info(f"[Historian] Archived {len(hist_rows)} universal tag aggregates | {archive_hour}")
+                        # Advisory lock: only one process archives universal historian per hour
+                        cursor.execute("SELECT pg_try_advisory_xact_lock(%s)", (ARCHIVE_ADVISORY_LOCK_ID,))
+                        row = cursor.fetchone()
+                        got_lock = (row[0] if isinstance(row, (list, tuple)) else list(row.values())[0]) if row else False
+                        if got_lock:
+                            cursor.execute("""
+                                SELECT tag_id, BOOL_OR(is_counter) AS is_counter,
+                                       CASE WHEN BOOL_OR(is_counter) THEN SUM(COALESCE(value_delta, 0))::double precision ELSE AVG(value)::double precision END AS agg_value,
+                                       CASE WHEN BOOL_OR(is_counter) THEN SUM(COALESCE(value_delta, 0))::double precision ELSE NULL END AS agg_delta
+                                FROM tag_history
+                                WHERE layout_id IS NULL AND "timestamp" >= %s AND "timestamp" < %s
+                                GROUP BY tag_id
+                            """, (hour_start, archive_hour))
+                            agg_rows = cursor.fetchall()
+                            if agg_rows:
+                                # INSERT with ON CONFLICT so duplicate runs do not insert twice (requires unique index on (tag_id, archive_hour) WHERE layout_id IS NULL)
+                                insert_sql = """
+                                    INSERT INTO tag_history_archive (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, archive_hour, order_name)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    ON CONFLICT (tag_id, archive_hour) WHERE layout_id IS NULL DO NOTHING
+                                """
+                                for r in agg_rows:
+                                    tag_id = r['tag_id']
+                                    is_counter = bool(r.get('is_counter', False))
+                                    agg_value = float(r['agg_value']) if r.get('agg_value') is not None else 0.0
+                                    agg_delta = float(r['agg_delta']) if r.get('agg_delta') is not None else None
+                                    cursor.execute(insert_sql, (None, tag_id, agg_value, None, agg_delta, is_counter, 'GOOD', archive_hour, None))
+                                conn.commit()
+                                logger.info(f"[Historian] Archived {len(agg_rows)} universal tag aggregates | {archive_hour}")
+                        else:
+                            conn.rollback()
                 except Exception as hist_err:
                     logger.warning(f"[Historian] Universal archive aggregation failed: {hist_err}")
 
