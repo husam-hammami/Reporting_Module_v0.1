@@ -10,6 +10,9 @@ Controlled by env USE_CENTRAL_HISTORIAN (default: true).
 Uses a Postgres advisory lock (HISTORIAN_ADVISORY_LOCK_ID) so that only one
 writer inserts per second even if multiple processes/greenlets run the worker,
 preventing duplicate rows per tag per second.
+
+PERFORMANCE: Reads from TagValueCache (shared poller) instead of calling
+read_all_tags() independently. Uses execute_values() for bulk insert.
 """
 
 import logging
@@ -18,9 +21,9 @@ import time
 import datetime
 import eventlet
 from contextlib import closing
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, execute_values
 
-from utils.tag_reader import read_all_tags
+from utils.tag_value_cache import get_tag_value_cache
 from utils.historian_helpers import get_tag_metadata_map
 
 logger = logging.getLogger(__name__)
@@ -55,7 +58,8 @@ def historian_worker():
         logger.info("[Historian] USE_CENTRAL_HISTORIAN=false, historian worker disabled")
         return
 
-    logger.info("[Historian] Starting universal historian worker")
+    logger.info("[Historian] Starting universal historian worker (using TagValueCache)")
+    cache = get_tag_value_cache()
 
     while True:
         try:
@@ -63,8 +67,8 @@ def historian_worker():
 
             loop_start = time.time()
 
-            # Read ALL active PLC tags
-            tag_values = read_all_tags(tag_names=None, db_connection_func=get_db_connection)
+            # Read from shared cache instead of independent PLC read
+            tag_values = cache.get_values()
 
             if not tag_values:
                 eventlet.sleep(1)
@@ -86,7 +90,7 @@ def historian_worker():
                         for row in seed_cur.fetchall():
                             _last_tag_value[row["tag_id"]] = float(row["value"])
                 except Exception as seed_err:
-                    logger.debug(f"[Historian] Seed last values from DB: {seed_err}")
+                    logger.debug("[Historian] Seed last values from DB: %s", seed_err)
 
             hist_rows = []
             for tag_name, value in tag_values.items():
@@ -118,17 +122,20 @@ def historian_worker():
                     row = hist_cur.fetchone()
                     got_lock = (row[0] if isinstance(row, (list, tuple)) else list(row.values())[0]) if row else False
                     if got_lock:
-                        hist_cur.executemany(
-                            """INSERT INTO tag_history (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, "timestamp", order_name)
-                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                            hist_rows
+                        # Bulk insert using execute_values (5-10x faster than executemany)
+                        execute_values(
+                            hist_cur,
+                            """INSERT INTO tag_history
+                               (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, "timestamp", order_name)
+                               VALUES %s""",
+                            hist_rows,
+                            page_size=100
                         )
                         hist_conn.commit()
                         if int(time.time()) % 30 == 0:
-                            logger.info(f"[Historian] Wrote {len(hist_rows)} tag values to tag_history")
+                            logger.info("[Historian] Wrote %d tag values to tag_history", len(hist_rows))
                     else:
                         hist_conn.rollback()  # release any open transaction
-                    # else (no lock): another historian process holds the lock, skip insert this cycle
 
             # Sleep to maintain 1-second cycle
             elapsed = time.time() - loop_start
@@ -136,5 +143,5 @@ def historian_worker():
             eventlet.sleep(sleep_time)
 
         except Exception as e:
-            logger.error(f"[Historian] Worker error: {e}", exc_info=True)
+            logger.error("[Historian] Worker error: %s", e, exc_info=True)
             eventlet.sleep(5)

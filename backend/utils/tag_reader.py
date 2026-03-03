@@ -397,6 +397,292 @@ def read_all_tags(tag_names=None, db_connection_func=None):
     return result
 
 
+# ── Tag config cache (avoids querying DB every second) ────────────────────────
+_tag_config_cache = None
+_tag_config_cache_ts = 0
+_TAG_CONFIG_CACHE_TTL = 30  # seconds
+
+
+def _get_cached_tag_configs(db_connection_func, tag_names=None):
+    """Get active PLC tag configurations, cached for 30 seconds.
+
+    Avoids hitting the database every second for tag metadata that rarely changes.
+    """
+    global _tag_config_cache, _tag_config_cache_ts
+
+    now = time.time()
+    # Only use cache for full reads (tag_names=None) — filtered reads bypass cache
+    if tag_names is None and _tag_config_cache is not None and (now - _tag_config_cache_ts) < _TAG_CONFIG_CACHE_TTL:
+        return _tag_config_cache
+
+    with closing(db_connection_func()) as conn:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        if tag_names:
+            placeholders = ','.join(['%s'] * len(tag_names))
+            cursor.execute(f"""
+                SELECT id, tag_name, display_name, source_type,
+                       db_number, "offset", data_type, bit_position,
+                       string_length, byte_swap, unit, scaling,
+                       decimal_places, description, is_active, value_formula
+                FROM tags
+                WHERE is_active = true AND source_type = 'PLC'
+                AND tag_name IN ({placeholders})
+            """, list(tag_names))
+        else:
+            cursor.execute("""
+                SELECT id, tag_name, display_name, source_type,
+                       db_number, "offset", data_type, bit_position,
+                       string_length, byte_swap, unit, scaling,
+                       decimal_places, description, is_active, value_formula
+                FROM tags
+                WHERE is_active = true AND source_type = 'PLC'
+            """)
+        tags = cursor.fetchall()
+
+    if tag_names is None:
+        _tag_config_cache = tags
+        _tag_config_cache_ts = now
+
+    return tags
+
+
+def invalidate_tag_config_cache():
+    """Call when tag configuration changes (e.g., from Settings API)."""
+    global _tag_config_cache, _tag_config_cache_ts
+    _tag_config_cache = None
+    _tag_config_cache_ts = 0
+
+
+# ── Batched PLC reads ─────────────────────────────────────────────────────────
+
+def _compute_tag_byte_size(tag_config):
+    """Return the number of bytes a tag occupies in the PLC DB block."""
+    dtype = tag_config.get('data_type', 'REAL').upper()
+    if dtype == 'BOOL':
+        return 1
+    elif dtype == 'INT':
+        return 2
+    elif dtype in ('DINT', 'REAL'):
+        return 4
+    elif dtype == 'STRING':
+        return (tag_config.get('string_length') or 40) + 2
+    return 4  # default
+
+
+def _extract_value_from_buffer(buf, base_offset, tag_config):
+    """Extract a single tag value from a pre-read byte buffer.
+
+    Args:
+        buf: bytes read from PLC (contiguous block)
+        base_offset: the starting offset of the buffer within the DB
+        tag_config: tag configuration dict
+
+    Returns:
+        Parsed value (int, float, bool, str) or None on error
+    """
+    try:
+        tag_offset = tag_config['offset']
+        local_offset = tag_offset - base_offset
+        dtype = tag_config.get('data_type', 'REAL').upper()
+        tag_name = tag_config.get('tag_name', 'Unknown')
+
+        if local_offset < 0 or local_offset >= len(buf):
+            logger.warning("[BatchRead] Offset out of range for tag '%s': local=%d, buf_len=%d",
+                           tag_name, local_offset, len(buf))
+            return None
+
+        if dtype == 'BOOL':
+            bit_pos = tag_config.get('bit_position', 0) or 0
+            byte_val = buf[local_offset]
+            return bool(byte_val & (1 << bit_pos))
+
+        elif dtype == 'INT':
+            data = buf[local_offset:local_offset + 2]
+            if len(data) < 2:
+                return None
+            return struct.unpack('>h', data)[0]
+
+        elif dtype == 'DINT':
+            data = buf[local_offset:local_offset + 4]
+            if len(data) < 4:
+                return None
+            return struct.unpack('>i', data)[0]
+
+        elif dtype == 'REAL':
+            data = buf[local_offset:local_offset + 4]
+            if len(data) < 4:
+                return None
+            byte_swap = tag_config.get('byte_swap', False)
+            if byte_swap:
+                data = data[::-1]
+                value = struct.unpack('<f', data)[0]
+            else:
+                value = struct.unpack('>f', data)[0]
+            decimal_places = tag_config.get('decimal_places', 2)
+            return round(value, decimal_places)
+
+        elif dtype == 'STRING':
+            max_len = tag_config.get('string_length') or 40
+            data = buf[local_offset:local_offset + max_len + 2]
+            if len(data) < 2:
+                return None
+            actual_len = min(data[1], max_len)
+            return data[2:2 + actual_len].decode('ascii', errors='ignore')
+
+        else:
+            logger.warning("[BatchRead] Unsupported data type '%s' for tag '%s'", dtype, tag_name)
+            return None
+
+    except Exception as e:
+        logger.warning("[BatchRead] Error extracting tag '%s': %s",
+                       tag_config.get('tag_name', '?'), e)
+        return None
+
+
+def _read_tags_batched(plc, tags):
+    """Read tags from PLC using batched reads grouped by DB number.
+
+    Instead of N individual plc.db_read() calls (one per tag),
+    groups tags by db_number and reads each DB block in a single call.
+
+    Args:
+        plc: Connected PLC client (snap7 or emulator)
+        tags: List of tag config dicts
+
+    Returns:
+        dict: {tag_name: raw_value, ...}
+    """
+    result = {}
+
+    # Group tags by db_number
+    db_groups = {}
+    for tag in tags:
+        db_num = tag.get('db_number')
+        if db_num is None:
+            continue
+        db_groups.setdefault(db_num, []).append(tag)
+
+    for db_num, group_tags in db_groups.items():
+        # Calculate the byte range to read for this DB
+        min_offset = float('inf')
+        max_end = 0
+
+        for tag in group_tags:
+            offset = tag['offset']
+            size = _compute_tag_byte_size(tag)
+            min_offset = min(min_offset, offset)
+            max_end = max(max_end, offset + size)
+
+        min_offset = int(min_offset)
+        total_size = int(max_end - min_offset)
+
+        if total_size <= 0 or total_size > 65536:
+            logger.warning("[BatchRead] Skipping DB%d: invalid range %d-%d",
+                           db_num, min_offset, max_end)
+            for tag in group_tags:
+                result[tag['tag_name']] = None
+            continue
+
+        # Single PLC read for the entire DB range
+        try:
+            buf = plc.db_read(db_num, min_offset, total_size)
+        except Exception as e:
+            logger.error("[BatchRead] Failed to read DB%d (offset=%d, size=%d): %s",
+                         db_num, min_offset, total_size, e)
+            # Fallback: try individual reads for this group
+            for tag in group_tags:
+                try:
+                    value = read_tag_value(plc, tag)
+                    result[tag['tag_name']] = value
+                except Exception:
+                    result[tag['tag_name']] = None
+            continue
+
+        # Extract individual tag values from the buffer
+        for tag in group_tags:
+            value = _extract_value_from_buffer(buf, min_offset, tag)
+            result[tag['tag_name']] = value
+
+    return result
+
+
+def read_all_tags_batched(tag_names=None, db_connection_func=None):
+    """Read all active PLC tags using batched reads — optimized version.
+
+    Key improvements over read_all_tags():
+    1. Caches tag configs (avoids DB query every second)
+    2. Batches PLC reads by DB number (M reads instead of N)
+    3. Applies formulas/scaling in the same loop
+
+    Args:
+        tag_names: Optional list of tag names to read
+        db_connection_func: Function to get database connection
+
+    Returns:
+        dict: {tag_name: value, ...}
+    """
+    if db_connection_func is None:
+        import sys
+        if 'app' in sys.modules:
+            from app import get_db_connection
+            db_connection_func = get_db_connection
+        else:
+            from app import get_db_connection
+            db_connection_func = get_db_connection
+
+    from plc_utils import connect_to_plc_fast
+
+    result = {}
+
+    try:
+        plc = connect_to_plc_fast()
+    except Exception as e:
+        logger.error("[BatchRead] Failed to connect to PLC: %s", e)
+        return result
+
+    # Get tag configs (cached for 30s)
+    tags = _get_cached_tag_configs(db_connection_func, tag_names)
+    if not tags:
+        logger.debug("[BatchRead] No active PLC tags found")
+        return result
+
+    # Batched PLC read
+    raw_values = _read_tags_batched(plc, tags)
+
+    # Apply formulas and scaling
+    for tag in tags:
+        tag_name = tag['tag_name']
+        value = raw_values.get(tag_name)
+        if value is not None:
+            value_formula = tag.get('value_formula')
+            if value_formula and value_formula.strip():
+                final_value = evaluate_value_formula(value_formula, value)
+            else:
+                scaling = float(tag.get('scaling', 1.0))
+                final_value = value * scaling if isinstance(value, (int, float)) else value
+            result[tag_name] = final_value
+        else:
+            result[tag_name] = None
+
+    # Demo mode: also generate Manual/Formula tag values
+    try:
+        from demo_mode import get_demo_mode
+        if get_demo_mode():
+            manual_values = _generate_demo_manual_values(db_connection_func)
+            if manual_values:
+                result.update(manual_values)
+
+            if not any(k for k in result if k not in (manual_values or {})):
+                from plc_data_source import get_demo_fallback_tag_values
+                fallback = get_demo_fallback_tag_values()
+                if fallback:
+                    result.update(fallback)
+    except Exception as e:
+        logger.debug("[BatchRead] Demo fallback check skipped: %s", e)
+
+    return result
+
+
 def enrich_bin_tags_with_materials(tag_values, db_connection_func=None):
     """
     Enrich tag values that represent bin_ids with material names.

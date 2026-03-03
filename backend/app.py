@@ -32,7 +32,7 @@ from scheduler import start_scheduler
 
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.WARNING,
     format="%(asctime)s %(levelname)s: %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout)
@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 # Guard: only one historian worker per process (avoids duplicate tag_history rows)
 _historian_worker_started = False
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 # Initialize the Flask application
 app = Flask(__name__, static_folder='frontend/dist')
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'hercules-dev-secret-key-2026')
@@ -104,16 +104,10 @@ def handle_options_preflight():
             return r
         return "", 200
 
-# Request logging ONLY (no CORS logic here)
+# Request logging ONLY (no CORS logic here) — debug level to avoid flooding logs
 @app.before_request
 def log_request_info():
-    logger.info(f"Incoming request: {request.method} {request.path}")
-    logger.info(f"Request headers: {dict(request.headers)}")
-
-    if request.is_json:
-        logger.info(f"Request JSON: {request.get_json()}")
-    elif request.form:
-        logger.info(f"Request form: {dict(request.form)}")
+    logger.debug("Incoming request: %s %s", request.method, request.path)
 
 # Single source of truth for CORS headers
 @app.after_request
@@ -545,26 +539,18 @@ from flask import make_response
 # User authentication routes
 @app.route('/login', methods=['POST'])
 def login():
-    logger.info("Login endpoint called")
     if request.method == 'POST':
-        logger.info(f"Login request received - method: POST")
-        logger.info(f"Request content type: {request.content_type}")
-        logger.info(f"Request is_json: {request.is_json}")
-
         if not request.is_json:
-            logger.warning("Login request is not JSON, attempting to parse anyway")
             try:
                 data = request.get_json(force=True)
             except Exception as e:
-                logger.error(f"Failed to parse JSON: {e}")
+                logger.warning("Login: invalid JSON: %s", e)
                 return jsonify({"message": "Invalid request format"}), 400
         else:
             data = request.get_json()
 
         username = data.get('username') if data else request.json.get('username')
         password = data.get('password') if data else request.json.get('password')
-
-        logger.info(f"Attempting login for username: {username}")
 
         with closing(get_db_connection()) as conn:
             cursor = conn.cursor()
@@ -767,50 +753,65 @@ def handle_message(message):
 
 
 def dynamic_tag_realtime_monitor():
-    """New dynamic tag-based monitor - runs in parallel with existing monitors"""
+    """WebSocket realtime monitor — reads from TagValueCache (no independent PLC reads).
+
+    PERFORMANCE: Uses shared cache instead of calling read_all_tags() independently.
+    This eliminates one of the 3 redundant PLC polling loops.
+    """
     import datetime
     import eventlet
+    from utils.tag_value_cache import get_tag_value_cache
 
-    logger.info("Starting dynamic tag realtime monitor")
+    logger.info("[RealtimeMonitor] Starting (using TagValueCache)")
+    cache = get_tag_value_cache()
 
     while True:
         try:
-            # Import here to avoid circular imports
-            from utils.tag_reader import read_all_tags
+            tag_values = cache.get_values()
 
-            # Read all active tags from PLC
-            tag_values = read_all_tags(tag_names=None, db_connection_func=get_db_connection)
+            if tag_values:
+                ws_data = {
+                    'timestamp': datetime.datetime.now().isoformat(),
+                    'tag_values': tag_values,
+                    'plc_connected': True
+                }
+                socketio.emit('live_tag_data', ws_data)
+            else:
+                socketio.emit('live_tag_data', {
+                    'error': 'Cache empty or stale',
+                    'plc_connected': False,
+                    'timestamp': datetime.datetime.now().isoformat()
+                })
 
-            # Build WebSocket payload
-            ws_data = {
-                'timestamp': datetime.datetime.now().isoformat(),
-                'tag_values': tag_values,
-                'plc_connected': True
-            }
-
-            # Emit to WebSocket
-            socketio.emit('live_tag_data', ws_data)
-
-            eventlet.sleep(1)  # Update every 1 second
+            eventlet.sleep(1)
 
         except Exception as e:
-            logger.error(f"Error in dynamic tag monitor: {e}", exc_info=True)
+            logger.error("[RealtimeMonitor] Error: %s", e, exc_info=True)
             socketio.emit('live_tag_data', {
                 'error': str(e),
                 'plc_connected': False,
                 'timestamp': datetime.datetime.now().isoformat()
             })
-            eventlet.sleep(5)  # Wait longer on error
+            eventlet.sleep(5)
 
 
-# Spawn dynamic workers
+# ── Spawn dynamic workers ─────────────────────────────────────────────────────
 logger.info("Starting dynamic monitoring system")
 
-# Dynamic tag monitor (for WebSocket data only, not storage)
+# 1. Start the shared tag poller FIRST — all workers consume from this cache
+#    instead of each independently reading from PLC (3N reads → M reads).
+try:
+    from utils.tag_value_cache import start_tag_poller
+    start_tag_poller(get_db_connection, interval=1.0)
+    logger.info("Started shared tag poller (TagValueCache)")
+except Exception as e:
+    logger.error("Could not start tag poller: %s", e, exc_info=True)
+
+# 2. Dynamic tag monitor (for WebSocket data only, not storage)
 eventlet.spawn(dynamic_tag_realtime_monitor)
 
-# Universal historian worker (records ALL active PLC tags, independent of layouts).
-# Only spawn once per process; advisory lock in worker ensures one writer per second across processes.
+# 3. Universal historian worker (records ALL active PLC tags, independent of layouts).
+#    Only spawn once per process; advisory lock in worker ensures one writer per second across processes.
 try:
     if not _historian_worker_started:
         from workers.historian_worker import historian_worker
@@ -818,9 +819,9 @@ try:
         _historian_worker_started = True
         logger.info("Started universal historian worker")
 except Exception as e:
-    logger.error(f"Could not start historian worker: {e}", exc_info=True)
+    logger.error("Could not start historian worker: %s", e, exc_info=True)
 
-# Dynamic monitoring workers (for published layouts - Live Monitor storage + archiving)
+# 4. Dynamic monitoring workers (for published layouts - Live Monitor storage + archiving)
 try:
     from workers.dynamic_monitor_worker import dynamic_monitor_worker
     from workers.dynamic_archive_worker import dynamic_archive_worker
@@ -828,7 +829,7 @@ try:
     eventlet.spawn(dynamic_archive_worker)
     logger.info("Started dynamic monitor and archive workers")
 except Exception as e:
-    logger.error(f"Could not start dynamic workers: {e}", exc_info=True)
+    logger.error("Could not start dynamic workers: %s", e, exc_info=True)
 
 # Auto-seed emulator with all DB tags when in demo mode (runs regardless of entry point)
 try:

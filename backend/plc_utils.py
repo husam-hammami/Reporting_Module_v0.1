@@ -35,17 +35,23 @@ class SharedPLCConnection:
         self._lock = threading.Lock()
         self._last_fail_time = 0
 
+    def mark_disconnected(self):
+        """Mark connection as lost. Called externally when a db_read() fails."""
+        with self._lock:
+            self.connected = False
+            logger.warning("PLC connection marked as disconnected")
+
     def get_client(self):
         """Get connected PLC client, reconnecting if needed.
-        Uses a cooldown period after failures to avoid blocking eventlet."""
+        Uses a cooldown period after failures to avoid blocking eventlet.
+
+        No health-check (get_cpu_state) on every call — we rely on actual
+        db_read() failures to detect disconnection via mark_disconnected(),
+        avoiding an extra TCP round-trip per access.
+        """
         with self._lock:
             if self.client and self.connected:
-                try:
-                    self.client.get_cpu_state()
-                    return self.client
-                except Exception:
-                    logger.warning("PLC connection lost, reconnecting...")
-                    self.connected = False
+                return self.client
 
             import time as _time
             now = _time.time()
