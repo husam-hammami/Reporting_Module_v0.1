@@ -33,3 +33,6 @@ Thumbs.db
 # Pipeline signal files
 .plan_a_done
 .plan_b1_done
+
+backend/venv/
+venv/

@@ -388,11 +388,11 @@ try:
     db_pool = psycopg2.pool.ThreadedConnectionPool(
         minconn=5,
         maxconn=20,
-        dbname=os.getenv('POSTGRES_DB', 'dynamic_db_hercules'),
+        dbname=os.getenv('POSTGRES_DB', 'Dynamic_DB_Hercules'),
         user=os.getenv('POSTGRES_USER', 'postgres'),
-        password=os.getenv('POSTGRES_PASSWORD', 'Hercules'),
+        password=os.getenv('POSTGRES_PASSWORD', 'Admin@123'),
         host=os.getenv('DB_HOST', '127.0.0.1'),
-        port=int(os.getenv('DB_PORT', 5432)),
+        port=int(os.getenv('DB_PORT', 5433)),
         connect_timeout=10
     )
     logger.info("Database connection pool created (5-20 connections, 10s timeout)")
@@ -862,4 +862,4 @@ if __name__ == '__main__':
     logger.info("Server will listen on: http://0.0.0.0:5000")
     logger.info("Test endpoint available at: http://localhost:5000/test")
     # Eventlet handles HTTP and WebSocket requests properly
-    socketio.run(app, debug=False, host='0.0.0.0', port=5000, use_reloader=False)
+    socketio.run(app, debug=False, host='0.0.0.0', port=5001, use_reloader=False)
