@@ -1,12 +1,24 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { Tooltip } from '@mui/material';
 import { ChevronDown, Search, Tag, LayoutGrid } from 'lucide-react';
 import { WIDGET_CATALOG, createWidget } from '../widgets/widgetDefaults';
 
 /* ── SVG icons (colored, unique per type) ────────────────────── */
 
-/* Industrial blue icon palette */
 const IC = { primary: '#2563ab', mid: '#4a86c5', light: '#7ba8d6', muted: '#6b7f94', subtle: '#8898aa' };
+
+const ICON_TINTS = {
+  kpi:      { bg: 'rgba(37,99,171,0.10)', border: 'rgba(37,99,171,0.18)' },
+  table:    { bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.18)' },
+  chart:    { bg: 'rgba(99,102,241,0.10)', border: 'rgba(99,102,241,0.18)' },
+  barchart: { bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.18)' },
+  gauge:    { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.18)' },
+  silo:     { bg: 'rgba(14,165,233,0.10)', border: 'rgba(14,165,233,0.18)' },
+  stat:     { bg: 'rgba(168,85,247,0.10)', border: 'rgba(168,85,247,0.18)' },
+  text:     { bg: 'rgba(107,114,128,0.10)', border: 'rgba(107,114,128,0.18)' },
+  image:    { bg: 'rgba(236,72,153,0.10)', border: 'rgba(236,72,153,0.18)' },
+  repeat:   { bg: 'rgba(20,184,166,0.10)', border: 'rgba(20,184,166,0.18)' },
+};
 
 function VizIcon({ type }) {
   const s = 'w-7 h-7';
@@ -25,7 +37,6 @@ function VizIcon({ type }) {
   }
 }
 
-/* Small icon variant for widget list */
 function SmallVizIcon({ type }) {
   const s = 'w-4 h-4';
   switch (type) {
@@ -58,31 +69,73 @@ const COMPONENTS = [
   { section: 'Structure', type: 'repeat', label: 'Repeat Panel' },
 ];
 
-/* Widget type labels */
 const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', text: 'Text', image: 'Image', repeat: 'Repeat' };
 
 const SECTIONS = ['Visualizations', 'Structure', 'Tag Groups', 'Widgets'];
 
+/* ── Collapsible wrapper with smooth height animation ────────── */
+
+function CollapsibleSection({ isOpen, children }) {
+  const contentRef = useRef(null);
+  const [height, setHeight] = useState(isOpen ? 'auto' : 0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    if (isOpen) {
+      const h = contentRef.current.scrollHeight;
+      setHeight(h);
+      setIsAnimating(true);
+      const timer = setTimeout(() => {
+        setHeight('auto');
+        setIsAnimating(false);
+      }, 250);
+      return () => clearTimeout(timer);
+    } else {
+      const h = contentRef.current.scrollHeight;
+      setHeight(h);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setHeight(0);
+          setIsAnimating(true);
+        });
+      });
+      const timer = setTimeout(() => setIsAnimating(false), 250);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  return (
+    <div
+      ref={contentRef}
+      style={{
+        height: typeof height === 'number' ? `${height}px` : height,
+        overflow: isAnimating || !isOpen ? 'hidden' : 'visible',
+        transition: isAnimating ? 'height 250ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+        opacity: isOpen ? 1 : 0,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /* ── Helpers ─────────────────────────────────────────────────── */
 
-/** Extract all tag names and formulas from a single widget config */
 function extractWidgetDataSources(widget) {
   const c = widget.config || {};
   const tags = [];
   const formulas = [];
 
-  // Direct dataSource
   if (c.dataSource?.tagName) tags.push(c.dataSource.tagName);
   if (c.dataSource?.formula) formulas.push(c.dataSource.formula);
   if (Array.isArray(c.dataSource?.groupTags)) {
     c.dataSource.groupTags.forEach((t) => { if (t) tags.push(t); });
   }
 
-  // Silo extra tags
   if (c.capacityTag) tags.push(c.capacityTag);
   if (c.tonsTag) tags.push(c.tonsTag);
 
-  // Series (chart/barchart)
   if (Array.isArray(c.series)) {
     c.series.forEach((s) => {
       const tag = s?.dataSource?.tagName ?? s?.tagName;
@@ -94,12 +147,10 @@ function extractWidgetDataSources(widget) {
     });
   }
 
-  // Legacy tags array
   if (Array.isArray(c.tags)) {
     c.tags.forEach((t) => { if (t?.tagName) tags.push(t.tagName); });
   }
 
-  // Table columns
   if (Array.isArray(c.tableColumns)) {
     c.tableColumns.forEach((col) => {
       if (col?.tagName) tags.push(col.tagName);
@@ -113,7 +164,6 @@ function extractWidgetDataSources(widget) {
   return { tags: [...new Set(tags)], formulas: [...new Set(formulas.filter(Boolean))] };
 }
 
-/** Build tag groups from DB groups only (no hardcoded fallback) */
 function buildTagGroupSections(tags, groups, tagSearch) {
   const q = tagSearch.toLowerCase().trim();
   const safeTags = Array.isArray(tags) ? tags : [];
@@ -136,14 +186,12 @@ function buildTagGroupSections(tags, groups, tagSearch) {
     const groupTagNames = (g.tags || []).map((t) => t.tag_name).filter(Boolean);
     const matching = groupTagNames.filter((tn) => filteredSet.has(tn));
     if (matching.length > 0) {
-      // Get full tag objects for matching tags
       const tagObjs = matching.map((tn) => filtered.find((t) => t.tag_name === tn)).filter(Boolean);
       groupedSections.push({ groupName: g.group_name, tags: tagObjs });
       matching.forEach((tn) => usedInGroups.add(tn));
     }
   });
 
-  // Ungrouped tags
   const ungrouped = filtered.filter((t) => !usedInGroups.has(t.tag_name));
   if (ungrouped.length > 0) {
     groupedSections.push({ groupName: 'Ungrouped', tags: ungrouped });
@@ -174,13 +222,11 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
     return COMPONENTS.filter((c) => c.label.toLowerCase().includes(q) || c.type.toLowerCase().includes(q));
   }, [search]);
 
-  // Tag groups from DB
   const { groupedSections, totalFiltered } = useMemo(
     () => buildTagGroupSections(tags, groups, tagSearch),
     [tags, groups, tagSearch],
   );
 
-  // Widget data sources (tags + formulas per widget)
   const widgetDataSources = useMemo(() => {
     const map = {};
     widgets.forEach((w) => {
@@ -189,13 +235,11 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
     return map;
   }, [widgets]);
 
-  // Sorted widgets (by Y position)
   const sortedWidgets = useMemo(
     () => [...widgets].sort((a, b) => (a.y ?? 0) - (b.y ?? 0)),
     [widgets],
   );
 
-  // Count widgets that have at least one tag or formula
   const widgetsWithData = useMemo(
     () => sortedWidgets.filter((w) => {
       const ds = widgetDataSources[w.id];
@@ -219,11 +263,10 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
 
   return (
     <div className="flex flex-col h-full bg-[var(--rb-panel)]">
-      {/* Header */}
       <div className="rb-toolbox-header px-4 py-3">
         <p className="text-[15px] font-bold text-[var(--rb-accent)] mb-2">Components</p>
         <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--rb-text-muted)]" />
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--rb-text-muted)] pointer-events-none" />
           <input
             type="text"
             value={search}
@@ -243,12 +286,10 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
 
           const items = (isTagGroups || isWidgets) ? [] : filteredComponents.filter((c) => c.section === sectionName);
 
-          /* Hide component sections if search has no matches */
           if (!isTagGroups && !isWidgets && search.trim() && items.length === 0) return null;
 
           return (
             <div key={sectionName} className="border-b border-[var(--rb-border)]">
-              {/* Section header */}
               <button
                 onClick={() => toggleSection(sectionName)}
                 className="rb-toolbox-accordion-header"
@@ -270,193 +311,222 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                 </span>
                 <ChevronDown
                   size={13}
-                  className={`transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`}
+                  style={{
+                    transition: 'transform 250ms cubic-bezier(0.16, 1, 0.3, 1)',
+                    transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                  }}
                 />
               </button>
 
-              {/* Visualizations grid */}
-              {isOpen && !isTagGroups && !isWidgets && isViz && (
-                <div className="px-3 pb-3">
-                  <div className="grid grid-cols-4 gap-2">
-                    {items.map(({ type, label }) => (
-                      <Tooltip key={type} title={label} placement="top" arrow disableInteractive>
+              <CollapsibleSection isOpen={isOpen}>
+                {!isTagGroups && !isWidgets && isViz && (
+                  <div className="px-3 pb-3">
+                    <div className="grid grid-cols-4 gap-2">
+                      {items.map(({ type, label }) => {
+                        const tint = ICON_TINTS[type] || ICON_TINTS.kpi;
+                        return (
+                          <Tooltip key={type} title={label} placement="top" arrow disableInteractive>
+                            <button
+                              type="button"
+                              onClick={() => handleAdd(type)}
+                              draggable
+                              onDragStart={(e) => onDragStart(e, type)}
+                              className={`rb-toolbox-item flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg cursor-grab active:cursor-grabbing ${
+                                activeType === type
+                                  ? 'bg-[var(--rb-accent-subtle)] shadow-sm'
+                                  : ''
+                              }`}
+                            >
+                              <div
+                                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                                style={{
+                                  background: tint.bg,
+                                  border: `1px solid ${tint.border}`,
+                                }}
+                              >
+                                <VizIcon type={type} />
+                              </div>
+                              <span className="text-[9px] font-medium text-[var(--rb-text-muted)] text-center leading-tight w-full truncate">{label.split(' ')[0]}</span>
+                            </button>
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {!isTagGroups && !isWidgets && !isViz && (
+                  <div className="px-3 pb-3 space-y-0.5">
+                    {items.map(({ type, label }) => {
+                      const cat = WIDGET_CATALOG.find((c) => c.type === type);
+                      const tint = ICON_TINTS[type] || ICON_TINTS.text;
+                      return (
                         <button
-                          type="button"
+                          key={type}
                           onClick={() => handleAdd(type)}
                           draggable
                           onDragStart={(e) => onDragStart(e, type)}
-                          className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg transition-all cursor-grab active:cursor-grabbing ${
-                            activeType === type
-                              ? 'bg-[var(--rb-accent-subtle)] shadow-sm'
-                              : 'hover:bg-[var(--rb-accent-subtle)]'
-                          }`}
-                          style={{ boxShadow: activeType === type ? undefined : '0 1px 2px rgba(0,0,0,0.04)' }}
+                          className="rb-toolbox-item w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-transparent hover:border-[var(--rb-accent)]/30 group text-left cursor-grab active:cursor-grabbing"
                         >
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--rb-surface), var(--rb-canvas))' }}>
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{
+                              background: tint.bg,
+                              border: `1px solid ${tint.border}`,
+                            }}
+                          >
                             <VizIcon type={type} />
                           </div>
-                          <span className="text-[9px] font-medium text-[var(--rb-text-muted)] text-center leading-tight w-full truncate">{label.split(' ')[0]}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-medium text-[var(--rb-text)] group-hover:text-[var(--rb-accent)] transition-colors">{label}</p>
+                            {cat?.description && <p className="text-[9px] text-[var(--rb-text-muted)] mt-0.5 truncate">{cat.description}</p>}
+                          </div>
                         </button>
-                      </Tooltip>
-                    ))}
+                      );
+                    })}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Structure rows */}
-              {isOpen && !isTagGroups && !isWidgets && !isViz && (
-                <div className="px-3 pb-3 space-y-0.5">
-                  {items.map(({ type, label }) => {
-                    const cat = WIDGET_CATALOG.find((c) => c.type === type);
-                    return (
-                      <button
-                        key={type}
-                        onClick={() => handleAdd(type)}
-                        draggable
-                        onDragStart={(e) => onDragStart(e, type)}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-transparent hover:border-[var(--rb-accent)]/30 hover:bg-[var(--rb-accent-subtle)] transition-all group text-left cursor-grab active:cursor-grabbing"
-                      >
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--rb-surface), var(--rb-canvas))' }}>
-                          <VizIcon type={type} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[11px] font-medium text-[var(--rb-text)] group-hover:text-[var(--rb-accent)] transition-colors">{label}</p>
-                          {cat?.description && <p className="text-[9px] text-[var(--rb-text-muted)] mt-0.5 truncate">{cat.description}</p>}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                {isTagGroups && (
+                  <div className="px-3 pb-3">
+                    <div className="relative mb-2">
+                      <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--rb-text-muted)] pointer-events-none" />
+                      <input
+                        type="text"
+                        value={tagSearch}
+                        onChange={(e) => setTagSearch(e.target.value)}
+                        placeholder="Search tags..."
+                        className="rb-input-base w-full pl-6 py-1 text-[10px]"
+                      />
+                    </div>
 
-              {/* ── Tag Groups (from DB) ───────────────────────── */}
-              {isOpen && isTagGroups && (
-                <div className="px-3 pb-3">
-                  {/* Tag search */}
-                  <div className="relative mb-2">
-                    <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--rb-text-muted)]" />
-                    <input
-                      type="text"
-                      value={tagSearch}
-                      onChange={(e) => setTagSearch(e.target.value)}
-                      placeholder="Search tags..."
-                      className="rb-input-base w-full pl-6 py-1 text-[10px]"
-                    />
+                    {groupedSections.length === 0 ? (
+                      <p className="text-[10px] text-[var(--rb-text-muted)] px-1 py-2">
+                        {tagSearch.trim() ? 'No tags match search' : 'No tag groups defined. Go to Engineering \u2192 Tag Groups to create groups.'}
+                      </p>
+                    ) : (
+                      <div className="space-y-0.5">
+                        {groupedSections.map(({ groupName, tags: groupTags }) => {
+                          const isGroupOpen = openTagGroups[groupName] !== false;
+                          return (
+                            <div key={groupName}>
+                              <button
+                                onClick={() => toggleTagGroup(groupName)}
+                                className="w-full flex items-center gap-1.5 px-1 py-1 text-left rounded hover:bg-[var(--rb-surface)] transition-colors"
+                              >
+                                <ChevronDown
+                                  size={10}
+                                  style={{
+                                    transition: 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                    transform: isGroupOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                    flexShrink: 0,
+                                  }}
+                                  className="text-[var(--rb-text-muted)]"
+                                />
+                                <span className="text-[10px] font-semibold text-[var(--rb-text)] truncate flex-1">
+                                  {groupName}
+                                </span>
+                                <span className="text-[9px] text-[var(--rb-text-muted)] bg-[var(--rb-surface)] px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                  {groupTags.length}
+                                </span>
+                              </button>
+                              {isGroupOpen && (
+                                <div className="ml-3 space-y-px">
+                                  {groupTags.map((tag) => (
+                                    <div
+                                      key={tag.tag_name}
+                                      className="flex items-center gap-1.5 px-1.5 py-[3px] rounded hover:bg-[var(--rb-surface)] transition-colors cursor-default"
+                                    >
+                                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[var(--rb-accent)]" style={{ opacity: 0.5 }} />
+                                      <span className="text-[10px] text-[var(--rb-text-muted)] truncate flex-1">
+                                        {tag.tag_name}
+                                      </span>
+                                      {tag.unit && (
+                                        <span className="text-[8px] text-[var(--rb-text-muted)] bg-[var(--rb-surface)] px-1 py-px rounded flex-shrink-0">
+                                          {tag.unit}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
+                )}
 
-                  {groupedSections.length === 0 ? (
-                    <p className="text-[10px] text-[var(--rb-text-muted)] px-1 py-2">
-                      {tagSearch.trim() ? 'No tags match search' : 'No tag groups defined. Go to Engineering \u2192 Tag Groups to create groups.'}
-                    </p>
-                  ) : (
-                    <div className="space-y-0.5">
-                      {groupedSections.map(({ groupName, tags: groupTags }) => {
-                        const isGroupOpen = openTagGroups[groupName] !== false;
+                {isWidgets && (
+                  <div className="px-3 pb-3 space-y-1">
+                    {widgetsWithData.length === 0 ? (
+                      <p className="text-[10px] text-[var(--rb-text-muted)] px-1 py-2">No widgets with data sources on canvas</p>
+                    ) : (
+                      widgetsWithData.map((w) => {
+                        const ds = widgetDataSources[w.id] || { tags: [], formulas: [] };
+                        const isExpanded = openWidgetIds[w.id] || false;
+                        const title = w.config?.title || w.config?.dataSource?.tagName || w.type;
+                        const typeLabel = TYPE_LABELS[w.type] || w.type;
+                        const tint = ICON_TINTS[w.type] || ICON_TINTS.kpi;
+
                         return (
-                          <div key={groupName}>
+                          <div key={w.id} className="rounded-md overflow-hidden">
                             <button
-                              onClick={() => toggleTagGroup(groupName)}
-                              className="w-full flex items-center gap-1.5 px-1 py-1 text-left rounded hover:bg-[var(--rb-surface)] transition-colors"
+                              onClick={() => toggleWidgetOpen(w.id)}
+                              className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left transition-all ${
+                                selectedId === w.id
+                                  ? 'bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)]'
+                                  : 'text-[var(--rb-text)] hover:bg-[var(--rb-surface)]'
+                              }`}
                             >
+                              <div
+                                className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
+                                style={{ background: tint.bg, border: `1px solid ${tint.border}` }}
+                              >
+                                <SmallVizIcon type={w.type} />
+                              </div>
+                              <span className="text-[10px] font-medium truncate flex-1">{title}</span>
+                              <span className="text-[8px] font-semibold text-[var(--rb-text-muted)] px-1.5 py-0.5 rounded-full bg-[var(--rb-surface)] flex-shrink-0 uppercase tracking-wide">
+                                {typeLabel}
+                              </span>
                               <ChevronDown
                                 size={10}
-                                className={`text-[var(--rb-text-muted)] transition-transform duration-150 flex-shrink-0 ${isGroupOpen ? '' : '-rotate-90'}`}
+                                style={{
+                                  transition: 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                  transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                  flexShrink: 0,
+                                }}
+                                className="text-[var(--rb-text-muted)]"
                               />
-                              <span className="text-[10px] font-semibold text-[var(--rb-text)] truncate flex-1">
-                                {groupName}
-                              </span>
-                              <span className="text-[9px] text-[var(--rb-text-muted)] flex-shrink-0">
-                                {groupTags.length}
-                              </span>
                             </button>
-                            {isGroupOpen && (
-                              <div className="ml-3 space-y-px">
-                                {groupTags.map((tag) => (
-                                  <div
-                                    key={tag.tag_name}
-                                    className="flex items-center gap-1.5 px-1.5 py-[3px] rounded hover:bg-[var(--rb-surface)] transition-colors cursor-default"
-                                  >
-                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[var(--rb-accent)]" style={{ opacity: 0.5 }} />
-                                    <span className="text-[10px] text-[var(--rb-text-muted)] truncate flex-1">
-                                      {tag.tag_name}
-                                    </span>
-                                    {tag.unit && (
-                                      <span className="text-[8px] text-[var(--rb-text-muted)] bg-[var(--rb-surface)] px-1 py-px rounded flex-shrink-0">
-                                        {tag.unit}
-                                      </span>
-                                    )}
+
+                            {isExpanded && (
+                              <div className="ml-7 mt-1 mb-1.5 space-y-0.5 pl-2 border-l-2 border-[var(--rb-border-subtle)]">
+                                {ds.tags.map((tagName) => (
+                                  <div key={tagName} className="flex items-center gap-1.5 px-1.5 py-[3px] rounded hover:bg-[var(--rb-surface)] transition-colors">
+                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-emerald-500" />
+                                    <span className="text-[9px] text-[var(--rb-text-muted)] truncate">{tagName}</span>
                                   </div>
                                 ))}
+                                {ds.formulas.map((formula, i) => (
+                                  <div key={i} className="flex items-center gap-1.5 px-1.5 py-[3px] rounded hover:bg-[var(--rb-surface)] transition-colors">
+                                    <span className="text-[9px] text-amber-500 flex-shrink-0 font-semibold">fx</span>
+                                    <span className="text-[9px] text-[var(--rb-text-muted)] truncate font-mono">{formula}</span>
+                                  </div>
+                                ))}
+                                {ds.tags.length === 0 && ds.formulas.length === 0 && (
+                                  <span className="text-[9px] text-[var(--rb-text-muted)] px-1">No data sources</span>
+                                )}
                               </div>
                             )}
                           </div>
                         );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── Widgets on Canvas ──────────────────────────── */}
-              {isOpen && isWidgets && (
-                <div className="px-3 pb-3 space-y-0.5">
-                  {widgetsWithData.length === 0 ? (
-                    <p className="text-[10px] text-[var(--rb-text-muted)] px-1 py-2">No widgets with data sources on canvas</p>
-                  ) : (
-                    widgetsWithData.map((w) => {
-                      const ds = widgetDataSources[w.id] || { tags: [], formulas: [] };
-                      const isExpanded = openWidgetIds[w.id] || false;
-                      const title = w.config?.title || w.config?.dataSource?.tagName || w.type;
-                      const typeLabel = TYPE_LABELS[w.type] || w.type;
-
-                      return (
-                        <div key={w.id}>
-                          {/* Widget row */}
-                          <button
-                            onClick={() => toggleWidgetOpen(w.id)}
-                            className={`w-full flex items-center gap-2 px-1.5 py-1.5 rounded-md text-left transition-colors ${
-                              selectedId === w.id
-                                ? 'bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)]'
-                                : 'text-[var(--rb-text)] hover:bg-[var(--rb-surface)]'
-                            }`}
-                          >
-                            <SmallVizIcon type={w.type} />
-                            <span className="text-[10px] font-medium truncate flex-1">{title}</span>
-                            <span className="text-[8px] text-[var(--rb-text-muted)] px-1 py-0.5 rounded bg-[var(--rb-surface)] flex-shrink-0">
-                              {typeLabel}
-                            </span>
-                            <ChevronDown
-                              size={10}
-                              className={`text-[var(--rb-text-muted)] transition-transform duration-150 flex-shrink-0 ${isExpanded ? '' : '-rotate-90'}`}
-                            />
-                          </button>
-
-                          {/* Expanded: show tags and formulas */}
-                          {isExpanded && (
-                            <div className="ml-6 mt-0.5 mb-1 space-y-px">
-                              {ds.tags.map((tagName) => (
-                                <div key={tagName} className="flex items-center gap-1.5 px-1 py-[2px]">
-                                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-emerald-500" />
-                                  <span className="text-[9px] text-[var(--rb-text-muted)] truncate">{tagName}</span>
-                                </div>
-                              ))}
-                              {ds.formulas.map((formula, i) => (
-                                <div key={i} className="flex items-center gap-1.5 px-1 py-[2px]">
-                                  <span className="text-[9px] text-amber-500 flex-shrink-0">fx</span>
-                                  <span className="text-[9px] text-[var(--rb-text-muted)] truncate font-mono">{formula}</span>
-                                </div>
-                              ))}
-                              {ds.tags.length === 0 && ds.formulas.length === 0 && (
-                                <span className="text-[9px] text-[var(--rb-text-muted)] px-1">No data sources</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
+                      })
+                    )}
+                  </div>
+                )}
+              </CollapsibleSection>
             </div>
           );
         })}

@@ -1,3 +1,6 @@
+import { useState, useRef, useEffect } from 'react';
+import { useReducedMotion } from 'framer-motion';
+import { useThumbnailCapture } from '../ThumbnailCaptureContext';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import { VALUE_FONT_SIZES, TITLE_FONT_SIZES } from './widgetDefaults';
 
@@ -14,9 +17,50 @@ function resolveValue(config, tagValues) {
     if (agg === 'max') return Math.max(...vals);
     if (agg === 'count') return vals.length;
     if (agg === 'delta') return vals.length < 2 ? 0 : vals[vals.length - 1] - vals[0];
-    return vals.reduce((a, b) => a + b, 0) / vals.length; // avg
+    return vals.reduce((a, b) => a + b, 0) / vals.length;
   }
   return tagValues?.[ds.tagName] ?? null;
+}
+
+function useAnimatedNumber(target, decimals, skipAnimation) {
+  const [display, setDisplay] = useState(target);
+  const rafRef = useRef(null);
+  const startRef = useRef(null);
+  const fromRef = useRef(target);
+
+  useEffect(() => {
+    if (skipAnimation || target == null) {
+      setDisplay(target);
+      return;
+    }
+    const from = fromRef.current ?? target;
+    const diff = target - from;
+    if (Math.abs(diff) < 0.0001) {
+      setDisplay(target);
+      return;
+    }
+    const duration = 350;
+    startRef.current = performance.now();
+    const animate = (now) => {
+      const elapsed = now - startRef.current;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const current = from + diff * eased;
+      setDisplay(current);
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      } else {
+        fromRef.current = target;
+      }
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target, skipAnimation]);
+
+  useEffect(() => { fromRef.current = display; }, [display]);
+
+  if (target == null) return '\u2014';
+  return Number(display).toFixed(decimals);
 }
 
 const ALIGN_CLASSES = {
@@ -26,8 +70,14 @@ const ALIGN_CLASSES = {
 };
 
 export default function StatWidget({ config, tagValues }) {
+  const prefersReducedMotion = useReducedMotion();
+  const isCapturing = useThumbnailCapture();
+  const skipAnimation = prefersReducedMotion || isCapturing;
+
   const raw = resolveValue(config, tagValues);
-  const display = raw != null ? Number(raw).toFixed(config.decimals ?? 1) : '\u2014';
+  const numericValue = raw != null ? Number(raw) : null;
+  const decimals = config.decimals ?? 1;
+  const display = useAnimatedNumber(numericValue, decimals, skipAnimation);
   const color = config.color || '#2563ab';
 
   const showTitle = config.showTitle !== false;
@@ -38,26 +88,24 @@ export default function StatWidget({ config, tagValues }) {
   return (
     <div
       className={`flex flex-col ${ALIGN_CLASSES[align] || ALIGN_CLASSES.center} justify-center h-full min-h-0 rounded-lg`}
-      style={{
-        padding: 'clamp(6px, 1.2vw, 16px)',
-      }}
+      style={{ padding: 'var(--rb-widget-padding, clamp(6px, 1.2vw, 16px))' }}
     >
       {showTitle && (
         <p
-          className="font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate w-full"
+          className="rb-widget-title truncate w-full"
           style={{ fontSize: titleFontSize }}
         >
           {config.title || 'Stat'}
         </p>
       )}
       <span
-        className={`font-bold tabular-nums tracking-tight mt-1 ${!valueFontSize ? 'text-4xl' : ''}`}
+        className={`rb-value-primary mt-1 ${!valueFontSize ? 'text-4xl' : ''}`}
         style={{ color, ...(valueFontSize ? { fontSize: valueFontSize } : {}) }}
       >
         {display}
       </span>
       {config.unit && (
-        <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 mt-0.5">{config.unit}</span>
+        <span className="rb-value-unit mt-0.5">{config.unit}</span>
       )}
     </div>
   );

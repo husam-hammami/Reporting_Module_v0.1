@@ -1,8 +1,46 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { useReducedMotion } from 'framer-motion';
+import { useThumbnailCapture } from '../ThumbnailCaptureContext';
 import { Gauge } from 'lucide-react';
 import { VALUE_FONT_SIZES, TITLE_FONT_SIZES } from './widgetDefaults';
 
+function useAnimatedValue(target, skipAnimation) {
+  const [current, setCurrent] = useState(target);
+  const rafRef = useRef(null);
+  const startRef = useRef(null);
+  const fromRef = useRef(target);
+
+  useEffect(() => {
+    if (skipAnimation) { setCurrent(target); return; }
+    const from = fromRef.current;
+    const diff = target - from;
+    if (Math.abs(diff) < 0.0001) { setCurrent(target); return; }
+    const duration = 380;
+    startRef.current = performance.now();
+    const animate = (now) => {
+      const elapsed = now - startRef.current;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = t < 1 ? 1 - Math.pow(1 - t, 3) + Math.sin(t * Math.PI) * 0.04 * (1 - t) : 1;
+      setCurrent(from + diff * eased);
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      } else {
+        fromRef.current = target;
+      }
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target, skipAnimation]);
+
+  useEffect(() => { fromRef.current = current; }, [current]);
+  return current;
+}
+
 export default function GaugeWidget({ config, tagValues }) {
+  const prefersReducedMotion = useReducedMotion();
+  const isCapturing = useThumbnailCapture();
+  const skipAnimation = prefersReducedMotion || isCapturing;
+
   const tagName = config.dataSource?.tagName ?? config.tagName;
   const value = tagValues?.[tagName];
   const numValue = value != null ? Number(value) : 0;
@@ -52,7 +90,8 @@ export default function GaugeWidget({ config, tagValues }) {
   const needleLen = r - 6;
   const tickCount = 11;
   const trend = config.trend != null ? config.trend : null;
-  const needleRotation = -90 + percent * 180;
+  const animatedPercent = useAnimatedValue(percent, skipAnimation);
+  const needleRotation = -90 + animatedPercent * 180;
   const unit = config.unit || '';
   const valueWithUnit = unit ? `${displayValue} ${unit}`.trim() : displayValue;
 
@@ -62,21 +101,20 @@ export default function GaugeWidget({ config, tagValues }) {
 
   return (
     <div className={`flex flex-col h-full min-h-0 overflow-hidden ${config.showCard !== false ? 'rounded-xl bg-[var(--rb-panel)] border border-[var(--rb-border)]' : ''}`}>
-      {/* Header: title + icon | trend badge */}
       {showTitle && (
-        <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-3 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2 flex-shrink-0" style={{ padding: 'var(--rb-space-3) var(--rb-space-3) var(--rb-space-2)' }}>
           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-            <Gauge size={14} className="flex-shrink-0 text-gray-600 dark:text-white/90" />
+            <Gauge size={14} className="flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }} />
             <span
-              className="font-medium truncate min-w-0 text-gray-800 dark:text-white"
+              className="rb-widget-title truncate min-w-0"
               title={config.title || 'Gauge'}
-              style={{ fontSize: `calc(${titleFontSize} + 4px)`, minWidth: '3rem' }}
+              style={{ fontSize: titleFontSize }}
             >
               {config.title || 'Gauge'}
             </span>
           </div>
           {trend != null && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-100 dark:bg-[#5a6b8a]/60 text-blue-700 dark:text-white flex-shrink-0">
+            <span className="rb-badge flex-shrink-0" style={{ background: 'var(--rb-accent-subtle)', color: 'var(--rb-accent)' }}>
               {trend > 0 ? '+' : ''}{trend}%
             </span>
           )}
@@ -114,14 +152,13 @@ export default function GaugeWidget({ config, tagValues }) {
           })}
 
           {/* Filled arc (zone color) */}
-          {percent > 0.002 && (
+          {animatedPercent > 0.002 && (
             <path
-              d={describeArc(cx, cy, r, startAngle, startAngle + percent * 180)}
+              d={describeArc(cx, cy, r, startAngle, startAngle + animatedPercent * 180)}
               fill="none"
               stroke={activeColor === '#00e676' || activeColor === '#10b981' ? '#00BFFF' : activeColor}
               strokeWidth="10"
               strokeLinecap="round"
-              style={{ transition: 'stroke 0.3s ease-out' }}
             />
           )}
 
@@ -143,15 +180,14 @@ export default function GaugeWidget({ config, tagValues }) {
 
         </svg>
 
-        {/* Value with unit inline + status below gauge */}
         <div className="flex flex-col items-center justify-center mt-0 pt-0.5 pb-2 flex-shrink-0">
           <span
-            className={`font-bold tabular-nums leading-none text-gray-900 dark:text-white ${!valueFontSize ? 'text-xl' : ''}`}
+            className={`rb-value-primary leading-none ${!valueFontSize ? 'text-xl' : ''}`}
             style={valueFontSize ? { fontSize: valueFontSize } : undefined}
           >
             {valueWithUnit}
           </span>
-          <span className="text-[10px] font-medium uppercase tracking-wider mt-1 text-gray-600 dark:text-white/80">
+          <span className="rb-widget-title mt-1">
             {statusLabel}
           </span>
         </div>

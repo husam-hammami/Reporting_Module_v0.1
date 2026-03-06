@@ -46,16 +46,28 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
   const imageProps = widget.type === 'image'
     ? { onUpdateConfig: (patch) => onUpdateWidget?.(widgetId, { config: patch }) }
     : {};
+
+  const isCardless = CARDLESS_WIDGET_TYPES.has(widget.type);
+  const isInvisible = INVISIBLE_WRAPPER_TYPES.has(widget.type);
+
+  const innerClass = isInvisible
+    ? 'h-full w-full'
+    : isCardless
+      ? 'h-full w-full rb-widget-card-transparent'
+      : 'h-full w-full flex flex-col';
+
   return (
-    <Component
-      config={widget.config || {}}
-      tagValues={tagValues || {}}
-      isPreview={isPreview}
-      {...tableProps}
-      {...siloProps}
-      {...kpiProps}
-      {...chartProps}
-      {...imageProps}
-    />
+    <div className={innerClass}>
+      <Component
+        config={widget.config || {}}
+        tagValues={tagValues || {}}
+        isPreview={isPreview}
+        {...tableProps}
+        {...siloProps}
+        {...kpiProps}
+        {...chartProps}
+        {...imageProps}
+      />
+    </div>
   );
 }

@@ -46,9 +46,18 @@ A full-stack industrial plant monitoring system with a React frontend and Flask 
 - xhtml2pdf not installed (cairo dependency missing) — PDF email reports are gracefully skipped
 - snap7 v2.1.0 uses `snap7.type` (not `snap7.types`) — fixed in plc_utils.py
 
+## Report Builder UI Redesign (Completed)
+Premium-quality redesign of the Report Builder module (Manager, Canvas, Preview + all 9 widget types).
+- **Design System**: `reportBuilderTheme.css` — CSS custom properties for colors, typography scale, spacing, elevation, transitions; full dark mode support
+- **Design Constraints**: Solid surfaces with clean borders (no glassmorphism/backdrop-blur), no new dependencies, animations use only transform+opacity under 400ms, all gated by `useReducedMotion()` and `ThumbnailCaptureContext`
+- **Files Modified**: All files under `Frontend/src/Pages/ReportBuilder/` (widgets, panels, canvas, manager, preview, formulas, thumbnail, seed template, theme CSS) plus `Frontend/src/index.css` for global animation keyframes
+- **Widget Types**: KPI, Stat, Gauge, Silo, Chart, Table, Text, Image — all use consistent typographic scale and spacing tokens
+- **Value Animations**: KPI/Stat use animated number counting, Gauge uses spring-like needle animation, Silo uses smooth fill transitions — all gated
+
 ## Key Files
 - `backend/app.py` - Main Flask app, DB connection pool, CORS, SocketIO
 - `backend/config/demo_mode.json` - Demo mode toggle
 - `backend/config/plc_config.json` - PLC connection settings
 - `Frontend/src/API/axios.js` - API base URL config (uses relative URLs for Vite proxy)
 - `Frontend/vite.config.js` - Vite dev server config with proxy
+- `Frontend/src/Pages/ReportBuilder/reportBuilderTheme.css` - Report Builder design system tokens

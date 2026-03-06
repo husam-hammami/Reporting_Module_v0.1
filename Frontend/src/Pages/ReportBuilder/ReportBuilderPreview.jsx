@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPen, FaPrint, FaExpand, FaCompress, FaFilePdf, FaImage } from 'react-icons/fa';
 import { Tooltip } from '@mui/material';
+import { motion, useReducedMotion } from 'framer-motion';
 import { exportAsPNG, exportAsPDF } from '../../utils/exportReport';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
 import { useReportCanvas, useAvailableTags, collectWidgetTagNames } from '../../Hooks/useReportBuilder';
@@ -10,22 +11,18 @@ import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '
 import axios from '../../API/axios';
 import { useSocket } from '../../Context/SocketContext';
 import { useEmulator } from '../../Context/EmulatorContext';
+import { useThumbnailCapture } from './ThumbnailCaptureContext';
 import LiveDataIndicator from '../../Components/Common/LiveDataIndicator';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import './reportBuilderTheme.css';
 
-/* ── Grid: match ReportBuilderCanvas exactly for pixel-perfect consistency ── */
 const GRID_COLS_DEFAULT = 12;
 const GRID_ROW_H_DEFAULT = 40;
 const GRID_MARGIN = [8, 8];
 const GRID_PADDING = [0, 0];
 
-/**
- * Full-screen read-only preview with live PLC data.
- * Uses react-grid-layout (same as ReportBuilderCanvas) for consistent dimensions.
- */
 export default function ReportBuilderPreview() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -39,8 +36,10 @@ export default function ReportBuilderPreview() {
   const { containerRef, width: gridWidth } = useContainerWidth();
   const { socket } = useSocket();
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
+  const prefersReducedMotion = useReducedMotion();
+  const isCapturing = useThumbnailCapture();
+  const skipAnimation = prefersReducedMotion || isCapturing;
 
-  /* Measure grid container width (same pattern as ReportBuilderCanvas). */
   const [measuredGridWidth, setMeasuredGridWidth] = useState(0);
   useEffect(() => {
     const el = containerRef?.current;
@@ -63,10 +62,8 @@ export default function ReportBuilderPreview() {
     e.preventDefault();
   }, []);
 
-  // Collect all tag names used by widgets (dataSource, series, columns, silo extras)
   const usedTagNames = useMemo(() => collectWidgetTagNames(widgets), [widgets]);
 
-  // Fetch initial tag values via REST (backend returns { tag_values: { ... } })
   useEffect(() => {
     if (usedTagNames.length === 0) return;
     const fetchValues = async () => {
@@ -88,7 +85,6 @@ export default function ReportBuilderPreview() {
     return () => clearInterval(interval);
   }, [usedTagNames]);
 
-  // Live WebSocket updates
   useEffect(() => {
     if (!socket) return;
     const handler = (data) => {
@@ -101,7 +97,6 @@ export default function ReportBuilderPreview() {
     return () => socket.off('live_tag_data', handler);
   }, [socket]);
 
-  /* Align with ReportBuilderCanvas: when emulator on, use emulator + fallback for unknown tags; else REST/WS */
   const tagValues = useMemo(() => {
     if (emulatorOn && emulatorValues) {
       const base = { ...emulatorValues };
@@ -116,7 +111,6 @@ export default function ReportBuilderPreview() {
     return { ...liveTagValues };
   }, [liveTagValues, emulatorOn, emulatorValues, usedTagNames]);
 
-  // Reset LiveDataIndicator when emulator values change
   useEffect(() => {
     if (emulatorOn && emulatorValues) {
       setLastDataUpdate(Date.now());
@@ -125,10 +119,8 @@ export default function ReportBuilderPreview() {
 
   const tagHistory = useTagHistory(usedTagNames, tagValues);
 
-  // Print
   const handlePrint = () => window.print();
 
-  // Export handlers
   const handleExportPDF = async () => {
     setExporting(true);
     try {
@@ -144,7 +136,6 @@ export default function ReportBuilderPreview() {
     } finally { setExporting(false); }
   };
 
-  // Fullscreen
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.();
@@ -179,34 +170,59 @@ export default function ReportBuilderPreview() {
     [widgets],
   );
 
+  const pageEntrance = skipAnimation
+    ? {}
+    : {
+        initial: { opacity: 0, y: 16 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+      };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-80px)]">
+      <div className="report-builder flex items-center justify-center h-[calc(100vh-80px)]" style={{ background: 'var(--rb-surface)' }}>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-400">Loading preview...</p>
+          <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--rb-accent)', borderTopColor: 'transparent' }} />
+          <p className="rb-label">Loading preview...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-70px)] flex flex-col overflow-hidden">
+    <div className="report-builder h-[calc(100vh-70px)] flex flex-col overflow-hidden" style={{ background: 'var(--rb-surface)' }}>
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-[#080f1a] border-b border-gray-200 dark:border-gray-700/50 flex-shrink-0 print:hidden">
+      <div
+        className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 print:hidden"
+        style={{
+          background: 'var(--rb-panel)',
+          borderBottom: '1px solid var(--rb-border)',
+        }}
+      >
         <div className="flex items-center gap-3">
           <Tooltip title="Back to editor" placement="bottom" arrow disableInteractive>
             <button
               onClick={() => navigate(`/report-builder/${id}`)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: 'var(--rb-text-muted)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-subtle)'; e.currentTarget.style.color = 'var(--rb-text)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--rb-text-muted)'; }}
             >
               <FaArrowLeft className="text-sm" />
             </button>
           </Tooltip>
-          <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <h1 className="rb-heading" style={{ fontSize: 'var(--rb-font-md)' }}>
             {template?.name || 'Preview'}
           </h1>
-          <span className="text-[10px] text-brand bg-brand-subtle dark:bg-cyan-900/20 px-2 py-0.5 rounded-full font-medium">
+          <span
+            className="rb-badge"
+            style={{
+              background: 'var(--rb-accent-subtle)',
+              color: 'var(--rb-accent)',
+              fontSize: 'var(--rb-font-xs)',
+              fontWeight: 600,
+            }}
+          >
             Preview Mode
           </span>
           <LiveDataIndicator lastUpdated={lastDataUpdate} />
@@ -215,70 +231,110 @@ export default function ReportBuilderPreview() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate(`/report-builder/${id}`)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-600/50 transition-colors"
+            className="rb-btn-ghost inline-flex items-center gap-1.5"
+            style={{
+              fontSize: 'var(--rb-font-sm)',
+              border: '1px solid var(--rb-border)',
+              borderRadius: 'var(--rb-radius-lg)',
+            }}
           >
-            <FaPen className="text-[10px]" />
+            <FaPen style={{ fontSize: '10px' }} />
             Edit
           </button>
           <Tooltip title="Toggle fullscreen" placement="bottom" arrow disableInteractive>
             <button
               onClick={toggleFullscreen}
-              className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: 'var(--rb-text-muted)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-subtle)'; e.currentTarget.style.color = 'var(--rb-text)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--rb-text-muted)'; }}
             >
               {fullscreen ? <FaCompress className="text-sm" /> : <FaExpand className="text-sm" />}
             </button>
           </Tooltip>
           <div className="relative group">
             <Tooltip title="Export options" placement="bottom" arrow disableInteractive>
-              <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-brand hover:bg-brand-hover transition-colors">
-                <FaPrint className="text-[10px]" />
+              <button className="rb-btn-primary inline-flex items-center gap-1.5">
+                <FaPrint style={{ fontSize: '10px' }} />
                 {exporting ? 'Exporting...' : 'Export'}
               </button>
             </Tooltip>
-            <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              <button onClick={handlePrint} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg flex items-center gap-2">
-                <FaPrint className="text-[10px]" /> Print
+            <div
+              className="absolute right-0 mt-1 w-40 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible z-50"
+              style={{
+                background: 'var(--rb-panel)',
+                border: '1px solid var(--rb-border)',
+                boxShadow: 'var(--rb-elevation-3)',
+                transition: 'opacity var(--rb-transition-fast) ease, visibility var(--rb-transition-fast) ease',
+              }}
+            >
+              <button
+                onClick={handlePrint}
+                className="w-full text-left px-3 py-2 flex items-center gap-2 rounded-t-lg"
+                style={{ fontSize: 'var(--rb-font-sm)', color: 'var(--rb-text)', transition: 'background var(--rb-transition-fast) ease' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-subtle)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <FaPrint style={{ fontSize: '10px', color: 'var(--rb-text-muted)' }} /> Print
               </button>
-              <button onClick={handleExportPDF} disabled={exporting} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50">
-                <FaFilePdf className="text-[10px]" /> Export PDF
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting}
+                className="w-full text-left px-3 py-2 flex items-center gap-2 disabled:opacity-50"
+                style={{ fontSize: 'var(--rb-font-sm)', color: 'var(--rb-text)', transition: 'background var(--rb-transition-fast) ease' }}
+                onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'var(--rb-accent-subtle)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <FaFilePdf style={{ fontSize: '10px', color: 'var(--rb-danger)' }} /> Export PDF
               </button>
-              <button onClick={handleExportPNG} disabled={exporting} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg flex items-center gap-2 disabled:opacity-50">
-                <FaImage className="text-[10px]" /> Export PNG
+              <button
+                onClick={handleExportPNG}
+                disabled={exporting}
+                className="w-full text-left px-3 py-2 flex items-center gap-2 rounded-b-lg disabled:opacity-50"
+                style={{ fontSize: 'var(--rb-font-sm)', color: 'var(--rb-text)', transition: 'background var(--rb-transition-fast) ease' }}
+                onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'var(--rb-accent-subtle)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <FaImage style={{ fontSize: '10px', color: 'var(--rb-success)' }} /> Export PNG
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Preview body — full width; scrollable with mouse wheel */}
+      {/* Preview body */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 min-h-0 bg-gray-50 dark:bg-[#0b111e] overflow-y-auto overflow-x-hidden overscroll-behavior-auto"
-        style={{ WebkitOverflowScrolling: 'touch' }}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-behavior-auto"
+        style={{ background: 'var(--rb-surface)', WebkitOverflowScrolling: 'touch' }}
         onWheelCapture={handleWheelCapture}
       >
-        <div id="report-print-section" className={`w-full mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}>
+        <motion.div
+          id="report-print-section"
+          className={`w-full mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}
+          {...pageEntrance}
+        >
           {/* Compact report header */}
-          <div className="mb-1 print:mb-2 px-1">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          <div className="mb-1 print:mb-2 px-1 pt-2">
+            <h1 className="rb-title" style={{ fontSize: 'var(--rb-font-lg)' }}>
               {template?.name || 'Report'}
             </h1>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            <p className="rb-caption mt-0.5">
               Generated: {new Date().toLocaleString()}
             </p>
           </div>
 
-          {/* Widgets grid — same react-grid-layout as ReportBuilderCanvas for consistent dimensions */}
+          {/* Widgets grid */}
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <p className="text-sm text-gray-400 dark:text-gray-500">
+              <p className="rb-label">
                 No widgets in this report. Go back to the canvas to add widgets.
               </p>
             </div>
           ) : (
             <div
               ref={containerRef}
-              className="report-builder rb-canvas-dots rb-canvas-perspective rb-layout-readonly pt-3 pb-6 px-6"
+              className="rb-canvas-dots rb-canvas-perspective rb-layout-readonly pt-3 pb-6 px-6"
               style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}
             >
               <GridLayout
@@ -336,7 +392,7 @@ export default function ReportBuilderPreview() {
               </GridLayout>
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

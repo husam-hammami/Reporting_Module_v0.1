@@ -1,4 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { useReducedMotion } from 'framer-motion';
+import { useThumbnailCapture } from '../ThumbnailCaptureContext';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import { TITLE_FONT_SIZES } from './widgetDefaults';
 
@@ -33,9 +35,41 @@ function getZoneColor(percent, zones, defaultColor = '#3b82f6') {
 // Default blue for Equipment-status style when no zones configured
 const DEFAULT_FILL_BLUE = '#3b82f6';
 
+function useAnimatedValue(target, skipAnimation) {
+  const [current, setCurrent] = useState(target);
+  const rafRef = useRef(null);
+  const startRef = useRef(null);
+  const fromRef = useRef(target);
+
+  useEffect(() => {
+    if (skipAnimation) { setCurrent(target); return; }
+    const from = fromRef.current;
+    const diff = target - from;
+    if (Math.abs(diff) < 0.001) { setCurrent(target); return; }
+    const duration = 380;
+    startRef.current = performance.now();
+    const animate = (now) => {
+      const elapsed = now - startRef.current;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setCurrent(from + diff * eased);
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      } else {
+        fromRef.current = target;
+      }
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target, skipAnimation]);
+
+  useEffect(() => { fromRef.current = current; }, [current]);
+  return current;
+}
+
 // ----- 3D cylindrical vessel with metallic gradient, wave animation, zone glows -----
 
-function Silo2DSvg({ fillPercent, fillColor }) {
+function Silo2DSvg({ fillPercent, fillColor, skipAnimation }) {
   const fillRatio = Math.max(0, Math.min(1, fillPercent / 100));
   const bodyTop = 22;
   const bodyH = 78;
@@ -100,10 +134,9 @@ function Silo2DSvg({ fillPercent, fillColor }) {
           <rect
             x={bodyLeft} y={fillY} width={bodyW} height={fillH + 2}
             fill={`url(#${uniqueId}-fill)`}
-            style={{ transition: 'y 0.3s ease, height 0.3s ease' }}
           />
           {/* Wave on fill surface */}
-          {showWave && (
+          {showWave && !skipAnimation && (
             <g style={{ animation: 'silo-wave-slide 3s linear infinite' }}>
               <path
                 d={`M ${bodyLeft - 10} ${fillY}
@@ -126,7 +159,6 @@ function Silo2DSvg({ fillPercent, fillColor }) {
           {/* Fill surface ellipse for 3D effect */}
           <ellipse cx={cx} cy={fillY} rx={bodyW / 2 - 1} ry={3}
             fill={fillColor} opacity="0.6"
-            style={{ transition: 'cy 0.3s ease' }}
           />
         </g>
       )}
@@ -156,7 +188,6 @@ function Silo2DSvg({ fillPercent, fillColor }) {
           fill="none"
           style={{
             filter: 'drop-shadow(0 0 6px #10b981)',
-            transition: 'all 0.3s ease',
           }}
           clipPath={`url(#${uniqueId}-clip)`}
         />
@@ -164,10 +195,9 @@ function Silo2DSvg({ fillPercent, fillColor }) {
       {showLowGlow && (
         <rect x={bodyLeft} y={fillY} width={bodyW} height={fillH}
           fill="none"
-          className="silo-low-pulse"
+          className={skipAnimation ? '' : 'silo-low-pulse'}
           style={{
             filter: 'drop-shadow(0 0 8px #ef4444)',
-            transition: 'all 0.3s ease',
           }}
           clipPath={`url(#${uniqueId}-clip)`}
         />
@@ -201,12 +231,17 @@ function Silo2DSvg({ fillPercent, fillColor }) {
  * Layout: label above, cylinder, percentage and optional tons below.
  */
 export default function SiloWidget({ config, tagValues }) {
+  const prefersReducedMotion = useReducedMotion();
+  const isCapturing = useThumbnailCapture();
+  const skipAnimation = prefersReducedMotion || isCapturing;
+
   const ds = config.dataSource || { type: 'tag', tagName: '', formula: '', groupTags: [], aggregation: 'last' };
   const fillRaw = resolveValue(config, tagValues);
-  const fillPercent = useMemo(() => {
+  const targetPercent = useMemo(() => {
     const v = fillRaw != null ? Number(fillRaw) : 0;
     return Math.max(0, Math.min(100, v));
   }, [fillRaw]);
+  const fillPercent = useAnimatedValue(targetPercent, skipAnimation);
 
   const capacityRaw = config.capacityTag ? (tagValues?.[config.capacityTag] ?? null) : null;
   const tonsRaw = config.tonsTag ? (tagValues?.[config.tonsTag] ?? null) : null;
@@ -227,14 +262,12 @@ export default function SiloWidget({ config, tagValues }) {
   return (
     <div
       className="flex flex-col items-center justify-center h-full min-h-0 rounded-lg overflow-hidden"
-      style={{
-        padding: 'clamp(8px, 1.2vw, 16px)',
-      }}
+      style={{ padding: 'var(--rb-widget-padding, clamp(8px, 1.2vw, 16px))' }}
     >
       {showTitle && config.title && (
         <p
-          className="font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 truncate w-full text-center"
-          style={{ fontSize: `calc(${titleFontSize} + 1px)` }}
+          className="rb-widget-title mb-2 truncate w-full text-center"
+          style={{ fontSize: titleFontSize }}
         >
           {config.title}
         </p>
@@ -244,18 +277,18 @@ export default function SiloWidget({ config, tagValues }) {
         className="w-full flex-1 min-h-0 min-h-[40px] max-h-[200px] flex items-center justify-center cursor-help"
         title={`${displayPercent}${unit !== '%' ? ` ${unit}` : '%'}${tons != null ? ` • ${displayTons} t` : ''}`}
       >
-        <Silo2DSvg fillPercent={fillPercent} fillColor={fillColor} />
+        <Silo2DSvg fillPercent={fillPercent} fillColor={fillColor} skipAnimation={skipAnimation} />
       </div>
 
       <div className="flex flex-col items-center gap-0.5 w-full mt-2">
-        <span className="text-lg font-semibold tabular-nums text-gray-800 dark:text-gray-100 tracking-tight">
+        <span className="rb-value-primary text-lg">
           {displayPercent}{unit !== '%' ? ` ${unit}` : '%'}
         </span>
         {config.showTons !== false && (tons != null || displayTons !== '—') && (
-          <span className="text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">{displayTons}</span>
+          <span className="rb-value-unit rb-tabular-nums">{displayTons}</span>
         )}
         {config.showCapacity && capacity != null && (
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 tabular-nums">cap. {Number(capacity).toFixed(0)}</span>
+          <span className="rb-caption rb-tabular-nums">cap. {Number(capacity).toFixed(0)}</span>
         )}
       </div>
     </div>

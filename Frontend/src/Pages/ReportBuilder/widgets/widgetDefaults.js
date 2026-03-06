@@ -9,17 +9,17 @@ export const uid = () => `w-${_counter++}-${Math.random().toString(36).slice(2, 
 /* ── Shared formatting constants ──────────────────────────────── */
 
 export const VALUE_FONT_SIZES = {
-  auto: undefined,   // widget uses its own responsive default
-  sm: '18px',
-  md: '24px',
-  lg: '30px',
-  xl: '36px',
+  auto: undefined,
+  sm: '1.125rem',
+  md: '1.5rem',
+  lg: '2rem',
+  xl: '2.5rem',
 };
 
 export const TITLE_FONT_SIZES = {
-  sm: '9px',
-  md: '10px',
-  lg: '12px',
+  sm: '0.5625rem',
+  md: '0.625rem',
+  lg: '0.75rem',
 };
 
 /* ── Widget Categories ─────────────────────────────────────────── */

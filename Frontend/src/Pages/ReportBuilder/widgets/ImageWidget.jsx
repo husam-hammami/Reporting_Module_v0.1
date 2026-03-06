@@ -46,13 +46,20 @@ export default function ImageWidget({ config, onUpdateConfig }) {
   if (!src) {
     return (
       <div
-        className="flex flex-col items-center justify-center h-full w-full cursor-pointer text-[#8898aa] hover:text-[#2563ab] transition-colors no-drag"
+        className="flex flex-col items-center justify-center h-full w-full cursor-pointer rounded-lg border-2 border-dashed no-drag"
+        style={{
+          borderColor: 'var(--rb-border)',
+          color: 'var(--rb-text-muted)',
+          transition: 'border-color var(--rb-transition-fast) ease, color var(--rb-transition-fast) ease',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--rb-accent)'; e.currentTarget.style.color = 'var(--rb-accent)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--rb-border)'; e.currentTarget.style.color = 'var(--rb-text-muted)'; }}
         onClick={handleClick}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
         <ImagePlus size={28} strokeWidth={1.5} />
-        <span className="text-[10px] mt-1.5 font-medium">Click or drop image</span>
+        <span className="rb-caption mt-1.5 font-medium">Click or drop image</span>
         <input
           ref={inputRef}
           type="file"

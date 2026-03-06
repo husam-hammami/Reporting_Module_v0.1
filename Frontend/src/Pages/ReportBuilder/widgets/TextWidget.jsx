@@ -19,7 +19,7 @@ export default function TextWidget({ config }) {
           fontSize,
           fontWeight,
           fontStyle: italic ? 'italic' : 'normal',
-          color,
+          color: color || 'var(--rb-text)',
           lineHeight: 1.2,
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',

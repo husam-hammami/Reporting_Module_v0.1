@@ -121,24 +121,21 @@ export default function ReportThumbnail({ template }) {
           <DominantIcon size={44} className={`${gradient.iconColor} opacity-[0.06]`} strokeWidth={1.5} />
         </div>
 
-        {/* Frosted icon circle */}
-        <div className="w-[52px] h-[52px] rounded-full bg-white/60 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/10 flex items-center justify-center shadow-sm">
+        <div className="w-[52px] h-[52px] rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-sm">
           <DominantIcon size={22} className={gradient.iconColor} strokeWidth={2} />
         </div>
 
-        {/* Category label */}
-        <span className="text-[11px] font-bold text-black/50 dark:text-white/60 tracking-wide text-center leading-tight">
+        <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 tracking-wide text-center leading-tight">
           {gradient.label}
         </span>
 
-        {/* Widget count pill */}
-        <span className="text-[9px] font-semibold text-black/40 dark:text-white/45 bg-white/50 dark:bg-white/[0.07] backdrop-blur-sm px-2.5 py-0.5 rounded-full border border-white/20 dark:border-white/10">
+        <span className="text-[9px] font-semibold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded-full border border-gray-200 dark:border-gray-700">
           {total} widget{total !== 1 ? 's' : ''}
         </span>
       </div>
 
       {/* ── Zone 2: Composition Strip ── */}
-      <div className="flex-shrink-0 bg-white/50 dark:bg-black/20 backdrop-blur-sm border-t border-black/[0.04] dark:border-white/[0.04] px-3 py-2 flex items-center gap-1.5 overflow-hidden">
+      <div className="flex-shrink-0 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-3 py-2 flex items-center gap-1.5 overflow-hidden">
         {pills.map(([type, count]) => (
           <CompositionPill key={type} type={type} count={count} />
         ))}

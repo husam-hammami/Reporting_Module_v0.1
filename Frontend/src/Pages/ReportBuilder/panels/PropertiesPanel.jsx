@@ -1,22 +1,46 @@
 import { useState, useMemo } from 'react';
-import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft } from 'lucide-react';
+import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import FormulaEditor from '../formulas/FormulaEditor';
 
 /* ── Shared UI primitives (Report Builder design system) ───────── */
 
 function Section({ icon: Icon, title, children, defaultOpen = true, isFirst = false }) {
   const [open, setOpen] = useState(defaultOpen);
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <div className={`border-b border-[var(--rb-border)] last:border-0${!isFirst ? ' border-t border-t-[var(--rb-border)]' : ''}`}>
       <button
         onClick={() => setOpen(!open)}
-        className="rb-section-header w-full flex items-center gap-2 py-3 px-5 hover:bg-[var(--rb-surface)] transition-colors text-left"
+        className="w-full flex items-center gap-2.5 py-3.5 px-5 hover:bg-[var(--rb-surface)] transition-colors text-left group"
       >
-        {Icon && <Icon size={16} className="text-[var(--rb-accent)]" />}
-        <span className="flex-1">{title}</span>
-        {open ? <ChevronDown size={16} className="opacity-60" /> : <ChevronRight size={16} className="opacity-60" />}
+        {Icon && (
+          <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--rb-accent-subtle)]">
+            <Icon size={13} className="text-[var(--rb-accent)]" />
+          </span>
+        )}
+        <span className="flex-1 rb-section-header" style={{ padding: 0 }}>{title}</span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <ChevronDown size={15} className="text-[var(--rb-text-muted)] group-hover:text-[var(--rb-text)] transition-colors" />
+        </motion.span>
       </button>
-      {open && <div className="px-5 pb-4 pt-1 space-y-4">{children}</div>}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={prefersReducedMotion ? undefined : { height: 0, opacity: 0 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="px-5 pb-4 pt-1 space-y-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -34,8 +58,8 @@ const AGGREGATION_DESCRIPTIONS = {
 
 function Field({ label, children }) {
   return (
-    <div className="space-y-2">
-      <label className="rb-label block">{label}</label>
+    <div className="space-y-1.5">
+      <label className="block text-[var(--rb-font-sm)] font-medium text-[var(--rb-text-muted)] tracking-wide" style={{ fontSize: 'var(--rb-font-sm)' }}>{label}</label>
       {children}
     </div>
   );
@@ -69,16 +93,19 @@ function SelectInput({ value, onChange, options }) {
 
 function Toggle({ label, value, onChange }) {
   return (
-    <label className="flex items-center justify-between cursor-pointer gap-3">
+    <label className="flex items-center justify-between cursor-pointer gap-3 py-0.5">
       <span className="rb-label">{label}</span>
       <button
         type="button"
         role="switch"
         aria-checked={!!value}
         onClick={() => onChange(!value)}
-        className={`relative w-10 h-6 rounded-full transition-colors ${value ? 'bg-[var(--rb-accent)]' : 'bg-[var(--rb-border)]'}`}
+        className={`relative w-11 h-[1.375rem] rounded-full transition-all duration-200 flex-shrink-0 ${value ? 'bg-[var(--rb-accent)] shadow-[0_0_0_1px_var(--rb-accent)]' : 'bg-[var(--rb-border)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]'}`}
       >
-        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-4' : ''}`} />
+        <span
+          className={`absolute top-[2px] left-[2px] w-[1.125rem] h-[1.125rem] rounded-full bg-white shadow-sm transition-transform duration-200 ${value ? 'translate-x-[1.125rem]' : ''}`}
+          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)' }}
+        />
       </button>
     </label>
   );
@@ -91,7 +118,7 @@ function ColorInput({ value, onChange }) {
         type="color"
         value={value || 'hsl(199, 72%, 42%)'}
         onChange={(e) => onChange(e.target.value)}
-        className="w-9 h-9 rounded-lg border border-[var(--rb-border)] cursor-pointer bg-transparent p-0"
+        className="w-9 h-9 rounded-lg border border-[var(--rb-border)] cursor-pointer bg-transparent p-0 hover:border-[var(--rb-accent)] transition-colors"
       />
       <input
         type="text"
@@ -632,7 +659,6 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
         <>
           <Toggle label="Striped rows" value={config.striped} onChange={(v) => onUpdate({ striped: v })} />
           <Toggle label="Compact" value={config.compact} onChange={(v) => onUpdate({ compact: v })} />
-          {/* Compact color groups */}
           <Field label="Header colors">
             <div className="rb-color-group">
               <span className="rb-caption mr-1">bg</span>
@@ -718,13 +744,19 @@ function ThresholdsSection({ config, onUpdate }) {
       ) : (
         <div className="space-y-2">
           {rules.map((rule, i) => (
-            <div key={i} className="rb-threshold-rule flex items-center gap-2 p-2.5 rounded-lg bg-[var(--rb-surface)]" style={{ borderLeft: `3px solid ${rule.color}` }}>
-              <input
-                type="color"
-                value={rule.color}
-                onChange={(e) => updateRule(i, { color: e.target.value })}
-                className="w-6 h-6 rounded-md border border-[var(--rb-border)] cursor-pointer bg-transparent p-0 flex-shrink-0"
-              />
+            <div
+              key={i}
+              className="flex items-center gap-2.5 p-3 rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-border-subtle)] transition-colors hover:border-[var(--rb-border)]"
+              style={{ borderLeft: `3px solid ${rule.color}` }}
+            >
+              <div className="flex-shrink-0">
+                <input
+                  type="color"
+                  value={rule.color}
+                  onChange={(e) => updateRule(i, { color: e.target.value })}
+                  className="w-7 h-7 rounded-md border border-[var(--rb-border)] cursor-pointer bg-transparent p-0 hover:border-[var(--rb-accent)] transition-colors"
+                />
+              </div>
               <select
                 value={rule.condition}
                 onChange={(e) => updateRule(i, { condition: e.target.value })}
@@ -743,7 +775,7 @@ function ThresholdsSection({ config, onUpdate }) {
               />
               {rule.condition === 'between' && (
                 <>
-                  <span className="rb-caption">to</span>
+                  <span className="rb-caption text-[var(--rb-text-muted)]">to</span>
                   <input
                     type="number"
                     value={rule.valueTo}
@@ -752,15 +784,19 @@ function ThresholdsSection({ config, onUpdate }) {
                   />
                 </>
               )}
-              <button onClick={() => removeRule(i)} className="rb-btn-ghost p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]">
+              <button
+                onClick={() => removeRule(i)}
+                className="rb-btn-ghost p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] rounded-md transition-all"
+              >
                 <X size={14} />
               </button>
             </div>
           ))}
         </div>
       )}
-      <button onClick={addRule} className="rb-caption text-[var(--rb-accent)] hover:underline mt-2">
-        + Add threshold rule
+      <button onClick={addRule} className="inline-flex items-center gap-1.5 rb-caption text-[var(--rb-accent)] hover:underline mt-2 font-medium">
+        <Plus size={12} />
+        Add threshold rule
       </button>
     </Section>
   );
@@ -794,7 +830,7 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
             <div key={i} className="p-3 rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-border)] space-y-3">
               <div className="flex items-center justify-between">
                 <span className="rb-label">Series {i + 1}</span>
-                <button onClick={() => removeSeries(i)} className="rb-btn-ghost p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]">
+                <button onClick={() => removeSeries(i)} className="rb-btn-ghost p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] rounded-md transition-all">
                   <X size={14} />
                 </button>
               </div>
@@ -846,8 +882,9 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
           ))}
         </div>
       )}
-      <button onClick={addSeries} className="rb-caption text-[var(--rb-accent)] hover:underline mt-2">
-        + Add data series
+      <button onClick={addSeries} className="inline-flex items-center gap-1.5 rb-caption text-[var(--rb-accent)] hover:underline mt-2 font-medium">
+        <Plus size={12} />
+        Add data series
       </button>
     </Section>
   );
@@ -918,7 +955,6 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
 
   return (
     <Section icon={Database} title="Table Columns" defaultOpen={true}>
-      {/* Breadcrumb */}
       <p className="rb-caption mb-3 text-[var(--rb-text-muted)]">
         <span className="font-medium text-[var(--rb-text)]">Data Table</span>
         <span className="mx-1">&rsaquo;</span>
@@ -968,7 +1004,7 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                 </span>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeColumn(i); }}
-                  className="rb-btn-ghost p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
+                  className="rb-btn-ghost p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] rounded-md transition-all"
                 >
                   <X size={14} />
                 </button>
@@ -993,14 +1029,12 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                   />
                 </Field>
 
-                {/* Tag source */}
                 {(col.sourceType || 'tag') === 'tag' && (
                   <Field label="Tag">
                     <TagPicker tags={tags} value={col.tagName} onChange={(v) => updateColumn(i, { tagName: v })} />
                   </Field>
                 )}
 
-                {/* Formula source */}
                 {col.sourceType === 'formula' && (
                   <>
                     {savedFormulas.length > 0 && (
@@ -1029,7 +1063,6 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                   </>
                 )}
 
-                {/* Group source */}
                 {col.sourceType === 'group' && (
                   <>
                     <Field label="Group tags">
@@ -1056,7 +1089,6 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                   </>
                 )}
 
-                {/* Mapping source */}
                 {col.sourceType === 'mapping' && (
                   <Field label="Mapping">
                     <SelectInput
@@ -1074,14 +1106,12 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                   </Field>
                 )}
 
-                {/* Static source */}
                 {col.sourceType === 'static' && (
                   <Field label="Static value">
                     <TextInput value={col.staticValue} onChange={(v) => updateColumn(i, { staticValue: v })} placeholder="Text or number" />
                   </Field>
                 )}
 
-                {/* Aggregation for all value types (tag, formula, group) */}
                 {(col.sourceType === 'tag' || col.sourceType === 'formula' || col.sourceType === 'group') && (
                   <Field label="Aggregation">
                     <SelectInput
@@ -1100,7 +1130,6 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                   </Field>
                 )}
 
-                {/* Formatting row */}
                 <div className="grid grid-cols-3 gap-2">
                   <Field label="Format">
                     <SelectInput
@@ -1138,19 +1167,19 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
       )}
 
       <div className="flex flex-wrap gap-2 mt-3">
-        <button onClick={() => addColumn('tag')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)] hover:bg-[var(--rb-accent)]/20">
+        <button onClick={() => addColumn('tag')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)] hover:bg-[var(--rb-accent)]/20 transition-colors">
           <Plus size={12} className="inline mr-1" /> Tag
         </button>
-        <button onClick={() => addColumn('formula')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500/20">
+        <button onClick={() => addColumn('formula')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 transition-colors">
           <Plus size={12} className="inline mr-1" /> Formula
         </button>
-        <button onClick={() => addColumn('group')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20">
+        <button onClick={() => addColumn('group')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors">
           <Plus size={12} className="inline mr-1" /> Group
         </button>
-        <button onClick={() => addColumn('mapping')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20">
+        <button onClick={() => addColumn('mapping')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition-colors">
           <Plus size={12} className="inline mr-1" /> Mapping
         </button>
-        <button onClick={() => addColumn('static')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-[var(--rb-surface)] text-[var(--rb-text-muted)] hover:bg-[var(--rb-border)]">
+        <button onClick={() => addColumn('static')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-[var(--rb-surface)] text-[var(--rb-text-muted)] hover:bg-[var(--rb-border)] transition-colors">
           <Plus size={12} className="inline mr-1" /> Static
         </button>
       </div>
@@ -1170,6 +1199,7 @@ const TAB_FORMAT = 'format';
 
 export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, tags, tagValues, groups = [], savedFormulas = [] }) {
   const [activeTab, setActiveTab] = useState(TAB_DATA);
+  const prefersReducedMotion = useReducedMotion();
 
   if (!widget) {
     return (
@@ -1191,11 +1221,10 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
       <div className="flex-shrink-0 border-b border-[var(--rb-border)]">
         <div className="flex items-center justify-between px-5 py-4">
           <p className="rb-heading text-[var(--rb-text)] truncate pr-2">{widgetTitle}</p>
-          <button onClick={onClose} className="rb-btn-ghost p-2 -mr-2">
+          <button onClick={onClose} className="rb-btn-ghost p-2 -mr-2 hover:bg-[var(--rb-surface)] rounded-md transition-colors">
             <X size={18} />
           </button>
         </div>
-        {/* Segmented control tabs */}
         <div className="px-5 py-3 border-t border-[var(--rb-border)]/80">
           <div className="rb-segmented-control">
             {[
@@ -1215,92 +1244,104 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {activeTab === TAB_DATA && (
-          <>
-            {HAS_DATA_SOURCE.has(widget.type) && (
-              <DataSourceSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} groups={groups} savedFormulas={savedFormulas} />
-            )}
-            {HAS_SERIES.has(widget.type) && (
-              <ChartSeriesSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
-            )}
-            {HAS_TABLE_COLUMNS.has(widget.type) && (
-              <TableColumnsSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
-            )}
-            {!HAS_DATA_SOURCE.has(widget.type) && !HAS_SERIES.has(widget.type) && !HAS_TABLE_COLUMNS.has(widget.type) && (
-              <div className="px-5 py-6 rb-caption text-[var(--rb-text-muted)]">
-                {widget.type === 'text'
-                  ? 'Use the Format tab to configure this element.'
-                  : 'No data options for this widget.'}
-              </div>
-            )}
-          </>
-        )}
-        {activeTab === TAB_FORMAT && (
-          <>
-            {/* Card Appearance — moved from header */}
-            {['kpi', 'gauge', 'silo', 'stat', 'chart', 'barchart', 'table', 'image'].includes(widget.type) && (
-              <Section icon={Palette} title="Card Appearance" defaultOpen={true} isFirst>
-                <Toggle
-                  label="Show card (border & background)"
-                  value={config.showCard !== false}
-                  onChange={(v) => handleConfigUpdate({ showCard: v })}
-                />
-              </Section>
-            )}
-            {/* Separator Line — available for ALL widget types */}
-            <Section icon={SeparatorHorizontal} title="Separator Line" defaultOpen={false}>
-              <Toggle
-                label="Show bottom separator"
-                value={!!config.showSeparator}
-                onChange={(v) => handleConfigUpdate({ showSeparator: v })}
-              />
-              {config.showSeparator && (
-                <>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Field label="Style">
-                      <SelectInput
-                        value={config.separatorStyle || 'solid'}
-                        onChange={(v) => handleConfigUpdate({ separatorStyle: v })}
-                        options={[
-                          { value: 'solid', label: 'Solid' },
-                          { value: 'dashed', label: 'Dashed' },
-                          { value: 'dotted', label: 'Dotted' },
-                        ]}
-                      />
-                    </Field>
-                    <Field label="Thickness">
-                      <SelectInput
-                        value={String(config.separatorThickness || 1)}
-                        onChange={(v) => handleConfigUpdate({ separatorThickness: Number(v) })}
-                        options={[
-                          { value: '1', label: '1px' },
-                          { value: '2', label: '2px' },
-                          { value: '3', label: '3px' },
-                        ]}
-                      />
-                    </Field>
-                  </div>
-                  <Field label="Color">
-                    <ColorInput
-                      value={config.separatorColor || ''}
-                      onChange={(v) => handleConfigUpdate({ separatorColor: v })}
-                    />
-                  </Field>
-                </>
+        <AnimatePresence mode="wait">
+          {activeTab === TAB_DATA && (
+            <motion.div
+              key="data"
+              initial={prefersReducedMotion ? false : { opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0, x: 8 }}
+              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
+            >
+              {HAS_DATA_SOURCE.has(widget.type) && (
+                <DataSourceSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} groups={groups} savedFormulas={savedFormulas} />
               )}
-            </Section>
-            <DisplaySection widgetType={widget.type} config={config} onUpdate={handleConfigUpdate} tags={tags} />
-            {HAS_THRESHOLDS.has(widget.type) && (
-              <ThresholdsSection config={config} onUpdate={handleConfigUpdate} />
-            )}
-          </>
-        )}
+              {HAS_SERIES.has(widget.type) && (
+                <ChartSeriesSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
+              )}
+              {HAS_TABLE_COLUMNS.has(widget.type) && (
+                <TableColumnsSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
+              )}
+              {!HAS_DATA_SOURCE.has(widget.type) && !HAS_SERIES.has(widget.type) && !HAS_TABLE_COLUMNS.has(widget.type) && (
+                <div className="px-5 py-6 rb-caption text-[var(--rb-text-muted)]">
+                  {widget.type === 'text'
+                    ? 'Use the Format tab to configure this element.'
+                    : 'No data options for this widget.'}
+                </div>
+              )}
+            </motion.div>
+          )}
+          {activeTab === TAB_FORMAT && (
+            <motion.div
+              key="format"
+              initial={prefersReducedMotion ? false : { opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0, x: -8 }}
+              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
+            >
+              {['kpi', 'gauge', 'silo', 'stat', 'chart', 'barchart', 'table', 'image'].includes(widget.type) && (
+                <Section icon={Palette} title="Card Appearance" defaultOpen={true} isFirst>
+                  <Toggle
+                    label="Show card (border & background)"
+                    value={config.showCard !== false}
+                    onChange={(v) => handleConfigUpdate({ showCard: v })}
+                  />
+                </Section>
+              )}
+              <Section icon={SeparatorHorizontal} title="Separator Line" defaultOpen={false}>
+                <Toggle
+                  label="Show bottom separator"
+                  value={!!config.showSeparator}
+                  onChange={(v) => handleConfigUpdate({ showSeparator: v })}
+                />
+                {config.showSeparator && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Style">
+                        <SelectInput
+                          value={config.separatorStyle || 'solid'}
+                          onChange={(v) => handleConfigUpdate({ separatorStyle: v })}
+                          options={[
+                            { value: 'solid', label: 'Solid' },
+                            { value: 'dashed', label: 'Dashed' },
+                            { value: 'dotted', label: 'Dotted' },
+                          ]}
+                        />
+                      </Field>
+                      <Field label="Thickness">
+                        <SelectInput
+                          value={String(config.separatorThickness || 1)}
+                          onChange={(v) => handleConfigUpdate({ separatorThickness: Number(v) })}
+                          options={[
+                            { value: '1', label: '1px' },
+                            { value: '2', label: '2px' },
+                            { value: '3', label: '3px' },
+                          ]}
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Color">
+                      <ColorInput
+                        value={config.separatorColor || ''}
+                        onChange={(v) => handleConfigUpdate({ separatorColor: v })}
+                      />
+                    </Field>
+                  </>
+                )}
+              </Section>
+              <DisplaySection widgetType={widget.type} config={config} onUpdate={handleConfigUpdate} tags={tags} />
+              {HAS_THRESHOLDS.has(widget.type) && (
+                <ThresholdsSection config={config} onUpdate={handleConfigUpdate} />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="px-5 py-4 border-t border-[var(--rb-border)] flex-shrink-0">
         <button
           onClick={() => onDelete(widget.id)}
-          className="w-full flex items-center justify-center gap-2 rb-body font-medium text-[var(--rb-danger)] hover:bg-[var(--rb-danger)]/10 rounded-lg py-2.5 transition-colors"
+          className="w-full flex items-center justify-center gap-2 rb-body font-medium text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] rounded-lg py-2.5 transition-all active:scale-[0.98]"
         >
           <Trash2 size={14} />
           Remove widget

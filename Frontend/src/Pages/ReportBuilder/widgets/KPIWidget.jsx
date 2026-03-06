@@ -1,4 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect, useState } from 'react';
+import { useReducedMotion } from 'framer-motion';
+import { useThumbnailCapture } from '../ThumbnailCaptureContext';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import { VALUE_FONT_SIZES, TITLE_FONT_SIZES } from './widgetDefaults';
 
@@ -66,12 +68,58 @@ const JUSTIFY_CLASSES = {
   right: 'justify-end',
 };
 
+function useAnimatedNumber(target, decimals, skipAnimation) {
+  const [display, setDisplay] = useState(target);
+  const rafRef = useRef(null);
+  const startRef = useRef(null);
+  const fromRef = useRef(target);
+
+  useEffect(() => {
+    if (skipAnimation || target == null) {
+      setDisplay(target);
+      return;
+    }
+    const from = fromRef.current ?? target;
+    const diff = target - from;
+    if (Math.abs(diff) < 0.0001) {
+      setDisplay(target);
+      return;
+    }
+    const duration = 350;
+    startRef.current = performance.now();
+    const animate = (now) => {
+      const elapsed = now - startRef.current;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const current = from + diff * eased;
+      setDisplay(current);
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      } else {
+        fromRef.current = target;
+      }
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target, skipAnimation]);
+
+  useEffect(() => { fromRef.current = display; }, [display]);
+
+  if (target == null) return '\u2014';
+  return Number(display).toFixed(decimals);
+}
+
 export default function KPIWidget({ config, tagValues, sparklineData }) {
+  const prefersReducedMotion = useReducedMotion();
+  const isCapturing = useThumbnailCapture();
+  const skipAnimation = prefersReducedMotion || isCapturing;
+
   const rawValue = resolveValue(config, tagValues);
-  const displayValue = rawValue != null ? Number(rawValue).toFixed(config.decimals ?? 1) : '\u2014';
+  const numericValue = rawValue != null ? Number(rawValue) : null;
+  const decimals = config.decimals ?? 1;
+  const displayValue = useAnimatedNumber(numericValue, decimals, skipAnimation);
   const activeColor = getThresholdColor(rawValue, config.thresholds, config.color || '#2563ab');
 
-  // Extract numeric values from timestamped {t,v} objects (useTagHistory format)
   const sparkValues = useMemo(
     () => Array.isArray(sparklineData) && sparklineData.length >= 2
       ? sparklineData.map((p) => (typeof p === 'object' && p !== null ? p.v : p))
@@ -83,6 +131,13 @@ export default function KPIWidget({ config, tagValues, sparklineData }) {
     [sparkValues],
   );
 
+  const [sparkVisible, setSparkVisible] = useState(skipAnimation);
+  useEffect(() => {
+    if (skipAnimation) { setSparkVisible(true); return; }
+    const timer = setTimeout(() => setSparkVisible(true), 100);
+    return () => clearTimeout(timer);
+  }, [skipAnimation]);
+
   const showTitle = config.showTitle !== false;
   const titleFontSize = TITLE_FONT_SIZES[config.titleFontSize] || TITLE_FONT_SIZES.md;
   const valueFontSize = VALUE_FONT_SIZES[config.valueFontSize];
@@ -91,13 +146,11 @@ export default function KPIWidget({ config, tagValues, sparklineData }) {
   return (
     <div
       className={`flex flex-col h-full justify-between min-h-0 rounded-lg ${ALIGN_CLASSES[align] || ''}`}
-      style={{
-        padding: 'clamp(6px, 1.2vw, 16px)',
-      }}
+      style={{ padding: 'var(--rb-widget-padding, clamp(6px, 1.2vw, 16px))' }}
     >
       {showTitle && (
         <p
-          className="font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate"
+          className="rb-widget-title truncate"
           style={{ fontSize: titleFontSize }}
         >
           {config.title || 'KPI'}
@@ -105,17 +158,25 @@ export default function KPIWidget({ config, tagValues, sparklineData }) {
       )}
       <div className={`flex items-baseline gap-1.5 mt-1 ${JUSTIFY_CLASSES[align] || ''}`}>
         <span
-          className={`font-bold tabular-nums tracking-tight ${!valueFontSize ? 'text-3xl' : ''}`}
+          className={`rb-value-primary ${!valueFontSize ? 'text-3xl' : ''}`}
           style={{ color: activeColor, ...(valueFontSize ? { fontSize: valueFontSize } : {}) }}
         >
           {displayValue}
         </span>
         {config.unit && (
-          <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500">{config.unit}</span>
+          <span className="rb-value-unit">{config.unit}</span>
         )}
       </div>
       {config.showSparkline && (
-        <div className="mt-2 h-5 w-full rounded overflow-hidden bg-gray-100 dark:bg-gray-800/40">
+        <div
+          className="mt-2 h-5 w-full rounded overflow-hidden"
+          style={{
+            background: 'var(--rb-surface)',
+            opacity: sparkVisible ? 1 : 0,
+            transform: sparkVisible ? 'translateY(0)' : 'translateY(4px)',
+            transition: skipAnimation ? 'none' : 'opacity 300ms ease, transform 300ms ease',
+          }}
+        >
           <svg viewBox="0 0 100 20" className="w-full h-full" preserveAspectRatio="none">
             <polyline
               fill="none"

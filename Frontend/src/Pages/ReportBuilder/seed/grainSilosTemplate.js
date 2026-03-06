@@ -160,8 +160,8 @@ export function buildGrainSilosTemplate(templateId) {
   widgets.push(kpi('Outload Rail', 'Outload_Rail', 't', 1, 10, y));
   y += 1;
   // Row 1: Balance + Queue + Intake chart (side by side)
-  widgets.push(kpi('Balance', 'Balance_Tons', 't', 1, 0, y, 2, 1));
-  widgets.push(kpi('Queue', 'Queue_Status', '', 0, 2, y, 2, 1));
+  widgets.push(kpi('Balance', 'Balance_Tons', 't', 1, 0, y, 2, 2));
+  widgets.push(kpi('Queue', 'Queue_Status', '', 0, 2, y, 2, 2));
   widgets.push(chart('Intake / Outload', ['Intake_Today', 'Outload_Ship', 'Outload_Truck'], 4, y, 8, 2));
   y += 2;
 
@@ -197,9 +197,9 @@ export function buildGrainSilosTemplate(templateId) {
   // Row 6: Grain Quality — label + KPIs
   widgets.push(text('Grain Quality', 'h3', y, 12));
   y += 1;
-  widgets.push(kpi('Moisture', 'Moisture_Avg', '%', 2, 0, y));
-  widgets.push(kpi('Aeration', 'Aeration_Status', '', 0, 4, y));
-  widgets.push(kpi('Quality Dev', 'Quality_Deviation', '', 0, 8, y));
+  widgets.push(kpi('Moisture', 'Moisture_Avg', '%', 2, 0, y, 4, 1));
+  widgets.push(kpi('Aeration', 'Aeration_Status', '', 0, 4, y, 4, 1));
+  widgets.push(kpi('Quality Dev', 'Quality_Deviation', '', 0, 8, y, 4, 1));
   y += 1;
   widgets.push(table(
     'Temp °C',
@@ -213,10 +213,10 @@ export function buildGrainSilosTemplate(templateId) {
       { label: 'S7', tagName: 'Silo7_Temp', unit: '°C', decimals: 1 },
       { label: 'S8', tagName: 'Silo8_Temp', unit: '°C', decimals: 1 },
     ],
-    0, y, 8, 1
+    0, y, 8, 2
   ));
-  widgets.push(chart('Silo temps', ['Silo1_Temp', 'Silo2_Temp', 'Silo3_Temp', 'Silo4_Temp'], 8, y, 4, 1));
-  y += 1;
+  widgets.push(chart('Silo temps', ['Silo1_Temp', 'Silo2_Temp', 'Silo3_Temp', 'Silo4_Temp'], 8, y, 4, 2));
+  y += 2;
 
   // Row 7: Equipment — table + bar chart side by side
   widgets.push(text('Equipment', 'h3', y, 12));
@@ -238,10 +238,10 @@ export function buildGrainSilosTemplate(templateId) {
   // Row 8: Energy — 4 KPIs then table + chart
   widgets.push(text('Energy & Utilities', 'h3', y, 12));
   y += 1;
-  widgets.push(kpi('Power In', 'Power_Intake_Area', 'kW', 1, 0, y));
-  widgets.push(kpi('Power Stor', 'Power_Storage_Area', 'kW', 1, 3, y));
-  widgets.push(kpi('kWh/t', 'Energy_Per_Ton', 'kWh/t', 2, 6, y));
-  widgets.push(kpi('Peak', 'Peak_Power_kW', 'kW', 1, 9, y));
+  widgets.push(kpi('Power In', 'Power_Intake_Area', 'kW', 1, 0, y, 3, 1));
+  widgets.push(kpi('Power Stor', 'Power_Storage_Area', 'kW', 1, 3, y, 3, 1));
+  widgets.push(kpi('kWh/t', 'Energy_Per_Ton', 'kWh/t', 2, 6, y, 3, 1));
+  widgets.push(kpi('Peak', 'Peak_Power_kW', 'kW', 1, 9, y, 3, 1));
   y += 1;
   widgets.push(table(
     'Energy',
@@ -250,10 +250,10 @@ export function buildGrainSilosTemplate(templateId) {
       { label: 'Storage', tagName: 'Power_Storage_Area', unit: 'kW', decimals: 1 },
       { label: 'kWh/t', tagName: 'Energy_Per_Ton', unit: 'kWh/t', decimals: 2 },
     ],
-    0, y, 6, 1
+    0, y, 6, 2
   ));
-  widgets.push(chart('Power', ['Power_Intake_Area', 'Power_Storage_Area'], 6, y, 6, 1));
-  y += 1;
+  widgets.push(chart('Power', ['Power_Intake_Area', 'Power_Storage_Area'], 6, y, 6, 2));
+  y += 2;
 
   // Row 9: Alarms + Ops KPI on same row
   widgets.push(text('Alarms & Ops KPI', 'h3', y, 12));
@@ -272,11 +272,11 @@ export function buildGrainSilosTemplate(templateId) {
       { label: 'Critical', tagName: 'Alarm_Critical_Count', decimals: 0 },
       { label: 'Response', tagName: 'Alarm_Response_Time_Avg', decimals: 1 },
     ],
-    0, y, 6, 1
+    0, y, 6, 2
   ));
-  widgets.push(stat('Downtime %', 'Downtime_Pct', '%', 1, 6, y));
-  widgets.push(stat('Losses %', 'Losses_Pct', '%', 2, 8, y));
-  y += 1;
+  widgets.push(stat('Downtime %', 'Downtime_Pct', '%', 1, 6, y, 3, 2));
+  widgets.push(stat('Losses %', 'Losses_Pct', '%', 2, 9, y, 3, 2));
+  y += 2;
 
   // Row 10: Maintenance
   widgets.push(text('Maintenance', 'h3', y, 12));

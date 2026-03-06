@@ -2,11 +2,9 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertCircle, CheckCircle2, X, Plus, Zap,
-  Code2, Blocks, Search,
+  Code2, Blocks, Search, Hash,
 } from 'lucide-react';
 import { validateFormula, evaluateFormula, AVAILABLE_FUNCTIONS } from './formulaEngine';
-
-/* ── Operator buttons ──────────────────────────────────────────── */
 
 const OPERATORS = [
   { symbol: '+', label: 'Add' },
@@ -17,8 +15,6 @@ const OPERATORS = [
   { symbol: ')', label: ')' },
 ];
 
-/* ── Parse formula string into visual blocks ───────────────────── */
-
 function parseToBlocks(formula) {
   if (!formula) return [];
   const blocks = [];
@@ -27,7 +23,6 @@ function parseToBlocks(formula) {
   let lastIndex = 0;
 
   while ((match = regex.exec(formula)) !== null) {
-    // Capture whitespace/filler between tokens
     if (match.index > lastIndex) {
       const gap = formula.slice(lastIndex, match.index).trim();
       if (gap) blocks.push({ type: 'raw', value: gap });
@@ -44,15 +39,12 @@ function parseToBlocks(formula) {
     }
     lastIndex = match.index + match[0].length;
   }
-  // Trailing content
   if (lastIndex < formula.length) {
     const tail = formula.slice(lastIndex).trim();
     if (tail) blocks.push({ type: 'raw', value: tail });
   }
   return blocks;
 }
-
-/* ── Rebuild formula string from blocks ────────────────────────── */
 
 function blocksToFormula(blocks) {
   return blocks
@@ -68,15 +60,15 @@ function blocksToFormula(blocks) {
     .trim();
 }
 
-/* ── Block chip component ──────────────────────────────────────── */
-
 function BlockChip({ block, onRemove, tagMeta }) {
-  const styles = {
-    tag: 'bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)] border-[var(--rb-accent)]/30',
-    function: 'bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)] border-[var(--rb-accent)]/30',
-    operator: 'bg-[var(--rb-surface)] text-[var(--rb-text-muted)] border-[var(--rb-border)]',
-    number: 'bg-[var(--rb-surface)] text-[var(--rb-text)] border-[var(--rb-border)] font-mono',
-    raw: 'bg-[var(--rb-surface)] text-[var(--rb-text-muted)] border-[var(--rb-border)]',
+  const baseClasses = 'inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full border transition-all duration-150';
+
+  const styleMap = {
+    tag: `${baseClasses} bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)] border-[color-mix(in_srgb,var(--rb-accent)_25%,transparent)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]`,
+    function: `${baseClasses} bg-[var(--rb-warning-subtle)] text-[var(--rb-warning)] border-[color-mix(in_srgb,var(--rb-warning)_25%,transparent)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]`,
+    operator: `${baseClasses} bg-[var(--rb-surface)] text-[var(--rb-text-muted)] border-[var(--rb-border)] min-w-[28px] justify-center font-mono text-[12px]`,
+    number: `${baseClasses} bg-[var(--rb-surface)] text-[var(--rb-text)] border-[var(--rb-border)] font-mono tabular-nums shadow-[0_1px_2px_rgba(0,0,0,0.04)]`,
+    raw: `${baseClasses} bg-[var(--rb-surface)] text-[var(--rb-text-muted)] border-[var(--rb-border)]`,
   };
 
   const displayName = block.type === 'tag' && tagMeta?.[block.value]
@@ -84,8 +76,8 @@ function BlockChip({ block, onRemove, tagMeta }) {
     : block.value;
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-1 rb-caption font-medium rounded-md border ${styles[block.type] || styles.raw}`}>
-      {block.type === 'tag' && <span className="w-2 h-2 rounded-full bg-[var(--rb-accent)] flex-shrink-0" />}
+    <span className={styleMap[block.type] || styleMap.raw}>
+      {block.type === 'tag' && <span className="w-1.5 h-1.5 rounded-full bg-[var(--rb-accent)] flex-shrink-0 opacity-70" />}
       {block.type === 'function' && <Zap size={10} className="flex-shrink-0 opacity-70" />}
       <span className={block.type === 'number' || block.type === 'function' ? 'font-mono' : ''}>
         {displayName}
@@ -93,7 +85,7 @@ function BlockChip({ block, onRemove, tagMeta }) {
       {onRemove && (block.type === 'tag' || block.type === 'function' || block.type === 'number') && (
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="ml-0.5 text-current opacity-50 hover:opacity-100 transition-opacity"
+          className="ml-0.5 p-0.5 rounded-full text-current opacity-40 hover:opacity-100 hover:bg-[rgba(0,0,0,0.08)] dark:hover:bg-[rgba(255,255,255,0.1)] transition-all duration-150"
         >
           <X size={10} />
         </button>
@@ -102,10 +94,8 @@ function BlockChip({ block, onRemove, tagMeta }) {
   );
 }
 
-/* ── Main: Visual Formula Editor ───────────────────────────────── */
-
 export default function FormulaEditor({ value, onChange, tags, tagValues, onSaveAsSignal }) {
-  const [mode, setMode] = useState('visual'); // 'visual' | 'advanced'
+  const [mode, setMode] = useState('visual');
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [showFuncPicker, setShowFuncPicker] = useState(false);
   const [showNumberInput, setShowNumberInput] = useState(false);
@@ -119,13 +109,13 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
   useEffect(() => {
     if (!showTagPicker || !tagTriggerRef.current) return setTagPickerRect(null);
     const rect = tagTriggerRef.current.getBoundingClientRect();
-    setTagPickerRect({ top: rect.bottom + 6, left: rect.left, width: Math.max(256, rect.width) });
+    setTagPickerRect({ top: rect.bottom + 6, left: rect.left, width: Math.max(280, rect.width) });
   }, [showTagPicker]);
 
   useEffect(() => {
     if (!showFuncPicker || !funcTriggerRef.current) return setFuncPickerRect(null);
     const rect = funcTriggerRef.current.getBoundingClientRect();
-    setFuncPickerRect({ top: rect.bottom + 6, left: rect.left, width: Math.max(224, rect.width) });
+    setFuncPickerRect({ top: rect.bottom + 6, left: rect.left, width: Math.max(240, rect.width) });
   }, [showFuncPicker]);
 
   const safeTags = Array.isArray(tags) ? tags : [];
@@ -150,7 +140,6 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
     );
   }, [safeTags, tagSearch]);
 
-  // Visual mode: append block to formula
   const appendToFormula = useCallback((text) => {
     const current = (value || '').trim();
     const sep = current && !current.endsWith('(') && text !== ')' ? ' ' : '';
@@ -189,13 +178,11 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-[var(--rb-surface)] border border-[var(--rb-border)]">
+        <div className="rb-segmented-control">
           <button
             type="button"
             onClick={() => setMode('visual')}
-            className={`inline-flex items-center gap-1.5 px-2 py-1.5 text-[12px] font-medium rounded transition-colors ${
-              mode === 'visual' ? 'bg-[var(--rb-panel)] text-[var(--rb-text)] border border-[var(--rb-border)] shadow-sm' : 'text-[var(--rb-text-muted)] hover:text-[var(--rb-text)]'
-            }`}
+            className={`inline-flex items-center gap-1.5 ${mode === 'visual' ? 'active' : ''}`}
           >
             <Blocks size={12} />
             Visual
@@ -203,9 +190,7 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
           <button
             type="button"
             onClick={() => setMode('advanced')}
-            className={`inline-flex items-center gap-1.5 px-2 py-1.5 text-[12px] font-medium rounded transition-colors ${
-              mode === 'advanced' ? 'bg-[var(--rb-panel)] text-[var(--rb-text)] border border-[var(--rb-border)] shadow-sm' : 'text-[var(--rb-text-muted)] hover:text-[var(--rb-text)]'
-            }`}
+            className={`inline-flex items-center gap-1.5 ${mode === 'advanced' ? 'active' : ''}`}
           >
             <Code2 size={12} />
             Advanced
@@ -214,11 +199,11 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
         {value?.trim() && (
           <div className="flex items-center gap-1.5">
             {validation.valid ? (
-              <span className="rb-caption inline-flex items-center gap-1 text-[var(--rb-success)]">
+              <span className="rb-formula-validation success" style={{ padding: '4px 10px' }}>
                 <CheckCircle2 size={12} /> Valid
               </span>
             ) : (
-              <span className="rb-caption inline-flex items-center gap-1 text-[var(--rb-danger)]">
+              <span className="rb-formula-validation error" style={{ padding: '4px 10px' }}>
                 <AlertCircle size={12} /> {validation.errors.filter((e) => e.type !== 'warning').length} error{validation.errors.filter((e) => e.type !== 'warning').length !== 1 ? 's' : ''}
               </span>
             )}
@@ -228,9 +213,9 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
 
       {mode === 'visual' ? (
         <>
-          <div className="min-h-[64px] px-3 py-2.5 rounded-lg border border-[var(--rb-border)] bg-[var(--rb-input)] flex flex-wrap items-center gap-2 content-start">
+          <div className="min-h-[72px] px-3.5 py-3 rounded-lg border border-[var(--rb-border)] bg-[var(--rb-input)] flex flex-wrap items-center gap-2 content-start transition-colors duration-150 focus-within:border-[var(--rb-accent)] focus-within:shadow-[0_0_0_3px_var(--rb-accent-subtle)]">
             {blocks.length === 0 ? (
-              <span className="text-[12px] italic text-[var(--rb-text-muted)]">
+              <span className="text-[12px] italic text-[var(--rb-text-muted)] select-none">
                 e.g. {'{Pressure_1}'} + {'{Flow_Rate_1}'} / 2 — use buttons below
               </span>
             ) : (
@@ -245,7 +230,7 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
                 ))}
                 <button
                   onClick={clearAll}
-                  className="ml-1 p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] transition-colors"
+                  className="ml-1 p-1.5 rounded-full text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] transition-all duration-150"
                   title="Clear all"
                 >
                   <X size={12} />
@@ -255,13 +240,12 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
-            {/* Insert group */}
             <div className="relative">
               <button
                 ref={tagTriggerRef}
                 type="button"
                 onClick={() => { setShowTagPicker(!showTagPicker); setShowFuncPicker(false); setShowNumberInput(false); }}
-                className="rb-badge rb-body inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[var(--rb-accent)]/30 bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)] hover:bg-[var(--rb-accent)]/15 transition-colors font-semibold"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[color-mix(in_srgb,var(--rb-accent)_30%,transparent)] bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)] hover:bg-[color-mix(in_srgb,var(--rb-accent)_15%,transparent)] active:scale-[0.97] transition-all duration-150 text-[11px] font-semibold tracking-wide uppercase"
               >
                 <Plus size={12} />
                 Tag
@@ -270,39 +254,39 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
                 <>
                   <div className="fixed inset-0 z-[99998]" onClick={() => { setShowTagPicker(false); setTagSearch(''); }} aria-hidden />
                   <div
-                    className="fixed z-[99999] rounded-xl border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#131b2d] shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.4)] overflow-hidden"
-                    style={{ top: tagPickerRect.top, left: tagPickerRect.left, width: tagPickerRect.width, maxHeight: 'min(280px, 50vh)' }}
+                    className="fixed z-[99999] rb-formula-dropdown overflow-hidden"
+                    style={{ top: tagPickerRect.top, left: tagPickerRect.left, width: tagPickerRect.width, maxHeight: 'min(300px, 50vh)' }}
                   >
-                    <div className="p-2.5 border-b border-[#e3e9f0] dark:border-[#1e2d40] bg-[#f8fafc] dark:bg-[#0b111e]">
+                    <div className="p-2.5 border-b border-[var(--rb-border-subtle)] bg-[var(--rb-surface)]">
                       <div className="relative">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8898aa] dark:text-[#6b7f94]" />
+                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--rb-text-muted)]" />
                         <input
                           type="text"
                           value={tagSearch}
                           onChange={(e) => setTagSearch(e.target.value)}
                           placeholder="Search tags..."
                           autoFocus
-                          className="w-full pl-9 pr-3 py-2 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#131b2d] text-[#3a4a5c] dark:text-[#c1ccd9] placeholder-[#8898aa] focus:outline-none focus:ring-2 focus:ring-[#0e74904d] focus:border-brand transition-colors"
+                          className="rb-input-base w-full pl-9 pr-3 py-2 text-[12px] rounded-lg"
                         />
                       </div>
                     </div>
-                    <div className="overflow-y-auto py-1" style={{ maxHeight: 232 }}>
+                    <div className="overflow-y-auto py-1" style={{ maxHeight: 240 }}>
                       {filteredTags.length === 0 ? (
-                        <p className="text-[12px] text-[#8898aa] dark:text-[#6b7f94] px-4 py-4 text-center">No tags found</p>
+                        <p className="text-[12px] text-[var(--rb-text-muted)] px-4 py-4 text-center">No tags found</p>
                       ) : (
                         filteredTags.map((tag) => (
                           <button
                             key={tag.tag_name}
                             type="button"
                             onClick={() => addTag(tag.tag_name)}
-                            className="w-full px-4 py-2.5 text-left text-[12px] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-brand-subtle dark:hover:bg-[#0f2840] active:bg-[#d6eaf8] dark:active:bg-[#162a45] transition-colors rounded-md mx-1"
+                            className="rb-formula-dropdown-item w-full text-left"
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium truncate">{tag.display_name || tag.tag_name}</span>
-                              {tag.unit && <span className="text-[11px] text-[#6b7f94] dark:text-[#8898aa] shrink-0">{tag.unit}</span>}
+                              <span className="text-[12px] font-medium text-[var(--rb-text)] truncate">{tag.display_name || tag.tag_name}</span>
+                              {tag.unit && <span className="text-[10px] font-medium text-[var(--rb-text-muted)] shrink-0 px-1.5 py-0.5 rounded bg-[var(--rb-surface)]">{tag.unit}</span>}
                             </div>
                             {tag.description && (
-                              <p className="text-[11px] mt-0.5 truncate text-[#6b7f94] dark:text-[#8898aa]">{tag.description}</p>
+                              <p className="text-[10px] mt-0.5 truncate text-[var(--rb-text-muted)]">{tag.description}</p>
                             )}
                           </button>
                         ))
@@ -314,7 +298,6 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
               )}
             </div>
 
-            {/* Arithmetic group */}
             <span className="rb-toolbar-divider" style={{ height: 16 }} />
             {['+', '-', '*', '/'].map((sym) => (
               <button
@@ -322,24 +305,22 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
                 type="button"
                 onClick={() => addOperator(sym)}
                 title={OPERATORS.find(o => o.symbol === sym)?.label}
-                className="w-7 h-7 flex items-center justify-center text-sm font-mono font-semibold rounded-md bg-[var(--rb-surface)] text-[var(--rb-text-muted)] border border-[var(--rb-border)] hover:border-[var(--rb-accent)]/40 hover:text-[var(--rb-text)] transition-colors"
+                className="w-8 h-8 flex items-center justify-center text-[13px] font-mono font-bold rounded-lg bg-[var(--rb-surface)] text-[var(--rb-text-muted)] border border-[var(--rb-border)] hover:border-[var(--rb-accent)] hover:text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] active:scale-[0.93] transition-all duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
               >
                 {sym}
               </button>
             ))}
-            {/* Grouping */}
             <span className="rb-toolbar-divider" style={{ height: 16 }} />
             {['(', ')'].map((sym) => (
               <button
                 key={sym}
                 type="button"
                 onClick={() => addOperator(sym)}
-                className="w-7 h-7 flex items-center justify-center text-sm font-mono font-semibold rounded-md bg-[var(--rb-surface)] text-[var(--rb-text-muted)] border border-[var(--rb-border)] hover:border-[var(--rb-accent)]/40 hover:text-[var(--rb-text)] transition-colors"
+                className="w-8 h-8 flex items-center justify-center text-[13px] font-mono font-bold rounded-lg bg-[var(--rb-surface)] text-[var(--rb-text-muted)] border border-[var(--rb-border)] hover:border-[var(--rb-accent)] hover:text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] active:scale-[0.93] transition-all duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
               >
                 {sym}
               </button>
             ))}
-            {/* Values group */}
             <span className="rb-toolbar-divider" style={{ height: 16 }} />
             <div className="relative">
               {showNumberInput ? (
@@ -351,17 +332,18 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
                     onKeyDown={(e) => { if (e.key === 'Enter') addNumber(); if (e.key === 'Escape') setShowNumberInput(false); }}
                     placeholder="0"
                     autoFocus
-                    className="rb-input-base w-14 font-mono py-1.5 text-[12px] rounded-md"
+                    className="rb-input-base w-16 font-mono py-1.5 text-[12px] rounded-lg tabular-nums"
                   />
-                  <button type="button" onClick={addNumber} className="p-1.5 text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] rounded-md"><CheckCircle2 size={12} /></button>
-                  <button type="button" onClick={() => setShowNumberInput(false)} className="p-1.5 text-[var(--rb-text-muted)] hover:bg-[var(--rb-surface)] rounded-md"><X size={12} /></button>
+                  <button type="button" onClick={addNumber} className="p-1.5 text-[var(--rb-success)] hover:bg-[var(--rb-success-subtle)] rounded-lg transition-all duration-150"><CheckCircle2 size={14} /></button>
+                  <button type="button" onClick={() => setShowNumberInput(false)} className="p-1.5 text-[var(--rb-text-muted)] hover:bg-[var(--rb-surface)] rounded-lg transition-all duration-150"><X size={14} /></button>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => { setShowNumberInput(true); setShowFuncPicker(false); setShowTagPicker(false); }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-[var(--rb-border)] bg-[var(--rb-surface)] text-[var(--rb-text-muted)] hover:border-[var(--rb-accent)]/40 hover:text-[var(--rb-text)] transition-colors text-[12px] font-medium"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--rb-border)] bg-[var(--rb-surface)] text-[var(--rb-text-muted)] hover:border-[var(--rb-accent)] hover:text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] active:scale-[0.97] transition-all duration-150 text-[11px] font-semibold tracking-wide"
                 >
+                  <Hash size={11} />
                   123
                 </button>
               )}
@@ -372,27 +354,27 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
                 ref={funcTriggerRef}
                 type="button"
                 onClick={() => { setShowFuncPicker(!showFuncPicker); setShowTagPicker(false); setShowNumberInput(false); }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[var(--rb-border)] bg-[var(--rb-surface)] text-[var(--rb-text-muted)] hover:border-[var(--rb-accent)]/40 hover:text-[var(--rb-text)] transition-colors text-[12px] font-medium"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--rb-border)] bg-[var(--rb-surface)] text-[var(--rb-text-muted)] hover:border-[var(--rb-accent)] hover:text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] active:scale-[0.97] transition-all duration-150 text-[11px] font-semibold tracking-wide"
               >
-                <Zap size={12} />
+                <Zap size={11} />
                 Fn
               </button>
               {showFuncPicker && funcPickerRect && createPortal(
                 <>
                   <div className="fixed inset-0 z-[99998]" onClick={() => setShowFuncPicker(false)} aria-hidden />
                   <div
-                    className="fixed z-[99999] rounded-xl border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#131b2d] shadow-[0_8px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.4)] overflow-y-auto py-1"
-                    style={{ top: funcPickerRect.top, left: funcPickerRect.left, width: funcPickerRect.width, maxHeight: 'min(260px, 45vh)' }}
+                    className="fixed z-[99999] rb-formula-dropdown overflow-y-auto py-1"
+                    style={{ top: funcPickerRect.top, left: funcPickerRect.left, width: funcPickerRect.width, maxHeight: 'min(280px, 45vh)' }}
                   >
                     {AVAILABLE_FUNCTIONS.map((fn) => (
                       <button
                         key={fn.name}
                         type="button"
                         onClick={() => addFunction(fn)}
-                        className="w-full px-4 py-2.5 text-left text-[12px] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-brand-subtle dark:hover:bg-[#0f2840] active:bg-[#d6eaf8] dark:active:bg-[#162a45] transition-colors rounded-md mx-1"
+                        className="rb-formula-dropdown-item w-full text-left"
                       >
-                        <span className="font-mono font-semibold">{fn.name}()</span>
-                        <p className="text-[11px] mt-0.5 text-[#6b7f94] dark:text-[#8898aa]">{fn.description}</p>
+                        <span className="rb-formula-tag-chip font-semibold">{fn.name}()</span>
+                        <p className="text-[10px] mt-1 text-[var(--rb-text-muted)]">{fn.description}</p>
                       </button>
                     ))}
                   </div>
@@ -409,7 +391,7 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
             onChange={(e) => onChange(e.target.value)}
             placeholder="e.g. ({Temperature_1} + {Temperature_2}) / 2"
             rows={3}
-            className="rb-input-base w-full py-3 font-mono resize-none"
+            className="rb-input-base w-full py-3 font-mono resize-none rounded-lg"
           />
           <p className="rb-caption text-[var(--rb-text-muted)] leading-relaxed">
             Use {'{'}<span className="font-mono">TagName</span>{'}'} for tags. Functions: {AVAILABLE_FUNCTIONS.map((f) => f.name).join(', ')}
@@ -418,10 +400,10 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
       )}
 
       {validation.errors.length > 0 && (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {validation.errors.map((err, i) => (
             <div key={i} className={`rb-formula-validation ${err.type === 'warning' ? 'warning' : 'error'}`}>
-              {err.type === 'warning' ? <AlertCircle size={12} /> : <AlertCircle size={12} />}
+              <AlertCircle size={12} className="flex-shrink-0" />
               <span>{err.message}</span>
             </div>
           ))}
@@ -429,9 +411,9 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
       )}
 
       {previewValue !== null && (
-        <div className="flex items-center gap-2 px-2.5 py-2 rounded-md bg-[var(--rb-surface)] border border-[var(--rb-border)]">
-          <span className="text-[11px] text-[var(--rb-text-muted)]">Result:</span>
-          <span className="text-[12px] font-mono font-semibold text-[var(--rb-text)]">
+        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-border)]">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--rb-text-muted)]">Result</span>
+          <span className="text-[13px] font-mono font-bold tabular-nums text-[var(--rb-text)]">
             {typeof previewValue === 'number' ? previewValue.toFixed(2) : String(previewValue)}
           </span>
         </div>
@@ -440,7 +422,7 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
       {onSaveAsSignal && value?.trim() && validation.valid && (
         <button
           onClick={onSaveAsSignal}
-          className="w-full py-2.5 rb-body text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] rounded-lg transition-colors border border-dashed border-[var(--rb-accent)]/40"
+          className="w-full py-2.5 text-[12px] font-medium text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] rounded-lg transition-all duration-150 border border-dashed border-[color-mix(in_srgb,var(--rb-accent)_40%,transparent)] active:scale-[0.99]"
         >
           Save as reusable computed signal
         </button>

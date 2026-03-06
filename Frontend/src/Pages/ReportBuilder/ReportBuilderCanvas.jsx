@@ -8,7 +8,7 @@ import {
   Copy, Trash2, Lock, Unlock,
 } from 'lucide-react';
 import { Tooltip } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useReportCanvas, useAvailableTags, useAvailableGroups, useAvailableFormulas, collectWidgetTagNames } from '../../Hooks/useReportBuilder';
 import { useTagHistory } from '../../Hooks/useTagHistory';
 import WidgetToolbox from './panels/WidgetToolbox';
@@ -16,6 +16,7 @@ import PropertiesPanel from './panels/PropertiesPanel';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from './widgets/WidgetRenderer';
 import { WIDGET_CATALOG, createWidget } from './widgets/widgetDefaults';
 import { useEmulator } from '../../Context/EmulatorContext';
+import { useThumbnailCapture } from './ThumbnailCaptureContext';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -127,6 +128,9 @@ export default function ReportBuilderCanvas() {
   const { groups } = useAvailableGroups();
   const { formulas: savedFormulas } = useAvailableFormulas();
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
+  const prefersReducedMotion = useReducedMotion();
+  const isCapturing = useThumbnailCapture();
+  const skipAnimations = prefersReducedMotion || isCapturing;
   const widgets = rawWidgets;
   const usedTagNames = useMemo(() => collectWidgetTagNames(widgets), [widgets]);
   /* Merge emulator values — profiles are built dynamically from DB tags */
@@ -424,7 +428,12 @@ export default function ReportBuilderCanvas() {
             )}
           </div>
           <span className={`rb-badge ${statusClass}`}>{template?.status || 'Draft'}</span>
-          {dirty && <span className="rb-badge bg-[var(--rb-warning)]/12 text-[var(--rb-warning)]">Unsaved</span>}
+          {dirty && (
+            <span className="rb-badge bg-[var(--rb-warning)]/12 text-[var(--rb-warning)] inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--rb-warning)] animate-pulse" />
+              Unsaved changes
+            </span>
+          )}
           {migrated && (
             <span className="rb-badge bg-[var(--rb-warning)]/12 text-[var(--rb-warning)] inline-flex items-center gap-1">
               <AlertCircle size={12} /> Migrated
@@ -463,8 +472,9 @@ export default function ReportBuilderCanvas() {
                 onClick={handleSave}
                 disabled={saving}
                 className={`rb-btn-success inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed ${saveSuccess ? '!bg-[var(--rb-success)]' : ''}`}
+                style={{ transition: skipAnimations ? 'none' : 'background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease' }}
               >
-                {saveSuccess ? <><Check size={14} /> Saved</> : saving ? 'Saving...' : <><Save size={14} /> Save Template</>}
+                {saveSuccess ? <><Check size={14} /> Saved</> : saving ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Saving...</> : <><Save size={14} /> Save Template</>}
               </button>
             </span>
           </Tooltip>
@@ -497,10 +507,10 @@ export default function ReportBuilderCanvas() {
         <AnimatePresence>
           {showToolbox && (
             <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 260, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              initial={skipAnimations ? false : { width: 0, opacity: 0, x: -20 }}
+              animate={{ width: 260, opacity: 1, x: 0 }}
+              exit={skipAnimations ? { width: 0, opacity: 0 } : { width: 0, opacity: 0, x: -20 }}
+              transition={skipAnimations ? { duration: 0 } : { duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
               className="flex-shrink-0 rb-panel-surface border-r border-[var(--rb-border)] overflow-hidden rb-panel-left-shadow"
             >
               <WidgetToolbox
@@ -519,7 +529,7 @@ export default function ReportBuilderCanvas() {
         <div className="flex-1 min-w-0 min-h-0 basis-0 relative">
           <div
             ref={canvasScrollRef}
-            className="absolute inset-0 overflow-y-auto overflow-x-auto rb-canvas-surface"
+            className="absolute inset-0 overflow-y-auto overflow-x-auto rb-canvas-surface rb-canvas-dots"
             onClick={handleDeselect}
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
@@ -530,7 +540,11 @@ export default function ReportBuilderCanvas() {
               {/* Page container — zoom via transform: scale() */}
               <div
                 className={`rb-page-container w-full ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}
-                style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+                style={{
+                  transform: `scale(${zoom})`,
+                  transformOrigin: 'top center',
+                  transition: skipAnimations ? 'none' : 'max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease-out',
+                }}
               >
                 <div ref={containerRef} className="px-6 pt-3 pb-6 rb-canvas-perspective" style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}>
                   {widgets.length === 0 ? (
@@ -613,10 +627,10 @@ export default function ReportBuilderCanvas() {
                           <AnimatePresence>
                             {isSelected && (
                               <motion.div
-                                initial={{ opacity: 0, y: 4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 4 }}
-                                transition={{ duration: 0.15 }}
+                                initial={skipAnimations ? false : { opacity: 0, scale: 0.85, y: 4 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={skipAnimations ? { opacity: 0 } : { opacity: 0, scale: 0.85, y: 4 }}
+                                transition={skipAnimations ? { duration: 0 } : { duration: 0.18, ease: [0.34, 1.56, 0.64, 1] }}
                                 className="rb-widget-minitoolbar no-drag"
                               >
                                 <Tooltip title="Duplicate (Ctrl+D)" placement="top" arrow disableInteractive>
@@ -731,10 +745,10 @@ export default function ReportBuilderCanvas() {
         <AnimatePresence>
           {showProperties && (
             <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 324, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              initial={skipAnimations ? false : { width: 0, opacity: 0, x: 20 }}
+              animate={{ width: 324, opacity: 1, x: 0 }}
+              exit={skipAnimations ? { width: 0, opacity: 0 } : { width: 0, opacity: 0, x: 20 }}
+              transition={skipAnimations ? { duration: 0 } : { duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
               className="flex-shrink-0 rb-panel-surface border-l border-[var(--rb-border)] overflow-hidden rb-panel-right-shadow"
             >
               <PropertiesPanel

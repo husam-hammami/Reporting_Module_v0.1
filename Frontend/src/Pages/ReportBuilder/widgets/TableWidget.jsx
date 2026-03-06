@@ -407,7 +407,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   /* ── Empty state ── */
   if (columns.length === 0) {
     return (
-      <div className="flex flex-col h-full p-4 overflow-hidden relative">
+      <div className="flex flex-col h-full overflow-hidden relative" style={{ padding: 'var(--rb-widget-padding, 16px)' }}>
         {safeConfig.title && (
           <h4 className="rb-heading mb-3 truncate">{safeConfig.title}</h4>
         )}
@@ -444,7 +444,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const cellPy = compact ? 'py-1.5' : 'py-2.5';
 
   return (
-    <div className="flex flex-col h-full p-4 overflow-hidden relative">
+    <div className="flex flex-col h-full overflow-hidden relative" style={{ padding: 'var(--rb-widget-padding, 16px)' }}>
       {safeConfig.title && (
         <h4 className="rb-heading mb-3 truncate">{safeConfig.title}</h4>
       )}
@@ -475,7 +475,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                 <th
                   key={ci}
                   onDoubleClick={canEdit ? () => openEditor('edit', ci, col) : undefined}
-                  className={`px-3 ${cellPy} text-left rb-label border-b-2 ${canEdit ? 'cursor-pointer hover:bg-[var(--rb-accent-subtle)]/50 transition-colors group select-none' : ''} ${fitInContainer ? 'truncate' : ''}`}
+                  className={`px-3 ${cellPy} text-left border-b-2 rb-widget-title ${canEdit ? 'cursor-pointer hover:bg-[var(--rb-accent-subtle)]/50 transition-colors group select-none' : ''} ${fitInContainer ? 'truncate' : ''}`}
                   style={{
                     ...(colMinWidth != null && { minWidth: colMinWidth }),
                     textAlign: col.align || 'left',
@@ -532,7 +532,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                   <td
                     key={ci}
                     onDoubleClick={canEdit ? () => openEditor('edit', ci, col) : undefined}
-                    className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${isNumeric ? 'font-mono tabular-nums' : ''}`}
+                    className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${isNumeric ? 'font-mono rb-tabular-nums' : ''}`}
                     style={{
                       borderColor: borderColor || 'var(--rb-border)',
                       textAlign: col.align || 'left',
@@ -590,7 +590,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                     <td
                       key={ci}
                       onDoubleClick={canEdit ? () => openEditorForStaticCell(ri, ci) : undefined}
-                      className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${cellConfig?.sourceType !== 'static' ? 'font-mono tabular-nums' : ''}`}
+                      className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${cellConfig?.sourceType !== 'static' ? 'font-mono rb-tabular-nums' : ''}`}
                       style={{
                         borderColor: borderColor || 'var(--rb-border)',
                         textAlign: col.align || 'left',
@@ -632,7 +632,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
               return (
                 <tr
                   key={`summary-${si}`}
-                  className="font-semibold border-t"
+                  className="font-bold border-t"
                   style={{
                     borderColor: borderColor || 'var(--rb-border)',
                     backgroundColor: striped
@@ -649,7 +649,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                     return (
                       <td
                         key={ci}
-                        className={`px-3 ${cellPy} border-b font-mono tabular-nums ${fitInContainer ? 'max-w-0 truncate' : ''}`}
+                        className={`px-3 ${cellPy} border-b font-mono rb-tabular-nums ${fitInContainer ? 'max-w-0 truncate' : ''}`}
                         style={{ borderColor: borderColor || 'var(--rb-border)', textAlign: col.align || 'left' }}
                       >
                         {isFirst && (

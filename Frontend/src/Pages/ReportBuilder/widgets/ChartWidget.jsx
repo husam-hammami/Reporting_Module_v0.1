@@ -59,9 +59,9 @@ export default function ChartWidget({ config, tagValues, tagHistory, isPreview =
 
   /* ── LINE / AREA CHART (uPlot — live streaming) ────────────────── */
   return (
-    <div className="flex flex-col h-full p-3">
+    <div className="flex flex-col h-full" style={{ padding: 'var(--rb-widget-padding-sm, 12px)' }}>
       {config.title && (
-        <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 truncate">
+        <h4 className="rb-widget-title mb-2 truncate">
           {config.title}
         </h4>
       )}
@@ -193,9 +193,9 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
   }), [config, isCapturing, annotationObjs]);
 
   return (
-    <div className="flex flex-col h-full p-3">
+    <div className="flex flex-col h-full" style={{ padding: 'var(--rb-widget-padding-sm, 12px)' }}>
       {config.title && (
-        <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 truncate">
+        <h4 className="rb-widget-title mb-2 truncate">
           {config.title}
         </h4>
       )}
