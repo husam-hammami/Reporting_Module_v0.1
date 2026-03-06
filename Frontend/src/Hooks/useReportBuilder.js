@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { loadAndMigrateConfig, EMPTY_LAYOUT_CONFIG, CURRENT_SCHEMA_VERSION } from '../Pages/ReportBuilder/state/templateSchema';
 import { buildGrainSilosTemplate } from '../Pages/ReportBuilder/seed/grainSilosTemplate';
+import { buildMilATemplate } from '../Pages/ReportBuilder/seed/milATemplate';
 import { reportBuilderApi } from '../API/reportBuilderApi';
 import axios, { isExplicitRemoteApi } from '../API/axios';
 
@@ -26,6 +27,7 @@ function lsWrite(templates) {
 
 const CLEAR_FLAG = 'hercules_report_builder_templates_cleared';
 const GRAIN_SILOS_SEEDED_FLAG = 'hercules_report_builder_grain_silos_seeded';
+const MIL_A_SEEDED_FLAG = 'hercules_report_builder_mil_a_seeded';
 
 let _nextId = Date.now();
 function localId() { return _nextId++; }
@@ -196,14 +198,26 @@ export function useReportTemplates() {
       lsWrite([]);
       localStorage.setItem(CLEAR_FLAG, '1');
     }
-    if (SEED_DEMO_REPORTS && !localStorage.getItem(GRAIN_SILOS_SEEDED_FLAG)) {
+    if (SEED_DEMO_REPORTS) {
       try {
-        const existing = lsRead();
-        const hasGrainSilos = existing.some((t) => t.name === 'Grain_Silos');
-        if (!hasGrainSilos) {
-          const seed = buildGrainSilosTemplate(localId());
-          lsWrite([seed, ...existing]);
+        let existing = lsRead();
+        if (!localStorage.getItem(GRAIN_SILOS_SEEDED_FLAG)) {
+          const hasGrainSilos = existing.some((t) => t.name === 'Grain_Silos');
+          if (!hasGrainSilos) {
+            const seed = buildGrainSilosTemplate(localId());
+            existing = [seed, ...existing];
+            lsWrite(existing);
+          }
           localStorage.setItem(GRAIN_SILOS_SEEDED_FLAG, '1');
+        }
+        if (!localStorage.getItem(MIL_A_SEEDED_FLAG)) {
+          const hasMilA = existing.some((t) => t.name === 'Mil-A');
+          if (!hasMilA) {
+            const seed = buildMilATemplate(localId());
+            existing = [...existing, seed];
+            lsWrite(existing);
+          }
+          localStorage.setItem(MIL_A_SEEDED_FLAG, '1');
         }
       } catch (e) {
         console.warn('[Report Builder] Seed template failed:', e);
