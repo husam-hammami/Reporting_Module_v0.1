@@ -3,14 +3,14 @@
  * Guarantees canvas never crashes from malformed data.
  */
 
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export const EMPTY_LAYOUT_CONFIG = {
   schemaVersion: CURRENT_SCHEMA_VERSION,
   widgets: [],
   parameters: [],
   computedSignals: [],
-  grid: { cols: 12, rowHeight: 20 },
+  grid: { cols: 12, rowHeight: 40 },
 };
 
 /* ── Validate and repair a single widget ───────────────────────── */
@@ -75,25 +75,7 @@ function migrateV1toV2(config) {
     }).filter(Boolean),
     parameters: Array.isArray(config?.parameters) ? config.parameters : [],
     computedSignals: Array.isArray(config?.computedSignals) ? config.computedSignals : [],
-    grid: config?.grid || { cols: 12, rowHeight: 20 },
-    schemaVersion: 2, // mark as v2 so the v2→v3 migration runs next
-  };
-}
-
-/* ── Migrate from v2 to v3: halve row height, double widget h & y ── */
-
-function migrateV2toV3(config) {
-  const oldRowH = config?.grid?.rowHeight || 40;
-  const scale = oldRowH / 20; // typically 2 (40/20)
-  const widgets = (config.widgets || []).map((w) => ({
-    ...w,
-    h: Math.max(1, Math.round((w.h || 2) * scale)),
-    y: Math.round((w.y || 0) * scale),
-  }));
-  return {
-    ...config,
-    widgets,
-    grid: { ...(config.grid || {}), rowHeight: 20 },
+    grid: config?.grid || { cols: 12, rowHeight: 40 },
     schemaVersion: CURRENT_SCHEMA_VERSION,
   };
 }
@@ -110,12 +92,8 @@ export function loadAndMigrateConfig(rawConfig) {
     let config = rawConfig;
     let migrated = false;
 
-    if (version < 2) {
+    if (version < CURRENT_SCHEMA_VERSION) {
       config = migrateV1toV2(config);
-      migrated = true;
-    }
-    if ((config.schemaVersion || version) < 3) {
-      config = migrateV2toV3(config);
       migrated = true;
     }
 

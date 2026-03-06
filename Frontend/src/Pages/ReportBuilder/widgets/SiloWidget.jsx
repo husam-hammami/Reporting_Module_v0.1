@@ -56,7 +56,7 @@ function Silo2DSvg({ fillPercent, fillColor }) {
   return (
     <svg
       viewBox="0 0 100 118"
-      className="w-full h-full"
+      className="w-full h-full max-h-[200px]"
       preserveAspectRatio="xMidYMax meet"
       aria-hidden
       role="img"
@@ -241,7 +241,7 @@ export default function SiloWidget({ config, tagValues }) {
       )}
 
       <div
-        className="w-full flex-1 min-h-0 flex items-center justify-center cursor-help"
+        className="w-full flex-1 min-h-0 min-h-[40px] max-h-[200px] flex items-center justify-center cursor-help"
         title={`${displayPercent}${unit !== '%' ? ` ${unit}` : '%'}${tons != null ? ` • ${displayTons} t` : ''}`}
       >
         <Silo2DSvg fillPercent={fillPercent} fillColor={fillColor} />

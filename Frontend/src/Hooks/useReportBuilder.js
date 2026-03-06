@@ -424,7 +424,7 @@ export function useReportCanvas(templateId) {
       widgets: w,
       parameters: p,
       computedSignals: cs,
-      grid: template?.layout_config?.grid || { cols: 12, rowHeight: 20 },
+      grid: template?.layout_config?.grid || { cols: 12, rowHeight: 40 },
     };
 
     const payload = { layout_config };

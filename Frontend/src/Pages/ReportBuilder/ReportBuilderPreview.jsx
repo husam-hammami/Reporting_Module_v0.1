@@ -18,7 +18,7 @@ import './reportBuilderTheme.css';
 
 /* ── Grid: match ReportBuilderCanvas exactly for pixel-perfect consistency ── */
 const GRID_COLS_DEFAULT = 12;
-const GRID_ROW_H_DEFAULT = 20;
+const GRID_ROW_H_DEFAULT = 40;
 const GRID_MARGIN = [8, 8];
 const GRID_PADDING = [0, 0];
 

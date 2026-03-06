@@ -43,7 +43,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Activity',
     description: 'Single value with optional sparkline',
     defaultW: 3,
-    defaultH: 4,
+    defaultH: 2,
     defaultConfig: {
       title: 'KPI Value',
       dataSource: { type: 'tag', tagName: '', formula: '', groupTags: [], aggregation: 'last' },
@@ -66,7 +66,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Gauge',
     description: 'Radial progress indicator',
     defaultW: 3,
-    defaultH: 6,
+    defaultH: 3,
     defaultConfig: {
       title: 'Gauge',
       dataSource: { type: 'tag', tagName: '', formula: '', groupTags: [], aggregation: 'last' },
@@ -92,7 +92,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Cylinder',
     description: '2.5D cylinder fill level (grain silo)',
     defaultW: 2,
-    defaultH: 8,
+    defaultH: 4,
     defaultConfig: {
       title: 'Silo',
       dataSource: { type: 'tag', tagName: '', formula: '', groupTags: [], aggregation: 'last' },
@@ -120,7 +120,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Hash',
     description: 'Large number with label',
     defaultW: 2,
-    defaultH: 4,
+    defaultH: 2,
     defaultConfig: {
       title: 'Stat',
       dataSource: { type: 'tag', tagName: '', formula: '', groupTags: [], aggregation: 'last' },
@@ -144,7 +144,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'TrendingUp',
     description: 'Time-series line or area chart',
     defaultW: 6,
-    defaultH: 8,
+    defaultH: 4,
     defaultConfig: {
       title: 'Line Chart',
       chartType: 'line',
@@ -166,7 +166,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'BarChart3',
     description: 'Categorical or time-based bars',
     defaultW: 6,
-    defaultH: 8,
+    defaultH: 4,
     defaultConfig: {
       title: 'Bar Chart',
       chartType: 'bar',
@@ -190,7 +190,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Table2',
     description: 'Data table with computed columns',
     defaultW: 6,
-    defaultH: 8,
+    defaultH: 4,
     defaultConfig: {
       title: 'Data Table',
       tableColumns: [],
@@ -215,7 +215,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Type',
     description: 'Inline text label or heading',
     defaultW: 4,
-    defaultH: 2,
+    defaultH: 1,
     defaultConfig: {
       content: 'Text',
       fontSize: '14px',
@@ -233,7 +233,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Image',
     description: 'Upload an image from your PC',
     defaultW: 4,
-    defaultH: 6,
+    defaultH: 3,
     defaultConfig: {
       src: '',
       objectFit: 'contain',
@@ -251,7 +251,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Repeat2',
     description: 'Repeat a widget per parameter value',
     defaultW: 6,
-    defaultH: 8,
+    defaultH: 4,
     defaultConfig: {
       parameterName: '',
       childWidgetType: 'kpi',
