@@ -1,0 +1,13 @@
+[build]
+  base = "Frontend"
+  publish = "Frontend/dist"
+  command = "npm install && npm run build"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# SPA client-side routing — serve index.html for all paths
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
