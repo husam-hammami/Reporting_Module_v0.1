@@ -23,7 +23,7 @@ import './reportBuilderTheme.css';
 
 /* ── Grid: match report viewer; compact row height for less clutter ─────── */
 const GRID_COLS_DEFAULT   = 12;
-const GRID_ROW_H_DEFAULT  = 40;   // row height (px) — compact layout
+const GRID_ROW_H_DEFAULT  = 20;   // row height (px) — fine-grained positioning
 const GRID_MARGIN         = [8, 8];
 const GRID_PADDING        = [0, 0]; // outer container provides 12px 24px 24px 24px to match viewer
 

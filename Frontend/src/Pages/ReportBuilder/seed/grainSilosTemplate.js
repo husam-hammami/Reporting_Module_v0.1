@@ -300,7 +300,7 @@ export function buildGrainSilosTemplate(templateId) {
     description: 'Grain Terminal: Intake, Silo Status, Quality, Equipment, Energy, Alarms, Ops KPI, Maintenance.',
     status: 'draft',
     layout_config: {
-      schemaVersion: CURRENT_SCHEMA_VERSION,
+      schemaVersion: 2, // v2 so v2→v3 migration auto-doubles h/y for 20px rows
       widgets,
       parameters: [],
       computedSignals: [],

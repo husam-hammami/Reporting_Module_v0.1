@@ -237,7 +237,7 @@ function TagSelect({ tags, value, onChange }) {
    - Shows tag name / formula hint when no live data.
    ══════════════════════════════════════════════════════════════════ */
 
-const LAYOUT_ROW_HEIGHT_DEFAULT = 40;
+const LAYOUT_ROW_HEIGHT_DEFAULT = 20;
 /** In preview, table body height ≈ (layoutH * rowHeight) - title - padding. Use same min in builder so dimensions match. */
 function tableBodyMinHeight(layoutH, layoutRowHeight) {
   const h = Number(layoutH);

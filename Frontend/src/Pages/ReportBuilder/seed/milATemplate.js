@@ -12,7 +12,7 @@ export function buildMilATemplate(templateId) {
     description: 'Mil-A report: Data tables (Bin/Material, Product kg), Bran Receiver, Yield Log, Yield Line chart.',
     status: 'draft',
     layout_config: {
-      schemaVersion: CURRENT_SCHEMA_VERSION,
+      schemaVersion: 2, // v2 so v2→v3 migration auto-scales for 20px rows
       widgets: [
         {
           id: 'w-mila-1-datatable-bin',
