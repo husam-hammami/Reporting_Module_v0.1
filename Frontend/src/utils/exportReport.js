@@ -1,7 +1,6 @@
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-
 export async function exportAsPNG(element, filename = 'report') {
+  const { default: html2canvas } = await import('html2canvas');
+
   const originalBg = element.style.backgroundColor;
   element.style.backgroundColor = '#ffffff';
 
@@ -25,6 +24,11 @@ export async function exportAsPNG(element, filename = 'report') {
 }
 
 export async function exportAsPDF(element, filename = 'report') {
+  const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf'),
+  ]);
+
   const originalBg = element.style.backgroundColor;
   element.style.backgroundColor = '#ffffff';
 

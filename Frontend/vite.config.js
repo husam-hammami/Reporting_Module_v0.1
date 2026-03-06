@@ -9,6 +9,20 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-charts': ['chart.js', 'react-chartjs-2', 'chartjs-adapter-date-fns', 'chartjs-plugin-annotation'],
+          'vendor-mui': ['@mui/material', '@emotion/react', '@emotion/styled'],
+          'vendor-3d': ['three', '@react-three/fiber'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-grid': ['react-grid-layout'],
+        },
+      },
+    },
+  },
   server: {
     port: 5174, // ✅ must match backend CORS (5174, 5175 allowed)
     strictPort: true, // fail if 5174 in use so we stay on allowed port
