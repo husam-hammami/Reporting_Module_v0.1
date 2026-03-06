@@ -1,0 +1,77 @@
+Here's the full prompt:
+
+---
+
+> ## Objective
+> 
+> Redesign the Report Builder module to look and feel like a premium, modern industrial dashboard tool. Think Figma-level polish meets an engineering control room. The result should feel fast, professional, and satisfying to use — with purposeful motion design throughout.
+> 
+> The Report Builder has 3 views: a **Manager** (gallery of saved reports), a **Canvas** (the drag-and-drop editor), and a **Preview** (read-only live view). All three need the redesign treatment.
+> 
+> ## What you're working with
+> 
+> - **Location:** `Frontend/src/Pages/ReportBuilder/` and its subdirectories (`widgets/`, `panels/`, `formulas/`, `state/`, `seed/`)
+> - **Design tokens:** `Frontend/src/Pages/ReportBuilder/reportBuilderTheme.css` — CSS variables for colors, spacing, typography
+> - **Global styles:** `Frontend/src/index.css` — Tailwind base
+> - **Already installed:** React, Tailwind CSS, shadcn/ui, Framer Motion, Lucide icons, react-grid-layout, uPlot, Chart.js
+> - **9 widget types:** KPI, Stat, Gauge, Silo, Chart, BarChart, Table, Text, Image
+> - **3-column editor layout:** Left toolbox → Center canvas (react-grid-layout) → Right properties panel
+> - **Existing features:** drag-and-drop, undo/redo, autosave, zoom, dark mode, formula engine, thresholds, parameters, PDF/PNG export
+> 
+> ## Design direction
+> 
+> You have creative freedom on the visual design. What matters is the outcome:
+> - It should look like a product someone would pay for, not a developer prototype
+> - Interactions should feel physical and responsive — things lift when grabbed, settle when dropped, respond to hover
+> - Motion should be purposeful and fast — this is a productivity tool, every animation under 400ms
+> - Data widgets (KPI, Gauge, Silo, Charts) should animate their values in smoothly, not pop
+> - The overall density should stay high (it's a power-user tool) but with better visual hierarchy and breathing room
+> - Dark mode must work — update the dark mode token overrides alongside any light mode changes
+> - Use Framer Motion for all animations. Use `useReducedMotion()` to respect user accessibility preferences
+> 
+> ## Safety rules — READ CAREFULLY
+> 
+> **These rules are non-negotiable. Breaking any of them will make the changes unpushable.**
+> 
+> ### Files you CAN modify:
+> - `Frontend/src/Pages/ReportBuilder/**/*` — all files in this directory tree
+> - `Frontend/src/index.css` — only for adding Tailwind utilities or global animation classes
+> - `Frontend/src/Components/**/*` — only if you're improving shared UI components used by the Report Builder
+> 
+> ### Files you MUST NOT touch:
+> - Everything in `backend/` — do not open, read, or modify anything
+> - `Frontend/package.json` — do not add new dependencies. Work with what's installed
+> - `Frontend/vite.config.js`, `Frontend/tailwind.config.js`, `Frontend/jsconfig.json`
+> - `netlify.toml`, `nginx.conf`, `docker-compose.yml`, `.github/`
+> - `Frontend/src/Routes/`, `Frontend/src/Hooks/` (except hooks inside ReportBuilder/)
+> - Any file outside of `Frontend/src/`
+> 
+> ### Code rules:
+> - **Do not rename, move, or delete any files** — keep the exact same file structure
+> - **Do not change component props, hook signatures, state shape, or API calls** — only change JSX, CSS classes, inline styles, and animation wrappers
+> - **Do not change the react-grid-layout configuration** (columns, row height, compaction mode) — only style around it
+> - **Do not modify the formula engine, template schema, migration logic, or data flow**
+> - **Do not remove existing functionality** — every feature must still work: drag-drop, undo/redo, save, export, zoom, parameters, thresholds, tag picker, formula editor
+> - **Preserve all keyboard shortcuts** (Ctrl+S, Ctrl+Z, Ctrl+D, Delete, zoom keys)
+> - **Respect `ThumbnailCaptureContext`** — all animations must be disabled when this context is active (already implemented, don't break it)
+> - **Use shadcn/ui components** (Button, Input, Select, Card, Tabs, Tooltip, Dialog, etc.) to replace any raw HTML elements where appropriate
+> - **Use Tailwind classes** instead of writing new custom CSS wherever possible
+> - **Only animate `transform` and `opacity`** for performance — use Framer Motion's `layout` prop for layout shifts
+> 
+> ### Before finishing:
+> - Run the app and click through all 3 views (Manager, Canvas, Preview)
+> - Add a widget from the toolbox, move it, resize it, open properties, delete it
+> - Toggle dark mode and verify it looks correct
+> - Confirm no console errors related to your changes
+> 
+> ## Run command
+> 
+> ```bash
+> cd Frontend && npm install && npm run dev -- --host 0.0.0.0
+> ```
+> 
+> API calls will fail — that's expected. Focus on the visual layer. Use the emulator/demo data that appears by default.
+
+---
+
+That's it — one prompt, paste and go. The safety section is strict enough that you'll be able to `git add Frontend/src/` and push with confidence.

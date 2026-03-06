@@ -1,0 +1,41 @@
+What I want
+A redesign that makes this look and feel like a premium product — something like Grafana, Notion, or Linear in quality. But the priority order is:
+
+1. Structure and alignment first — Fix the spacing, padding, typography hierarchy, and visual grouping. Every widget in a row should feel like it belongs together. Section headers should visually connect to their content. This is more important than any color or animation work.
+
+2. Design system consistency — Establish a clear typographic scale that all widgets follow: widget title style, primary value style, secondary/unit style, caption style. Update reportBuilderTheme.css tokens and then apply them uniformly across every widget type (KPI, Stat, Gauge, Silo, Chart, Table, Text, Image).
+
+3. Visual polish — Better cards, cleaner panels, refined toolbar. Solid surfaces with clean borders — no glassmorphism, no backdrop-blur, no translucent panels. This runs on industrial PCs, not MacBooks.
+
+4. Motion design last — Use Framer Motion for purposeful micro-interactions: hover lifts, drag feedback, panel transitions, value animations. Every animation under 400ms. Use useReducedMotion() for accessibility. Respect the existing ThumbnailCaptureContext (disables animations during export). Only animate transform and opacity for performance.
+
+Scope — what to redesign
+Report Manager (gallery page) — card grid, search, creation flow
+Canvas editor — top toolbar, left toolbox, center canvas, right properties panel, floating toolbar, widget cards, selection states, drag states
+All 9 widget types — KPI, Stat, Gauge, Silo, Chart, BarChart, Table, Text, Image — consistent padding, typography, and hover/selection behavior
+Properties panel — form controls, section headers, tag picker, threshold editor, formula editor
+Preview mode — clean read-only presentation
+Seed templates — update grainSilosTemplate.js and milATemplate.js so widgets in the same logical row have matching h values and proper alignment
+Safety rules — these are non-negotiable
+Files you CAN modify:
+
+Frontend/src/Pages/ReportBuilder/**/* — all files in this directory tree
+Frontend/src/index.css — only for adding Tailwind utilities or animation keyframes
+Frontend/src/Components/**/* — only shared UI components used by the Report Builder
+Files you MUST NOT touch:
+
+Everything in backend/
+Frontend/package.json — do not add new dependencies, work with what's installed
+Frontend/vite.config.js, Frontend/tailwind.config.js, Frontend/jsconfig.json, Frontend/components.json
+netlify.toml, nginx.conf, docker-compose.yml, .github/
+Frontend/src/Routes/, Frontend/src/Hooks/useReportBuilder.js
+Any file outside Frontend/src/
+Code rules:
+
+Do not rename, move, or delete any files
+Do not change component props, hook signatures, state shape, or API calls
+Do not change react-grid-layout constants: GRID_COLS_DEFAULT (12), GRID_ROW_H_DEFAULT (40), GRID_MARGIN ([8,8]), GRID_PADDING ([0,0]), compactType={null}, allowOverlap={true}
+Do not modify the formula engine, template schema, migration logic, or data flow
+Do not remove any existing functionality — drag-drop, undo/redo, save, export, zoom, parameters, thresholds, tag picker, formula editor, keyboard shortcuts must all still work
+Use shadcn/ui components where appropriate (Button, Input, Select, Card, Tooltip, Dialog)
+Use Tailwind classes over custom CSS wherever possible
