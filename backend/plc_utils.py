@@ -10,7 +10,8 @@ Provides:
 import logging
 import threading
 import snap7
-import snap7.types
+import snap7.type as snap7_types
+import snap7.type as snap7types
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +72,9 @@ class SharedPLCConnection:
 
                 self.client = snap7.client.Client()
                 try:
-                    self.client.set_param(snap7.types.PingTimeout, _PLC_CONNECT_TIMEOUT_MS)
-                    self.client.set_param(snap7.types.RecvTimeout, _PLC_RECV_TIMEOUT_MS)
-                    self.client.set_param(snap7.types.SendTimeout, _PLC_SEND_TIMEOUT_MS)
+                    self.client.set_param(snap7_types.PingTimeout, _PLC_CONNECT_TIMEOUT_MS)
+                    self.client.set_param(snap7_types.RecvTimeout, _PLC_RECV_TIMEOUT_MS)
+                    self.client.set_param(snap7_types.SendTimeout, _PLC_SEND_TIMEOUT_MS)
                 except Exception:
                     pass  # older snap7 versions may not support set_param
                 self.client.connect(self.ip, self.rack, self.slot)

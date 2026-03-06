@@ -2,6 +2,11 @@ import eventlet
 eventlet.monkey_patch()  # Required for eventlet to work with standard library
 import os
 import logging
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+except ImportError:
+    pass
 import webbrowser
 import json
 from flask import Flask, jsonify, request, render_template, redirect, url_for, flash
@@ -60,78 +65,49 @@ app.config.update(
     SESSION_COOKIE_SECURE=_session_secure
 )
 
-# Explicit allowed origins (NO regex, NO wildcard)
-# Include both 5174 and 5175 so CORS works regardless of Vite dev server port
-ALLOWED_ORIGINS = {
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-    "http://localhost:5175",
-    "http://127.0.0.1:5175",
-    "https://dot-hardwood-songs-cables.trycloudflare.com",
-    "http://100.118.31.61:5174",
-    "http://100.118.31.61:80",
-    "https://dynamic-config.netlify.app",
-}
+ALLOWED_ORIGINS = "*"
 
-# Initialize SocketIO (NO wildcard)
+# Initialize SocketIO with wildcard CORS for Replit proxy compatibility
 socketio = SocketIO(
     app,
-    cors_allowed_origins=list(ALLOWED_ORIGINS),
+    cors_allowed_origins="*",
     async_mode="eventlet",
-    supports_credentials=True
+    supports_credentials=False
 )
 
 # CORS preflight: respond to OPTIONS with 200 + full CORS headers (before any route)
 CORS_ALLOW_HEADERS = "Content-Type, Authorization, ngrok-skip-browser-warning"
 
-def _normalize_origin(origin):
-    """Strip trailing slash so https://example.com/ matches https://example.com."""
-    if not origin:
-        return origin
-    return origin.rstrip("/")
-
 @app.before_request
 def handle_options_preflight():
     if request.method == "OPTIONS":
-        origin = request.headers.get("Origin")
-        if _normalize_origin(origin) in ALLOWED_ORIGINS:
-            from flask import Response
-            r = Response("", status=200)
-            r.headers["Access-Control-Allow-Origin"] = origin
-            r.headers["Access-Control-Allow-Credentials"] = "true"
-            r.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
-            r.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-            return r
-        return "", 200
+        from flask import Response
+        origin = request.headers.get("Origin", "*")
+        r = Response("", status=200)
+        r.headers["Access-Control-Allow-Origin"] = origin
+        r.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
+        r.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        return r
 
-# Request logging ONLY (no CORS logic here) — debug level to avoid flooding logs
 @app.before_request
 def log_request_info():
     logger.debug("Incoming request: %s %s", request.method, request.path)
 
-# Single source of truth for CORS headers
 @app.after_request
 def add_cors_headers(response):
-    origin = request.headers.get("Origin")
-    if _normalize_origin(origin) in ALLOWED_ORIGINS:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-
+    origin = request.headers.get("Origin", "*")
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     return response
 
-# Global OPTIONS handler (preflight) - backup if before_request didn't run
 @app.route("/<path:path>", methods=["OPTIONS"])
 def options_handler(path):
     response = jsonify({})
-    origin = request.headers.get("Origin")
-    if _normalize_origin(origin) in ALLOWED_ORIGINS:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-
+    origin = request.headers.get("Origin", "*")
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     return response, 200
 
 # Debug routes - only registered in DEV_MODE
@@ -862,4 +838,4 @@ if __name__ == '__main__':
     logger.info("Server will listen on: http://0.0.0.0:5000")
     logger.info("Test endpoint available at: http://localhost:5000/test")
     # Eventlet handles HTTP and WebSocket requests properly
-    socketio.run(app, debug=False, host='0.0.0.0', port=5001, use_reloader=False)
+    socketio.run(app, debug=False, host='localhost', port=8000, use_reloader=False)

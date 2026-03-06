@@ -2,8 +2,8 @@ import axios from 'axios';
 
 const isDev = import.meta.env.DEV;
 const isProduction = import.meta.env.PROD;
-const primaryURL = import.meta.env.VITE_API_URL || (isProduction ? '/' : 'http://localhost:5001');
-const LOCAL_FALLBACK = 'http://localhost:5001';
+const primaryURL = import.meta.env.VITE_API_URL || '';
+const LOCAL_FALLBACK = '';
 const isExplicitRemoteUrl = isDev && import.meta.env.VITE_API_URL && primaryURL !== LOCAL_FALLBACK;
 
 // In dev: if primary API is unreachable (e.g. VPN off), use local backend so app always works.

@@ -4,7 +4,10 @@ import requests
 import tempfile
 import smtplib
 from datetime import datetime, timedelta
-from xhtml2pdf import pisa
+try:
+    from xhtml2pdf import pisa
+except ImportError:
+    pisa = None
 from email.message import EmailMessage
 
 # === EMAIL SETTINGS (loaded from config at send time) ===
@@ -36,6 +39,9 @@ def fetch_summary(api_url):
         return {}, start_date.date(), end_date.date()
 
 def generate_pdf(title, html, pdf_path):
+    if pisa is None:
+        logger.warning(f"xhtml2pdf not available, skipping PDF generation for {title}")
+        return
     try:
         with open(pdf_path, "wb") as f:
             pisa.CreatePDF(html, dest=f)

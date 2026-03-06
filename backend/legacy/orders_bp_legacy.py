@@ -85,9 +85,9 @@ class SharedPLCConnection:
                 self.client = snap7.client.Client()
                 # Set short timeouts BEFORE connect to avoid long blocks
                 try:
-                    self.client.set_param(snap7.types.PingTimeout, _PLC_CONNECT_TIMEOUT_MS)
-                    self.client.set_param(snap7.types.RecvTimeout, _PLC_RECV_TIMEOUT_MS)
-                    self.client.set_param(snap7.types.SendTimeout, _PLC_SEND_TIMEOUT_MS)
+                    self.client.set_param(snap7_type.PingTimeout, _PLC_CONNECT_TIMEOUT_MS)
+                    self.client.set_param(snap7_type.RecvTimeout, _PLC_RECV_TIMEOUT_MS)
+                    self.client.set_param(snap7_type.SendTimeout, _PLC_SEND_TIMEOUT_MS)
                 except Exception:
                     pass  # older snap7 versions may not support set_param
                 self.client.connect(self.ip, self.rack, self.slot)

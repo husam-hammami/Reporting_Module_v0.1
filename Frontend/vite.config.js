@@ -10,24 +10,26 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5174, // ✅ must match backend CORS (5174, 5175 allowed)
-    strictPort: true, // fail if 5174 in use so we stay on allowed port
+    host: '0.0.0.0',
+    port: 5000,
+    strictPort: true,
+    allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5000', // ✅ Flask backend
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false,
       },
       '/orders': {
-        target: 'http://127.0.0.1:5000', // ✅ Flask backend
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false,
       },
       '/socket.io': {
-        target: 'http://127.0.0.1:5000', // ✅ Flask-SocketIO backend
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false,
-        ws: true, // Enable WebSocket proxy
+        ws: true,
       },
     },
   },
