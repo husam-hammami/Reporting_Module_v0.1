@@ -80,8 +80,8 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
   const H = 200;
   const cx = W / 2;
 
-  const bodyL = 30;
-  const bodyR = W - 30;
+  const bodyL = 26;
+  const bodyR = W - 26;
   const bodyW = bodyR - bodyL;
   const bodyRx = bodyW / 2;
 
