@@ -85,7 +85,7 @@ function ReportList({ onSelect }) {
           <button
             key={t.id}
             onClick={() => onSelect(t.id)}
-            className="text-left bg-white dark:bg-[#121e2c] border border-gray-200 dark:border-gray-700/30 rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-900/5 dark:hover:shadow-cyan-500/3 transition-all duration-150 group"
+            className="text-left bg-white/90 dark:bg-[#121e2c] border border-gray-200 dark:border-gray-700/30 rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-900/5 dark:hover:shadow-cyan-500/3 transition-all duration-150 group backdrop-blur-sm"
           >
             {/* Preview area — real report thumbnail */}
             <div className="relative h-56 w-full flex items-stretch overflow-hidden">
@@ -425,7 +425,7 @@ function SingleReportView({ reportId, onBack }) {
   return (
     <div className="flex flex-col h-[calc(100vh-80px)] bg-transparent">
       {/* ── Toolbar: back + title | date/time + time filters (left, centered) | actions ── */}
-      <div className="bg-white dark:bg-[#111c2e] border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
+      <div className="bg-white/90 dark:bg-[#111c2e] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
         {/* Left: back + report name */}
         <button onClick={onBack} className="p-2 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0">
           <FaChevronLeft size={14} />
@@ -480,19 +480,19 @@ function SingleReportView({ reportId, onBack }) {
 
       {/* ── Custom date range (only when custom selected) ── */}
       {timePreset === 'custom' && (
-        <div className="bg-white dark:bg-[#111c2e] border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2 flex items-center gap-3 print:hidden">
+        <div className="bg-white/90 dark:bg-[#111c2e] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2 flex items-center gap-3 print:hidden">
           <label className="text-[10px] font-medium text-[#6b7f94]">From</label>
           <input type="datetime-local" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
-            className="text-[11px] rounded-md border border-[#e3e9f0] bg-white dark:bg-[#111c2e] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
+            className="text-[11px] rounded-md border border-[#e3e9f0] bg-white/90 dark:bg-[#111c2e] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
           <label className="text-[10px] font-medium text-[#6b7f94]">To</label>
           <input type="datetime-local" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
-            className="text-[11px] rounded-md border border-[#e3e9f0] bg-white dark:bg-[#111c2e] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
+            className="text-[11px] rounded-md border border-[#e3e9f0] bg-white/90 dark:bg-[#111c2e] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
         </div>
       )}
 
       {/* ── Shift selector (when shift selected) ── */}
       {timePreset === 'shift' && (
-        <div className="bg-white dark:bg-[#111c2e] border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2 flex items-center gap-3 print:hidden">
+        <div className="bg-white/90 dark:bg-[#111c2e] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2 flex items-center gap-3 print:hidden">
           {shiftsConfig?.shifts?.length > 0 ? (
             <>
               <label className="text-[10px] font-medium text-[#6b7f94]">Shift</label>
@@ -637,7 +637,7 @@ export default function ReportViewer() {
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-transparent">
-      <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white dark:bg-[#111c2e]">
+      <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white/90 dark:bg-[#111c2e] backdrop-blur-sm">
         <h1 className="text-[15px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Reporting</h1>
         <p className="text-[11px] text-[#8898aa] mt-0.5">Select a report to view with live or historical data</p>
       </div>

@@ -51,7 +51,7 @@ Complete app-shell redesign extending the Report Builder's Mission Control aesth
 
 ### Design System (Global) — Industrial SCADA Theme
 - **Dark palette**: Deep navy control-room (`#060c1a` body, `#0a1020` navbar/sidenav, `#0d1a2a` panels, `#111c2e` elevated surfaces)
-- **Video background**: `bg-video.mp4` (futuristic neon wave) plays behind content in dark mode only, with semi-transparent overlay (`rgba(6,12,26,0.72-0.85)`) for readability. Login uses radial overlay for center focus effect.
+- **Video background**: `bg-video.mp4` (futuristic neon wave) in `Frontend/index.html` (outside React `#root`). Both modes: `#root { position:relative; z-index:1 }` sits above fixed video at `z-index:0`. Dark mode: 40% opacity, no filter, dark gradient overlay. Light mode: 18% opacity with `invert(1) hue-rotate(180deg) saturate(0.3) brightness(1.4)` filter, light gradient overlay. All page containers use `bg-transparent` or semi-transparent (`bg-white/90`, `rgba(...)`) with `backdrop-blur` for frosted-glass effect.
 - **Primary accent**: Cyan `#22d3ee` (dark mode), `#0284c7` (light mode) — used for active states, borders; glows only in dark mode
 - **Semantic colors**: Light mode uses muted professional tones (`#059669` success, `#d97706` warning, `#dc2626` danger); dark mode uses brighter variants (`#34d399`, `#fbbf24`, `#fb7185`)
 - **Panel borders**: `rgba(34, 211, 238, 0.28)` widget cards, `rgba(34, 211, 238, 0.18)` tables/sections, with prominent box-shadow glow in dark mode

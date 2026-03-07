@@ -349,7 +349,7 @@ const TagGroupManager = () => {
   };
 
   return (
-    <div className="p-5 min-h-screen bg-[#f5f8fb] dark:bg-[#0b111e]">
+    <div className="p-5 min-h-screen bg-transparent">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div>

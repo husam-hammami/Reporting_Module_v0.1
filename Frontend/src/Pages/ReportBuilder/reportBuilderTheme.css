@@ -97,7 +97,7 @@
    ═══════════════════════════════════════════════════════════════ */
 .dark .report-builder {
   --rb-bg-deep: transparent;
-  --rb-surface: #080d19;
+  --rb-surface: rgba(8,13,25,0.85);
   --rb-panel: #0d1a2a;
   --rb-panel-raised: #111c2e;
   --rb-canvas: transparent;

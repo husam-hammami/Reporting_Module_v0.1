@@ -102,7 +102,7 @@ const ExportImport = () => {
   };
 
   return (
-    <div className="p-5 min-h-full bg-[#f5f8fb] dark:bg-[#0b111e]">
+    <div className="p-5 min-h-full bg-transparent">
       {/* Header */}
       <div className="mb-4">
         <h2 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">
