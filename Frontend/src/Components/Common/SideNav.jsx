@@ -1,228 +1,3 @@
-// import { styled, useTheme } from '@mui/material/styles';
-// import MuiDrawer from '@mui/material/Drawer';
-// import List from '@mui/material/List';
-// import Divider from '@mui/material/Divider';
-// import ListItem from '@mui/material/ListItem';
-// import ListItemButton from '@mui/material/ListItemButton';
-// import { Box, Tooltip } from '@mui/material';
-// import { menuItems /*, bluePrint, feederBlueprint */ } from '../../Data/Navbar';
-// import { NavbarContext } from '../../Context/NavbarContext';
-// import { useContext } from 'react';
-// import { NavLink } from 'react-router-dom';
-// import { AuthContext } from '../../Context/AuthProvider';
-
-// const drawerWidth = 240;
-
-// const openedMixin = theme => ({
-//   width: drawerWidth,
-//   transition: theme.transitions.create('width', {
-//     easing: theme.transitions.easing.sharp,
-//     duration: theme.transitions.duration.enteringScreen,
-//   }),
-//   overflowX: 'hidden',
-// });
-
-// const closedMixin = theme => ({
-//   transition: theme.transitions.create('width', {
-//     easing: theme.transitions.easing.sharp,
-//     duration: theme.transitions.duration.leavingScreen,
-//   }),
-//   overflowX: 'hidden',
-//   width: `calc(${theme.spacing(7)} + 1px)`,
-//   [theme.breakpoints.up('sm')]: {
-//     width: `calc(${theme.spacing(8)} + 1px)`,
-//   },
-// });
-
-// const DrawerHeader = styled('div')(({ theme }) => ({
-//   display: 'flex',
-//   alignItems: 'center',
-//   justifyContent: 'flex-end',
-//   padding: theme.spacing(0, 1),
-//   ...theme.mixins.toolbar,
-// }));
-
-// const Drawer = styled(MuiDrawer, {
-//   shouldForwardProp: prop => prop !== 'open',
-// })(({ theme, open }) => ({
-//   width: drawerWidth,
-//   flexShrink: 0,
-//   whiteSpace: 'nowrap',
-//   boxSizing: 'border-box',
-//   ...(open && {
-//     ...openedMixin(theme),
-//     '& .MuiDrawer-paper': openedMixin(theme),
-//   }),
-//   ...(!open && {
-//     ...closedMixin(theme),
-//     '& .MuiDrawer-paper': closedMixin(theme),
-//   }),
-// }));
-
-// export default function SideNav() {
-//   const { open } = useContext(NavbarContext);
-//   const { auth } = useContext(AuthContext);
-
-//   return (
-//     <Box sx={{ display: 'flex' }}>
-//       <Drawer
-//         variant="permanent"
-//         open={open}
-//         PaperProps={{
-//           className:
-//             'dark:!bg-zinc-800 dark:!text-zinc-300 !bg-zinc-300 2xl:!pt-10 pt-7',
-//         }}
-//       >
-//         <DrawerHeader />
-
-//         {/* --- Standard Menu Items --- */}
-//         <List>
-//           {menuItems.map(
-//             (item) =>
-//               item.roles.includes(auth.role) && (
-//                 <ListItem key={item.name} disablePadding sx={{ display: 'block' }}>
-//                   <NavLink
-//                     to={item.link}
-//                     className={({ isActive }) =>
-//                       `inline-block w-full transition-all duration-300 ease-in-out ${
-//                         isActive
-//                           ? 'bg-zinc-600 dark:bg-zinc-200 text-zinc-100 dark:text-zinc-800 hover:!bg-zinc-500 dark:hover:!bg-zinc-400'
-//                           : 'dark:hover:!bg-zinc-700 hover:!bg-zinc-400'
-//                       }`
-//                     }
-//                   >
-//                     <Tooltip
-//                       title={<span className="2xl:!text-lg">{item.tooltip}</span>}
-//                       placement="top"
-//                       arrow
-//                       disableInteractive
-//                       slotProps={{
-//                         popper: { className: `${open ? 'hidden' : ''}` },
-//                       }}
-//                     >
-//                       <ListItemButton
-//                         sx={[
-//                           { minHeight: 48, px: 2.5 },
-//                           open
-//                             ? { justifyContent: 'initial' }
-//                             : { justifyContent: 'center' },
-//                         ]}
-//                         className="last:2xl:!mb-1 !py-6 2xl:!py-7"
-//                       >
-//                         <div
-//                           className={`flex justify-center items-center ${
-//                             open ? 'mr-3' : 'mr-auto'
-//                           }`}
-//                         >
-//                           <item.icon className="text-xl md:text-2xl 2xl:!text-3xl" />
-//                         </div>
-//                         <span
-//                           className={`text-xl 2xl:!text-2xl ml-3 ${
-//                             open ? 'inline' : 'hidden'
-//                           }`}
-//                         >
-//                           {item.name}
-//                         </span>
-//                       </ListItemButton>
-//                     </Tooltip>
-//                   </NavLink>
-//                 </ListItem>
-//               )
-//           )}
-//         </List>
-
-//         <Divider className="dark:!bg-zinc-600" />
-
-//         {/* --- Blueprint Order Menu --- */}
-//         {/* Commented out for future use
-//         <Tooltip
-//           title={<span className="2xl:!text-lg">{bluePrint.tooltip}</span>}
-//           placement="right"
-//         >
-//           <ListItemButton
-//             component={NavLink}
-//             to={bluePrint.link}
-//             className={`!rounded-lg !mb-2 !p-2 !min-h-0 ${
-//               open ? '!justify-start' : '!justify-center'
-//             }`}
-//             sx={{
-//               '&.active': {
-//                 backgroundColor: 'primary.main',
-//                 color: 'white',
-//                 '&:hover': {
-//                   backgroundColor: 'primary.dark',
-//                 },
-//               },
-//             }}
-//           >
-//             <Box
-//               className={`flex items-center ${
-//                 open ? 'w-full' : 'w-auto'
-//               }`}
-//             >
-//               <bluePrint.icon className="text-xl md:text-2xl 2xl:!text-3xl" />
-//               {open && (
-//                 <span className="ml-3 text-sm md:text-base 2xl:!text-lg">
-//                   {bluePrint.name}
-//                 </span>
-//               )}
-//             </Box>
-//           </ListItemButton>
-//         </Tooltip>
-
-//         <Tooltip
-//           title={<span className="2xl:!text-lg">{feederBlueprint.tooltip}</span>}
-//           placement="right"
-//         >
-//           <ListItemButton
-//             component={NavLink}
-//             to={feederBlueprint.link}
-//             className={`!rounded-lg !mb-2 !p-2 !min-h-0 ${
-//               open ? '!justify-start' : '!justify-center'
-//             }`}
-//             sx={{
-//               '&.active': {
-//                 backgroundColor: 'primary.main',
-//                 color: 'white',
-//                 '&:hover': {
-//                   backgroundColor: 'primary.dark',
-//                 },
-//               },
-//             }}
-//           >
-//             <Box
-//               className={`flex items-center ${
-//                 open ? 'w-full' : 'w-auto'
-//               }`}
-//             >
-//               <feederBlueprint.icon className="text-xl md:text-2xl 2xl:!text-3xl" />
-//               {open && (
-//                 <span className="ml-3 text-sm md:text-base 2xl:!text-lg">
-//                   {feederBlueprint.name}
-//                 </span>
-//               )}
-//             </Box>
-//           </ListItemButton>
-//         </Tooltip>
-//         */}
-//       </Drawer>
-//     </Box>
-//   );
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import { styled } from '@mui/material/styles';
 import MuiDrawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
@@ -236,20 +11,25 @@ import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../../Context/AuthProvider';
 import '../../Pages/ReportBuilder/reportBuilderTheme.css';
 
-/* Category header mapping — links to category labels */
 const CATEGORY_MAP = {
   '/report-builder': 'BUILD',
   '/reporting': 'VIEW',
   '/settings': 'CONFIGURE',
 };
 
-const drawerWidth = 170;
+const CATEGORY_COLORS = {
+  'BUILD': { accent: '#38bdf8', bg: 'rgba(56, 189, 248, 0.06)' },
+  'VIEW': { accent: '#34d399', bg: 'rgba(52, 211, 153, 0.06)' },
+  'CONFIGURE': { accent: '#a78bfa', bg: 'rgba(167, 139, 250, 0.06)' },
+};
+
+const drawerWidth = 200;
 
 const openedMixin = theme => ({
   width: drawerWidth,
   transition: theme.transitions.create('width', {
     easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.enteringScreen,
+    duration: 250,
   }),
   overflowX: 'hidden',
 });
@@ -257,12 +37,12 @@ const openedMixin = theme => ({
 const closedMixin = theme => ({
   transition: theme.transitions.create('width', {
     easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.leavingScreen,
+    duration: 200,
   }),
   overflowX: 'hidden',
-  width: 48,
+  width: 56,
   [theme.breakpoints.up('sm')]: {
-    width: 48,
+    width: 56,
   },
 });
 
@@ -277,14 +57,12 @@ const Drawer = styled(MuiDrawer, {
     ...openedMixin(theme),
     '& .MuiDrawer-paper': {
       ...openedMixin(theme),
-      borderRight: '1px solid #e3e9f0',
     },
   }),
   ...(!open && {
     ...closedMixin(theme),
     '& .MuiDrawer-paper': {
       ...closedMixin(theme),
-      borderRight: '1px solid #e3e9f0',
     },
   }),
 }));
@@ -301,6 +79,8 @@ export default function SideNav() {
     return acc;
   }, []);
 
+  let lastCategory = null;
+
   return (
     <Box sx={{ display: 'flex' }}>
       <Drawer
@@ -308,38 +88,69 @@ export default function SideNav() {
         open={open}
         PaperProps={{
           sx: {
-            background: '#ffffff',
-            color: '#3a4a5c',
-            paddingTop: '70px',
+            background: '#fafbfc',
+            color: '#334155',
+            paddingTop: '52px',
+            borderRight: '1px solid rgba(0,0,0,0.06)',
             '.dark &': {
-              background: '#080f1a',
-              color: '#e0e0e0',
-              borderColor: '#1e2d40',
+              background: '#060c18',
+              color: '#e2e8f0',
+              borderRight: '1px solid rgba(255,255,255,0.06)',
             },
           },
         }}
       >
-        <List sx={{ px: open ? 1 : 0.5, pt: 0.5 }}>
-          {uniqueMenuItems.map(
-            (item) =>
-              auth && item.roles.includes(auth.role) && (
-                <ListItem key={item.link} disablePadding sx={{ display: 'block', mb: 0.25 }}>
-                  {CATEGORY_MAP[item.link] && (
-                    <div className={`rb-sidenav-category ${open ? '' : 'collapsed'}`}>
-                      {CATEGORY_MAP[item.link]}
-                    </div>
-                  )}
-                  <NavLink
-                    to={item.link}
-                    className={({ isActive }) =>
-                      `block w-full rounded-lg transition-all duration-200 ${
-                        isActive
-                          ? 'bg-brand-subtle text-brand dark:bg-brand-subtle dark:text-brand'
-                          : 'text-[#5a6d80] hover:bg-[#f4f8fb] dark:text-[#8898aa] dark:hover:bg-[#131b2d]'
-                      }`
-                    }
+        <List sx={{ px: open ? 1.25 : 0.75, pt: 1.5 }}>
+          {uniqueMenuItems.map((item) => {
+            if (!auth || !item.roles.includes(auth.role)) return null;
+            const category = CATEGORY_MAP[item.link];
+            const showCategory = category && category !== lastCategory;
+            if (category) lastCategory = category;
+            const catColor = CATEGORY_COLORS[category] || CATEGORY_COLORS['BUILD'];
+
+            return (
+              <ListItem key={item.link} disablePadding sx={{ display: 'block', mb: 0.25 }}>
+                {showCategory && (
+                  <div
+                    className={`flex items-center gap-1.5 mb-1 ${open ? 'px-2' : 'px-0 justify-center'}`}
+                    style={{ marginTop: lastCategory !== category ? 0 : 12 }}
                   >
-                    {({ isActive }) => (
+                    {open && (
+                      <>
+                        <div
+                          className="w-1 h-3 rounded-full"
+                          style={{ background: catColor.accent }}
+                        />
+                        <span
+                          className="text-[9px] font-bold tracking-[0.2em] uppercase"
+                          style={{ color: catColor.accent, opacity: 0.7 }}
+                        >
+                          {category}
+                        </span>
+                      </>
+                    )}
+                    {!open && (
+                      <div
+                        className="w-6 h-0.5 rounded-full opacity-30"
+                        style={{ background: catColor.accent }}
+                      />
+                    )}
+                  </div>
+                )}
+                <NavLink
+                  to={item.link}
+                  className={({ isActive }) =>
+                    `block w-full rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? 'shadow-sm'
+                        : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
+                    }`
+                  }
+                >
+                  {({ isActive }) => {
+                    const activeCat = CATEGORY_MAP[item.link];
+                    const activeColor = activeCat ? CATEGORY_COLORS[activeCat]?.accent : catColor.accent;
+                    return (
                       <Tooltip
                         title={<span style={{ fontSize: 12 }}>{item.tooltip}</span>}
                         placement="right"
@@ -352,43 +163,74 @@ export default function SideNav() {
                         <ListItemButton
                           sx={[
                             {
-                              minHeight: 34,
-                              px: open ? 1.5 : 1,
-                              py: 0.6,
-                              borderRadius: '6px',
+                              minHeight: 36,
+                              px: open ? 1.5 : 1.25,
+                              py: 0.75,
+                              borderRadius: '8px',
+                              position: 'relative',
+                              overflow: 'hidden',
                             },
                             open
                               ? { justifyContent: 'initial' }
                               : { justifyContent: 'center' },
+                            isActive && {
+                              background: `${activeColor}08`,
+                              '&:hover': { background: `${activeColor}12` },
+                            },
                           ]}
                         >
+                          {isActive && (
+                            <div
+                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
+                              style={{
+                                height: '60%',
+                                background: activeColor,
+                                boxShadow: `0 0 8px ${activeColor}40`,
+                              }}
+                            />
+                          )}
                           <div
                             className={`flex justify-center items-center flex-shrink-0 ${
                               open ? 'mr-2.5' : 'mr-0'
                             }`}
                           >
                             <item.icon
-                              style={{ fontSize: 14 }}
-                              className={isActive ? 'text-brand dark:text-brand' : 'text-[#8898aa] dark:text-[#a0a0a0]'}
+                              style={{
+                                fontSize: 15,
+                                color: isActive ? activeColor : undefined,
+                                filter: isActive ? `drop-shadow(0 0 4px ${activeColor}40)` : undefined,
+                              }}
+                              className={isActive ? '' : 'text-[#94a3b8] dark:text-[#64748b]'}
                             />
                           </div>
                           {open && (
                             <span
-                              className={`text-[12px] font-medium leading-tight truncate ${
-                                isActive ? 'text-brand dark:text-brand' : 'text-[#3a4a5c] dark:text-[#c1ccd9]'
-                              }`}
+                              className={`text-[12px] font-medium leading-tight truncate transition-colors duration-200`}
+                              style={{
+                                color: isActive ? activeColor : undefined,
+                              }}
                             >
                               {item.name}
                             </span>
                           )}
                         </ListItemButton>
                       </Tooltip>
-                    )}
-                  </NavLink>
-                </ListItem>
-              )
-          )}
+                    );
+                  }}
+                </NavLink>
+              </ListItem>
+            );
+          })}
         </List>
+
+        {open && (
+          <div className="mt-auto px-3 pb-3">
+            <div className="p-2.5 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
+              <p className="text-[9px] font-semibold tracking-[0.15em] uppercase text-[#94a3b8] dark:text-[#475569] mb-0.5">Hercules v2</p>
+              <p className="text-[10px] text-[#cbd5e1] dark:text-[#334155]">Industrial SCADA</p>
+            </div>
+          </div>
+        )}
       </Drawer>
     </Box>
   );

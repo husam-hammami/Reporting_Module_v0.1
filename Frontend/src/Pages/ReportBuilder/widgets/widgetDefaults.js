@@ -196,6 +196,9 @@ export const WIDGET_CATALOG = [
       tableColumns: [],
       summaryRows: [],
       staticDataRows: [],
+      sectionHeaders: [],
+      reportHeader: null,
+      showUnitsInCells: false,
       striped: true,
       compact: false,
       showCard: true,
@@ -204,6 +207,8 @@ export const WIDGET_CATALOG = [
       rowBg: '',
       stripedRowBg: '',
       borderColor: '',
+      sectionHeaderBg: '',
+      sectionHeaderColor: '',
     },
   },
 

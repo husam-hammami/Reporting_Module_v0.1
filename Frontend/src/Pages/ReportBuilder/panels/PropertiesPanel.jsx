@@ -647,12 +647,48 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
         <>
           <Toggle label="Striped rows" value={config.striped} onChange={(v) => onUpdate({ striped: v })} />
           <Toggle label="Compact" value={config.compact} onChange={(v) => onUpdate({ compact: v })} />
+          <Toggle label="Show units in cells" value={config.showUnitsInCells} onChange={(v) => onUpdate({ showUnitsInCells: v })} />
+          <Toggle
+            label="Report header"
+            value={config.reportHeader?.show}
+            onChange={(v) => onUpdate({ reportHeader: { ...(config.reportHeader || {}), show: v } })}
+          />
+          {config.reportHeader?.show && (
+            <>
+              <Field label="Report title">
+                <TextInput value={config.reportHeader?.title || ''} onChange={(v) => onUpdate({ reportHeader: { ...config.reportHeader, title: v } })} placeholder="e.g. Mill-A Daily Report" />
+              </Field>
+              <Field label="Date range">
+                <TextInput value={config.reportHeader?.dateRange || ''} onChange={(v) => onUpdate({ reportHeader: { ...config.reportHeader, dateRange: v } })} placeholder="e.g. 05/03/2026 to 06/03/2026" />
+              </Field>
+              <Field label="Line name">
+                <TextInput value={config.reportHeader?.lineName || ''} onChange={(v) => onUpdate({ reportHeader: { ...config.reportHeader, lineName: v } })} placeholder="e.g. MIL-A" />
+              </Field>
+              <Field label="Line status">
+                <TextInput value={config.reportHeader?.lineStatus || ''} onChange={(v) => onUpdate({ reportHeader: { ...config.reportHeader, lineStatus: v } })} placeholder="e.g. Running" />
+              </Field>
+              <Field label="Produced total">
+                <TextInput value={config.reportHeader?.producedTotal || ''} onChange={(v) => onUpdate({ reportHeader: { ...config.reportHeader, producedTotal: v } })} placeholder="e.g. 230372.0 kg" />
+              </Field>
+              <Field label="Consumed total">
+                <TextInput value={config.reportHeader?.consumedTotal || ''} onChange={(v) => onUpdate({ reportHeader: { ...config.reportHeader, consumedTotal: v } })} placeholder="e.g. 234994.0 kg" />
+              </Field>
+            </>
+          )}
           <Field label="Header colors">
             <div className="rb-color-group">
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
               <input type="color" value={config.headerBg || '#1e293b'} onChange={(e) => onUpdate({ headerBg: e.target.value })} className="rb-color-swatch" />
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">text</span>
               <input type="color" value={config.headerColor || '#ffffff'} onChange={(e) => onUpdate({ headerColor: e.target.value })} className="rb-color-swatch" />
+            </div>
+          </Field>
+          <Field label="Section header colors">
+            <div className="rb-color-group">
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
+              <input type="color" value={config.sectionHeaderBg || '#f1f5f9'} onChange={(e) => onUpdate({ sectionHeaderBg: e.target.value })} className="rb-color-swatch" />
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">text</span>
+              <input type="color" value={config.sectionHeaderColor || '#0f172a'} onChange={(e) => onUpdate({ sectionHeaderColor: e.target.value })} className="rb-color-swatch" />
             </div>
           </Field>
           <Field label="Row colors">

@@ -1,6 +1,6 @@
-import { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, X, Settings2 } from 'lucide-react';
+import { Plus, Trash2, X, Settings2, GripVertical } from 'lucide-react';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import FormulaEditor from '../formulas/FormulaEditor';
 
@@ -99,9 +99,10 @@ function getSourceBadge(col) {
 
 /* ── Format cell for display ───────────────────────────────────── */
 
-function formatCellDisplay(value, col) {
+function formatCellDisplay(value, col, showUnit = false) {
   const format = col.format || 'number';
   const decimals = col.decimals ?? 1;
+  const unit = showUnit && col.unit ? ` ${col.unit}` : '';
 
   if (format === 'boolean') {
     const checked = value != null && value !== '' && (typeof value === 'number' ? value !== 0 : !!value);
@@ -111,12 +112,18 @@ function formatCellDisplay(value, col) {
   if (format === 'percentage') {
     const num = Number(value);
     if (num == null || isNaN(num)) return { type: 'text', text: '\u2014' };
-    return { type: 'text', text: `${num.toFixed(decimals)}%` };
+    return { type: 'text', text: `${num.toFixed(decimals)} %` };
   }
 
-  if (value == null) return { type: 'text', text: null }; // null = no live value, show hint
-  if (typeof value === 'number' && !isNaN(value)) return { type: 'text', text: value.toFixed(decimals) };
-  return { type: 'text', text: String(value) };
+  if (format === 'weight') {
+    const num = Number(value);
+    if (num == null || isNaN(num)) return { type: 'text', text: '\u2014' };
+    return { type: 'text', text: `${num.toFixed(decimals)}${unit || ' kg'}` };
+  }
+
+  if (value == null) return { type: 'text', text: null };
+  if (typeof value === 'number' && !isNaN(value)) return { type: 'text', text: `${value.toFixed(decimals)}${unit}` };
+  return { type: 'text', text: `${String(value)}${unit}` };
 }
 
 /* ── Get threshold color ───────────────────────────────────────── */
@@ -253,6 +260,9 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const columns = Array.isArray(safeConfig.tableColumns) ? safeConfig.tableColumns : [];
   const summaryRows = Array.isArray(safeConfig.summaryRows) ? safeConfig.summaryRows : [];
   const rawStaticRows = Array.isArray(safeConfig.staticDataRows) ? safeConfig.staticDataRows : [];
+  const sectionHeaders = Array.isArray(safeConfig.sectionHeaders) ? safeConfig.sectionHeaders : [];
+  const reportHeader = safeConfig.reportHeader || null;
+  const showUnitsInCells = safeConfig.showUnitsInCells || false;
   const staticDataRows = useMemo(() => {
     const n = columns.length;
     if (n === 0) return [];
@@ -276,6 +286,8 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const rowBg = safeConfig.rowBg || '';
   const stripedRowBg = safeConfig.stripedRowBg || '';
   const borderColor = safeConfig.borderColor || '';
+  const sectionHeaderBg = safeConfig.sectionHeaderBg || '';
+  const sectionHeaderColor = safeConfig.sectionHeaderColor || '';
 
   const canEdit = Boolean(isSelected && onUpdate && widgetId);
   /** In builder workspace always fit table (no horizontal scroll); in preview allow scroll/minWidth. */
@@ -358,8 +370,42 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const removeStaticRow = useCallback((index) => {
     if (!onUpdate || !widgetId) return;
     const newRows = rawStaticRows.filter((_, i) => i !== index);
-    onUpdate(widgetId, { config: { ...safeConfig, staticDataRows: newRows } });
-  }, [onUpdate, widgetId, rawStaticRows, safeConfig]);
+    const staticOffset = 1;
+    const boundary = index + staticOffset;
+    const updatedHeaders = sectionHeaders
+      .filter(sh => sh.beforeRowIndex !== boundary)
+      .map(sh => {
+        if (sh.beforeRowIndex > boundary) return { ...sh, beforeRowIndex: sh.beforeRowIndex - 1 };
+        return sh;
+      });
+    onUpdate(widgetId, { config: { ...safeConfig, staticDataRows: newRows, sectionHeaders: updatedHeaders } });
+  }, [onUpdate, widgetId, rawStaticRows, safeConfig, sectionHeaders]);
+
+  /* ── Section header management ── */
+  const addSectionHeader = useCallback((label, beforeRowIndex) => {
+    if (!onUpdate || !widgetId) return;
+    const newHeaders = [...sectionHeaders, { label: label || 'Section', beforeRowIndex: beforeRowIndex ?? staticDataRows.length }];
+    onUpdate(widgetId, { config: { ...safeConfig, sectionHeaders: newHeaders } });
+  }, [onUpdate, widgetId, sectionHeaders, safeConfig, staticDataRows.length]);
+
+  const removeSectionHeader = useCallback((index) => {
+    if (!onUpdate || !widgetId) return;
+    const newHeaders = sectionHeaders.filter((_, i) => i !== index);
+    onUpdate(widgetId, { config: { ...safeConfig, sectionHeaders: newHeaders } });
+  }, [onUpdate, widgetId, sectionHeaders, safeConfig]);
+
+  const updateSectionHeader = useCallback((index, updates) => {
+    if (!onUpdate || !widgetId) return;
+    const newHeaders = sectionHeaders.map((sh, i) => i === index ? { ...sh, ...updates } : sh);
+    onUpdate(widgetId, { config: { ...safeConfig, sectionHeaders: newHeaders } });
+  }, [onUpdate, widgetId, sectionHeaders, safeConfig]);
+
+  /* ── Report header management ── */
+  const updateReportHeader = useCallback((updates) => {
+    if (!onUpdate || !widgetId) return;
+    const current = reportHeader || { show: false, title: '', dateRange: '', lineStatus: '', lineName: '', producedTotal: '', consumedTotal: '' };
+    onUpdate(widgetId, { config: { ...safeConfig, reportHeader: { ...current, ...updates } } });
+  }, [onUpdate, widgetId, reportHeader, safeConfig]);
 
   const updateStaticCellConfig = useCallback((rowIndex, colIndex, cellConfig) => {
     if (!onUpdate || !widgetId) return;
@@ -387,6 +433,17 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
     updateStaticCellConfig(rowIndex, colIndex, draftStaticCell);
     closeStaticCellEditor();
   }, [editingStaticCell, draftStaticCell, updateStaticCellConfig, closeStaticCellEditor]);
+
+  /* ── Build section header lookup (which rows have headers before them) ── */
+  const sectionHeaderMap = useMemo(() => {
+    const map = {};
+    sectionHeaders.forEach((sh, idx) => {
+      const key = sh.beforeRowIndex ?? 0;
+      if (!map[key]) map[key] = [];
+      map[key].push({ ...sh, _idx: idx });
+    });
+    return map;
+  }, [sectionHeaders]);
 
   /* ── Compute one row of live values ── */
   const rowValues = useMemo(() => {
@@ -443,9 +500,82 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
 
   const cellPy = compact ? 'py-0.5' : 'py-1';
 
+  const totalColSpan = columns.length + (canEdit ? 1 : 0);
+
+  const renderSectionHeaderRows = (beforeRowIndex) => {
+    const headers = sectionHeaderMap[beforeRowIndex];
+    if (!headers || headers.length === 0) return null;
+    return headers.map((sh) => (
+      <tr key={`section-header-${sh._idx}`} className="rb-section-header-row">
+        <td
+          colSpan={totalColSpan}
+          className="px-3 py-2 font-bold text-left border-b"
+          style={{
+            backgroundColor: sectionHeaderBg || 'var(--rb-surface)',
+            color: sectionHeaderColor || 'var(--rb-text)',
+            borderColor: borderColor || 'var(--rb-border)',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+          }}
+        >
+          <span className="flex items-center gap-2">
+            {sh.label}
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => removeSectionHeader(sh._idx)}
+                className="rb-btn-ghost p-1 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] opacity-0 group-hover:opacity-100"
+                style={{ opacity: 1 }}
+                title="Remove section header"
+              >
+                <X size={10} />
+              </button>
+            )}
+          </span>
+        </td>
+      </tr>
+    ));
+  };
+
   return (
-    <div className="flex flex-col h-full overflow-hidden relative" style={{ padding: '6px 8px' }}>
-      {safeConfig.title && (
+    <div className="flex flex-col h-full overflow-hidden relative rb-production-table" style={{ padding: '6px 8px' }}>
+      {reportHeader?.show && (
+        <div className="rb-report-header mb-2 pb-2" style={{ borderBottom: `1px solid ${borderColor || 'var(--rb-border)'}` }}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              {reportHeader.title && (
+                <h3 className="text-sm font-bold text-[var(--rb-text)] mb-0.5">{reportHeader.title}</h3>
+              )}
+              {reportHeader.dateRange && (
+                <p className="rb-caption text-[var(--rb-text-muted)]">{reportHeader.dateRange}</p>
+              )}
+              {(reportHeader.lineName || reportHeader.lineStatus) && (
+                <div className="mt-1">
+                  {reportHeader.lineName && (
+                    <span className="text-xs font-semibold text-[var(--rb-accent)] mr-2">{reportHeader.lineName}</span>
+                  )}
+                  {reportHeader.lineStatus && (
+                    <span className="text-xs text-[var(--rb-text-muted)]">Status: {reportHeader.lineStatus}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            {(reportHeader.producedTotal || reportHeader.consumedTotal) && (
+              <div className="text-right flex-shrink-0">
+                {reportHeader.producedTotal && (
+                  <p className="text-xs"><span className="font-semibold text-[var(--rb-text)]">Produced:</span> <span className="font-mono rb-tabular-nums">{reportHeader.producedTotal}</span></p>
+                )}
+                {reportHeader.consumedTotal && (
+                  <p className="text-xs"><span className="font-semibold text-[var(--rb-text)]">Consumed:</span> <span className="font-mono rb-tabular-nums">{reportHeader.consumedTotal}</span></p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {safeConfig.title && !reportHeader?.show && (
         <h4 className="rb-widget-title mb-1.5 truncate">{safeConfig.title}</h4>
       )}
 
@@ -506,6 +636,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
             </tr>
           </thead>
           <tbody>
+            {renderSectionHeaderRows(0)}
             {/* ── Live data row ── */}
             <tr
               className="rb-table-body-row hover:opacity-90"
@@ -517,7 +648,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
             >
               {columns.map((col, ci) => {
                 const rawValue = rowValues[ci];
-                const formatted = formatCellDisplay(rawValue, col);
+                const formatted = formatCellDisplay(rawValue, col, showUnitsInCells);
                 const thresholdColor = getThresholdColor(rawValue, col.thresholds);
                 const isNumeric = col.sourceType !== 'static';
                 const hint = getColumnHint(col);
@@ -542,8 +673,10 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                     title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit') : undefined}
                   >
                     {showResolvedValue && formatted.type === 'boolean' ? (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded border border-[var(--rb-border)] bg-[var(--rb-input)]">
-                        {formatted.checked ? <span className="text-xs text-[var(--rb-accent)]">&#10003;</span> : null}
+                      <span className="rb-checkbox-cell inline-flex items-center justify-center w-[18px] h-[18px] rounded-[3px] border-2 border-[var(--rb-border)] bg-[var(--rb-input)] print:border-gray-400">
+                        {formatted.checked ? (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--rb-accent)] print:text-blue-600" /></svg>
+                        ) : null}
                       </span>
                     ) : (
                       showResolvedValue ? (
@@ -565,65 +698,75 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
               {canEdit && <td className={`px-2 ${cellPy} border-b`} style={{ borderColor: borderColor || 'var(--rb-border)' }} />}
             </tr>
 
-            {/* ── Static (configurable) data rows ── */}
-            {staticDataRows.map((rowCells, ri) => (
-              <tr
-                key={`static-${ri}`}
-                className="rb-table-body-row"
-                style={{
-                  backgroundColor: striped && (ri + 2) % 2 === 0 ? (stripedRowBg || 'var(--rb-panel)') : (rowBg || 'transparent'),
-                  borderColor: borderColor || 'var(--rb-border)',
-                }}
-              >
-                {columns.map((col, ci) => {
-                  const cellConfig = rowCells[ci];
-                  const rawValue = resolveColumnValue(cellConfig, tagValues);
-                  const formatted = formatCellDisplay(rawValue, cellConfig);
-                  const hint = getColumnHint(cellConfig);
-                  const badge = getSourceBadge(cellConfig);
-                  const hasValue = formatted.text !== null;
-                  const showResolvedValue = !!isPreview;
-                  const displayText = showResolvedValue
-                    ? (hasValue ? formatted.text : (hint || '—'))
-                    : (hint || 'Double-click to set');
-                  return (
-                    <td
-                      key={ci}
-                      onDoubleClick={canEdit ? () => openEditorForStaticCell(ri, ci) : undefined}
-                      className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${cellConfig?.sourceType !== 'static' ? 'font-mono rb-tabular-nums' : ''}`}
-                      style={{
-                        borderColor: borderColor || 'var(--rb-border)',
-                        textAlign: col.align || 'left',
-                        ...(fitInContainer && { overflow: 'hidden', textOverflow: 'ellipsis' }),
-                      }}
-                      title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit cell') : undefined}
-                    >
-                      {showResolvedValue && formatted.type === 'boolean' ? (
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded border border-[var(--rb-border)] bg-[var(--rb-input)]">
-                          {formatted.checked ? <span className="text-xs text-[var(--rb-accent)]">&#10003;</span> : null}
-                        </span>
-                      ) : (
-                        <span className={`${hasValue || showResolvedValue ? '' : 'rb-caption italic'} ${fitInContainer ? 'block truncate' : ''}`}>
-                          {displayText}
-                        </span>
-                      )}
-                    </td>
-                  );
-                })}
-                {canEdit && (
-                  <td className={`px-2 ${cellPy} border-b`} style={{ borderColor: borderColor || 'var(--rb-border)' }}>
-                    <button
-                      type="button"
-                      onClick={() => removeStaticRow(ri)}
-                      className="rb-btn-ghost p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
-                      title="Remove row"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
+            {/* ── Static (configurable) data rows with section headers ── */}
+            {staticDataRows.map((rowCells, ri) => {
+              const rowIndex = ri + 1;
+              return (
+                <React.Fragment key={`static-group-${ri}`}>
+                  {renderSectionHeaderRows(rowIndex)}
+                  <tr
+                    className="rb-table-body-row"
+                    style={{
+                      backgroundColor: striped && (ri + 2) % 2 === 0 ? (stripedRowBg || 'var(--rb-panel)') : (rowBg || 'transparent'),
+                      borderColor: borderColor || 'var(--rb-border)',
+                    }}
+                  >
+                    {columns.map((col, ci) => {
+                      const cellConfig = rowCells[ci];
+                      const rawValue = resolveColumnValue(cellConfig, tagValues);
+                      const formatted = formatCellDisplay(rawValue, cellConfig, showUnitsInCells);
+                      const thresholdColor = getThresholdColor(rawValue, cellConfig.thresholds);
+                      const hint = getColumnHint(cellConfig);
+                      const badge = getSourceBadge(cellConfig);
+                      const hasValue = formatted.text !== null;
+                      const showResolvedValue = !!isPreview;
+                      const displayText = showResolvedValue
+                        ? (hasValue ? formatted.text : (hint || '—'))
+                        : (hint || 'Double-click to set');
+                      const numericAlign = (cellConfig.format === 'number' || cellConfig.format === 'percentage' || cellConfig.format === 'weight') && cellConfig.sourceType !== 'static';
+                      return (
+                        <td
+                          key={ci}
+                          onDoubleClick={canEdit ? () => openEditorForStaticCell(ri, ci) : undefined}
+                          className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${cellConfig?.sourceType !== 'static' ? 'font-mono rb-tabular-nums' : ''}`}
+                          style={{
+                            borderColor: borderColor || 'var(--rb-border)',
+                            textAlign: numericAlign ? 'right' : (col.align || 'left'),
+                            ...(thresholdColor ? { color: thresholdColor, fontWeight: 600 } : {}),
+                            ...(fitInContainer && { overflow: 'hidden', textOverflow: 'ellipsis' }),
+                          }}
+                          title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit cell') : undefined}
+                        >
+                          {showResolvedValue && formatted.type === 'boolean' ? (
+                            <span className="rb-checkbox-cell inline-flex items-center justify-center w-[18px] h-[18px] rounded-[3px] border-2 border-[var(--rb-border)] bg-[var(--rb-input)] print:border-gray-400">
+                              {formatted.checked ? (
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--rb-accent)] print:text-blue-600" /></svg>
+                              ) : null}
+                            </span>
+                          ) : (
+                            <span className={`${hasValue || showResolvedValue ? '' : 'rb-caption italic'} ${fitInContainer ? 'block truncate' : ''}`}>
+                              {displayText}
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    {canEdit && (
+                      <td className={`px-2 ${cellPy} border-b`} style={{ borderColor: borderColor || 'var(--rb-border)' }}>
+                        <button
+                          type="button"
+                          onClick={() => removeStaticRow(ri)}
+                          className="rb-btn-ghost p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
+                          title="Remove row"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                </React.Fragment>
+              );
+            })}
 
             {/* ── Summary / aggregation rows ── */}
             {summaryData.map((sValues, si) => {
@@ -694,6 +837,16 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                           className="rb-body inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--rb-border)] text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:border-[var(--rb-accent)]/50 hover:bg-[var(--rb-accent-subtle)] transition-colors"
                         >
                           <Plus size={12} /> New row
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const label = prompt('Section header label:', 'Section');
+                            if (label) addSectionHeader(label, staticDataRows.length + 1);
+                          }}
+                          className="rb-body inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--rb-text-muted)]/30 text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:border-[var(--rb-accent)]/50 hover:bg-[var(--rb-accent-subtle)] transition-colors"
+                        >
+                          <GripVertical size={12} /> Section header
                         </button>
                         <button
                           type="button"
@@ -935,7 +1088,7 @@ function ColumnEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagVa
                   <div>
                     <span className="text-[10px] text-[var(--rb-text-muted)] block mb-1">Format</span>
                     <select value={draft.format || 'number'} onChange={(e) => patch({ format: e.target.value })} className={inputCls}>
-                      <option value="number">Number</option><option value="percentage">Percentage</option><option value="boolean">Checkbox</option>
+                      <option value="number">Number</option><option value="percentage">Percentage</option><option value="weight">Weight</option><option value="boolean">Checkbox</option>
                     </select>
                   </div>
                   <div>

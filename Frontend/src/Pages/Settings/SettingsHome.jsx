@@ -40,10 +40,14 @@ const SettingsHome = () => {
   const showDefault = location.pathname === '/settings';
 
   return (
-    <div className="min-h-[calc(100vh-70px)] bg-[#f5f8fb] dark:bg-[#0b111e]">
-      {/* ── Sticky top bar with tabs ── */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-[#131b2d] border-b border-[#e3e9f0] dark:border-[#1e2d40] px-6 pt-4 pb-0">
-        <h1 className="text-[15px] font-bold text-[#2a3545] dark:text-[#e1e8f0] mb-3">Engineering</h1>
+    <div className="min-h-[calc(100vh-52px)] bg-[#f8f9fb] dark:bg-[#060c18]">
+      <div className="sticky top-0 z-10 bg-white/90 dark:bg-[#0a1120]/90 border-b border-black/[0.06] dark:border-white/[0.06] px-6 pt-4 pb-0"
+        style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-1 h-4 rounded-full bg-[#a78bfa]" />
+          <h1 className="text-[15px] font-bold text-[#0f1729] dark:text-[#f0f4f8] tracking-tight">Engineering</h1>
+        </div>
         <nav className="flex gap-0 -mb-px overflow-x-auto">
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
@@ -52,9 +56,13 @@ const SettingsHome = () => {
               <Link
                 key={item.link}
                 to={item.link}
-                className={`rb-settings-tab ${active ? 'active' : ''}`}
+                className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium whitespace-nowrap border-b-2 transition-all duration-200 ${
+                  active
+                    ? 'border-[var(--brand)] text-[var(--brand)] bg-[var(--brand-subtle)]'
+                    : 'border-transparent text-[#64748b] dark:text-[#64748b] hover:text-[#334155] dark:hover:text-[#e2e8f0] hover:border-[#cbd5e1] dark:hover:border-[#334155]'
+                }`}
               >
-                <Icon size={13} />
+                <Icon size={12} />
                 {item.name}
               </Link>
             );
@@ -62,15 +70,14 @@ const SettingsHome = () => {
         </nav>
       </div>
 
-      {/* ── Content ── */}
       <div className="max-w-[1200px] mx-auto px-5 py-4">
         {showDefault ? (
           <div className="text-center py-16 px-6">
-            <div className="w-12 h-12 rounded-xl bg-[#f0f5fa] dark:bg-[#0f2840] flex items-center justify-center mx-auto mb-4">
-              <FaTags className="text-[#8898aa] text-lg" />
+            <div className="w-12 h-12 rounded-xl bg-[#f0f5fa] dark:bg-[#0f1a2e] flex items-center justify-center mx-auto mb-4">
+              <FaTags className="text-[#94a3b8] text-lg" />
             </div>
-            <h2 className="text-[14px] font-semibold text-[#3a4a5c] dark:text-[#c1ccd9] mb-1">Select a section</h2>
-            <p className="text-[12px] text-[#8898aa] max-w-sm mx-auto">
+            <h2 className="text-[14px] font-semibold text-[#334155] dark:text-[#e2e8f0] mb-1">Select a section</h2>
+            <p className="text-[12px] text-[#94a3b8] max-w-sm mx-auto">
               Choose a tab above to manage tags, groups, mappings, or system settings.
             </p>
           </div>

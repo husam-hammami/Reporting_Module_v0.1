@@ -3,85 +3,103 @@
 @tailwind utilities;
 
 *{
-    /* transition: all 0.1s; */
     font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
 }
 
 @layer base {
-    /* Dark mode styles */
     .dark-style {
       @apply dark:bg-zinc-700 dark:text-zinc-50 bg-zinc-100;
     }
   }
 
-  /* @tailwind base;
-  @tailwind components;
-  @tailwind utilities; */
-  
   :root {
     --background: hsl(0, 0%, 100%);
-    --foreground: hsl(214, 14%, 4%);
-    --muted: hsl(214, 12%, 96%);
-    --muted-foreground: hsl(214, 8%, 45%);
+    --foreground: hsl(220, 25%, 10%);
+    --muted: hsl(220, 14%, 96%);
+    --muted-foreground: hsl(220, 8%, 46%);
     --popover: hsl(0, 0%, 100%);
-    --popover-foreground: hsl(214, 14%, 4%);
+    --popover-foreground: hsl(220, 25%, 10%);
     --card: hsl(0, 0%, 100%);
-    --card-foreground: hsl(214, 14%, 4%);
-    --border: hsl(214, 10%, 90%);
-    --input: hsl(214, 10%, 90%);
-    --primary: hsl(192, 82%, 31%);
+    --card-foreground: hsl(220, 25%, 10%);
+    --border: hsl(220, 13%, 91%);
+    --input: hsl(220, 13%, 91%);
+    --primary: hsl(200, 80%, 40%);
     --primary-foreground: hsl(0, 0%, 100%);
-    --secondary: hsl(214, 12%, 96%);
-    --secondary-foreground: hsl(214, 10%, 10%);
-    --accent: hsl(214, 12%, 96%);
-    --accent-foreground: hsl(214, 10%, 10%);
-    --destructive: hsl(0, 84.2%, 60.2%);
+    --secondary: hsl(220, 14%, 96%);
+    --secondary-foreground: hsl(220, 13%, 15%);
+    --accent: hsl(220, 14%, 96%);
+    --accent-foreground: hsl(220, 13%, 15%);
+    --destructive: hsl(0, 84%, 60%);
     --destructive-foreground: hsl(0, 0%, 100%);
-    --ring: hsl(214, 14%, 4%);
+    --ring: hsl(200, 80%, 40%);
     --radius: 0.5rem;
 
-    /* Brand accent — industrial deep blue */
-    --brand: #2563ab;
-    --brand-hover: #1d4f8a;
-    --brand-subtle: #e8f0fb;
-    --brand-ring: rgba(37, 99, 171, 0.3);
+    --brand: #0c7bb3;
+    --brand-hover: #0a6999;
+    --brand-subtle: #e6f4fb;
+    --brand-ring: rgba(12, 123, 179, 0.25);
+    --brand-glow: rgba(14, 165, 233, 0);
 
-    /* Theme-specific custom properties */
-    --theme-primary: hsl(213, 94%, 68%);
-    --theme-secondary: hsl(213, 93%, 88%);
-    --theme-accent: hsl(213, 87%, 51%);
-    --theme-light: hsl(213, 100%, 97%);
-    --theme-dark: hsl(213, 78%, 33%);
+    --theme-primary: hsl(200, 85%, 55%);
+    --theme-secondary: hsl(200, 80%, 85%);
+    --theme-accent: hsl(200, 90%, 45%);
+    --theme-light: hsl(200, 100%, 97%);
+    --theme-dark: hsl(200, 75%, 30%);
+
+    --nav-height: 52px;
+    --sidebar-width: 200px;
+    --sidebar-collapsed: 56px;
+
+    --glass-bg: rgba(255, 255, 255, 0.82);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-blur: 16px;
+
+    --surface-elevated: #ffffff;
+    --surface-sunken: #f4f6f9;
+    --text-primary: #0f1729;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --border-subtle: #e2e8f0;
   }
   
   .dark {
-    /* Smart Factory theme - dark desaturated blue with vibrant accents */
-    --background: 218 47% 9%;        /* #0b111e - application background */
-    --foreground: 0 0% 100%;         /* #ffffff - primary text */
-    --muted: 217 39% 13%;           /* #131b2d - widget/card */
-    --muted-foreground: 0 0% 63%;   /* #a0a0a0 - secondary text */
-    --popover: 218 60% 8%;          /* #080f1a - sidebar/panels */
-    --popover-foreground: 0 0% 100%;
-    --card: 217 39% 13%;            /* #131b2d */
-    --card-foreground: 0 0% 100%;
-    --border: 218 25% 20%;           /* subtle borders */
-    --input: 217 39% 13%;
-    --primary: 217 80% 68%;         /* #60a5fa - softer blue accent */
-    --primary-foreground: 218 47% 9%;
-    --secondary: 217 39% 13%;
-    --secondary-foreground: 0 0% 100%;
-    --accent: 221 100% 55%;         /* #1a5cff - active nav blue */
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;       /* #ef5350 */
-    --destructive-foreground: 0 0% 100%;
-    --ring: 217 80% 68%;
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --muted: 220 30% 12%;
+    --muted-foreground: 215 20% 65%;
+    --popover: 224 50% 5%;
+    --popover-foreground: 210 40% 98%;
+    --card: 222 35% 10%;
+    --card-foreground: 210 40% 98%;
+    --border: 220 20% 18%;
+    --input: 222 35% 10%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 222 47% 6%;
+    --secondary: 220 30% 12%;
+    --secondary-foreground: 210 40% 98%;
+    --accent: 199 89% 48%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 199 89% 48%;
     --radius: 0.5rem;
 
-    /* Brand accent — softer blue for dark mode */
-    --brand: #60a5fa;
-    --brand-hover: #4b8edf;
-    --brand-subtle: #1a2540;
-    --brand-ring: rgba(96, 165, 250, 0.3);
+    --brand: #38bdf8;
+    --brand-hover: #7dd3fc;
+    --brand-subtle: rgba(56, 189, 248, 0.08);
+    --brand-ring: rgba(56, 189, 248, 0.3);
+    --brand-glow: rgba(56, 189, 248, 0.15);
+
+    --glass-bg: rgba(8, 15, 28, 0.75);
+    --glass-border: rgba(56, 189, 248, 0.08);
+    --glass-blur: 20px;
+
+    --surface-elevated: #0f1a2e;
+    --surface-sunken: #060c18;
+    --text-primary: #f0f4f8;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border-subtle: rgba(148, 163, 184, 0.1);
   }
   
   @layer base {
@@ -90,21 +108,21 @@
     }
   
     body {
-      @apply font-sans antialiased bg-white dark:bg-[#0b111e] text-foreground;
+      @apply font-sans antialiased bg-white dark:bg-[#060c18] text-foreground;
     }
   }
   
   @layer utilities {
     .dark-input-field .MuiOutlinedInput-root {
-      background-color: #131b2d !important;
+      background-color: #0f1a2e !important;
     }
     
     .dark-input-field .MuiOutlinedInput-root:hover {
-      background-color: #131b2d !important;
+      background-color: #0f1a2e !important;
     }
     
     .dark-input-field .MuiOutlinedInput-root.Mui-focused {
-      background-color: #131b2d !important;
+      background-color: #0f1a2e !important;
     }
     
     .theme-transition {
@@ -135,6 +153,18 @@
     .theme-border {
       border-color: var(--theme-primary);
     }
+
+    .glass-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
+    }
+
+    .surface-elevated {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+    }
   
     .status-indicator {
       animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -161,34 +191,29 @@
       animation: loading 1.5s infinite;
     }
 
+    .dark .loading-skeleton {
+      background: linear-gradient(90deg, #0f1a2e 25%, #162340 50%, #0f1a2e 75%);
+      background-size: 200% 100%;
+    }
+
     @keyframes loading {
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
 
-    /* Chart canvas background in dark mode */
     .dark canvas {
-      background-color: #131b2d !important;
+      background-color: #0a1120 !important;
     }
 
-    /* Ensure Energy Report page background is solid in dark mode */
     .dark .min-h-screen.bg-gradient-to-br {
-      background: #0b111e !important;
+      background: #060c18 !important;
       background-image: none !important;
     }
 
-    /* Ensure Report page background is solid in dark mode */
     .dark .min-h-screen.bg-zinc-100 {
-      background: #0b111e !important;
+      background: #060c18 !important;
     }
 
-    /* Ensure NewReport page background is solid in dark mode */
-    .dark .min-h-screen.bg-gradient-to-br {
-      background: #0b111e !important;
-      background-image: none !important;
-    }
-
-    /* Cyan checkbox styling for setpoint tables - Smart Factory theme */
     input[type="checkbox"].checkbox-cyan {
       accent-color: var(--brand) !important;
       -webkit-appearance: checkbox !important;
@@ -204,12 +229,10 @@
       border-color: var(--brand) !important;
     }
 
-    /* Force cyan color using filter for browsers that don't support accent-color */
     input[type="checkbox"].checkbox-cyan:checked {
       filter: none !important;
     }
 
-    /* WebKit/Chrome specific */
     input[type="checkbox"].checkbox-cyan::-webkit-appearance {
       accent-color: var(--brand) !important;
     }
@@ -219,12 +242,10 @@
       accent-color: var(--brand) !important;
     }
 
-    /* Firefox specific */
     input[type="checkbox"].checkbox-cyan:checked {
       accent-color: var(--brand) !important;
     }
 
-    /* Custom checkbox using pseudo-elements as fallback */
     input[type="checkbox"].checkbox-cyan {
       position: relative;
     }
@@ -257,6 +278,26 @@
       to { opacity: 1; transform: scale(1); }
     }
 
+    @keyframes mc-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes mc-glow-pulse {
+      0%, 100% { box-shadow: 0 0 4px rgba(56, 189, 248, 0.3); }
+      50% { box-shadow: 0 0 12px rgba(56, 189, 248, 0.6); }
+    }
+
+    @keyframes mc-shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    @keyframes mc-border-glow {
+      0%, 100% { border-color: rgba(56, 189, 248, 0.2); }
+      50% { border-color: rgba(56, 189, 248, 0.5); }
+    }
+
     .animate-fade-in {
       animation: rb-fade-in 250ms ease-out both;
     }
@@ -268,12 +309,38 @@
     .animate-scale-in {
       animation: rb-scale-in 250ms ease-out both;
     }
+
+    .animate-mc-pulse {
+      animation: mc-pulse 2s ease-in-out infinite;
+    }
+
+    .animate-mc-glow {
+      animation: mc-glow-pulse 3s ease-in-out infinite;
+    }
+
+    .mc-gradient-border {
+      position: relative;
+    }
+    .mc-gradient-border::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(14, 165, 233, 0.1), rgba(56, 189, 248, 0.3));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
   }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
   .animate-slide-up,
   .animate-scale-in,
+  .animate-mc-pulse,
+  .animate-mc-glow,
   .rb-fade-in,
   .rb-slide-up {
     animation: none !important;
@@ -296,7 +363,7 @@
     margin: 0 !important;
     padding: 0 !important;
   }
-  .print\\:hidden {
+  .print\:hidden {
     display: none !important;
   }
 }
@@ -343,19 +410,16 @@
   opacity: 1;
 }
 
-/* Edge handles — thin strips along each side */
 .react-grid-item > .react-resizable-handle-s  { bottom: -3px; left: 8px; right: 8px; height: 6px; cursor: s-resize; }
 .react-grid-item > .react-resizable-handle-n  { top: -3px;    left: 8px; right: 8px; height: 6px; cursor: n-resize; }
 .react-grid-item > .react-resizable-handle-e  { right: -3px;  top: 8px;  bottom: 8px; width: 6px; cursor: e-resize; }
 .react-grid-item > .react-resizable-handle-w  { left: -3px;   top: 8px;  bottom: 8px; width: 6px; cursor: w-resize; }
 
-/* Corner handles — small squares at each corner */
 .react-grid-item > .react-resizable-handle-se { bottom: -3px; right: -3px;  width: 10px; height: 10px; cursor: se-resize; }
 .react-grid-item > .react-resizable-handle-sw { bottom: -3px; left: -3px;   width: 10px; height: 10px; cursor: sw-resize; }
 .react-grid-item > .react-resizable-handle-ne { top: -3px;    right: -3px;  width: 10px; height: 10px; cursor: ne-resize; }
 .react-grid-item > .react-resizable-handle-nw { top: -3px;    left: -3px;   width: 10px; height: 10px; cursor: nw-resize; }
 
-/* Visual indicator on SE corner */
 .react-grid-item > .react-resizable-handle-se::after {
   content: "";
   position: absolute;
@@ -372,7 +436,6 @@
   border-color: rgba(76, 224, 255, 0.6);
 }
 
-/* Highlight edges on hover */
 .react-grid-item > .react-resizable-handle-s:hover,
 .react-grid-item > .react-resizable-handle-n:hover { background: rgba(76, 224, 255, 0.15); border-radius: 3px; }
 .react-grid-item > .react-resizable-handle-e:hover,
@@ -389,4 +452,26 @@
   opacity: 1 !important;
   transition: all 150ms ease;
 }
-  
+
+/* ─────────────── App Shell: Scrollbar ─────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.15);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.3);
+}

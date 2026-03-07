@@ -13,11 +13,21 @@ export default {
     extend: {
       animation: {
         'fade-loop': 'fadeLoop 0.8s infinite',
+        'live-pulse': 'livePulse 2s ease-in-out infinite',
+        'glow': 'glowPulse 3s ease-in-out infinite',
       },
       keyframes: {
         fadeLoop: {
           '0%, 100%': { opacity: '0.3' },
           '50%': { opacity: '1' },
+        },
+        livePulse: {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.6', transform: 'scale(0.85)' },
+        },
+        glowPulse: {
+          '0%, 100%': { boxShadow: '0 0 4px rgba(56, 189, 248, 0.2)' },
+          '50%': { boxShadow: '0 0 16px rgba(56, 189, 248, 0.5)' },
         },
       },
       colors: {
@@ -59,6 +69,8 @@ export default {
           hover: "var(--brand-hover)",
           subtle: "var(--brand-subtle)",
         },
+        'mc-surface': 'var(--surface-elevated)',
+        'mc-sunken': 'var(--surface-sunken)',
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -68,6 +80,9 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+      },
+      backdropBlur: {
+        glass: 'var(--glass-blur)',
       },
     },
   },

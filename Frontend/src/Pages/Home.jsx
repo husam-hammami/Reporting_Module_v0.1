@@ -10,7 +10,7 @@ function Home() {
   const { mode } = contextValue || {};
 
   const DrawerHeader = styled('div')(() => ({
-    minHeight: 70,
+    minHeight: 52,
   }));
 
   const theme = createTheme({
@@ -26,11 +26,11 @@ function Home() {
       <Box
         component="main"
         sx={{ flexGrow: 1, p: 0, overflow: 'hidden' }}
-        className="bg-[#f5f8fb] dark:bg-[#0b111e]"
+        className="bg-[#f8f9fb] dark:bg-[#060c18]"
       >
         <DrawerHeader />
         <ThemeProvider theme={theme}>
-          <div id="main-scroll-container" className="h-[calc(100vh-70px)] overflow-auto">
+          <div id="main-scroll-container" className="h-[calc(100vh-52px)] overflow-auto">
             <Outlet />
           </div>
         </ThemeProvider>
