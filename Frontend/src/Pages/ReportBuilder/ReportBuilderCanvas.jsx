@@ -530,6 +530,7 @@ export default function ReportBuilderCanvas() {
           <div
             ref={canvasScrollRef}
             className="absolute inset-0 overflow-y-auto overflow-x-auto rb-canvas-surface rb-canvas-dots"
+            style={{ background: 'var(--rb-canvas)' }}
             onClick={handleDeselect}
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
@@ -549,7 +550,7 @@ export default function ReportBuilderCanvas() {
                 <div ref={containerRef} className="px-6 pt-3 pb-6 rb-canvas-perspective" style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}>
                   {widgets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-                    <div className="w-16 h-16 rounded-2xl bg-[var(--rb-panel)] border border-[var(--rb-border)] flex items-center justify-center mb-5">
+                    <div className="rb-empty-state-icon w-16 h-16 rounded-2xl flex items-center justify-center mb-5">
                       <Plus size={28} className="text-[var(--rb-text-muted)]" />
                     </div>
                     <h3 className="rb-heading mb-2">Start designing your report</h3>
@@ -600,8 +601,8 @@ export default function ReportBuilderCanvas() {
                           } ${
                             isSelected
                               ? isInvisible
-                                ? 'outline outline-2 outline-[var(--rb-accent)] outline-offset-1 rounded'
-                                : 'border-[var(--rb-accent)]'
+                                ? 'outline outline-2 outline-[var(--rb-accent)] outline-offset-1 rounded rb-widget-selected'
+                                : 'rb-widget-selected'
                               : isInvisible
                                 ? 'hover:outline hover:outline-1 hover:outline-[var(--rb-accent)]/30 hover:outline-offset-1 rounded'
                                 : showCard
@@ -609,8 +610,8 @@ export default function ReportBuilderCanvas() {
                                   : 'hover:border-[var(--rb-accent)]/50'
                           }`}
                           style={isSelected && !isInvisible ? {
-                            background: 'color-mix(in srgb, var(--rb-accent) 3%, var(--rb-panel))',
-                            boxShadow: '0 0 0 3px color-mix(in srgb, var(--rb-accent) 12%, transparent)',
+                            borderColor: 'var(--rb-accent)',
+                            boxShadow: '0 0 20px var(--rb-accent-glow), 0 0 0 2px color-mix(in srgb, var(--rb-accent) 18%, transparent)',
                           } : undefined}
                         >
                           {/* Selection handles (4 corners) */}

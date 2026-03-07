@@ -46,17 +46,23 @@ A full-stack industrial plant monitoring system with a React frontend and Flask 
 - xhtml2pdf not installed (cairo dependency missing) — PDF email reports are gracefully skipped
 - snap7 v2.1.0 uses `snap7.type` (not `snap7.types`) — fixed in plc_utils.py
 
-## Report Builder UI Redesign (Completed — v2 Industrial/SCADA Density Pass)
-Full rendering-layer redesign for professional Grafana/SCADA-caliber industrial dashboards. Zero backend changes.
-- **Design System**: `reportBuilderTheme.css` — density-first CSS tokens: dark navy surfaces (#0a0f1a, #111827), cyan/teal accents, tight spacing (4-8px padding), compact typography (10px uppercase titles, 18-32px tabular-nums values, 11px body, 9px captions)
-- **Grid**: `GRID_MARGIN` reduced from [8,8] to [4,4] in both Canvas and Preview for dense layouts
-- **Widget Cards**: Single clean layer — 1px border, 4px radius, 8px internal padding via `.rb-widget-card` CSS class. No nested wrappers or double-padding
-- **Default Sizes**: Compact defaults — KPI/Stat 2×1, Gauge 2×2, Silo 2×3, Chart/Table 4×3, Text 3×1
-- **Widget Toolbox**: Neutral monochrome icon backgrounds using `var(--rb-surface)` + `var(--rb-border)` — no colored ICON_TINTS
-- **Properties Panel**: Layout section (X/Y/W/H number inputs) added above Data/Format tabs for precise positioning
-- **Seed Template**: Grain Silos template optimized — silos changed from 3×2 (4 per row) to 2×3 (6 per row) for better density
-- **Files Modified**: All files under `Frontend/src/Pages/ReportBuilder/` (widgets, panels, canvas, manager, preview, seed template, theme CSS)
-- **Preserved Contracts**: All API endpoints, schema (templateSchema.js), hook signatures (useReportCanvas, useTagHistory, useSocket), data flow, and infrastructure (react-grid-layout, Chart.js, uPlot, html2canvas, jspdf) untouched
+## Report Builder UI — "Mission Control" Redesign (v3)
+Complete creative rendering-layer redesign inspired by SpaceX mission control, Bloomberg Terminal, and SCADA HMIs. Zero backend changes.
+- **Design Concept**: "Mission Control" — dark-first with deep space palette, electric cyan accents, glowing edges, gradient-border cards, extreme typographic contrast
+- **Theme CSS** (`reportBuilderTheme.css`): Full token system — deep space blacks (#030711, #0c1222), electric cyan (#38bdf8 dark / #0ea5e9 light), amber warnings (#fbbf24), neon green success (#34d399). Glowing box-shadows, frosted glass effects, custom scrollbars
+- **KPI Widget**: Massive centered value with glowing accent bar underneath, gradient-filled area sparkline, compact horizontal mode at h=1
+- **Gauge Widget**: Gradient arc stroke through zone colors, glowing endpoint dot (replaces needle), digital value readout, tick marks with variable thickness
+- **Silo Widget**: Enhanced metallic gradients (8-stop), glossy liquid surface, dual-wave animation, bold percentage overlay
+- **Chart Widget**: Edge-to-edge layout, Mission Control color palette (#00d4ff, #00e88f, #ffaa33), gradient bar fills, dark tooltips with monospace
+- **Table Widget**: Gradient header strip, monospace tabular-nums, accent hover rows
+- **Stat Widget**: Large auto-sizing value with accent glow, left accent border strip
+- **Manager**: Holographic gradient-border cards (`.rb-holo-card`), status badges with colored glow dots, premium empty state
+- **Canvas**: Deep dark workspace with cyan dot grid, glowing selection handles (circular), frosted glass floating toolbar
+- **Toolbox**: Cyan accent header, icon-pill buttons with glow on hover, widget selection restores canvas focus
+- **Properties Panel**: Monospace layout inputs, glowing segmented control, accent section headers with icon badges
+- **Grid**: [4,4] margins in Canvas and Preview
+- **Files Modified**: All under `Frontend/src/Pages/ReportBuilder/` — widgets, panels, canvas, manager, preview, theme CSS
+- **Preserved Contracts**: All API endpoints, schema, hook signatures, data flow, and infrastructure untouched
 
 ## Key Files
 - `backend/app.py` - Main Flask app, DB connection pool, CORS, SocketIO

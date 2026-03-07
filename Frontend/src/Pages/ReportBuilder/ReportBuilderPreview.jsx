@@ -180,7 +180,7 @@ export default function ReportBuilderPreview() {
 
   if (loading) {
     return (
-      <div className="report-builder flex items-center justify-center h-[calc(100vh-80px)]" style={{ background: 'var(--rb-surface)' }}>
+      <div className="report-builder flex items-center justify-center h-[calc(100vh-80px)]" style={{ background: 'var(--rb-canvas)' }}>
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--rb-accent)', borderTopColor: 'transparent' }} />
           <p className="rb-label">Loading preview...</p>
@@ -190,12 +190,11 @@ export default function ReportBuilderPreview() {
   }
 
   return (
-    <div className="report-builder h-[calc(100vh-70px)] flex flex-col overflow-hidden" style={{ background: 'var(--rb-surface)' }}>
+    <div className="report-builder h-[calc(100vh-70px)] flex flex-col overflow-hidden" style={{ background: 'var(--rb-canvas)' }}>
       {/* Top bar */}
       <div
-        className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 print:hidden"
+        className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 print:hidden rb-panel-surface"
         style={{
-          background: 'var(--rb-panel)',
           borderBottom: '1px solid var(--rb-border)',
         }}
       >
@@ -305,8 +304,8 @@ export default function ReportBuilderPreview() {
       {/* Preview body */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-behavior-auto"
-        style={{ background: 'var(--rb-surface)', WebkitOverflowScrolling: 'touch' }}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-behavior-auto rb-canvas-dots"
+        style={{ background: 'var(--rb-canvas)', WebkitOverflowScrolling: 'touch' }}
         onWheelCapture={handleWheelCapture}
       >
         <motion.div
@@ -315,7 +314,7 @@ export default function ReportBuilderPreview() {
           {...pageEntrance}
         >
           {/* Compact report header */}
-          <div className="mb-1 print:mb-2 px-1 pt-2">
+          <div className="mb-1 print:mb-2 px-4 pt-3">
             <h1 className="rb-title" style={{ fontSize: 'var(--rb-font-lg)' }}>
               {template?.name || 'Report'}
             </h1>
@@ -327,6 +326,9 @@ export default function ReportBuilderPreview() {
           {/* Widgets grid */}
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="rb-empty-state-icon w-14 h-14 rounded-xl flex items-center justify-center mb-4">
+                <FaPen style={{ fontSize: '16px', color: 'var(--rb-text-muted)' }} />
+              </div>
               <p className="rb-label">
                 No widgets in this report. Go back to the canvas to add widgets.
               </p>
@@ -334,7 +336,7 @@ export default function ReportBuilderPreview() {
           ) : (
             <div
               ref={containerRef}
-              className="rb-canvas-dots rb-canvas-perspective rb-layout-readonly pt-3 pb-6 px-6"
+              className="rb-canvas-perspective rb-layout-readonly pt-3 pb-6 px-4"
               style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}
             >
               <GridLayout

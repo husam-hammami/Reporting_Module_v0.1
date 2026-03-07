@@ -3,45 +3,53 @@ import { Tooltip } from '@mui/material';
 import { ChevronDown, Search, Tag, LayoutGrid } from 'lucide-react';
 import { WIDGET_CATALOG, createWidget } from '../widgets/widgetDefaults';
 
-/* ── SVG icons (colored, unique per type) ────────────────────── */
+const IC = {
+  primary: 'var(--rb-text-muted)',
+  mid: 'var(--rb-text-muted)',
+  light: 'var(--rb-border)',
+  active: 'var(--rb-accent)',
+  activeMid: 'var(--rb-accent-bright)',
+};
 
-const IC = { primary: '#6b7280', mid: '#9ca3af', light: '#d1d5db', muted: '#6b7f94', subtle: '#8898aa' };
-
-function VizIcon({ type }) {
+function VizIcon({ type, isActive }) {
   const s = 'w-7 h-7';
+  const p = isActive ? IC.active : IC.primary;
+  const m = isActive ? IC.activeMid : IC.mid;
+  const l = isActive ? IC.active : IC.light;
   switch (type) {
-    case 'kpi': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M5 22l5.5-5.4 4 3.8 7.2-8.4 4.3 3" stroke={IC.primary} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /><rect x="4" y="22" width="4.5" height="5" rx="1" fill={IC.light} /><rect x="11" y="19" width="4.5" height="8" rx="1" fill={IC.mid} /><rect x="18" y="14.5" width="4.5" height="12.5" rx="1" fill={IC.primary} /></svg>;
-    case 'table': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="5" width="24" height="22" rx="3" stroke={IC.primary} strokeWidth="2" /><path d="M4 12h24M4 19h24M12 5v22M20 5v22" stroke={IC.mid} strokeWidth="1.6" /></svg>;
-    case 'chart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M5 25h22" stroke={IC.light} strokeWidth="1.6" /><path d="M6 21l5.5-5.5 5 3.6 8-8" stroke={IC.primary} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-    case 'barchart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M5 26h22" stroke={IC.light} strokeWidth="1.6" /><rect x="7" y="15" width="4" height="10" rx="1.2" fill={IC.light} /><rect x="14" y="10" width="4" height="15" rx="1.2" fill={IC.mid} /><rect x="21" y="6" width="4" height="19" rx="1.2" fill={IC.primary} /></svg>;
-    case 'gauge': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 22a10 10 0 0 1 20 0" stroke={IC.light} strokeWidth="3" strokeLinecap="round" /><path d="M6 22a10 10 0 0 1 5.8-9" stroke="#c4a27a" strokeWidth="3" strokeLinecap="round" /><path d="M11.8 13a10 10 0 0 1 8.4 0" stroke="#8aae8a" strokeWidth="3" strokeLinecap="round" /><path d="M16 21l5-5" stroke={IC.primary} strokeWidth="2.2" strokeLinecap="round" /><circle cx="16" cy="21" r="1.6" fill={IC.primary} /></svg>;
-    case 'stat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={IC.mid} strokeWidth="2" /><text x="16" y="21" textAnchor="middle" fill={IC.primary} fontSize="12" fontWeight="bold" fontFamily="monospace">42</text></svg>;
-    case 'image': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={IC.mid} strokeWidth="1.8" /><circle cx="12" cy="13" r="2.5" stroke={IC.primary} strokeWidth="1.5" /><path d="M4 22l6-5 4 3 5-6 9 8" stroke={IC.primary} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-    case 'repeat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="10" height="16" rx="2" stroke={IC.mid} strokeWidth="1.8" /><rect x="18" y="8" width="10" height="16" rx="2" stroke={IC.mid} strokeWidth="1.8" /><path d="M14 16h4" stroke={IC.primary} strokeWidth="1.5" strokeLinecap="round" /><path d="M16 14v4" stroke={IC.primary} strokeWidth="1.5" strokeLinecap="round" /></svg>;
-    case 'silo': return <svg viewBox="0 0 32 32" className={s} fill="none"><ellipse cx="16" cy="8" rx="8" ry="3" stroke={IC.mid} strokeWidth="1.8" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" stroke={IC.mid} strokeWidth="1.8" fill="none" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" fill="url(#silo-toolbox-fill)" fillOpacity="0.3" stroke="none" /><defs><linearGradient id="silo-toolbox-fill" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stopColor={IC.primary} /><stop offset="70%" stopColor={IC.primary} stopOpacity="0.5" /></linearGradient></defs></svg>;
-    case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="6" y="22" fill={IC.primary} fontSize="16" fontWeight="bold" fontFamily="serif">T</text><path d="M18 10h8M18 16h6M18 22h4" stroke={IC.mid} strokeWidth="1.6" strokeLinecap="round" /></svg>;
+    case 'kpi': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M5 22l5.5-5.4 4 3.8 7.2-8.4 4.3 3" stroke={p} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /><rect x="4" y="22" width="4.5" height="5" rx="1" fill={l} /><rect x="11" y="19" width="4.5" height="8" rx="1" fill={m} /><rect x="18" y="14.5" width="4.5" height="12.5" rx="1" fill={p} /></svg>;
+    case 'table': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="5" width="24" height="22" rx="3" stroke={p} strokeWidth="2" /><path d="M4 12h24M4 19h24M12 5v22M20 5v22" stroke={m} strokeWidth="1.6" /></svg>;
+    case 'chart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M5 25h22" stroke={l} strokeWidth="1.6" /><path d="M6 21l5.5-5.5 5 3.6 8-8" stroke={p} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case 'barchart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M5 26h22" stroke={l} strokeWidth="1.6" /><rect x="7" y="15" width="4" height="10" rx="1.2" fill={l} /><rect x="14" y="10" width="4" height="15" rx="1.2" fill={m} /><rect x="21" y="6" width="4" height="19" rx="1.2" fill={p} /></svg>;
+    case 'gauge': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 22a10 10 0 0 1 20 0" stroke={l} strokeWidth="3" strokeLinecap="round" /><path d="M6 22a10 10 0 0 1 5.8-9" stroke={isActive ? '#fbbf24' : '#c4a27a'} strokeWidth="3" strokeLinecap="round" /><path d="M11.8 13a10 10 0 0 1 8.4 0" stroke={isActive ? '#34d399' : '#8aae8a'} strokeWidth="3" strokeLinecap="round" /><path d="M16 21l5-5" stroke={p} strokeWidth="2.2" strokeLinecap="round" /><circle cx="16" cy="21" r="1.6" fill={p} /></svg>;
+    case 'stat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="2" /><text x="16" y="21" textAnchor="middle" fill={p} fontSize="12" fontWeight="bold" fontFamily="monospace">42</text></svg>;
+    case 'image': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="1.8" /><circle cx="12" cy="13" r="2.5" stroke={p} strokeWidth="1.5" /><path d="M4 22l6-5 4 3 5-6 9 8" stroke={p} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case 'repeat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="1.8" /><rect x="18" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="1.8" /><path d="M14 16h4" stroke={p} strokeWidth="1.5" strokeLinecap="round" /><path d="M16 14v4" stroke={p} strokeWidth="1.5" strokeLinecap="round" /></svg>;
+    case 'silo': return <svg viewBox="0 0 32 32" className={s} fill="none"><ellipse cx="16" cy="8" rx="8" ry="3" stroke={m} strokeWidth="1.8" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" stroke={m} strokeWidth="1.8" fill="none" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" fill={isActive ? 'rgba(56,189,248,0.15)' : 'rgba(107,127,148,0.15)'} stroke="none" /><defs><linearGradient id="silo-toolbox-fill" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stopColor={p} /><stop offset="70%" stopColor={p} stopOpacity="0.5" /></linearGradient></defs></svg>;
+    case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="6" y="22" fill={p} fontSize="16" fontWeight="bold" fontFamily="serif">T</text><path d="M18 10h8M18 16h6M18 22h4" stroke={m} strokeWidth="1.6" strokeLinecap="round" /></svg>;
     default: return null;
   }
 }
 
 function SmallVizIcon({ type }) {
   const s = 'w-4 h-4';
+  const p = IC.primary;
+  const m = IC.mid;
+  const l = IC.light;
   switch (type) {
-    case 'kpi': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M5 22l5.5-5.4 4 3.8 7.2-8.4 4.3 3" stroke={IC.primary} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-    case 'table': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="5" width="24" height="22" rx="3" stroke={IC.primary} strokeWidth="2.5" /><path d="M4 12h24M12 5v22" stroke={IC.mid} strokeWidth="2" /></svg>;
-    case 'chart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 21l5.5-5.5 5 3.6 8-8" stroke={IC.primary} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-    case 'barchart': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="7" y="15" width="5" height="11" rx="1" fill={IC.light} /><rect x="14" y="10" width="5" height="16" rx="1" fill={IC.mid} /><rect x="21" y="6" width="5" height="20" rx="1" fill={IC.primary} /></svg>;
-    case 'gauge': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 22a10 10 0 0 1 20 0" stroke={IC.light} strokeWidth="3.5" strokeLinecap="round" /><path d="M16 21l5-5" stroke={IC.primary} strokeWidth="2.5" strokeLinecap="round" /></svg>;
-    case 'stat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={IC.mid} strokeWidth="2.5" /><text x="16" y="21" textAnchor="middle" fill={IC.primary} fontSize="14" fontWeight="bold">42</text></svg>;
-    case 'image': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={IC.mid} strokeWidth="2" /><path d="M4 22l6-5 4 3 5-6 9 8" stroke={IC.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-    case 'repeat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="10" height="16" rx="2" stroke={IC.mid} strokeWidth="2" /><rect x="18" y="8" width="10" height="16" rx="2" stroke={IC.mid} strokeWidth="2" /></svg>;
-    case 'silo': return <svg viewBox="0 0 32 32" className={s} fill="none"><ellipse cx="16" cy="8" rx="8" ry="3" stroke={IC.mid} strokeWidth="2" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" stroke={IC.mid} strokeWidth="2" fill="none" /></svg>;
-    case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="8" y="22" fill={IC.primary} fontSize="18" fontWeight="bold" fontFamily="serif">T</text></svg>;
+    case 'kpi': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M5 22l5.5-5.4 4 3.8 7.2-8.4 4.3 3" stroke={p} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case 'table': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="5" width="24" height="22" rx="3" stroke={p} strokeWidth="2.5" /><path d="M4 12h24M12 5v22" stroke={m} strokeWidth="2" /></svg>;
+    case 'chart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 21l5.5-5.5 5 3.6 8-8" stroke={p} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case 'barchart': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="7" y="15" width="5" height="11" rx="1" fill={l} /><rect x="14" y="10" width="5" height="16" rx="1" fill={m} /><rect x="21" y="6" width="5" height="20" rx="1" fill={p} /></svg>;
+    case 'gauge': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 22a10 10 0 0 1 20 0" stroke={l} strokeWidth="3.5" strokeLinecap="round" /><path d="M16 21l5-5" stroke={p} strokeWidth="2.5" strokeLinecap="round" /></svg>;
+    case 'stat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="2.5" /><text x="16" y="21" textAnchor="middle" fill={p} fontSize="14" fontWeight="bold">42</text></svg>;
+    case 'image': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="2" /><path d="M4 22l6-5 4 3 5-6 9 8" stroke={p} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case 'repeat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="2" /><rect x="18" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="2" /></svg>;
+    case 'silo': return <svg viewBox="0 0 32 32" className={s} fill="none"><ellipse cx="16" cy="8" rx="8" ry="3" stroke={m} strokeWidth="2" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" stroke={m} strokeWidth="2" fill="none" /></svg>;
+    case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="8" y="22" fill={p} fontSize="18" fontWeight="bold" fontFamily="serif">T</text></svg>;
     default: return null;
   }
 }
-
-/* ── Component data: one flat list, grouped by section label ──── */
 
 const COMPONENTS = [
   { section: 'Visualizations', type: 'kpi', label: 'KPI Card' },
@@ -59,8 +67,6 @@ const COMPONENTS = [
 const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', text: 'Text', image: 'Image', repeat: 'Repeat' };
 
 const SECTIONS = ['Visualizations', 'Structure', 'Tag Groups', 'Widgets'];
-
-/* ── Collapsible wrapper with smooth height animation ────────── */
 
 function CollapsibleSection({ isOpen, children }) {
   const contentRef = useRef(null);
@@ -106,8 +112,6 @@ function CollapsibleSection({ isOpen, children }) {
     </div>
   );
 }
-
-/* ── Helpers ─────────────────────────────────────────────────── */
 
 function extractWidgetDataSources(widget) {
   const c = widget.config || {};
@@ -187,10 +191,6 @@ function buildTagGroupSections(tags, groups, tagSearch) {
   return { groupedSections, totalFiltered: filtered.length };
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   MAIN
-   ══════════════════════════════════════════════════════════════════ */
-
 export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], widgets = [], selectedId, onSelectWidget }) {
   const [activeType, setActiveType] = useState(null);
   const [search, setSearch] = useState('');
@@ -249,11 +249,37 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--rb-panel)]">
-      <div className="rb-toolbox-header px-4 py-3">
-        <p className="text-[15px] font-bold text-[var(--rb-accent)] mb-2">Components</p>
+    <div className="flex flex-col h-full" style={{ background: 'var(--rb-panel)' }}>
+      <div
+        className="px-4 py-3"
+        style={{
+          background: 'var(--rb-surface)',
+          borderBottom: '1px solid var(--rb-border)',
+        }}
+      >
+        <div className="flex items-center gap-2 mb-2.5">
+          <div
+            className="w-1 h-4 rounded-full"
+            style={{ background: 'var(--rb-accent)' }}
+          />
+          <p
+            style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--rb-accent)',
+            }}
+          >
+            Components
+          </p>
+        </div>
         <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--rb-text-muted)] pointer-events-none" />
+          <Search
+            size={13}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: 'var(--rb-text-muted)' }}
+          />
           <input
             type="text"
             value={search}
@@ -276,22 +302,22 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
           if (!isTagGroups && !isWidgets && search.trim() && items.length === 0) return null;
 
           return (
-            <div key={sectionName} className="border-b border-[var(--rb-border)]">
+            <div key={sectionName} style={{ borderBottom: '1px solid var(--rb-border)' }}>
               <button
                 onClick={() => toggleSection(sectionName)}
                 className="rb-toolbox-accordion-header"
               >
                 <span className="flex items-center gap-1.5">
-                  {isTagGroups && <Tag size={11} className="text-[var(--rb-accent)]" />}
-                  {isWidgets && <LayoutGrid size={11} className="text-[var(--rb-accent)]" />}
+                  {isTagGroups && <Tag size={11} style={{ color: 'var(--rb-accent)' }} />}
+                  {isWidgets && <LayoutGrid size={11} style={{ color: 'var(--rb-accent)' }} />}
                   {sectionName}
                   {isTagGroups && (
-                    <span className="text-[var(--rb-text-muted)] font-normal">
+                    <span style={{ color: 'var(--rb-text-muted)', fontWeight: 400 }}>
                       ({Array.isArray(groups) ? groups.length : 0})
                     </span>
                   )}
                   {isWidgets && (
-                    <span className="text-[var(--rb-text-muted)] font-normal">
+                    <span style={{ color: 'var(--rb-text-muted)', fontWeight: 400 }}>
                       ({widgetsWithData.length})
                     </span>
                   )}
@@ -310,6 +336,7 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                   <div className="px-3 pb-3">
                     <div className="grid grid-cols-4 gap-2">
                       {items.map(({ type, label }) => {
+                        const isItemActive = activeType === type;
                         return (
                           <Tooltip key={type} title={label} placement="top" arrow disableInteractive>
                             <button
@@ -317,22 +344,38 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                               onClick={() => handleAdd(type)}
                               draggable
                               onDragStart={(e) => onDragStart(e, type)}
-                              className={`rb-toolbox-item flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg cursor-grab active:cursor-grabbing ${
-                                activeType === type
-                                  ? 'bg-[var(--rb-accent-subtle)] shadow-sm'
-                                  : ''
-                              }`}
+                              className="rb-toolbox-item flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg cursor-grab active:cursor-grabbing"
+                              style={{
+                                background: isItemActive ? 'var(--rb-accent-subtle)' : 'transparent',
+                                boxShadow: isItemActive ? '0 0 8px var(--rb-accent-glow)' : 'none',
+                              }}
                             >
                               <div
                                 className="w-10 h-10 rounded-lg flex items-center justify-center"
                                 style={{
                                   background: 'var(--rb-surface)',
-                                  border: '1px solid var(--rb-border)',
+                                  border: isItemActive
+                                    ? '1px solid var(--rb-accent)'
+                                    : '1px solid var(--rb-border)',
+                                  boxShadow: isItemActive ? '0 0 6px var(--rb-accent-glow)' : 'none',
+                                  transition: 'all 150ms ease',
                                 }}
                               >
-                                <VizIcon type={type} />
+                                <VizIcon type={type} isActive={isItemActive} />
                               </div>
-                              <span className="text-[9px] font-medium text-[var(--rb-text-muted)] text-center leading-tight w-full truncate">{label.split(' ')[0]}</span>
+                              <span
+                                className="text-center leading-tight w-full truncate"
+                                style={{
+                                  fontSize: '9px',
+                                  fontWeight: 600,
+                                  letterSpacing: '0.04em',
+                                  textTransform: 'uppercase',
+                                  color: isItemActive ? 'var(--rb-accent)' : 'var(--rb-text-muted)',
+                                  transition: 'color 150ms ease',
+                                }}
+                              >
+                                {label.split(' ')[0]}
+                              </span>
                             </button>
                           </Tooltip>
                         );
@@ -345,26 +388,55 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                   <div className="px-3 pb-3 space-y-0.5">
                     {items.map(({ type, label }) => {
                       const cat = WIDGET_CATALOG.find((c) => c.type === type);
+                      const isItemActive = activeType === type;
                       return (
                         <button
                           key={type}
                           onClick={() => handleAdd(type)}
                           draggable
                           onDragStart={(e) => onDragStart(e, type)}
-                          className="rb-toolbox-item w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-transparent hover:border-[var(--rb-accent)]/30 group text-left cursor-grab active:cursor-grabbing"
+                          className="rb-toolbox-item w-full flex items-center gap-3 px-3 py-2 rounded-lg group text-left cursor-grab active:cursor-grabbing"
+                          style={{
+                            border: isItemActive
+                              ? '1px solid var(--rb-accent)'
+                              : '1px solid transparent',
+                            background: isItemActive ? 'var(--rb-accent-subtle)' : 'transparent',
+                            boxShadow: isItemActive ? '0 0 8px var(--rb-accent-glow)' : 'none',
+                            transition: 'all 150ms ease',
+                          }}
                         >
                           <div
                             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                             style={{
                               background: 'var(--rb-surface)',
-                              border: '1px solid var(--rb-border)',
+                              border: isItemActive
+                                ? '1px solid var(--rb-accent)'
+                                : '1px solid var(--rb-border)',
+                              boxShadow: isItemActive ? '0 0 6px var(--rb-accent-glow)' : 'none',
+                              transition: 'all 150ms ease',
                             }}
                           >
-                            <VizIcon type={type} />
+                            <VizIcon type={type} isActive={isItemActive} />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-[11px] font-medium text-[var(--rb-text)] group-hover:text-[var(--rb-accent)] transition-colors">{label}</p>
-                            {cat?.description && <p className="text-[9px] text-[var(--rb-text-muted)] mt-0.5 truncate">{cat.description}</p>}
+                            <p
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: isItemActive ? 'var(--rb-accent)' : 'var(--rb-text)',
+                                transition: 'color 150ms ease',
+                              }}
+                            >
+                              {label}
+                            </p>
+                            {cat?.description && (
+                              <p
+                                className="mt-0.5 truncate"
+                                style={{ fontSize: '9px', color: 'var(--rb-text-muted)' }}
+                              >
+                                {cat.description}
+                              </p>
+                            )}
                           </div>
                         </button>
                       );
@@ -375,7 +447,11 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                 {isTagGroups && (
                   <div className="px-3 pb-3">
                     <div className="relative mb-2">
-                      <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--rb-text-muted)] pointer-events-none" />
+                      <Search
+                        size={12}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
+                        style={{ color: 'var(--rb-text-muted)' }}
+                      />
                       <input
                         type="text"
                         value={tagSearch}
@@ -386,8 +462,8 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                     </div>
 
                     {groupedSections.length === 0 ? (
-                      <p className="text-[10px] text-[var(--rb-text-muted)] px-1 py-2">
-                        {tagSearch.trim() ? 'No tags match search' : 'No tag groups defined. Go to Engineering \u2192 Tag Groups to create groups.'}
+                      <p style={{ fontSize: '10px', color: 'var(--rb-text-muted)', padding: '8px 4px' }}>
+                        {tagSearch.trim() ? 'No tags match search' : 'No tag groups defined. Go to Engineering → Tag Groups to create groups.'}
                       </p>
                     ) : (
                       <div className="space-y-0.5">
@@ -397,7 +473,10 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                             <div key={groupName}>
                               <button
                                 onClick={() => toggleTagGroup(groupName)}
-                                className="w-full flex items-center gap-1.5 px-1 py-1 text-left rounded hover:bg-[var(--rb-surface)] transition-colors"
+                                className="w-full flex items-center gap-1.5 px-1 py-1 text-left rounded"
+                                style={{ transition: 'background 120ms ease' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-surface)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                               >
                                 <ChevronDown
                                   size={10}
@@ -405,13 +484,26 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                                     transition: 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
                                     transform: isGroupOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
                                     flexShrink: 0,
+                                    color: 'var(--rb-text-muted)',
                                   }}
-                                  className="text-[var(--rb-text-muted)]"
                                 />
-                                <span className="text-[10px] font-semibold text-[var(--rb-text)] truncate flex-1">
+                                <span
+                                  className="truncate flex-1"
+                                  style={{ fontSize: '10px', fontWeight: 600, color: 'var(--rb-text)' }}
+                                >
                                   {groupName}
                                 </span>
-                                <span className="text-[9px] text-[var(--rb-text-muted)] bg-[var(--rb-surface)] px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                <span
+                                  className="flex-shrink-0"
+                                  style={{
+                                    fontSize: '9px',
+                                    color: 'var(--rb-text-muted)',
+                                    background: 'var(--rb-surface)',
+                                    padding: '2px 6px',
+                                    borderRadius: '9999px',
+                                    fontVariantNumeric: 'tabular-nums',
+                                  }}
+                                >
                                   {groupTags.length}
                                 </span>
                               </button>
@@ -420,14 +512,33 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                                   {groupTags.map((tag) => (
                                     <div
                                       key={tag.tag_name}
-                                      className="flex items-center gap-1.5 px-1.5 py-[3px] rounded hover:bg-[var(--rb-surface)] transition-colors cursor-default"
+                                      className="flex items-center gap-1.5 px-1.5 py-[3px] rounded cursor-default"
+                                      style={{ transition: 'background 120ms ease' }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-surface)'; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                                     >
-                                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[var(--rb-accent)]" style={{ opacity: 0.5 }} />
-                                      <span className="text-[10px] text-[var(--rb-text-muted)] truncate flex-1">
+                                      <span
+                                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                        style={{ background: 'var(--rb-accent)', opacity: 0.5 }}
+                                      />
+                                      <span
+                                        className="truncate flex-1"
+                                        style={{ fontSize: '10px', color: 'var(--rb-text-muted)' }}
+                                      >
                                         {tag.tag_name}
                                       </span>
                                       {tag.unit && (
-                                        <span className="text-[8px] text-[var(--rb-text-muted)] bg-[var(--rb-surface)] px-1 py-px rounded flex-shrink-0">
+                                        <span
+                                          className="flex-shrink-0"
+                                          style={{
+                                            fontSize: '8px',
+                                            color: 'var(--rb-text-muted)',
+                                            background: 'var(--rb-surface)',
+                                            padding: '1px 4px',
+                                            borderRadius: '4px',
+                                            fontFamily: 'monospace',
+                                          }}
+                                        >
                                           {tag.unit}
                                         </span>
                                       )}
@@ -446,31 +557,65 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                 {isWidgets && (
                   <div className="px-3 pb-3 space-y-1">
                     {widgetsWithData.length === 0 ? (
-                      <p className="text-[10px] text-[var(--rb-text-muted)] px-1 py-2">No widgets with data sources on canvas</p>
+                      <p style={{ fontSize: '10px', color: 'var(--rb-text-muted)', padding: '8px 4px' }}>
+                        No widgets with data sources on canvas
+                      </p>
                     ) : (
                       widgetsWithData.map((w) => {
                         const ds = widgetDataSources[w.id] || { tags: [], formulas: [] };
                         const isExpanded = openWidgetIds[w.id] || false;
                         const title = w.config?.title || w.config?.dataSource?.tagName || w.type;
                         const typeLabel = TYPE_LABELS[w.type] || w.type;
+                        const isSelected = selectedId === w.id;
                         return (
                           <div key={w.id} className="rounded-md overflow-hidden">
                             <button
-                              onClick={() => toggleWidgetOpen(w.id)}
-                              className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left transition-all ${
-                                selectedId === w.id
-                                  ? 'bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)]'
-                                  : 'text-[var(--rb-text)] hover:bg-[var(--rb-surface)]'
-                              }`}
+                              onClick={() => { onSelectWidget?.(w.id); toggleWidgetOpen(w.id); }}
+                              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left"
+                              style={{
+                                background: isSelected ? 'var(--rb-accent-subtle)' : 'transparent',
+                                color: isSelected ? 'var(--rb-accent)' : 'var(--rb-text)',
+                                boxShadow: isSelected ? '0 0 8px var(--rb-accent-glow)' : 'none',
+                                transition: 'all 150ms ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSelected) e.currentTarget.style.background = 'var(--rb-surface)';
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSelected) e.currentTarget.style.background = 'transparent';
+                              }}
                             >
                               <div
                                 className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
-                                style={{ background: 'var(--rb-surface)', border: '1px solid var(--rb-border)' }}
+                                style={{
+                                  background: 'var(--rb-surface)',
+                                  border: isSelected
+                                    ? '1px solid var(--rb-accent)'
+                                    : '1px solid var(--rb-border)',
+                                }}
                               >
                                 <SmallVizIcon type={w.type} />
                               </div>
-                              <span className="text-[10px] font-medium truncate flex-1">{title}</span>
-                              <span className="text-[8px] font-semibold text-[var(--rb-text-muted)] px-1.5 py-0.5 rounded-full bg-[var(--rb-surface)] flex-shrink-0 uppercase tracking-wide">
+                              <span
+                                className="truncate flex-1"
+                                style={{ fontSize: '10px', fontWeight: 500 }}
+                              >
+                                {title}
+                              </span>
+                              <span
+                                className="flex-shrink-0"
+                                style={{
+                                  fontSize: '8px',
+                                  fontWeight: 600,
+                                  color: 'var(--rb-text-muted)',
+                                  padding: '2px 6px',
+                                  borderRadius: '9999px',
+                                  background: 'var(--rb-surface)',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.06em',
+                                  fontVariantNumeric: 'tabular-nums',
+                                }}
+                              >
                                 {typeLabel}
                               </span>
                               <ChevronDown
@@ -479,27 +624,62 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                                   transition: 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
                                   transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
                                   flexShrink: 0,
+                                  color: 'var(--rb-text-muted)',
                                 }}
-                                className="text-[var(--rb-text-muted)]"
                               />
                             </button>
 
                             {isExpanded && (
-                              <div className="ml-7 mt-1 mb-1.5 space-y-0.5 pl-2 border-l-2 border-[var(--rb-border-subtle)]">
+                              <div
+                                className="ml-7 mt-1 mb-1.5 space-y-0.5 pl-2"
+                                style={{ borderLeft: '2px solid color-mix(in srgb, var(--rb-accent) 30%, transparent)' }}
+                              >
                                 {ds.tags.map((tagName) => (
-                                  <div key={tagName} className="flex items-center gap-1.5 px-1.5 py-[3px] rounded hover:bg-[var(--rb-surface)] transition-colors">
-                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-emerald-500" />
-                                    <span className="text-[9px] text-[var(--rb-text-muted)] truncate">{tagName}</span>
+                                  <div
+                                    key={tagName}
+                                    className="flex items-center gap-1.5 px-1.5 py-[3px] rounded"
+                                    style={{ transition: 'background 120ms ease' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-surface)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                  >
+                                    <span
+                                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                      style={{ background: 'var(--rb-success)' }}
+                                    />
+                                    <span
+                                      className="truncate"
+                                      style={{ fontSize: '9px', color: 'var(--rb-text-muted)', fontFamily: 'monospace' }}
+                                    >
+                                      {tagName}
+                                    </span>
                                   </div>
                                 ))}
                                 {ds.formulas.map((formula, i) => (
-                                  <div key={i} className="flex items-center gap-1.5 px-1.5 py-[3px] rounded hover:bg-[var(--rb-surface)] transition-colors">
-                                    <span className="text-[9px] text-amber-500 flex-shrink-0 font-semibold">fx</span>
-                                    <span className="text-[9px] text-[var(--rb-text-muted)] truncate font-mono">{formula}</span>
+                                  <div
+                                    key={i}
+                                    className="flex items-center gap-1.5 px-1.5 py-[3px] rounded"
+                                    style={{ transition: 'background 120ms ease' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-surface)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                  >
+                                    <span
+                                      className="flex-shrink-0"
+                                      style={{ fontSize: '9px', color: 'var(--rb-warning)', fontWeight: 600 }}
+                                    >
+                                      fx
+                                    </span>
+                                    <span
+                                      className="truncate"
+                                      style={{ fontSize: '9px', color: 'var(--rb-text-muted)', fontFamily: 'monospace' }}
+                                    >
+                                      {formula}
+                                    </span>
                                   </div>
                                 ))}
                                 {ds.tags.length === 0 && ds.formulas.length === 0 && (
-                                  <span className="text-[9px] text-[var(--rb-text-muted)] px-1">No data sources</span>
+                                  <span style={{ fontSize: '9px', color: 'var(--rb-text-muted)', padding: '0 4px' }}>
+                                    No data sources
+                                  </span>
                                 )}
                               </div>
                             )}

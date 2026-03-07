@@ -59,7 +59,7 @@ export default function GaugeWidget({ config, tagValues }) {
     { from: 70, to: 100, color: '#00e676', status: 'OPTIMAL' },
   ];
 
-  const fallbackColor = config.color || '#00BFFF';
+  const fallbackColor = config.color || '#00d4ff';
   const { activeColor, statusLabel } = useMemo(() => {
     const percentVal = percent * 100;
     for (const z of zones) {
@@ -69,6 +69,10 @@ export default function GaugeWidget({ config, tagValues }) {
     }
     return { activeColor: fallbackColor, statusLabel: 'OK' };
   }, [percent, zones, fallbackColor]);
+
+  const gradientId = useMemo(() => `gauge-grad-${Math.random().toString(36).slice(2, 9)}`, []);
+  const glowFilterId = useMemo(() => `gauge-glow-${Math.random().toString(36).slice(2, 9)}`, []);
+  const bgTrackId = useMemo(() => `gauge-bg-${Math.random().toString(36).slice(2, 9)}`, []);
 
   function describeArc(cx, cy, r, startDeg, endDeg) {
     const startRad = (startDeg * Math.PI) / 180;
@@ -81,20 +85,37 @@ export default function GaugeWidget({ config, tagValues }) {
     return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`;
   }
 
+  function pointOnArc(cx, cy, r, deg) {
+    const rad = (deg * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
   const cx = 64;
-  const cy = 56;
-  const r = 40;
-  const needleLen = r - 6;
+  const cy = 58;
+  const r = 42;
   const tickCount = 11;
   const trend = config.trend != null ? config.trend : null;
   const animatedPercent = useAnimatedValue(percent, skipAnimation);
-  const needleRotation = -90 + animatedPercent * 180;
   const unit = config.unit || '';
   const valueWithUnit = unit ? `${displayValue} ${unit}`.trim() : displayValue;
+
+  const endpointAngle = startAngle + animatedPercent * 180;
+  const endpoint = pointOnArc(cx, cy, r, endpointAngle);
 
   const showTitle = config.showTitle !== false;
   const titleFontSize = TITLE_FONT_SIZES[config.titleFontSize] || TITLE_FONT_SIZES.md;
   const valueFontSize = VALUE_FONT_SIZES[config.valueFontSize];
+
+  const zoneGradientStops = useMemo(() => {
+    if (!zones || zones.length === 0) return [];
+    const sorted = [...zones].sort((a, b) => a.from - b.from);
+    const stops = [];
+    sorted.forEach((z) => {
+      stops.push({ offset: `${z.from}%`, color: z.color });
+      stops.push({ offset: `${z.to}%`, color: z.color });
+    });
+    return stops;
+  }, [zones]);
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden" style={{ padding: '4px 6px' }}>
@@ -116,63 +137,124 @@ export default function GaugeWidget({ config, tagValues }) {
       )}
 
       <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-        <svg viewBox="0 0 128 88" className="w-full flex-shrink-0" style={{ maxWidth: '160px' }}>
+        <svg viewBox="0 0 128 90" className="w-full flex-shrink-0" style={{ maxWidth: '180px' }}>
+          <defs>
+            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+              {zoneGradientStops.map((stop, i) => (
+                <stop key={i} offset={stop.offset} stopColor={stop.color} />
+              ))}
+            </linearGradient>
+
+            <linearGradient id={bgTrackId} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="currentColor" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="currentColor" stopOpacity="0.08" />
+            </linearGradient>
+
+            <filter id={glowFilterId} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
           <path
             d={describeArc(cx, cy, r, startAngle, endAngle)}
             fill="none"
-            className="stroke-gray-300 dark:stroke-gray-600"
-            strokeWidth="10"
+            stroke="var(--rb-border, rgba(100,116,139,0.2))"
+            strokeWidth="8"
             strokeLinecap="round"
+            opacity="0.5"
           />
 
           {Array.from({ length: tickCount }).map((_, i) => {
             const t = i / (tickCount - 1);
             const deg = startAngle + t * 180;
             const rad = (deg * Math.PI) / 180;
-            const innerR = r - 4;
-            const outerR = r + 2;
+            const isMajor = i === 0 || i === tickCount - 1 || i === Math.floor(tickCount / 2);
+            const innerR = r - (isMajor ? 5 : 3);
+            const outerR = r + (isMajor ? 3 : 2);
             const x1 = cx + innerR * Math.cos(rad);
             const y1 = cy + innerR * Math.sin(rad);
             const x2 = cx + outerR * Math.cos(rad);
             const y2 = cy + outerR * Math.sin(rad);
             return (
-              <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} className="stroke-gray-400 dark:stroke-gray-500" strokeWidth="1.5" strokeLinecap="round" />
+              <line
+                key={i}
+                x1={x1} y1={y1} x2={x2} y2={y2}
+                stroke="var(--rb-text-muted, #64748b)"
+                strokeWidth={isMajor ? '1.2' : '0.7'}
+                strokeLinecap="round"
+                opacity={isMajor ? '0.5' : '0.3'}
+              />
             );
           })}
 
           {animatedPercent > 0.002 && (
-            <path
-              d={describeArc(cx, cy, r, startAngle, startAngle + animatedPercent * 180)}
-              fill="none"
-              stroke={activeColor === '#00e676' || activeColor === '#10b981' ? '#00BFFF' : activeColor}
-              strokeWidth="10"
-              strokeLinecap="round"
-            />
+            <>
+              <path
+                d={describeArc(cx, cy, r, startAngle, endpointAngle)}
+                fill="none"
+                stroke={`url(#${gradientId})`}
+                strokeWidth="8"
+                strokeLinecap="round"
+                filter={`url(#${glowFilterId})`}
+              />
+
+              <circle
+                cx={endpoint.x}
+                cy={endpoint.y}
+                r="5"
+                fill={activeColor}
+                stroke="var(--rb-panel, #111827)"
+                strokeWidth="2"
+                filter={`url(#${glowFilterId})`}
+              />
+              <circle
+                cx={endpoint.x}
+                cy={endpoint.y}
+                r="2"
+                fill="white"
+                opacity="0.9"
+              />
+            </>
           )}
 
-          <circle cx={cx} cy={cy} r="5" className="fill-gray-800 stroke-gray-500 dark:fill-[#0f172a] dark:stroke-[#334155]" strokeWidth="1" />
-
-          <g transform={`rotate(${needleRotation} ${cx} ${cy})`}>
-            <line
-              x1={cx}
-              y1={cy}
-              x2={cx + needleLen * Math.cos((-90 * Math.PI) / 180)}
-              y2={cy + needleLen * Math.sin((-90 * Math.PI) / 180)}
-              className="stroke-gray-700 dark:stroke-white/90"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
-          </g>
-        </svg>
-
-        <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ marginTop: '-2px' }}>
-          <span
-            className="rb-value-primary leading-none"
-            style={{ fontSize: valueFontSize || '18px' }}
+          <text
+            x={cx}
+            y={cy + 10}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="var(--rb-text, #e2e8f0)"
+            style={{
+              fontSize: valueFontSize || '16px',
+              fontWeight: 800,
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: '-0.03em',
+              fontFamily: 'inherit',
+            }}
           >
             {valueWithUnit}
-          </span>
-          <span className="rb-widget-title mt-0.5">
+          </text>
+        </svg>
+
+        <div className="flex items-center gap-1.5 flex-shrink-0" style={{ marginTop: '-4px' }}>
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: activeColor,
+              boxShadow: `0 0 6px ${activeColor}`,
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
+          <span
+            className="rb-widget-title"
+            style={{ color: activeColor }}
+          >
             {statusLabel}
           </span>
         </div>

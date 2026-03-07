@@ -3,8 +3,6 @@ import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTri
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import FormulaEditor from '../formulas/FormulaEditor';
 
-/* ── Shared UI primitives (Report Builder design system) ───────── */
-
 function Section({ icon: Icon, title, children, defaultOpen = true, isFirst = false }) {
   const [open, setOpen] = useState(defaultOpen);
   const prefersReducedMotion = useReducedMotion();
@@ -13,19 +11,19 @@ function Section({ icon: Icon, title, children, defaultOpen = true, isFirst = fa
     <div className={`border-b border-[var(--rb-border)] last:border-0${!isFirst ? ' border-t border-t-[var(--rb-border)]' : ''}`}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2.5 py-3.5 px-5 hover:bg-[var(--rb-surface)] transition-colors text-left group"
+        className="w-full flex items-center gap-2.5 py-3 px-5 hover:bg-[var(--rb-surface)] transition-colors text-left group"
       >
         {Icon && (
-          <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--rb-accent-subtle)]">
-            <Icon size={13} className="text-[var(--rb-accent)]" />
+          <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--rb-accent-subtle)] border border-[var(--rb-accent)]/20 shadow-[0_0_6px_var(--rb-accent-glow)]">
+            <Icon size={12} className="text-[var(--rb-accent)]" />
           </span>
         )}
-        <span className="flex-1 rb-section-header" style={{ padding: 0 }}>{title}</span>
+        <span className="flex-1 text-[10px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.08em]">{title}</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         >
-          <ChevronDown size={15} className="text-[var(--rb-text-muted)] group-hover:text-[var(--rb-text)] transition-colors" />
+          <ChevronDown size={14} className="text-[var(--rb-text-muted)] group-hover:text-[var(--rb-accent)] transition-colors" />
         </motion.span>
       </button>
       <AnimatePresence initial={false}>
@@ -45,7 +43,6 @@ function Section({ icon: Icon, title, children, defaultOpen = true, isFirst = fa
   );
 }
 
-/* Aggregation micro-descriptions */
 const AGGREGATION_DESCRIPTIONS = {
   last: 'Most recent value',
   avg: 'Average over time range',
@@ -59,7 +56,7 @@ const AGGREGATION_DESCRIPTIONS = {
 function Field({ label, children }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-[var(--rb-font-sm)] font-medium text-[var(--rb-text-muted)] tracking-wide" style={{ fontSize: 'var(--rb-font-sm)' }}>{label}</label>
+      <label className="block text-[9px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.06em]">{label}</label>
       {children}
     </div>
   );
@@ -72,7 +69,7 @@ function TextInput({ value, onChange, placeholder, type = 'text', mono = false }
       value={value ?? ''}
       onChange={(e) => onChange(type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}
       placeholder={placeholder}
-      className={`rb-input-base w-full ${mono ? 'font-mono' : ''}`}
+      className={`rb-input-base w-full ${mono ? 'font-mono tabular-nums' : ''}`}
     />
   );
 }
@@ -94,17 +91,17 @@ function SelectInput({ value, onChange, options }) {
 function Toggle({ label, value, onChange }) {
   return (
     <label className="flex items-center justify-between cursor-pointer gap-3 py-0.5">
-      <span className="rb-label">{label}</span>
+      <span className="text-[11px] font-medium text-[var(--rb-text-muted)]">{label}</span>
       <button
         type="button"
         role="switch"
         aria-checked={!!value}
         onClick={() => onChange(!value)}
-        className={`relative w-11 h-[1.375rem] rounded-full transition-all duration-200 flex-shrink-0 ${value ? 'bg-[var(--rb-accent)] shadow-[0_0_0_1px_var(--rb-accent)]' : 'bg-[var(--rb-border)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]'}`}
+        className={`relative w-11 h-[1.375rem] rounded-full transition-all duration-200 flex-shrink-0 ${value ? 'bg-[var(--rb-accent)] shadow-[0_0_8px_var(--rb-accent-glow)]' : 'bg-[var(--rb-border)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.15)]'}`}
       >
         <span
-          className={`absolute top-[2px] left-[2px] w-[1.125rem] h-[1.125rem] rounded-full bg-white shadow-sm transition-transform duration-200 ${value ? 'translate-x-[1.125rem]' : ''}`}
-          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)' }}
+          className={`absolute top-[2px] left-[2px] w-[1.125rem] h-[1.125rem] rounded-full shadow-sm transition-transform duration-200 ${value ? 'translate-x-[1.125rem] bg-white' : 'bg-[var(--rb-text-muted)]'}`}
+          style={{ boxShadow: value ? '0 0 4px var(--rb-accent-glow)' : '0 1px 3px rgba(0,0,0,0.15)' }}
         />
       </button>
     </label>
@@ -118,20 +115,18 @@ function ColorInput({ value, onChange }) {
         type="color"
         value={value || 'hsl(199, 72%, 42%)'}
         onChange={(e) => onChange(e.target.value)}
-        className="w-9 h-9 rounded-lg border border-[var(--rb-border)] cursor-pointer bg-transparent p-0 hover:border-[var(--rb-accent)] transition-colors"
+        className="w-8 h-8 rounded-md border border-[var(--rb-border)] cursor-pointer bg-transparent p-0 hover:border-[var(--rb-accent)] hover:shadow-[0_0_6px_var(--rb-accent-glow)] transition-all"
       />
       <input
         type="text"
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder="#hex"
-        className="rb-input-base flex-1 font-mono"
+        className="rb-input-base flex-1 font-mono text-[11px] tabular-nums"
       />
     </div>
   );
 }
-
-/* ── Tag Picker (inline) ──────────────────────────────────────── */
 
 function TagPicker({ tags, value, onChange, placeholder = 'Select tag...' }) {
   const safeTags = Array.isArray(tags) ? tags : [];
@@ -155,7 +150,7 @@ function TagPicker({ tags, value, onChange, placeholder = 'Select tag...' }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(''); }} />
-          <div className="absolute z-50 mt-2 w-full rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] shadow-xl max-h-56 overflow-hidden">
+          <div className="absolute z-50 mt-2 w-full rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] shadow-xl max-h-56 overflow-hidden backdrop-blur-sm">
             <div className="p-2 border-b border-[var(--rb-border)]">
               <input
                 type="text"
@@ -168,7 +163,7 @@ function TagPicker({ tags, value, onChange, placeholder = 'Select tag...' }) {
             </div>
             <div className="overflow-y-auto max-h-44" data-wheel-scroll>
               {filtered.length === 0 ? (
-                <p className="rb-caption px-4 py-4 text-center">No tags found</p>
+                <p className="text-[9px] text-[var(--rb-text-muted)] px-4 py-4 text-center">No tags found</p>
               ) : (() => {
                 const plcTags = filtered.filter(t => !t.source_type || t.source_type === 'PLC');
                 const formulaTags = filtered.filter(t => t.source_type === 'Formula');
@@ -177,14 +172,14 @@ function TagPicker({ tags, value, onChange, placeholder = 'Select tag...' }) {
                   <button
                     key={tag.tag_name}
                     onClick={() => { onChange(tag.tag_name); setOpen(false); setSearch(''); }}
-                    className={`w-full px-4 py-2 text-left rb-body hover:bg-[var(--rb-accent-subtle)] transition-colors ${value === tag.tag_name ? 'bg-[var(--rb-accent-subtle)]' : ''}`}
+                    className={`w-full px-4 py-2 text-left text-[12px] hover:bg-[var(--rb-accent-subtle)] transition-colors ${value === tag.tag_name ? 'bg-[var(--rb-accent-subtle)] border-l-2 border-l-[var(--rb-accent)]' : ''}`}
                   >
-                    <span className="font-medium">{tag.display_name || tag.tag_name}</span>
-                    {tag.unit && <span className="ml-1 rb-caption">({tag.unit})</span>}
+                    <span className="font-medium text-[var(--rb-text)]">{tag.display_name || tag.tag_name}</span>
+                    {tag.unit && <span className="ml-1 text-[9px] text-[var(--rb-text-muted)]">({tag.unit})</span>}
                   </button>
                 );
                 const sectionHeader = (label) => (
-                  <div key={label} className="px-4 py-1.5 rb-caption font-semibold uppercase tracking-wide bg-[var(--rb-surface)] border-b border-[var(--rb-border)] sticky top-0">{label}</div>
+                  <div key={label} className="px-4 py-1.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--rb-text-muted)] bg-[var(--rb-surface)] border-b border-[var(--rb-border)] sticky top-0">{label}</div>
                 );
                 return (
                   <>
@@ -201,8 +196,6 @@ function TagPicker({ tags, value, onChange, placeholder = 'Select tag...' }) {
     </div>
   );
 }
-
-/* ── Rich Formula Dropdown ─────────────────────────────────────── */
 
 function FormulaDropdown({ savedFormulas, onSelect }) {
   const [open, setOpen] = useState(false);
@@ -253,7 +246,7 @@ function FormulaDropdown({ savedFormulas, onSelect }) {
               </button>
             ))}
             {filtered.length === 0 && (
-              <div className="px-3 py-4 text-center rb-caption text-[var(--rb-text-muted)]">No formulas found</div>
+              <div className="px-3 py-4 text-center text-[9px] text-[var(--rb-text-muted)]">No formulas found</div>
             )}
           </div>
         </>
@@ -261,8 +254,6 @@ function FormulaDropdown({ savedFormulas, onSelect }) {
     </div>
   );
 }
-
-/* ── Data Source Section ───────────────────────────────────────── */
 
 function DataSourceSection({ config, onUpdate, tags, tagValues, groups = [], savedFormulas = [] }) {
   const ds = config.dataSource || { type: 'tag', tagName: '', formula: '', groupTags: [], aggregation: 'last' };
@@ -302,7 +293,7 @@ function DataSourceSection({ config, onUpdate, tags, tagValues, groups = [], sav
               ]}
             />
             {AGGREGATION_DESCRIPTIONS[ds.aggregation] && (
-              <p className="rb-caption text-[var(--rb-text-muted)] mt-1 ml-0.5">↳ {AGGREGATION_DESCRIPTIONS[ds.aggregation]}</p>
+              <p className="text-[9px] text-[var(--rb-text-muted)] mt-1 ml-0.5">↳ {AGGREGATION_DESCRIPTIONS[ds.aggregation]}</p>
             )}
           </Field>
         </>
@@ -370,7 +361,7 @@ function DataSourceSection({ config, onUpdate, tags, tagValues, groups = [], sav
               ))}
               <button
                 onClick={() => updateDS({ groupTags: [...(ds.groupTags || []), ''] })}
-                className="rb-caption text-[var(--rb-accent)] hover:underline"
+                className="text-[9px] font-medium text-[var(--rb-accent)] hover:underline"
               >
                 + Add tag to group
               </button>
@@ -395,8 +386,6 @@ function DataSourceSection({ config, onUpdate, tags, tagValues, groups = [], sav
     </Section>
   );
 }
-
-/* ── Display Section ──────────────────────────────────────────── */
 
 function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
   return (
@@ -585,16 +574,15 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
             <ColorInput value={config.accentColor} onChange={(v) => onUpdate({ accentColor: v })} />
           </Field>
 
-          {/* ── Reference / Target Lines ── */}
           <div className="mt-3 pt-3 border-t border-[var(--rb-border)]">
             <div className="flex items-center justify-between mb-2">
-              <span className="rb-caption font-semibold tracking-wide uppercase" style={{ fontSize: '9px' }}>Reference Lines</span>
+              <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--rb-text-muted)]">Reference Lines</span>
               <button
                 onClick={() => {
                   const annotations = [...(config.annotations || []), { label: 'Target', value: 0, color: '#ef4444' }];
                   onUpdate({ annotations });
                 }}
-                className="text-[9px] font-medium text-brand hover:underline"
+                className="text-[9px] font-medium text-[var(--rb-accent)] hover:underline"
               >
                 + Add
               </button>
@@ -610,7 +598,7 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
                     onUpdate({ annotations });
                   }}
                   placeholder="Label"
-                  className="rb-input flex-1"
+                  className="rb-input-base flex-1"
                   style={{ fontSize: '10px', padding: '3px 5px', minWidth: 0 }}
                 />
                 <input
@@ -622,7 +610,7 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
                     onUpdate({ annotations });
                   }}
                   placeholder="Value"
-                  className="rb-input"
+                  className="rb-input-base font-mono"
                   style={{ fontSize: '10px', padding: '3px 5px', width: '55px' }}
                 />
                 <input
@@ -641,7 +629,7 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
                     const annotations = config.annotations.filter((_, j) => j !== i);
                     onUpdate({ annotations });
                   }}
-                  className="text-[10px] text-red-400 hover:text-red-500 font-bold px-1"
+                  className="text-[10px] text-[var(--rb-danger)] hover:text-[var(--rb-danger)] font-bold px-1"
                   title="Remove"
                 >
                   ×
@@ -649,7 +637,7 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
               </div>
             ))}
             {(!config.annotations || config.annotations.length === 0) && (
-              <p className="text-[9px] text-[#8898aa] italic">No reference lines. Click + Add to create one.</p>
+              <p className="text-[9px] text-[var(--rb-text-muted)] italic">No reference lines. Click + Add to create one.</p>
             )}
           </div>
         </>
@@ -661,19 +649,19 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
           <Toggle label="Compact" value={config.compact} onChange={(v) => onUpdate({ compact: v })} />
           <Field label="Header colors">
             <div className="rb-color-group">
-              <span className="rb-caption mr-1">bg</span>
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
               <input type="color" value={config.headerBg || '#1e293b'} onChange={(e) => onUpdate({ headerBg: e.target.value })} className="rb-color-swatch" />
-              <span className="rb-caption mr-1">text</span>
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">text</span>
               <input type="color" value={config.headerColor || '#ffffff'} onChange={(e) => onUpdate({ headerColor: e.target.value })} className="rb-color-swatch" />
             </div>
           </Field>
           <Field label="Row colors">
             <div className="rb-color-group">
-              <span className="rb-caption mr-1">bg</span>
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
               <input type="color" value={config.rowBg || '#ffffff'} onChange={(e) => onUpdate({ rowBg: e.target.value })} className="rb-color-swatch" />
-              <span className="rb-caption mr-1">alt</span>
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">alt</span>
               <input type="color" value={config.stripedRowBg || '#f8fafc'} onChange={(e) => onUpdate({ stripedRowBg: e.target.value })} className="rb-color-swatch" />
-              <span className="rb-caption mr-1">border</span>
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">border</span>
               <input type="color" value={config.borderColor || '#e2e8f0'} onChange={(e) => onUpdate({ borderColor: e.target.value })} className="rb-color-swatch" />
             </div>
           </Field>
@@ -712,7 +700,7 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
           {config.src && (
             <button
               onClick={() => onUpdate({ src: '' })}
-              className="rb-caption text-[var(--rb-danger)] hover:underline"
+              className="text-[9px] text-[var(--rb-danger)] hover:underline"
             >
               Remove image
             </button>
@@ -722,8 +710,6 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
     </Section>
   );
 }
-
-/* ── Thresholds Section ───────────────────────────────────────── */
 
 const THRESHOLD_COLORS = ['#ef4444', '#f59e0b', '#10b981', '#06b6d4', '#8b5cf6', '#64748b'];
 
@@ -740,7 +726,7 @@ function ThresholdsSection({ config, onUpdate }) {
   return (
     <Section icon={AlertTriangle} title="Thresholds" defaultOpen={false}>
       {rules.length === 0 ? (
-        <p className="rb-caption mb-3 text-[var(--rb-text-muted)]">No threshold rules defined</p>
+        <p className="text-[9px] text-[var(--rb-text-muted)] mb-3">No threshold rules defined</p>
       ) : (
         <div className="space-y-2">
           {rules.map((rule, i) => (
@@ -754,7 +740,7 @@ function ThresholdsSection({ config, onUpdate }) {
                   type="color"
                   value={rule.color}
                   onChange={(e) => updateRule(i, { color: e.target.value })}
-                  className="w-7 h-7 rounded-md border border-[var(--rb-border)] cursor-pointer bg-transparent p-0 hover:border-[var(--rb-accent)] transition-colors"
+                  className="w-7 h-7 rounded-md border border-[var(--rb-border)] cursor-pointer bg-transparent p-0 hover:border-[var(--rb-accent)] hover:shadow-[0_0_6px_var(--rb-accent-glow)] transition-all"
                 />
               </div>
               <select
@@ -771,16 +757,16 @@ function ThresholdsSection({ config, onUpdate }) {
                 type="number"
                 value={rule.value}
                 onChange={(e) => updateRule(i, { value: Number(e.target.value) })}
-                className="rb-input-base w-16 font-mono text-xs"
+                className="rb-input-base w-16 font-mono tabular-nums text-xs"
               />
               {rule.condition === 'between' && (
                 <>
-                  <span className="rb-caption text-[var(--rb-text-muted)]">to</span>
+                  <span className="text-[9px] text-[var(--rb-text-muted)]">to</span>
                   <input
                     type="number"
                     value={rule.valueTo}
                     onChange={(e) => updateRule(i, { valueTo: Number(e.target.value) })}
-                    className="rb-input-base w-16 font-mono text-xs"
+                    className="rb-input-base w-16 font-mono tabular-nums text-xs"
                   />
                 </>
               )}
@@ -794,15 +780,13 @@ function ThresholdsSection({ config, onUpdate }) {
           ))}
         </div>
       )}
-      <button onClick={addRule} className="inline-flex items-center gap-1.5 rb-caption text-[var(--rb-accent)] hover:underline mt-2 font-medium">
+      <button onClick={addRule} className="inline-flex items-center gap-1.5 text-[9px] font-medium text-[var(--rb-accent)] hover:underline mt-2">
         <Plus size={12} />
         Add threshold rule
       </button>
     </Section>
   );
 }
-
-/* ── Chart Series Section ─────────────────────────────────────── */
 
 function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas = [] }) {
   const series = config.series || [];
@@ -823,13 +807,13 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
   return (
     <Section icon={Database} title="Data Series" defaultOpen={true}>
       {series.length === 0 ? (
-        <p className="rb-caption mb-3 text-[var(--rb-text-muted)]">No data series added</p>
+        <p className="text-[9px] text-[var(--rb-text-muted)] mb-3">No data series added</p>
       ) : (
         <div className="space-y-3">
           {series.map((s, i) => (
             <div key={i} className="p-3 rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-border)] space-y-3">
               <div className="flex items-center justify-between">
-                <span className="rb-label">Series {i + 1}</span>
+                <span className="text-[10px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.06em]">Series {i + 1}</span>
                 <button onClick={() => removeSeries(i)} className="rb-btn-ghost p-1.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] rounded-md transition-all">
                   <X size={14} />
                 </button>
@@ -882,15 +866,13 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
           ))}
         </div>
       )}
-      <button onClick={addSeries} className="inline-flex items-center gap-1.5 rb-caption text-[var(--rb-accent)] hover:underline mt-2 font-medium">
+      <button onClick={addSeries} className="inline-flex items-center gap-1.5 text-[9px] font-medium text-[var(--rb-accent)] hover:underline mt-2">
         <Plus size={12} />
         Add data series
       </button>
     </Section>
   );
 }
-
-/* ── Table Columns Section (Power BI–style, column-only) ──────── */
 
 const MAPPINGS_STORAGE_KEY = 'system_mappings_v2';
 
@@ -955,32 +937,32 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
 
   return (
     <Section icon={Database} title="Table Columns" defaultOpen={true}>
-      <p className="rb-caption mb-3 text-[var(--rb-text-muted)]">
+      <p className="text-[9px] text-[var(--rb-text-muted)] mb-3">
         <span className="font-medium text-[var(--rb-text)]">Data Table</span>
         <span className="mx-1">&rsaquo;</span>
         {columns.length} column{columns.length !== 1 ? 's' : ''}
       </p>
       {columns.length === 0 ? (
-        <p className="rb-caption mb-3 text-[var(--rb-text-muted)]">
+        <p className="text-[9px] text-[var(--rb-text-muted)] mb-3">
           Define columns for your table. Each column can be a tag value, formula, group aggregate, or static text.
         </p>
       ) : (
         <div className="space-y-2">
           {columns.map((col, i) => (
             <details key={i} className="group/col rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-border)] overflow-hidden">
-              <summary className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none list-none rb-body">
+              <summary className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none list-none text-[12px]">
                 <div className="flex flex-col gap-0">
                   <button
                     onClick={(e) => { e.preventDefault(); moveColumn(i, i - 1); }}
                     disabled={i === 0}
-                    className="rb-caption text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] disabled:opacity-30 leading-none py-0.5"
+                    className="text-[9px] text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] disabled:opacity-30 leading-none py-0.5"
                   >
                     &#9650;
                   </button>
                   <button
                     onClick={(e) => { e.preventDefault(); moveColumn(i, i + 1); }}
                     disabled={i === columns.length - 1}
-                    className="rb-caption text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] disabled:opacity-30 leading-none py-0.5"
+                    className="text-[9px] text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] disabled:opacity-30 leading-none py-0.5"
                   >
                     &#9660;
                   </button>
@@ -993,12 +975,12 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                   : 'bg-[var(--rb-text-muted)]'
                 }`} />
                 <span className="flex-1 min-w-0 truncate">
-                  <span className="block truncate font-medium">{col.label || `Column ${i + 1}`}</span>
-                  <span className="block rb-caption font-mono truncate mt-0.5">
+                  <span className="block truncate font-medium text-[var(--rb-text)]">{col.label || `Column ${i + 1}`}</span>
+                  <span className="block text-[9px] font-mono text-[var(--rb-text-muted)] truncate mt-0.5">
                     {getSourcePreview(col)}
                   </span>
                 </span>
-                <span className="rb-caption flex-shrink-0 inline-flex items-center gap-1">
+                <span className="text-[9px] text-[var(--rb-text-muted)] flex-shrink-0 inline-flex items-center gap-1">
                   {(() => { const SrcIcon = SOURCE_ICONS[col.sourceType || 'tag']; return SrcIcon ? <SrcIcon size={10} /> : null; })()}
                   {col.sourceType || 'tag'}
                 </span>
@@ -1081,7 +1063,7 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                             </button>
                           </div>
                         ))}
-                        <button onClick={() => updateColumn(i, { groupTags: [...(col.groupTags || []), ''] })} className="rb-caption text-[var(--rb-accent)] hover:underline">
+                        <button onClick={() => updateColumn(i, { groupTags: [...(col.groupTags || []), ''] })} className="text-[9px] font-medium text-[var(--rb-accent)] hover:underline">
                           + Add tag
                         </button>
                       </div>
@@ -1167,27 +1149,25 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
       )}
 
       <div className="flex flex-wrap gap-2 mt-3">
-        <button onClick={() => addColumn('tag')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)] hover:bg-[var(--rb-accent)]/20 transition-colors">
+        <button onClick={() => addColumn('tag')} className="rb-badge text-[12px] px-3 py-1.5 rounded-lg bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)] hover:bg-[var(--rb-accent)]/20 hover:shadow-[0_0_8px_var(--rb-accent-glow)] transition-all">
           <Plus size={12} className="inline mr-1" /> Tag
         </button>
-        <button onClick={() => addColumn('formula')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 transition-colors">
+        <button onClick={() => addColumn('formula')} className="rb-badge text-[12px] px-3 py-1.5 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 hover:shadow-[0_0_8px_rgba(139,92,246,0.3)] transition-all">
           <Plus size={12} className="inline mr-1" /> Formula
         </button>
-        <button onClick={() => addColumn('group')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors">
+        <button onClick={() => addColumn('group')} className="rb-badge text-[12px] px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 hover:shadow-[0_0_8px_rgba(245,158,11,0.3)] transition-all">
           <Plus size={12} className="inline mr-1" /> Group
         </button>
-        <button onClick={() => addColumn('mapping')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition-colors">
+        <button onClick={() => addColumn('mapping')} className="rb-badge text-[12px] px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 hover:shadow-[0_0_8px_rgba(20,184,166,0.3)] transition-all">
           <Plus size={12} className="inline mr-1" /> Mapping
         </button>
-        <button onClick={() => addColumn('static')} className="rb-badge rb-body px-3 py-1.5 rounded-lg bg-[var(--rb-surface)] text-[var(--rb-text-muted)] hover:bg-[var(--rb-border)] transition-colors">
+        <button onClick={() => addColumn('static')} className="rb-badge text-[12px] px-3 py-1.5 rounded-lg bg-[var(--rb-surface)] text-[var(--rb-text-muted)] hover:bg-[var(--rb-border)] transition-all">
           <Plus size={12} className="inline mr-1" /> Static
         </button>
       </div>
     </Section>
   );
 }
-
-/* ── Main: Properties Panel ───────────────────────────────────── */
 
 const HAS_DATA_SOURCE = new Set(['kpi', 'gauge', 'stat', 'silo']);
 const HAS_THRESHOLDS = new Set(['kpi', 'gauge', 'stat', 'table', 'silo']);
@@ -1203,8 +1183,11 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
 
   if (!widget) {
     return (
-      <div className="flex items-center justify-center h-full rb-caption p-8 text-center text-[var(--rb-text-muted)]">
-        Select a widget to edit its properties
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <div className="w-12 h-12 rounded-xl bg-[var(--rb-surface)] border border-[var(--rb-border)] flex items-center justify-center mb-4">
+          <MousePointer size={20} className="text-[var(--rb-text-muted)]" />
+        </div>
+        <p className="text-[11px] font-medium text-[var(--rb-text-muted)]">Select a widget to edit its properties</p>
       </div>
     );
   }
@@ -1219,23 +1202,29 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
   return (
     <div className="flex flex-col h-full">
       <div className="flex-shrink-0 border-b border-[var(--rb-border)]">
-        <div className="flex items-center justify-between px-5 py-4">
-          <p className="rb-heading text-[var(--rb-text)] truncate pr-2">{widgetTitle}</p>
+        <div className="flex items-center justify-between px-5 py-3.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--rb-accent-subtle)] border border-[var(--rb-accent)]/20">
+              <Sliders size={14} className="text-[var(--rb-accent)]" />
+            </span>
+            <p className="text-[13px] font-bold text-[var(--rb-text)] truncate">{widgetTitle}</p>
+          </div>
           <button onClick={onClose} className="rb-btn-ghost p-2 -mr-2 hover:bg-[var(--rb-surface)] rounded-md transition-colors">
-            <X size={18} />
+            <X size={16} className="text-[var(--rb-text-muted)]" />
           </button>
         </div>
-        <div className="px-5 py-3 border-t border-[var(--rb-border)]/80">
-          <div className="rb-segmented-control">
+        <div className="px-5 pb-3">
+          <div className="rb-segmented-control w-full">
             {[
-              { id: TAB_DATA, label: 'Data' },
-              { id: TAB_FORMAT, label: 'Format' },
+              { id: TAB_DATA, label: 'Data', icon: Database },
+              { id: TAB_FORMAT, label: 'Format', icon: Palette },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={activeTab === tab.id ? 'active' : ''}
+                className={`flex-1 flex items-center justify-center gap-1.5 ${activeTab === tab.id ? 'active' : ''}`}
               >
+                <tab.icon size={12} />
                 {tab.label}
               </button>
             ))}
@@ -1243,12 +1232,12 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
         </div>
       </div>
 
-      <div className="px-5 py-3 border-b border-[var(--rb-border)]">
+      <div className="px-5 py-3 border-b border-[var(--rb-border)] bg-[var(--rb-surface)]/50">
         <div className="flex items-center gap-1.5 mb-2">
-          <Move size={12} className="text-[var(--rb-text-muted)]" />
-          <span className="rb-label" style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Layout</span>
+          <Move size={11} className="text-[var(--rb-accent)]" />
+          <span className="text-[9px] font-bold text-[var(--rb-accent)] uppercase tracking-[0.08em]">Layout</span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-1.5">
           {[
             { key: 'x', label: 'X', min: 0, max: 11 },
             { key: 'y', label: 'Y', min: 0, max: 999 },
@@ -1256,7 +1245,7 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
             { key: 'h', label: 'H', min: 1, max: 999 },
           ].map(({ key, label, min, max }) => (
             <div key={key}>
-              <label className="block text-[9px] font-bold text-[var(--rb-text-muted)] uppercase mb-0.5">{label}</label>
+              <label className="block text-[8px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.1em] mb-0.5 text-center">{label}</label>
               <input
                 type="number"
                 min={min}
@@ -1270,8 +1259,8 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
                   if (key === 'w' && (widget.x || 0) + v > 12) v = 12 - (widget.x || 0);
                   onUpdate(widget.id, { [key]: v });
                 }}
-                className="rb-input-base w-full text-center py-1 text-[11px] font-mono"
-                style={{ padding: '3px 2px' }}
+                className="rb-input-base w-full text-center font-mono tabular-nums text-[11px] font-bold"
+                style={{ padding: '4px 2px' }}
               />
             </div>
           ))}
@@ -1298,7 +1287,7 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
                 <TableColumnsSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
               )}
               {!HAS_DATA_SOURCE.has(widget.type) && !HAS_SERIES.has(widget.type) && !HAS_TABLE_COLUMNS.has(widget.type) && (
-                <div className="px-5 py-6 rb-caption text-[var(--rb-text-muted)]">
+                <div className="px-5 py-6 text-[9px] text-[var(--rb-text-muted)]">
                   {widget.type === 'text'
                     ? 'Use the Format tab to configure this element.'
                     : 'No data options for this widget.'}
@@ -1373,10 +1362,10 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
         </AnimatePresence>
       </div>
 
-      <div className="px-5 py-4 border-t border-[var(--rb-border)] flex-shrink-0">
+      <div className="px-5 py-3.5 border-t border-[var(--rb-border)] flex-shrink-0">
         <button
           onClick={() => onDelete(widget.id)}
-          className="w-full flex items-center justify-center gap-2 rb-body font-medium text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] rounded-lg py-2.5 transition-all active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-2 text-[12px] font-semibold text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] rounded-lg py-2.5 transition-all active:scale-[0.98] border border-transparent hover:border-[var(--rb-danger)]/20"
         >
           <Trash2 size={14} />
           Remove widget

@@ -72,7 +72,7 @@ export default function StatWidget({ config, tagValues }) {
   const numericValue = raw != null ? Number(raw) : null;
   const decimals = config.decimals ?? 1;
   const display = useAnimatedNumber(numericValue, decimals, skipAnimation);
-  const color = config.color || '#2563ab';
+  const color = config.color || '#00d4ff';
 
   const showTitle = config.showTitle !== false;
   const titleFontSize = TITLE_FONT_SIZES[config.titleFontSize] || TITLE_FONT_SIZES.md;
@@ -80,31 +80,64 @@ export default function StatWidget({ config, tagValues }) {
   const align = config.align || 'center';
 
   const alignItems = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+  const textAlign = align;
 
   return (
     <div
-      className="flex flex-col justify-center h-full min-h-0"
-      style={{ padding: '6px 8px', alignItems }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        height: '100%',
+        minHeight: 0,
+        padding: '6px 10px 6px 0',
+        alignItems,
+        position: 'relative',
+        borderLeft: `3px solid ${color}`,
+        paddingLeft: '10px',
+      }}
     >
       {showTitle && (
         <p
-          className="rb-widget-title truncate w-full"
-          style={{ fontSize: titleFontSize, textAlign: align }}
+          className="rb-widget-title"
+          style={{
+            fontSize: titleFontSize,
+            textAlign,
+            width: '100%',
+            margin: 0,
+            marginBottom: '4px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
         >
           {config.title || 'Stat'}
         </p>
       )}
       <span
-        className="rb-value-primary mt-0.5"
+        className="rb-value-primary"
         style={{
           color,
-          fontSize: valueFontSize || 'clamp(18px, 3.5vw, 36px)',
+          fontSize: valueFontSize || 'clamp(20px, 4vw, 40px)',
+          lineHeight: 1.1,
+          fontWeight: 800,
+          fontVariantNumeric: 'tabular-nums',
+          letterSpacing: '-0.03em',
+          textShadow: `0 0 20px ${color}33`,
         }}
       >
         {display}
       </span>
       {config.unit && (
-        <span className="rb-value-unit">{config.unit}</span>
+        <span
+          className="rb-value-unit"
+          style={{
+            marginTop: '2px',
+            textAlign,
+          }}
+        >
+          {config.unit}
+        </span>
       )}
     </div>
   );

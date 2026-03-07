@@ -1,8 +1,3 @@
-/**
- * Image widget — displays an uploaded image.
- * The image is stored as a base64 data-URL in config.src.
- * Config: src, objectFit ('contain'|'cover'|'fill'), alt, borderRadius.
- */
 import { ImagePlus } from 'lucide-react';
 import { useRef, useCallback } from 'react';
 
@@ -15,7 +10,6 @@ export default function ImageWidget({ config, onUpdateConfig }) {
 
   const handleFile = useCallback((file) => {
     if (!file || !file.type.startsWith('image/')) return;
-    // Limit to 5 MB
     if (file.size > 5 * 1024 * 1024) {
       alert('Image must be under 5 MB');
       return;
@@ -46,20 +40,42 @@ export default function ImageWidget({ config, onUpdateConfig }) {
   if (!src) {
     return (
       <div
-        className="flex flex-col items-center justify-center h-full w-full cursor-pointer rounded-lg border-2 border-dashed no-drag"
+        className="flex flex-col items-center justify-center h-full w-full cursor-pointer no-drag"
         style={{
-          borderColor: 'var(--rb-border)',
+          border: '2px dashed var(--rb-accent, #38bdf8)',
+          borderRadius: 'var(--rb-radius-lg, 8px)',
           color: 'var(--rb-text-muted)',
-          transition: 'border-color var(--rb-transition-fast) ease, color var(--rb-transition-fast) ease',
+          background: 'var(--rb-accent-subtle, rgba(56,189,248,0.05))',
+          transition: 'border-color 150ms ease, color 150ms ease, background 150ms ease, box-shadow 150ms ease',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--rb-accent)'; e.currentTarget.style.color = 'var(--rb-accent)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--rb-border)'; e.currentTarget.style.color = 'var(--rb-text-muted)'; }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = 'var(--rb-accent-bright, #7dd3fc)';
+          e.currentTarget.style.color = 'var(--rb-accent, #38bdf8)';
+          e.currentTarget.style.background = 'var(--rb-accent-subtle, rgba(56,189,248,0.08))';
+          e.currentTarget.style.boxShadow = '0 0 16px var(--rb-accent-glow, rgba(56,189,248,0.2))';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = 'var(--rb-accent, #38bdf8)';
+          e.currentTarget.style.color = 'var(--rb-text-muted)';
+          e.currentTarget.style.background = 'var(--rb-accent-subtle, rgba(56,189,248,0.05))';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
         onClick={handleClick}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
-        <ImagePlus size={28} strokeWidth={1.5} />
-        <span className="rb-caption mt-1.5 font-medium">Click or drop image</span>
+        <ImagePlus size={32} strokeWidth={1.5} style={{ opacity: 0.7 }} />
+        <span
+          style={{
+            marginTop: '8px',
+            fontSize: '9px',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.10em',
+          }}
+        >
+          Click or drop image
+        </span>
         <input
           ref={inputRef}
           type="file"
@@ -77,7 +93,7 @@ export default function ImageWidget({ config, onUpdateConfig }) {
         src={src}
         alt={alt}
         className="h-full w-full"
-        style={{ objectFit: fit }}
+        style={{ objectFit: fit, display: 'block' }}
         draggable={false}
       />
     </div>

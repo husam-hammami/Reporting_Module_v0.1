@@ -40,7 +40,7 @@ function getThresholdColor(value, thresholds, defaultColor) {
   return defaultColor;
 }
 
-function buildSparklinePoints(data) {
+function buildSparklinePoints(data, height = 40) {
   if (!Array.isArray(data) || data.length < 2) return null;
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -49,7 +49,7 @@ function buildSparklinePoints(data) {
   return data
     .map((v, i) => {
       const x = n === 1 ? 50 : (i / (n - 1)) * 100;
-      const y = 20 - ((v - min) / range) * 18 - 1;
+      const y = height - ((v - min) / range) * (height - 4) - 2;
       return `${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(' ');
@@ -96,7 +96,7 @@ function useAnimatedNumber(target, decimals, skipAnimation) {
   return Number(display).toFixed(decimals);
 }
 
-export default function KPIWidget({ config, tagValues, sparklineData }) {
+export default function KPIWidget({ config, tagValues, sparklineData, layout }) {
   const prefersReducedMotion = useReducedMotion();
   const isCapturing = useThumbnailCapture();
   const skipAnimation = prefersReducedMotion || isCapturing;
@@ -105,7 +105,7 @@ export default function KPIWidget({ config, tagValues, sparklineData }) {
   const numericValue = rawValue != null ? Number(rawValue) : null;
   const decimals = config.decimals ?? 1;
   const displayValue = useAnimatedNumber(numericValue, decimals, skipAnimation);
-  const activeColor = getThresholdColor(rawValue, config.thresholds, config.color || '#2563ab');
+  const activeColor = getThresholdColor(rawValue, config.thresholds, config.color || '#00d4ff');
 
   const sparkValues = useMemo(
     () => Array.isArray(sparklineData) && sparklineData.length >= 2
@@ -114,9 +114,14 @@ export default function KPIWidget({ config, tagValues, sparklineData }) {
     [sparklineData],
   );
   const sparklinePoints = useMemo(
-    () => sparkValues ? buildSparklinePoints(sparkValues) : null,
+    () => sparkValues ? buildSparklinePoints(sparkValues, 40) : null,
     [sparkValues],
   );
+
+  const sparkAreaPath = useMemo(() => {
+    if (!sparklinePoints) return null;
+    return `M0,40 L${sparklinePoints} L100,40 Z`;
+  }, [sparklinePoints]);
 
   const [sparkVisible, setSparkVisible] = useState(skipAnimation);
   useEffect(() => {
@@ -128,30 +133,102 @@ export default function KPIWidget({ config, tagValues, sparklineData }) {
   const showTitle = config.showTitle !== false;
   const titleFontSize = TITLE_FONT_SIZES[config.titleFontSize] || TITLE_FONT_SIZES.md;
   const valueFontSize = VALUE_FONT_SIZES[config.valueFontSize];
-  const align = config.align || 'left';
+  const align = config.align || 'center';
+
+  const isCompact = layout?.h === 1;
+
+  const glowBarId = useMemo(() => `kpi-glow-${Math.random().toString(36).slice(2, 7)}`, []);
+  const sparkGradId = useMemo(() => `kpi-spark-${Math.random().toString(36).slice(2, 7)}`, []);
+
+  if (isCompact) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: '100%',
+          padding: '4px 10px',
+          borderLeft: `3px solid ${activeColor}`,
+          gap: '8px',
+          minHeight: 0,
+        }}
+      >
+        {showTitle && (
+          <span
+            className="rb-widget-title"
+            style={{
+              fontSize: titleFontSize,
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            {config.title || 'KPI'}
+          </span>
+        )}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+          <span
+            className="rb-value-primary"
+            style={{
+              color: activeColor,
+              fontSize: valueFontSize || 'clamp(16px, 2.5vw, 24px)',
+            }}
+          >
+            {displayValue}
+          </span>
+          {config.unit && (
+            <span className="rb-value-unit">{config.unit}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const alignItems = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
-  const justifyValue = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+  const textAlign = align;
 
   return (
     <div
-      className="flex flex-col h-full justify-between min-h-0"
-      style={{ padding: '6px 8px', alignItems }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems,
+        padding: '8px 12px',
+        minHeight: 0,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
     >
       {showTitle && (
         <p
           className="rb-widget-title truncate w-full"
-          style={{ fontSize: titleFontSize, textAlign: align }}
+          style={{
+            fontSize: titleFontSize,
+            textAlign,
+            marginBottom: '4px',
+          }}
         >
           {config.title || 'KPI'}
         </p>
       )}
-      <div className="flex items-baseline gap-1 mt-0.5" style={{ justifyContent: justifyValue }}>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: '6px',
+          justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+        }}
+      >
         <span
           className="rb-value-primary"
           style={{
             color: activeColor,
-            fontSize: valueFontSize || 'clamp(18px, 3vw, 32px)',
+            fontSize: valueFontSize || 'clamp(24px, 4vw, 42px)',
+            fontWeight: 800,
+            letterSpacing: '-0.03em',
+            textShadow: `0 0 20px ${activeColor}33`,
           }}
         >
           {displayValue}
@@ -160,26 +237,52 @@ export default function KPIWidget({ config, tagValues, sparklineData }) {
           <span className="rb-value-unit">{config.unit}</span>
         )}
       </div>
+
+      <div
+        style={{
+          width: align === 'center' ? '40px' : '32px',
+          height: '3px',
+          borderRadius: '2px',
+          background: activeColor,
+          marginTop: '6px',
+          boxShadow: `0 0 8px ${activeColor}66, 0 0 16px ${activeColor}22`,
+          alignSelf: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+        }}
+      />
+
       {config.showSparkline && (
         <div
-          className="w-full overflow-hidden"
           style={{
-            height: '16px',
-            marginTop: '2px',
+            width: '100%',
+            height: '28px',
+            marginTop: '6px',
             opacity: sparkVisible ? 1 : 0,
             transform: sparkVisible ? 'translateY(0)' : 'translateY(4px)',
             transition: skipAnimation ? 'none' : 'opacity 300ms ease, transform 300ms ease',
+            overflow: 'hidden',
           }}
         >
-          <svg viewBox="0 0 100 20" className="w-full h-full" preserveAspectRatio="none">
+          <svg viewBox="0 0 100 40" style={{ width: '100%', height: '100%' }} preserveAspectRatio="none">
+            <defs>
+              <linearGradient id={sparkGradId} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor={activeColor} stopOpacity="0.3" />
+                <stop offset="100%" stopColor={activeColor} stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            {sparkAreaPath && (
+              <path
+                d={sparkAreaPath}
+                fill={`url(#${sparkGradId})`}
+              />
+            )}
             <polyline
               fill="none"
               stroke={activeColor}
-              strokeWidth="1.5"
+              strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
-              points={sparklinePoints ?? '0,15 10,12 20,14 30,8 40,10 50,6 60,9 70,4 80,7 90,3 100,5'}
-              opacity="0.6"
+              points={sparklinePoints ?? '0,30 10,24 20,28 30,16 40,20 50,12 60,18 70,8 80,14 90,6 100,10'}
+              style={{ filter: `drop-shadow(0 0 3px ${activeColor}66)` }}
             />
           </svg>
         </div>
