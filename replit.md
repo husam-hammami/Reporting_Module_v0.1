@@ -62,6 +62,8 @@ Complete creative rendering-layer redesign inspired by SpaceX mission control, B
 - **Properties Panel**: Monospace layout inputs, glowing segmented control, accent section headers with icon badges
 - **Grid**: [4,4] margins in Canvas and Preview
 - **Files Modified**: All under `Frontend/src/Pages/ReportBuilder/` — widgets, panels, canvas, manager, preview, theme CSS
+- **Canvas Data Flow**: When emulator is ON, uses front-end emulator values; when OFF, polls backend `/api/live-monitor/tags` every 5s (same as Preview). This ensures the canvas always displays live data regardless of emulator state.
+- **Emulator Tag Seeding**: 31 grain terminal demo tags (Intake_Today, Silo1_Level, etc.) seeded into DB via `seed_report_templates.py`. Backend serves 33+ live tag values from emulator.
 - **Preserved Contracts**: All API endpoints, schema, hook signatures, data flow, and infrastructure untouched
 
 ## Key Files

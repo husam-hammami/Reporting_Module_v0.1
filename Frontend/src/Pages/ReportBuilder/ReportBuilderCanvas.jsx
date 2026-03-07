@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
+import axios from '../../API/axios';
 import {
   ArrowLeft, Save, Eye, PanelLeftClose, PanelRightClose,
   PanelLeft, PanelRight, Check, Pencil, Plus, X, AlertCircle, Send,
@@ -133,18 +134,36 @@ export default function ReportBuilderCanvas() {
   const skipAnimations = prefersReducedMotion || isCapturing;
   const widgets = rawWidgets;
   const usedTagNames = useMemo(() => collectWidgetTagNames(widgets), [widgets]);
-  /* Merge emulator values — profiles are built dynamically from DB tags */
+  const [polledTagValues, setPolledTagValues] = useState({});
+  useEffect(() => {
+    if (emulatorOn || usedTagNames.length === 0) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await axios.get('/api/live-monitor/tags', {
+          params: { tags: usedTagNames.join(',') },
+        });
+        if (!cancelled && res.data?.tag_values) setPolledTagValues(prev => ({ ...prev, ...res.data.tag_values }));
+      } catch {}
+    };
+    poll();
+    const id = setInterval(poll, 5000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [emulatorOn, usedTagNames]);
+
   const liveTagValues = useMemo(() => {
-    if (!emulatorOn || !emulatorValues) return {};
-    const base = { ...emulatorValues };
-    const t = Date.now() / 1000;
-    for (const tag of usedTagNames) {
-      if (tag && !(tag in base)) {
-        base[tag] = Number((50 + 15 * Math.sin((2 * Math.PI * t) / 200)).toFixed(2));
+    if (emulatorOn && emulatorValues) {
+      const base = { ...emulatorValues };
+      const t = Date.now() / 1000;
+      for (const tag of usedTagNames) {
+        if (tag && !(tag in base)) {
+          base[tag] = Number((50 + 15 * Math.sin((2 * Math.PI * t) / 200)).toFixed(2));
+        }
       }
+      return base;
     }
-    return base;
-  }, [emulatorOn, emulatorValues, usedTagNames]);
+    return polledTagValues;
+  }, [emulatorOn, emulatorValues, usedTagNames, polledTagValues]);
   const tagHistory = useTagHistory(usedTagNames, liveTagValues);
 
   const [selectedId, setSelectedId] = useState(null);
