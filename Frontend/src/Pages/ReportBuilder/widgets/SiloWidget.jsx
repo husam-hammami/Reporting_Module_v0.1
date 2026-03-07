@@ -99,42 +99,50 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
   const fillMid = fillColor;
   const fillBright = `rgb(${Math.min(rgb.r + 50, 255)}, ${Math.min(rgb.g + 50, 255)}, ${Math.min(rgb.b + 50, 255)})`;
 
+  const glowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`;
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet" aria-hidden role="img">
       <defs>
         <linearGradient id={`${uid}-body`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#6b7280" />
-          <stop offset="15%" stopColor="#7d8594" />
-          <stop offset="35%" stopColor="#929aa6" />
-          <stop offset="50%" stopColor="#9ca3af" />
-          <stop offset="65%" stopColor="#929aa6" />
-          <stop offset="85%" stopColor="#7d8594" />
-          <stop offset="100%" stopColor="#6b7280" />
+          <stop offset="0%" stopColor="#1a2230" />
+          <stop offset="12%" stopColor="#1e2838" />
+          <stop offset="35%" stopColor="#243040" />
+          <stop offset="50%" stopColor="#283448" />
+          <stop offset="65%" stopColor="#243040" />
+          <stop offset="88%" stopColor="#1e2838" />
+          <stop offset="100%" stopColor="#1a2230" />
         </linearGradient>
 
         <linearGradient id={`${uid}-top`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#78808c" />
-          <stop offset="30%" stopColor="#8e96a2" />
-          <stop offset="50%" stopColor="#9aa2ae" />
-          <stop offset="70%" stopColor="#8e96a2" />
-          <stop offset="100%" stopColor="#78808c" />
+          <stop offset="0%" stopColor="#1c2535" />
+          <stop offset="30%" stopColor="#253040" />
+          <stop offset="50%" stopColor="#2a3648" />
+          <stop offset="70%" stopColor="#253040" />
+          <stop offset="100%" stopColor="#1c2535" />
         </linearGradient>
 
         <linearGradient id={`${uid}-bot`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#5c6370" />
-          <stop offset="30%" stopColor="#6e7580" />
-          <stop offset="50%" stopColor="#787f8a" />
-          <stop offset="70%" stopColor="#6e7580" />
-          <stop offset="100%" stopColor="#5c6370" />
+          <stop offset="0%" stopColor="#141c28" />
+          <stop offset="30%" stopColor="#1a2432" />
+          <stop offset="50%" stopColor="#1e2838" />
+          <stop offset="70%" stopColor="#1a2432" />
+          <stop offset="100%" stopColor="#141c28" />
         </linearGradient>
 
         <linearGradient id={`${uid}-fill`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor={fillDark} />
-          <stop offset="20%" stopColor={fillMid} />
-          <stop offset="45%" stopColor={fillBright} />
-          <stop offset="55%" stopColor={fillBright} />
-          <stop offset="80%" stopColor={fillMid} />
+          <stop offset="18%" stopColor={fillMid} />
+          <stop offset="42%" stopColor={fillBright} />
+          <stop offset="58%" stopColor={fillBright} />
+          <stop offset="82%" stopColor={fillMid} />
           <stop offset="100%" stopColor={fillDark} />
+        </linearGradient>
+
+        <linearGradient id={`${uid}-fill-v`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="white" stopOpacity="0.12" />
+          <stop offset="40%" stopColor="white" stopOpacity="0" />
+          <stop offset="100%" stopColor="black" stopOpacity="0.15" />
         </linearGradient>
 
         <linearGradient id={`${uid}-fill-top`} x1="0" y1="0" x2="1" y2="0">
@@ -145,6 +153,18 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
           <stop offset="100%" stopColor={fillDark} />
         </linearGradient>
 
+        <linearGradient id={`${uid}-rim`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#2a3a50" />
+          <stop offset="25%" stopColor="#3a5068" />
+          <stop offset="50%" stopColor="#4a6078" />
+          <stop offset="75%" stopColor="#3a5068" />
+          <stop offset="100%" stopColor="#2a3a50" />
+        </linearGradient>
+
+        <filter id={`${uid}-glow`}>
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3" />
+        </filter>
+
         <clipPath id={`${uid}-clip`}>
           <rect x={bodyL} y={topY} width={bodyW} height={bodyH} />
         </clipPath>
@@ -154,36 +174,45 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
         fill={`url(#${uid}-body)`} />
 
       <ellipse cx={cx} cy={botY} rx={rx} ry={ry}
-        fill={`url(#${uid}-bot)`} />
+        fill={`url(#${uid}-bot)`} stroke="#2a3a50" strokeWidth="0.6" />
 
       {fillH > 0 && (
-        <g clipPath={`url(#${uid}-clip)`}>
-          <rect x={bodyL} y={fillY} width={bodyW} height={fillH + 1}
-            fill={`url(#${uid}-fill)`} />
+        <>
+          <rect x={bodyL + 1} y={fillY} width={bodyW - 2} height={fillH}
+            fill={glowColor} filter={`url(#${uid}-glow)`} clipPath={`url(#${uid}-clip)`} />
 
-          <ellipse cx={cx} cy={fillY} rx={rx - 0.5} ry={ry - 1}
-            fill={`url(#${uid}-fill-top)`} opacity="0.7" />
-        </g>
+          <g clipPath={`url(#${uid}-clip)`}>
+            <rect x={bodyL} y={fillY} width={bodyW} height={fillH + 1}
+              fill={`url(#${uid}-fill)`} />
+            <rect x={bodyL} y={fillY} width={bodyW} height={fillH + 1}
+              fill={`url(#${uid}-fill-v)`} />
+          </g>
+        </>
       )}
 
       {fillH > 0 && fillRatio < 0.93 && (
         <ellipse cx={cx} cy={fillY} rx={rx - 0.5} ry={ry - 1}
-          fill={`url(#${uid}-fill-top)`} opacity="0.5" />
+          fill={`url(#${uid}-fill-top)`} opacity="0.6" />
       )}
 
       <ellipse cx={cx} cy={topY} rx={rx} ry={ry}
-        fill={`url(#${uid}-top)`} stroke="#8890a0" strokeWidth="0.5" />
+        fill={`url(#${uid}-top)`} stroke="#3a5068" strokeWidth="0.6" />
+      <ellipse cx={cx} cy={topY} rx={rx - 3} ry={ry - 2}
+        fill="none" stroke="rgba(100,160,220,0.08)" strokeWidth="0.4" />
 
       <line x1={bodyL} y1={topY} x2={bodyL} y2={botY}
-        stroke="#8890a0" strokeWidth="0.4" />
+        stroke="#3a5068" strokeWidth="0.6" />
       <line x1={bodyR} y1={topY} x2={bodyR} y2={botY}
-        stroke="#5a6270" strokeWidth="0.4" />
+        stroke="#2a3a50" strokeWidth="0.6" />
+
+      <ellipse cx={cx} cy={botY} rx={rx} ry={ry}
+        fill="none" stroke="#2a3a50" strokeWidth="0.5" />
 
       <text x={cx} y={topY + bodyH / 2 + 8} textAnchor="middle"
         fontSize="22" fontWeight="700"
         fontFamily="'Inter', system-ui, -apple-system, sans-serif"
         fill="white" opacity="0.95"
-        paintOrder="stroke" stroke="rgba(0,0,0,0.6)" strokeWidth="2"
+        paintOrder="stroke" stroke="rgba(0,0,0,0.7)" strokeWidth="2.5"
       >
         {Math.round(fillPercent)}%
       </text>
