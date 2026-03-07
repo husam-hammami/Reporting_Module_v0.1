@@ -257,7 +257,7 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
       )}
 
       <ellipse cx={cx} cy={bodyBot} rx={bodyRx} ry={roofEllipseRy}
-        fill={`url(#${uid}-metal-shadow)`} stroke="#778899" strokeWidth="0.6" />
+        fill={fillH > 0 ? `url(#${uid}-fill-h)` : `url(#${uid}-metal-shadow)`} stroke="#778899" strokeWidth="0.6" />
 
       <path
         d={`M ${bodyL} ${roofBase}
