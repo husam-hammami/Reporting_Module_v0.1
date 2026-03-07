@@ -76,160 +76,157 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
   const fillRatio = Math.max(0, Math.min(1, fillPercent / 100));
   const uid = React.useId ? React.useId() : `s-${Math.random().toString(36).slice(2, 8)}`;
 
-  const W = 140;
-  const H = 200;
+  const W = 120;
+  const H = 220;
   const cx = W / 2;
 
-  const bodyL = 30;
-  const bodyR = W - 30;
+  const bodyL = 22;
+  const bodyR = W - 22;
   const bodyW = bodyR - bodyL;
-  const bodyRx = bodyW / 2;
 
-  const roofPeak = 18;
-  const roofBase = 42;
-  const roofEllipseRy = 10;
+  const capTop = 8;
+  const capH = 14;
+  const capBot = capTop + capH;
 
-  const bodyTop = roofBase;
-  const bodyBot = 148;
+  const roofTop = capBot;
+  const roofBot = roofTop + 8;
+
+  const bodyTop = roofBot;
+  const bodyBot = 186;
   const bodyH = bodyBot - bodyTop;
 
-  const hopperBot = 170;
-  const hopperEllipseRy = 6;
+  const foundTop = bodyBot;
+  const foundBot = 196;
+  const foundH = foundBot - foundTop;
 
-  const legBot = 192;
+  const baseBot = 210;
 
   const fillH = bodyH * fillRatio;
   const fillY = bodyBot - fillH;
-  const hasWave = fillRatio > 0.03 && fillRatio < 0.97 && !skipAnimation;
   const isLow = fillRatio > 0 && fillRatio < 0.15;
 
   const rgb = hexToRgb(fillColor.length === 7 ? fillColor : '#3b82f6');
-  const fillDark = `rgb(${Math.max(rgb.r - 50, 0)}, ${Math.max(rgb.g - 50, 0)}, ${Math.max(rgb.b - 50, 0)})`;
-  const fillLight = `rgb(${Math.min(rgb.r + 70, 255)}, ${Math.min(rgb.g + 70, 255)}, ${Math.min(rgb.b + 70, 255)})`;
-  const fillVLight = `rgba(${Math.min(rgb.r + 100, 255)}, ${Math.min(rgb.g + 100, 255)}, ${Math.min(rgb.b + 100, 255)}, 0.5)`;
+  const fillDark = `rgb(${Math.max(rgb.r - 40, 0)}, ${Math.max(rgb.g - 40, 0)}, ${Math.max(rgb.b - 40, 0)})`;
+  const fillLight = `rgb(${Math.min(rgb.r + 50, 255)}, ${Math.min(rgb.g + 50, 255)}, ${Math.min(rgb.b + 50, 255)})`;
 
-  const bandCount = 7;
-  const bandSpacing = bodyH / (bandCount + 1);
+  const pourLines = 8;
+  const pourSpacing = bodyH / (pourLines + 1);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet" aria-hidden role="img">
       <defs>
-        <linearGradient id={`${uid}-metal`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#6b7d8d" />
-          <stop offset="8%" stopColor="#8899a8" />
-          <stop offset="20%" stopColor="#a8bac8" />
-          <stop offset="35%" stopColor="#c8d6e2" />
-          <stop offset="45%" stopColor="#dae6f0" />
-          <stop offset="50%" stopColor="#e4eef6" />
-          <stop offset="55%" stopColor="#dae6f0" />
-          <stop offset="65%" stopColor="#c0d0de" />
-          <stop offset="80%" stopColor="#98aab8" />
-          <stop offset="92%" stopColor="#7a8c9c" />
-          <stop offset="100%" stopColor="#68788a" />
+        <linearGradient id={`${uid}-concrete`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#8a8a80" />
+          <stop offset="5%" stopColor="#959589" />
+          <stop offset="15%" stopColor="#a8a89c" />
+          <stop offset="30%" stopColor="#b8b8ac" />
+          <stop offset="45%" stopColor="#c4c4b8" />
+          <stop offset="50%" stopColor="#c8c8bc" />
+          <stop offset="55%" stopColor="#c4c4b8" />
+          <stop offset="70%" stopColor="#b0b0a4" />
+          <stop offset="85%" stopColor="#9a9a8e" />
+          <stop offset="95%" stopColor="#8e8e82" />
+          <stop offset="100%" stopColor="#858578" />
         </linearGradient>
 
-        <linearGradient id={`${uid}-metal-shadow`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#4a5a6a" />
-          <stop offset="15%" stopColor="#5a6a7a" />
-          <stop offset="35%" stopColor="#7a8a98" />
-          <stop offset="50%" stopColor="#8a9aa8" />
-          <stop offset="65%" stopColor="#7a8a98" />
-          <stop offset="85%" stopColor="#5a6a7a" />
-          <stop offset="100%" stopColor="#4a5a6a" />
-        </linearGradient>
-
-        <linearGradient id={`${uid}-roof`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#7a8a9a" />
-          <stop offset="20%" stopColor="#a0b0c0" />
-          <stop offset="40%" stopColor="#c0d0dd" />
-          <stop offset="50%" stopColor="#d8e4ee" />
-          <stop offset="60%" stopColor="#c0d0dd" />
-          <stop offset="80%" stopColor="#90a0b0" />
-          <stop offset="100%" stopColor="#6a7a8a" />
-        </linearGradient>
-
-        <linearGradient id={`${uid}-roof-v`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="white" stopOpacity="0.3" />
-          <stop offset="60%" stopColor="white" stopOpacity="0" />
-          <stop offset="100%" stopColor="black" stopOpacity="0.15" />
+        <linearGradient id={`${uid}-concrete-v`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="white" stopOpacity="0.08" />
+          <stop offset="20%" stopColor="white" stopOpacity="0.02" />
+          <stop offset="80%" stopColor="black" stopOpacity="0.03" />
+          <stop offset="100%" stopColor="black" stopOpacity="0.12" />
         </linearGradient>
 
         <linearGradient id={`${uid}-fill-h`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor={fillDark} />
           <stop offset="15%" stopColor={fillColor} />
           <stop offset="40%" stopColor={fillLight} />
-          <stop offset="50%" stopColor={fillVLight} />
-          <stop offset="60%" stopColor={fillLight} />
+          <stop offset="50%" stopColor={fillLight} />
+          <stop offset="60%" stopColor={fillColor} />
           <stop offset="85%" stopColor={fillColor} />
           <stop offset="100%" stopColor={fillDark} />
         </linearGradient>
 
         <linearGradient id={`${uid}-fill-v`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="white" stopOpacity="0.15" />
-          <stop offset="30%" stopColor="white" stopOpacity="0.03" />
-          <stop offset="70%" stopColor="black" stopOpacity="0.05" />
-          <stop offset="100%" stopColor="black" stopOpacity="0.18" />
+          <stop offset="0%" stopColor="white" stopOpacity="0.12" />
+          <stop offset="30%" stopColor="white" stopOpacity="0.02" />
+          <stop offset="80%" stopColor="black" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="black" stopOpacity="0.15" />
         </linearGradient>
 
-        <linearGradient id={`${uid}-hopper`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#5a6a78" />
-          <stop offset="30%" stopColor="#8898a8" />
-          <stop offset="50%" stopColor="#a0b0c0" />
-          <stop offset="70%" stopColor="#8898a8" />
-          <stop offset="100%" stopColor="#5a6a78" />
+        <linearGradient id={`${uid}-found`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#9a9a8e" />
+          <stop offset="100%" stopColor="#7a7a6e" />
         </linearGradient>
 
-        <linearGradient id={`${uid}-leg-g`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#556677" />
-          <stop offset="50%" stopColor="#8899aa" />
-          <stop offset="100%" stopColor="#556677" />
-        </linearGradient>
+        <filter id={`${uid}-noise`}>
+          <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" result="noise" />
+          <feColorMatrix type="saturate" values="0" in="noise" result="gray" />
+          <feBlend in="SourceGraphic" in2="gray" mode="multiply" result="blend" />
+          <feComponentTransfer in="blend">
+            <feFuncA type="linear" slope="1" />
+          </feComponentTransfer>
+        </filter>
 
         <clipPath id={`${uid}-body-clip`}>
           <rect x={bodyL} y={bodyTop} width={bodyW} height={bodyH} />
         </clipPath>
+
+        <pattern id={`${uid}-texture`} patternUnits="userSpaceOnUse" width="4" height="4">
+          <rect width="4" height="4" fill="transparent" />
+          <circle cx="1" cy="1" r="0.3" fill="rgba(0,0,0,0.03)" />
+          <circle cx="3" cy="3" r="0.2" fill="rgba(255,255,255,0.02)" />
+          <circle cx="2" cy="0" r="0.15" fill="rgba(0,0,0,0.02)" />
+        </pattern>
       </defs>
 
-      <line x1={bodyL + 8} y1={bodyBot + hopperEllipseRy} x2={bodyL - 2} y2={legBot}
-        stroke={`url(#${uid}-leg-g)`} strokeWidth="3" strokeLinecap="round" />
-      <line x1={bodyR - 8} y1={bodyBot + hopperEllipseRy} x2={bodyR + 2} y2={legBot}
-        stroke={`url(#${uid}-leg-g)`} strokeWidth="3" strokeLinecap="round" />
-      <line x1={cx - 6} y1={hopperBot} x2={cx - 6} y2={legBot}
-        stroke={`url(#${uid}-leg-g)`} strokeWidth="2.5" strokeLinecap="round" />
-      <line x1={cx + 6} y1={hopperBot} x2={cx + 6} y2={legBot}
-        stroke={`url(#${uid}-leg-g)`} strokeWidth="2.5" strokeLinecap="round" />
+      <rect x={bodyL - 8} y={foundBot} width={bodyW + 16} height={baseBot - foundBot}
+        fill="#6a6a5e" rx="1" />
+      <line x1={bodyL - 8} y1={foundBot} x2={bodyR + 8} y2={foundBot}
+        stroke="#5a5a4e" strokeWidth="0.8" />
 
-      <line x1={bodyL + 2} y1={legBot - 8} x2={bodyR - 2} y2={legBot - 8}
-        stroke="#667788" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1={bodyL - 4} y1={legBot} x2={bodyR + 4} y2={legBot}
-        stroke="#778899" strokeWidth="2.5" strokeLinecap="round" />
-
-      <path d={`M ${bodyL} ${bodyBot} L ${cx - 8} ${hopperBot} L ${cx + 8} ${hopperBot} L ${bodyR} ${bodyBot}`}
-        fill={`url(#${uid}-hopper)`} stroke="#778899" strokeWidth="0.7" strokeLinejoin="round" />
-      <ellipse cx={cx} cy={hopperBot} rx="8" ry={hopperEllipseRy - 2}
-        fill="#667788" stroke="#556677" strokeWidth="0.5" />
+      <rect x={bodyL - 4} y={foundTop} width={bodyW + 8} height={foundH}
+        fill={`url(#${uid}-found)`} rx="1" />
+      <line x1={bodyL - 4} y1={foundTop} x2={bodyR + 4} y2={foundTop}
+        stroke="rgba(0,0,0,0.15)" strokeWidth="0.6" />
+      <line x1={bodyL - 4} y1={foundBot} x2={bodyR + 4} y2={foundBot}
+        stroke="rgba(0,0,0,0.1)" strokeWidth="0.4" />
 
       <rect x={bodyL} y={bodyTop} width={bodyW} height={bodyH}
-        fill={`url(#${uid}-metal)`} stroke="#8898a6" strokeWidth="0.7" />
+        fill={`url(#${uid}-concrete)`} />
+      <rect x={bodyL} y={bodyTop} width={bodyW} height={bodyH}
+        fill={`url(#${uid}-concrete-v)`} />
+      <rect x={bodyL} y={bodyTop} width={bodyW} height={bodyH}
+        fill={`url(#${uid}-texture)`} />
 
-      {Array.from({ length: bandCount }, (_, i) => {
-        const by = bodyTop + bandSpacing * (i + 1);
+      <rect x={bodyL} y={bodyTop} width={bodyW} height={bodyH}
+        fill="none" stroke="#8a8a7e" strokeWidth="0.8" />
+
+      {Array.from({ length: pourLines }, (_, i) => {
+        const py = bodyTop + pourSpacing * (i + 1);
         return (
-          <g key={i}>
-            <line x1={bodyL} y1={by} x2={bodyR} y2={by}
-              stroke="rgba(0,0,0,0.08)" strokeWidth="1.2" />
-            <line x1={bodyL} y1={by - 1} x2={bodyR} y2={by - 1}
-              stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+          <g key={`pour-${i}`}>
+            <line x1={bodyL} y1={py} x2={bodyR} y2={py}
+              stroke="rgba(0,0,0,0.08)" strokeWidth="1" />
+            <line x1={bodyL} y1={py + 0.5} x2={bodyR} y2={py + 0.5}
+              stroke="rgba(255,255,255,0.04)" strokeWidth="0.5" />
           </g>
         );
       })}
 
-      <rect x={bodyL} y={bodyTop} width={6} height={bodyH}
-        fill="rgba(255,255,255,0.06)" />
-      <line x1={bodyL + 3} y1={bodyTop + 4} x2={bodyL + 3} y2={bodyBot - 4}
-        stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeLinecap="round" />
-      <rect x={bodyR - 4} y={bodyTop} width={4} height={bodyH}
-        fill="rgba(0,0,0,0.06)" />
+      {[0.25, 0.5, 0.75].map((pct, i) => {
+        const vx = bodyL + bodyW * pct;
+        return (
+          <line key={`vl-${i}`} x1={vx} y1={bodyTop} x2={vx} y2={bodyBot}
+            stroke="rgba(0,0,0,0.04)" strokeWidth="0.5" />
+        );
+      })}
+
+      <rect x={bodyL} y={bodyTop} width={4} height={bodyH}
+        fill="rgba(255,255,255,0.04)" />
+      <line x1={bodyL + 2} y1={bodyTop + 3} x2={bodyL + 2} y2={bodyBot - 3}
+        stroke="rgba(255,255,255,0.06)" strokeWidth="0.6" />
+      <rect x={bodyR - 3} y={bodyTop} width={3} height={bodyH}
+        fill="rgba(0,0,0,0.05)" />
 
       {fillH > 0 && (
         <g clipPath={`url(#${uid}-body-clip)`}>
@@ -238,102 +235,107 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
           <rect x={bodyL} y={fillY} width={bodyW} height={fillH + 1}
             fill={`url(#${uid}-fill-v)`} />
 
-          {Array.from({ length: bandCount }, (_, i) => {
-            const by = bodyTop + bandSpacing * (i + 1);
-            if (by < fillY || by > bodyBot) return null;
+          {Array.from({ length: pourLines }, (_, i) => {
+            const py = bodyTop + pourSpacing * (i + 1);
+            if (py < fillY || py > bodyBot) return null;
             return (
-              <g key={`fb-${i}`}>
-                <line x1={bodyL} y1={by} x2={bodyR} y2={by}
-                  stroke="rgba(0,0,0,0.06)" strokeWidth="1" />
-                <line x1={bodyL} y1={by - 1} x2={bodyR} y2={by - 1}
-                  stroke="rgba(255,255,255,0.08)" strokeWidth="0.4" />
-              </g>
+              <line key={`fp-${i}`} x1={bodyL} y1={py} x2={bodyR} y2={py}
+                stroke="rgba(0,0,0,0.05)" strokeWidth="0.8" />
             );
           })}
 
-          {hasWave && (
+          {fillRatio > 0.03 && fillRatio < 0.97 && !skipAnimation && (
             <>
-              <g style={{ animation: 'silo-wave-a 3s ease-in-out infinite' }}>
+              <g style={{ animation: 'silo-wave-a 3.5s ease-in-out infinite' }}>
                 <path
-                  d={`M ${bodyL - 8} ${fillY}
-                      C ${bodyL + bodyW * 0.15} ${fillY - 3},
-                        ${bodyL + bodyW * 0.35} ${fillY + 3},
+                  d={`M ${bodyL - 4} ${fillY}
+                      C ${bodyL + bodyW * 0.2} ${fillY - 2.5},
+                        ${bodyL + bodyW * 0.4} ${fillY + 2.5},
                         ${cx} ${fillY}
-                      C ${bodyL + bodyW * 0.65} ${fillY - 3},
-                        ${bodyL + bodyW * 0.85} ${fillY + 3},
-                        ${bodyR + 8} ${fillY}
-                      L ${bodyR + 8} ${fillY + 8}
-                      L ${bodyL - 8} ${fillY + 8} Z`}
-                  fill={fillColor} opacity="0.2"
-                />
-              </g>
-              <g style={{ animation: 'silo-wave-b 4s ease-in-out infinite' }}>
-                <path
-                  d={`M ${bodyL - 4} ${fillY + 1}
-                      C ${bodyL + bodyW * 0.2} ${fillY + 3},
-                        ${bodyL + bodyW * 0.45} ${fillY - 2},
-                        ${cx} ${fillY + 1}
-                      C ${bodyL + bodyW * 0.55} ${fillY + 3},
-                        ${bodyL + bodyW * 0.8} ${fillY - 2},
-                        ${bodyR + 4} ${fillY + 1}
+                      C ${bodyL + bodyW * 0.6} ${fillY - 2.5},
+                        ${bodyL + bodyW * 0.8} ${fillY + 2.5},
+                        ${bodyR + 4} ${fillY}
                       L ${bodyR + 4} ${fillY + 6}
                       L ${bodyL - 4} ${fillY + 6} Z`}
-                  fill={fillLight} opacity="0.12"
+                  fill={fillColor} opacity="0.15"
+                />
+              </g>
+              <g style={{ animation: 'silo-wave-b 4.5s ease-in-out infinite' }}>
+                <path
+                  d={`M ${bodyL - 2} ${fillY + 0.5}
+                      C ${bodyL + bodyW * 0.25} ${fillY + 2},
+                        ${bodyL + bodyW * 0.45} ${fillY - 1.5},
+                        ${cx} ${fillY + 0.5}
+                      C ${bodyL + bodyW * 0.55} ${fillY + 2},
+                        ${bodyL + bodyW * 0.75} ${fillY - 1.5},
+                        ${bodyR + 2} ${fillY + 0.5}
+                      L ${bodyR + 2} ${fillY + 5}
+                      L ${bodyL - 2} ${fillY + 5} Z`}
+                  fill={fillLight} opacity="0.08"
                 />
               </g>
             </>
           )}
 
-          <ellipse cx={cx} cy={fillY} rx={bodyW / 2 - 1} ry={3}
-            fill={fillColor} opacity="0.35" />
-          <ellipse cx={cx - 4} cy={fillY} rx={bodyW / 3} ry={1.5}
-            fill="white" opacity="0.06" />
+          <ellipse cx={cx} cy={fillY} rx={bodyW / 2 - 2} ry={2.5}
+            fill={fillColor} opacity="0.3" />
+          <ellipse cx={cx - 3} cy={fillY} rx={bodyW / 3} ry={1.2}
+            fill="white" opacity="0.05" />
 
-          <rect x={bodyL} y={fillY} width={5} height={fillH}
-            fill="rgba(255,255,255,0.04)" />
+          <rect x={bodyL} y={fillY} width={3} height={fillH}
+            fill="rgba(255,255,255,0.03)" />
         </g>
       )}
 
-      <ellipse cx={cx} cy={bodyBot} rx={bodyRx} ry={roofEllipseRy}
-        fill={`url(#${uid}-metal-shadow)`} stroke="#778899" strokeWidth="0.6" />
+      <rect x={bodyL} y={roofTop} width={bodyW} height={roofBot - roofTop}
+        fill="#a0a094" stroke="#8a8a7e" strokeWidth="0.5" />
+      <rect x={bodyL} y={roofTop} width={bodyW} height={3}
+        fill="rgba(255,255,255,0.1)" />
+      <line x1={bodyL} y1={roofBot} x2={bodyR} y2={roofBot}
+        stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
 
-      <path
-        d={`M ${bodyL} ${roofBase}
-            Q ${bodyL} ${roofPeak + 8}, ${cx} ${roofPeak}
-            Q ${bodyR} ${roofPeak + 8}, ${bodyR} ${roofBase}`}
-        fill={`url(#${uid}-roof)`} stroke="#8898a8" strokeWidth="0.7" />
-      <path
-        d={`M ${bodyL} ${roofBase}
-            Q ${bodyL} ${roofPeak + 8}, ${cx} ${roofPeak}
-            Q ${bodyR} ${roofPeak + 8}, ${bodyR} ${roofBase}`}
-        fill={`url(#${uid}-roof-v)`} />
+      <rect x={bodyL - 2} y={roofTop - 1} width={bodyW + 4} height={2}
+        fill="#9a9a8e" rx="0.5" />
 
-      <path d={`M ${cx} ${roofPeak} L ${cx} ${roofPeak - 6}`}
-        stroke="#8898a8" strokeWidth="2" strokeLinecap="round" />
-      <circle cx={cx} cy={roofPeak - 8} r="2.5" fill="#a0b0c0" stroke="#8090a0" strokeWidth="0.6" />
+      <rect x={cx - 14} y={capTop} width={28} height={capH}
+        fill="#9a9a90" stroke="#8a8a7e" strokeWidth="0.6" rx="2" />
+      <rect x={cx - 14} y={capTop} width={28} height={4}
+        fill="rgba(255,255,255,0.08)" rx="2" />
+      <rect x={cx - 3} y={capTop + 2} width={6} height={capH - 3}
+        fill="#7a7a70" rx="1" />
+      <line x1={cx - 10} y1={capTop + capH / 2} x2={cx - 5} y2={capTop + capH / 2}
+        stroke="#7a7a70" strokeWidth="0.8" />
+      <line x1={cx + 5} y1={capTop + capH / 2} x2={cx + 10} y2={capTop + capH / 2}
+        stroke="#7a7a70" strokeWidth="0.8" />
 
-      <ellipse cx={cx} cy={roofBase} rx={bodyRx} ry={roofEllipseRy}
-        fill={`url(#${uid}-metal)`} stroke="#8898a8" strokeWidth="0.6" />
-      <ellipse cx={cx} cy={roofBase} rx={bodyRx - 4} ry={roofEllipseRy - 3}
-        fill="rgba(255,255,255,0.08)" />
-
-      <line x1={cx - 4} y1={roofPeak + 4} x2={cx - 4} y2={roofBase - 3}
-        stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
-      <line x1={cx + 4} y1={roofPeak + 4} x2={cx + 4} y2={roofBase - 3}
-        stroke="rgba(0,0,0,0.05)" strokeWidth="0.5" />
+      <g opacity="0.3">
+        {Array.from({ length: Math.floor(bodyH / 5) }, (_, i) => {
+          const ry = bodyTop + 3 + i * 5;
+          if (ry > bodyBot - 3) return null;
+          return (
+            <g key={`ladder-${i}`}>
+              <line x1={bodyR - 1} y1={ry} x2={bodyR + 3} y2={ry}
+                stroke="#70706a" strokeWidth="0.6" />
+            </g>
+          );
+        })}
+        <line x1={bodyR - 1} y1={bodyTop + 2} x2={bodyR - 1} y2={bodyBot - 2}
+          stroke="#70706a" strokeWidth="0.7" />
+        <line x1={bodyR + 3} y1={bodyTop + 2} x2={bodyR + 3} y2={bodyBot - 2}
+          stroke="#70706a" strokeWidth="0.7" />
+      </g>
 
       <text x={cx} y={bodyTop + bodyH / 2 + 7} textAnchor="middle"
-        fontSize="24" fontWeight="800"
+        fontSize="22" fontWeight="800"
         fontFamily="'Inter', system-ui, -apple-system, sans-serif"
         fill="white" opacity="0.95"
-        paintOrder="stroke" stroke="rgba(0,0,0,0.5)" strokeWidth="1"
-        style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6), 0 0 16px rgba(0,0,0,0.3)' }}
+        paintOrder="stroke" stroke="rgba(0,0,0,0.6)" strokeWidth="1.2"
       >
         {Math.round(fillPercent)}%
       </text>
 
       {isLow && !skipAnimation && (
-        <rect x={bodyL + 2} y={fillY - 1} width={bodyW - 4} height={Math.max(fillH, 4)}
+        <rect x={bodyL + 1} y={fillY - 1} width={bodyW - 2} height={Math.max(fillH, 4)}
           fill="none" className="silo-low-pulse"
           style={{ filter: 'drop-shadow(0 0 6px #ef4444)' }}
           clipPath={`url(#${uid}-body-clip)`}
@@ -343,11 +345,11 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
       <style>{`
         @keyframes silo-wave-a {
           0%, 100% { transform: translateX(0); }
-          50% { transform: translateX(-6px); }
+          50% { transform: translateX(-4px); }
         }
         @keyframes silo-wave-b {
           0%, 100% { transform: translateX(0); }
-          50% { transform: translateX(5px); }
+          50% { transform: translateX(3px); }
         }
         .silo-low-pulse {
           animation: silo-pulse 1.5s ease-in-out infinite;
@@ -410,7 +412,7 @@ export default function SiloWidget({ config, tagValues }) {
       <div
         className="w-full flex-1 min-h-0 flex items-center justify-center cursor-help"
         title={`${displayPercent}${unit !== '%' ? ` ${unit}` : '%'}${tons != null ? ` • ${displayTons} t` : ''}`}
-        style={{ maxWidth: '160px', margin: '0 auto' }}
+        style={{ maxWidth: '140px', margin: '0 auto' }}
       >
         <GrainSilo3D fillPercent={fillPercent} fillColor={fillColor} skipAnimation={skipAnimation} />
       </div>
