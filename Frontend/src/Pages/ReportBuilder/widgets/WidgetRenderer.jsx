@@ -19,10 +19,8 @@ const RENDERERS = {
   text: TextWidget,
 };
 
-/* Types that never show a card wrapper by default */
 export const CARDLESS_WIDGET_TYPES = new Set(['image', 'text']);
 
-/* Types that should render with zero visual chrome (no border, no background) */
 export const INVISIBLE_WRAPPER_TYPES = new Set(['text']);
 
 function getKpiSparklineTag(config) {
@@ -47,17 +45,10 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
     ? { onUpdateConfig: (patch) => onUpdateWidget?.(widgetId, { config: patch }) }
     : {};
 
-  const isCardless = CARDLESS_WIDGET_TYPES.has(widget.type);
   const isInvisible = INVISIBLE_WRAPPER_TYPES.has(widget.type);
 
-  const innerClass = isInvisible
-    ? 'h-full w-full'
-    : isCardless
-      ? 'h-full w-full rb-widget-card-transparent'
-      : 'h-full w-full flex flex-col';
-
   return (
-    <div className={innerClass}>
+    <div className={isInvisible ? 'h-full w-full' : 'h-full w-full flex flex-col min-h-0 overflow-hidden'}>
       <Component
         config={widget.config || {}}
         tagValues={tagValues || {}}

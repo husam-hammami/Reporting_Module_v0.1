@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy } from 'lucide-react';
+import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy, Move } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import FormulaEditor from '../formulas/FormulaEditor';
 
@@ -1240,6 +1240,41 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      <div className="px-5 py-3 border-b border-[var(--rb-border)]">
+        <div className="flex items-center gap-1.5 mb-2">
+          <Move size={12} className="text-[var(--rb-text-muted)]" />
+          <span className="rb-label" style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Layout</span>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { key: 'x', label: 'X', min: 0, max: 11 },
+            { key: 'y', label: 'Y', min: 0, max: 999 },
+            { key: 'w', label: 'W', min: 1, max: 12 },
+            { key: 'h', label: 'H', min: 1, max: 999 },
+          ].map(({ key, label, min, max }) => (
+            <div key={key}>
+              <label className="block text-[9px] font-bold text-[var(--rb-text-muted)] uppercase mb-0.5">{label}</label>
+              <input
+                type="number"
+                min={min}
+                max={max}
+                value={widget[key] ?? 0}
+                onChange={(e) => {
+                  let v = parseInt(e.target.value, 10);
+                  if (isNaN(v)) return;
+                  v = Math.max(min, Math.min(max, v));
+                  if (key === 'x' && v + (widget.w || 1) > 12) v = 12 - (widget.w || 1);
+                  if (key === 'w' && (widget.x || 0) + v > 12) v = 12 - (widget.x || 0);
+                  onUpdate(widget.id, { [key]: v });
+                }}
+                className="rb-input-base w-full text-center py-1 text-[11px] font-mono"
+                style={{ padding: '3px 2px' }}
+              />
+            </div>
+          ))}
         </div>
       </div>
 

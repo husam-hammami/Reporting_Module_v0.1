@@ -6,7 +6,7 @@ import { VALUE_FONT_SIZES, TITLE_FONT_SIZES } from './widgetDefaults';
 
 function resolveValue(config, tagValues) {
   const ds = config.dataSource;
-  if (!ds) return tagValues?.[config.tagName] ?? null; // legacy fallback
+  if (!ds) return tagValues?.[config.tagName] ?? null;
   if (ds.type === 'formula' && ds.formula) {
     return evaluateFormula(ds.formula, tagValues);
   }
@@ -22,7 +22,7 @@ function resolveValue(config, tagValues) {
         if (vals.length < 2) return 0;
         return vals[vals.length - 1] - vals[0];
       }
-      default: return vals.reduce((a, b) => a + b, 0) / vals.length; // avg
+      default: return vals.reduce((a, b) => a + b, 0) / vals.length;
     }
   }
   return tagValues?.[ds.tagName] ?? null;
@@ -40,7 +40,6 @@ function getThresholdColor(value, thresholds, defaultColor) {
   return defaultColor;
 }
 
-/** Build SVG polyline points from numeric series (viewBox 0 0 100 20, y inverted). */
 function buildSparklinePoints(data) {
   if (!Array.isArray(data) || data.length < 2) return null;
   const min = Math.min(...data);
@@ -50,23 +49,11 @@ function buildSparklinePoints(data) {
   return data
     .map((v, i) => {
       const x = n === 1 ? 50 : (i / (n - 1)) * 100;
-      const y = 20 - ((v - min) / range) * 18 - 1; // 1px padding top/bottom
+      const y = 20 - ((v - min) / range) * 18 - 1;
       return `${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(' ');
 }
-
-const ALIGN_CLASSES = {
-  left: 'items-start text-left',
-  center: 'items-center text-center',
-  right: 'items-end text-right',
-};
-
-const JUSTIFY_CLASSES = {
-  left: '',
-  center: 'justify-center',
-  right: 'justify-end',
-};
 
 function useAnimatedNumber(target, decimals, skipAnimation) {
   const [display, setDisplay] = useState(target);
@@ -143,23 +130,29 @@ export default function KPIWidget({ config, tagValues, sparklineData }) {
   const valueFontSize = VALUE_FONT_SIZES[config.valueFontSize];
   const align = config.align || 'left';
 
+  const alignItems = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+  const justifyValue = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+
   return (
     <div
-      className={`flex flex-col h-full justify-between min-h-0 rounded-lg ${ALIGN_CLASSES[align] || ''}`}
-      style={{ padding: 'var(--rb-widget-padding, clamp(6px, 1.2vw, 16px))' }}
+      className="flex flex-col h-full justify-between min-h-0"
+      style={{ padding: '6px 8px', alignItems }}
     >
       {showTitle && (
         <p
-          className="rb-widget-title truncate"
-          style={{ fontSize: titleFontSize }}
+          className="rb-widget-title truncate w-full"
+          style={{ fontSize: titleFontSize, textAlign: align }}
         >
           {config.title || 'KPI'}
         </p>
       )}
-      <div className={`flex items-baseline gap-1.5 mt-1 ${JUSTIFY_CLASSES[align] || ''}`}>
+      <div className="flex items-baseline gap-1 mt-0.5" style={{ justifyContent: justifyValue }}>
         <span
-          className={`rb-value-primary ${!valueFontSize ? 'text-3xl' : ''}`}
-          style={{ color: activeColor, ...(valueFontSize ? { fontSize: valueFontSize } : {}) }}
+          className="rb-value-primary"
+          style={{
+            color: activeColor,
+            fontSize: valueFontSize || 'clamp(18px, 3vw, 32px)',
+          }}
         >
           {displayValue}
         </span>
@@ -169,9 +162,10 @@ export default function KPIWidget({ config, tagValues, sparklineData }) {
       </div>
       {config.showSparkline && (
         <div
-          className="mt-2 h-5 w-full rounded overflow-hidden"
+          className="w-full overflow-hidden"
           style={{
-            background: 'var(--rb-surface)',
+            height: '16px',
+            marginTop: '2px',
             opacity: sparkVisible ? 1 : 0,
             transform: sparkVisible ? 'translateY(0)' : 'translateY(4px)',
             transition: skipAnimation ? 'none' : 'opacity 300ms ease, transform 300ms ease',

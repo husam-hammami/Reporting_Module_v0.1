@@ -5,20 +5,7 @@ import { WIDGET_CATALOG, createWidget } from '../widgets/widgetDefaults';
 
 /* ── SVG icons (colored, unique per type) ────────────────────── */
 
-const IC = { primary: '#2563ab', mid: '#4a86c5', light: '#7ba8d6', muted: '#6b7f94', subtle: '#8898aa' };
-
-const ICON_TINTS = {
-  kpi:      { bg: 'rgba(37,99,171,0.10)', border: 'rgba(37,99,171,0.18)' },
-  table:    { bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.18)' },
-  chart:    { bg: 'rgba(99,102,241,0.10)', border: 'rgba(99,102,241,0.18)' },
-  barchart: { bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.18)' },
-  gauge:    { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.18)' },
-  silo:     { bg: 'rgba(14,165,233,0.10)', border: 'rgba(14,165,233,0.18)' },
-  stat:     { bg: 'rgba(168,85,247,0.10)', border: 'rgba(168,85,247,0.18)' },
-  text:     { bg: 'rgba(107,114,128,0.10)', border: 'rgba(107,114,128,0.18)' },
-  image:    { bg: 'rgba(236,72,153,0.10)', border: 'rgba(236,72,153,0.18)' },
-  repeat:   { bg: 'rgba(20,184,166,0.10)', border: 'rgba(20,184,166,0.18)' },
-};
+const IC = { primary: '#6b7280', mid: '#9ca3af', light: '#d1d5db', muted: '#6b7f94', subtle: '#8898aa' };
 
 function VizIcon({ type }) {
   const s = 'w-7 h-7';
@@ -323,7 +310,6 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                   <div className="px-3 pb-3">
                     <div className="grid grid-cols-4 gap-2">
                       {items.map(({ type, label }) => {
-                        const tint = ICON_TINTS[type] || ICON_TINTS.kpi;
                         return (
                           <Tooltip key={type} title={label} placement="top" arrow disableInteractive>
                             <button
@@ -340,8 +326,8 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                               <div
                                 className="w-10 h-10 rounded-lg flex items-center justify-center"
                                 style={{
-                                  background: tint.bg,
-                                  border: `1px solid ${tint.border}`,
+                                  background: 'var(--rb-surface)',
+                                  border: '1px solid var(--rb-border)',
                                 }}
                               >
                                 <VizIcon type={type} />
@@ -359,7 +345,6 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                   <div className="px-3 pb-3 space-y-0.5">
                     {items.map(({ type, label }) => {
                       const cat = WIDGET_CATALOG.find((c) => c.type === type);
-                      const tint = ICON_TINTS[type] || ICON_TINTS.text;
                       return (
                         <button
                           key={type}
@@ -371,8 +356,8 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                           <div
                             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                             style={{
-                              background: tint.bg,
-                              border: `1px solid ${tint.border}`,
+                              background: 'var(--rb-surface)',
+                              border: '1px solid var(--rb-border)',
                             }}
                           >
                             <VizIcon type={type} />
@@ -468,8 +453,6 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                         const isExpanded = openWidgetIds[w.id] || false;
                         const title = w.config?.title || w.config?.dataSource?.tagName || w.type;
                         const typeLabel = TYPE_LABELS[w.type] || w.type;
-                        const tint = ICON_TINTS[w.type] || ICON_TINTS.kpi;
-
                         return (
                           <div key={w.id} className="rounded-md overflow-hidden">
                             <button
@@ -482,7 +465,7 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                             >
                               <div
                                 className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
-                                style={{ background: tint.bg, border: `1px solid ${tint.border}` }}
+                                style={{ background: 'var(--rb-surface)', border: '1px solid var(--rb-border)' }}
                               >
                                 <SmallVizIcon type={w.type} />
                               </div>

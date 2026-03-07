@@ -1,9 +1,3 @@
-/**
- * ChartWidget — Report Builder chart dispatcher.
- *
- * LINE / AREA charts → UPlotChart (high-perf streaming, no full re-renders)
- * BAR charts         → Chart.js (categorical comparison, static snapshots)
- */
 import { useMemo } from 'react';
 import {
   Chart as ChartJS,
@@ -20,7 +14,6 @@ import UPlotChart from './UPlotChart';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend, annotationPlugin);
 
-// Industrial palette: brand blue, orange alert, green ok, red alarm, amber warning, steel gray
 const DEFAULT_COLORS = ['#2563ab', '#e67e22', '#27ae60', '#e74c3c', '#f39c12', '#7f8c8d'];
 
 export default function ChartWidget({ config, tagValues, tagHistory, isPreview = true }) {
@@ -33,7 +26,6 @@ export default function ChartWidget({ config, tagValues, tagHistory, isPreview =
       : DEFAULT_COLORS;
   const colors = palette;
 
-  // Report builder uses config.series (dataSource.tagName); legacy uses config.tags
   const series = config.series?.length
     ? config.series
     : (config.tags || []).map((t) => ({
@@ -43,7 +35,6 @@ export default function ChartWidget({ config, tagValues, tagHistory, isPreview =
 
   const isBarChart = config.chartType === 'bar';
 
-  /* ── BAR CHART (Chart.js — categorical, not streaming) ─────────── */
   if (isBarChart) {
     return (
       <BarChartView
@@ -57,20 +48,18 @@ export default function ChartWidget({ config, tagValues, tagHistory, isPreview =
     );
   }
 
-  /* ── LINE / AREA CHART (uPlot — live streaming) ────────────────── */
   return (
-    <div className="flex flex-col h-full" style={{ padding: 'var(--rb-widget-padding-sm, 12px)' }}>
+    <div className="flex flex-col h-full" style={{ padding: '4px 2px 2px' }}>
       {config.title && (
-        <h4 className="rb-widget-title mb-2 truncate">
+        <h4 className="rb-widget-title mb-1 truncate" style={{ padding: '0 4px' }}>
           {config.title}
         </h4>
       )}
       <div
-        className={`flex-1 min-h-0 overflow-hidden ${config.showCard !== false ? 'rounded-lg border border-[var(--rb-border)]' : ''}`}
+        className="flex-1 min-h-0 overflow-hidden"
         style={{
-          borderRadius: 'var(--rb-radius-lg)',
           ...(config.backgroundColor && { backgroundColor: config.backgroundColor }),
-          ...(!isPreview && { minHeight: '200px' }),
+          ...(!isPreview && { minHeight: '160px' }),
         }}
       >
         <UPlotChart
@@ -83,8 +72,6 @@ export default function ChartWidget({ config, tagValues, tagHistory, isPreview =
     </div>
   );
 }
-
-/* ── Bar Chart sub-component (unchanged from before) ─────────────── */
 
 function BarChartView({ config, series, colors, tagValues, isPreview, isCapturing }) {
   const chartData = useMemo(() => {
@@ -107,12 +94,11 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
         ? series.map((s, i) => s.color || colors[i % colors.length])
         : [colors[0]],
       borderWidth: 2,
-      borderRadius: 4,
+      borderRadius: 3,
     }];
     return { labels, datasets };
   }, [series, tagValues, config.title, colors]);
 
-  // Build Chart.js annotation objects from config.annotations
   const annotationObjs = useMemo(() => {
     if (!config.annotations?.length) return {};
     const obj = {};
@@ -153,8 +139,8 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
           color: '#9ca3af',
           boxWidth: 10,
           boxHeight: 3,
-          padding: 12,
-          font: { size: 10, family: 'monospace' },
+          padding: 8,
+          font: { size: 9, family: 'monospace' },
         },
       },
       tooltip: {
@@ -162,11 +148,11 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
         mode: 'index',
         intersect: false,
         backgroundColor: 'rgba(15, 23, 42, 0.95)',
-        titleFont: { size: 11, weight: '600', family: 'monospace' },
-        bodyFont: { size: 11, family: 'monospace' },
-        bodySpacing: 4,
-        padding: 10,
-        cornerRadius: 4,
+        titleFont: { size: 10, weight: '600', family: 'monospace' },
+        bodyFont: { size: 10, family: 'monospace' },
+        bodySpacing: 3,
+        padding: 8,
+        cornerRadius: 3,
         borderColor: 'rgba(76, 224, 255, 0.3)',
         borderWidth: 1,
         callbacks: {
@@ -193,18 +179,17 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
   }), [config, isCapturing, annotationObjs]);
 
   return (
-    <div className="flex flex-col h-full" style={{ padding: 'var(--rb-widget-padding-sm, 12px)' }}>
+    <div className="flex flex-col h-full" style={{ padding: '4px 2px 2px' }}>
       {config.title && (
-        <h4 className="rb-widget-title mb-2 truncate">
+        <h4 className="rb-widget-title mb-1 truncate" style={{ padding: '0 4px' }}>
           {config.title}
         </h4>
       )}
       <div
-        className={`flex-1 min-h-0 overflow-hidden ${config.showCard !== false ? 'rounded-lg border border-[var(--rb-border)]' : ''}`}
+        className="flex-1 min-h-0 overflow-hidden"
         style={{
-          borderRadius: 'var(--rb-radius-lg)',
           ...(config.backgroundColor && { backgroundColor: config.backgroundColor }),
-          ...(!isPreview && { minHeight: '200px' }),
+          ...(!isPreview && { minHeight: '160px' }),
         }}
       >
         <Bar data={chartData} options={options} />

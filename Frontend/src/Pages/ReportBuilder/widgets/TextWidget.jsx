@@ -1,7 +1,3 @@
-/**
- * Text element — renders inline text that only occupies the space of the text itself.
- * No card, no background, no padding above/below.
- */
 export default function TextWidget({ config }) {
   const align = config.align || 'left';
   const fontSize = config.fontSize || '14px';
@@ -23,6 +19,7 @@ export default function TextWidget({ config }) {
           lineHeight: 1.2,
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
+          letterSpacing: fontWeight >= 700 || fontWeight === 'bold' ? '-0.01em' : 'normal',
         }}
       >
         {config.content || 'Text'}

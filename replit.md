@@ -46,13 +46,17 @@ A full-stack industrial plant monitoring system with a React frontend and Flask 
 - xhtml2pdf not installed (cairo dependency missing) — PDF email reports are gracefully skipped
 - snap7 v2.1.0 uses `snap7.type` (not `snap7.types`) — fixed in plc_utils.py
 
-## Report Builder UI Redesign (Completed)
-Premium-quality redesign of the Report Builder module (Manager, Canvas, Preview + all 9 widget types).
-- **Design System**: `reportBuilderTheme.css` — CSS custom properties for colors, typography scale, spacing, elevation, transitions; full dark mode support
-- **Design Constraints**: Solid surfaces with clean borders (no glassmorphism/backdrop-blur), no new dependencies, animations use only transform+opacity under 400ms, all gated by `useReducedMotion()` and `ThumbnailCaptureContext`
-- **Files Modified**: All files under `Frontend/src/Pages/ReportBuilder/` (widgets, panels, canvas, manager, preview, formulas, thumbnail, seed template, theme CSS) plus `Frontend/src/index.css` for global animation keyframes
-- **Widget Types**: KPI, Stat, Gauge, Silo, Chart, Table, Text, Image — all use consistent typographic scale and spacing tokens
-- **Value Animations**: KPI/Stat use animated number counting, Gauge uses spring-like needle animation, Silo uses smooth fill transitions — all gated
+## Report Builder UI Redesign (Completed — v2 Industrial/SCADA Density Pass)
+Full rendering-layer redesign for professional Grafana/SCADA-caliber industrial dashboards. Zero backend changes.
+- **Design System**: `reportBuilderTheme.css` — density-first CSS tokens: dark navy surfaces (#0a0f1a, #111827), cyan/teal accents, tight spacing (4-8px padding), compact typography (10px uppercase titles, 18-32px tabular-nums values, 11px body, 9px captions)
+- **Grid**: `GRID_MARGIN` reduced from [8,8] to [4,4] in both Canvas and Preview for dense layouts
+- **Widget Cards**: Single clean layer — 1px border, 4px radius, 8px internal padding via `.rb-widget-card` CSS class. No nested wrappers or double-padding
+- **Default Sizes**: Compact defaults — KPI/Stat 2×1, Gauge 2×2, Silo 2×3, Chart/Table 4×3, Text 3×1
+- **Widget Toolbox**: Neutral monochrome icon backgrounds using `var(--rb-surface)` + `var(--rb-border)` — no colored ICON_TINTS
+- **Properties Panel**: Layout section (X/Y/W/H number inputs) added above Data/Format tabs for precise positioning
+- **Seed Template**: Grain Silos template optimized — silos changed from 3×2 (4 per row) to 2×3 (6 per row) for better density
+- **Files Modified**: All files under `Frontend/src/Pages/ReportBuilder/` (widgets, panels, canvas, manager, preview, seed template, theme CSS)
+- **Preserved Contracts**: All API endpoints, schema (templateSchema.js), hook signatures (useReportCanvas, useTagHistory, useSocket), data flow, and infrastructure (react-grid-layout, Chart.js, uPlot, html2canvas, jspdf) untouched
 
 ## Key Files
 - `backend/app.py` - Main Flask app, DB connection pool, CORS, SocketIO

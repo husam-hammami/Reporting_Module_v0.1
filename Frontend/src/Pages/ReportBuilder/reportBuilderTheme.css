@@ -1,95 +1,91 @@
 /**
- * Report Builder — Design system
- * Industrial, professional, elegant. Single source of truth for type, space, and color.
+ * Report Builder — Industrial Design System v2
+ * Density-first, Grafana-caliber. Single source of truth.
  */
 
 /* ─── Tokens (scoped to report builder shell) ───────────────────── */
 .report-builder {
-  /* ── Typographic scale ── */
-  --rb-font-xs: 0.625rem;   /* 10px - captions, hints */
-  --rb-font-sm: 0.6875rem;  /* 11px - labels */
-  --rb-font-base: 0.75rem;  /* 12px - body */
-  --rb-font-md: 0.8125rem;  /* 13px - section titles */
-  --rb-font-lg: 0.9375rem;  /* 15px - page title */
-  --rb-font-xl: 1.125rem;   /* 18px - primary widget value */
-  --rb-font-2xl: 1.5rem;    /* 24px - large primary value */
-  --rb-font-3xl: 2rem;      /* 32px - hero value */
+  --rb-font-xs: 0.5625rem;
+  --rb-font-sm: 0.6875rem;
+  --rb-font-base: 0.75rem;
+  --rb-font-md: 0.8125rem;
+  --rb-font-lg: 0.9375rem;
+  --rb-font-xl: 1.125rem;
+  --rb-font-2xl: 1.5rem;
+  --rb-font-3xl: 2rem;
 
-  /* ── Space scale (4px base) ── */
-  --rb-space-1: 0.25rem;   /* 4px */
-  --rb-space-2: 0.5rem;    /* 8px */
-  --rb-space-3: 0.75rem;   /* 12px */
-  --rb-space-4: 1rem;      /* 16px */
-  --rb-space-5: 1.25rem;   /* 20px */
-  --rb-space-6: 1.5rem;    /* 24px */
-  --rb-space-8: 2rem;      /* 32px */
+  --rb-pad-xs: 4px;
+  --rb-pad-sm: 6px;
+  --rb-pad-md: 8px;
+  --rb-pad-lg: 12px;
 
-  /* ── Surfaces — solid, no glassmorphism ── */
-  --rb-surface: hsl(220, 20%, 97%);
-  --rb-surface-dark: hsl(222, 47%, 8%);
-  --rb-panel: hsl(0, 0%, 100%);
-  --rb-panel-dark: hsl(222, 40%, 12%);
-  --rb-panel-raised: hsl(220, 14%, 96%);
-  --rb-panel-raised-dark: hsl(222, 38%, 15%);
-  --rb-canvas: hsl(220, 16%, 90%);
-  --rb-canvas-dark: hsl(224, 50%, 6%);
-  --rb-input: hsl(0, 0%, 100%);
-  --rb-input-dark: hsl(222, 38%, 14%);
+  --rb-space-1: 0.25rem;
+  --rb-space-2: 0.5rem;
+  --rb-space-3: 0.75rem;
+  --rb-space-4: 1rem;
+  --rb-space-5: 1.25rem;
+  --rb-space-6: 1.5rem;
+  --rb-space-8: 2rem;
 
-  /* ── Borders — refined ── */
-  --rb-border: hsl(220, 16%, 87%);
-  --rb-border-dark: hsl(222, 22%, 22%);
-  --rb-border-subtle: hsl(220, 14%, 91%);
-  --rb-border-subtle-dark: hsl(222, 20%, 18%);
+  --rb-surface: #f1f3f5;
+  --rb-surface-dark: #0a0f1a;
+  --rb-panel: #ffffff;
+  --rb-panel-dark: #111827;
+  --rb-panel-raised: #f8f9fa;
+  --rb-panel-raised-dark: #1a2332;
+  --rb-canvas: #e9ecef;
+  --rb-canvas-dark: #070c15;
+  --rb-input: #ffffff;
+  --rb-input-dark: #1a2332;
 
-  /* ── Text — high contrast hierarchy ── */
-  --rb-text: hsl(222, 30%, 16%);
-  --rb-text-secondary: hsl(222, 14%, 38%);
-  --rb-text-muted: hsl(222, 10%, 52%);
-  --rb-text-muted-dark: hsl(220, 10%, 64%);
-  --rb-text-inverse: hsl(0, 0%, 98%);
+  --rb-border: #dee2e6;
+  --rb-border-dark: rgba(255,255,255,0.08);
+  --rb-border-subtle: #e9ecef;
+  --rb-border-subtle-dark: rgba(255,255,255,0.05);
 
-  /* ── Accent — mode-aware via --brand tokens ── */
+  --rb-text: #1a1a2e;
+  --rb-text-secondary: #495057;
+  --rb-text-muted: #868e96;
+  --rb-text-muted-dark: #9ca3af;
+  --rb-text-inverse: #f8f9fa;
+
   --rb-accent: var(--brand);
   --rb-accent-hover: var(--brand-hover);
   --rb-accent-subtle: hsl(216, 60%, 94%);
   --rb-accent-subtle-dark: hsl(222, 50%, 16%);
   --rb-accent-glow: hsl(216, 70%, 60%);
 
-  /* ── Status — refined industrial accents ── */
-  --rb-success: hsl(160, 55%, 36%);
-  --rb-success-subtle: hsl(160, 50%, 94%);
-  --rb-warning: hsl(38, 80%, 48%);
-  --rb-warning-subtle: hsl(38, 70%, 94%);
-  --rb-danger: hsl(0, 68%, 50%);
-  --rb-danger-subtle: hsl(0, 60%, 95%);
+  --rb-success: #059669;
+  --rb-success-subtle: #ecfdf5;
+  --rb-warning: #d97706;
+  --rb-warning-subtle: #fffbeb;
+  --rb-danger: #dc2626;
+  --rb-danger-subtle: #fef2f2;
 
-  /* ── Radius ── */
-  --rb-radius-sm: 4px;
-  --rb-radius: 6px;
-  --rb-radius-lg: 8px;
-  --rb-radius-xl: 12px;
+  --rb-radius-sm: 3px;
+  --rb-radius: 4px;
+  --rb-radius-lg: 6px;
+  --rb-radius-xl: 8px;
 
-  /* ── Elevation — layered, softer box-shadows ── */
-  --rb-elevation-0: none;
-  --rb-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 4px rgba(0, 0, 0, 0.03);
-  --rb-elevation-2: 0 2px 4px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.04);
-  --rb-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
-  --rb-elevation-4: 0 8px 16px rgba(0, 0, 0, 0.06), 0 16px 48px rgba(0, 0, 0, 0.08);
+  --rb-elevation-1: 0 1px 2px rgba(0,0,0,0.04);
+  --rb-elevation-2: 0 1px 3px rgba(0,0,0,0.06);
+  --rb-elevation-3: 0 2px 8px rgba(0,0,0,0.08);
+  --rb-elevation-4: 0 4px 16px rgba(0,0,0,0.10);
   --rb-shadow-inset: none;
-  --rb-silo-card-bg: rgba(255, 255, 255, 0.98);
+  --rb-silo-card-bg: #ffffff;
 
-  /* ── Transition timing tokens ── */
-  --rb-transition-fast: 150ms;
-  --rb-transition-normal: 250ms;
-  --rb-transition-slow: 400ms;
+  --rb-transition-fast: 120ms;
+  --rb-transition-normal: 200ms;
+  --rb-transition-slow: 350ms;
   --rb-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --rb-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* ── Widget inner padding scale ── */
-  --rb-widget-padding-sm: var(--rb-space-3);
-  --rb-widget-padding: var(--rb-space-4);
-  --rb-widget-padding-lg: var(--rb-space-6);
+  --rb-widget-padding-sm: var(--rb-pad-md);
+  --rb-widget-padding: var(--rb-pad-md);
+  --rb-widget-padding-lg: var(--rb-pad-lg);
+
+  --rb-card-bg: var(--rb-panel);
+  --rb-card-border: var(--rb-border);
 }
 
 /* ─── Dark mode token overrides ────────────────────────────────── */
@@ -102,25 +98,27 @@
   --rb-border: var(--rb-border-dark);
   --rb-border-subtle: var(--rb-border-subtle-dark);
   --rb-text: var(--rb-text-inverse);
-  --rb-text-secondary: hsl(220, 10%, 72%);
+  --rb-text-secondary: #d1d5db;
   --rb-text-muted: var(--rb-text-muted-dark);
   --rb-accent-subtle: var(--rb-accent-subtle-dark);
   --rb-accent-glow: hsl(216, 60%, 45%);
-  --rb-success-subtle: hsl(160, 40%, 14%);
-  --rb-warning-subtle: hsl(38, 40%, 14%);
-  --rb-danger-subtle: hsl(0, 40%, 14%);
-  --rb-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.16), 0 1px 4px rgba(0, 0, 0, 0.12);
-  --rb-elevation-2: 0 2px 4px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.14);
-  --rb-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.20), 0 8px 24px rgba(0, 0, 0, 0.18);
-  --rb-elevation-4: 0 8px 16px rgba(0, 0, 0, 0.24), 0 16px 48px rgba(0, 0, 0, 0.22);
+  --rb-success-subtle: hsl(160, 40%, 12%);
+  --rb-warning-subtle: hsl(38, 40%, 12%);
+  --rb-danger-subtle: hsl(0, 40%, 12%);
+  --rb-elevation-1: 0 1px 2px rgba(0,0,0,0.3);
+  --rb-elevation-2: 0 1px 3px rgba(0,0,0,0.4);
+  --rb-elevation-3: 0 2px 8px rgba(0,0,0,0.5);
+  --rb-elevation-4: 0 4px 16px rgba(0,0,0,0.6);
   --rb-shadow-inset: none;
   --rb-silo-card-bg: var(--rb-panel);
+  --rb-card-bg: var(--rb-panel);
+  --rb-card-border: var(--rb-border);
 }
 
 /* ─── Typography classes ────────────────────────────────────────── */
 .report-builder .rb-title {
   font-size: var(--rb-font-lg);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--rb-text);
   line-height: 1.3;
@@ -153,12 +151,12 @@
 }
 
 .report-builder .rb-widget-title {
-  font-size: var(--rb-font-xs);
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rb-text-muted);
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 .report-builder .rb-value-primary {
@@ -167,7 +165,7 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   color: var(--rb-text);
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .report-builder .rb-value-secondary {
@@ -178,10 +176,10 @@
 }
 
 .report-builder .rb-value-unit {
-  font-size: var(--rb-font-sm);
+  font-size: var(--rb-font-xs);
   font-weight: 500;
   color: var(--rb-text-muted);
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 .report-builder .rb-tabular-nums {
@@ -207,7 +205,7 @@
 .report-builder .rb-input-base:focus {
   outline: none;
   border-color: var(--rb-accent);
-  box-shadow: 0 0 0 3px var(--rb-accent-subtle);
+  box-shadow: 0 0 0 2px var(--rb-accent-subtle);
 }
 
 .report-builder .rb-btn-primary {
@@ -235,7 +233,7 @@
 
 .report-builder .rb-btn-primary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--rb-accent-subtle);
+  box-shadow: 0 0 0 2px var(--rb-accent-subtle);
 }
 
 .report-builder .rb-btn-success {
@@ -260,18 +258,17 @@
 }
 .report-builder .rb-btn-success:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--rb-success-subtle);
+  box-shadow: 0 0 0 2px var(--rb-success-subtle);
 }
 
 .report-builder .rb-btn-ghost {
   font-size: var(--rb-font-sm);
   font-weight: 500;
-  padding: var(--rb-space-2) var(--rb-space-3);
+  padding: var(--rb-space-1) var(--rb-space-2);
   border-radius: var(--rb-radius);
   color: var(--rb-text-muted);
   transition: color var(--rb-transition-fast) ease,
-              background var(--rb-transition-fast) ease,
-              transform var(--rb-transition-fast) ease;
+              background var(--rb-transition-fast) ease;
 }
 
 .report-builder .rb-btn-ghost:hover {
@@ -285,7 +282,7 @@
 
 .report-builder .rb-btn-ghost:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--rb-accent-subtle);
+  box-shadow: 0 0 0 2px var(--rb-accent-subtle);
 }
 
 .report-builder .rb-panel-surface {
@@ -295,43 +292,36 @@
 
 /* ─── Widget card system ───────────────────────────────────────── */
 .report-builder .rb-widget-card {
-  background: var(--rb-panel);
-  border: 1px solid var(--rb-border);
-  border-radius: var(--rb-radius-lg);
-  box-shadow: var(--rb-elevation-1);
-  padding: var(--rb-widget-padding);
-  transition: transform var(--rb-transition-normal) var(--rb-ease-out),
-              box-shadow var(--rb-transition-normal) var(--rb-ease-out),
-              border-color var(--rb-transition-fast) ease;
-  will-change: transform;
+  background: var(--rb-card-bg);
+  border: 1px solid var(--rb-card-border);
+  border-radius: var(--rb-radius);
+  padding: var(--rb-pad-md);
+  transition: border-color var(--rb-transition-fast) ease;
 }
 
 .report-builder .rb-widget-card:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--rb-elevation-3);
-  border-color: color-mix(in srgb, var(--rb-accent) 40%, var(--rb-border));
+  border-color: color-mix(in srgb, var(--rb-accent) 30%, var(--rb-card-border));
 }
 
 .report-builder .rb-widget-card.rb-widget-selected {
   border-color: var(--rb-accent);
-  box-shadow: var(--rb-elevation-2), 0 0 0 2px color-mix(in srgb, var(--rb-accent) 20%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--rb-accent) 15%, transparent);
 }
 
 .report-builder .rb-widget-card.rb-widget-dragging {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: var(--rb-elevation-4);
+  box-shadow: var(--rb-elevation-3);
   border-color: var(--rb-accent);
   opacity: 0.95;
 }
 
 .dark .report-builder .rb-widget-card:hover {
-  box-shadow: var(--rb-elevation-3);
+  border-color: color-mix(in srgb, var(--rb-accent) 30%, var(--rb-card-border));
 }
 
 .report-builder .rb-widget-card-transparent {
   background: transparent;
   border: none;
-  border-radius: var(--rb-radius-lg);
+  border-radius: var(--rb-radius);
   box-shadow: none;
 }
 .report-builder .rb-widget-card-transparent:hover {
@@ -361,26 +351,26 @@
   font-size: var(--rb-font-sm);
   font-weight: 600;
   color: var(--rb-text-muted);
-  padding: var(--rb-space-2) var(--rb-space-4);
+  padding: var(--rb-space-1) var(--rb-space-3);
   letter-spacing: 0.02em;
 }
 
 .report-builder .rb-badge {
-  font-size: var(--rb-font-xs);
-  font-weight: 500;
-  padding: var(--rb-space-1) var(--rb-space-2);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
   border-radius: 9999px;
   letter-spacing: 0.02em;
 }
 
 .report-builder .rb-canvas-dots {
-  background-image: radial-gradient(circle at 1px 1px, hsl(220 16% 80% / 0.35) 0.8px, transparent 0);
-  background-size: 20px 20px;
+  background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.06) 0.6px, transparent 0);
+  background-size: 16px 16px;
 }
 
 .dark .report-builder .rb-canvas-dots {
-  background-image: radial-gradient(circle at 1px 1px, hsl(222 22% 24% / 0.45) 0.8px, transparent 0);
-  background-size: 20px 20px;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 0.6px, transparent 0);
+  background-size: 16px 16px;
 }
 
 .report-builder .rb-canvas-perspective {
@@ -390,7 +380,6 @@
   transform-style: flat;
 }
 
-/* Read-only layout (Reporting page): no resize handles, no drag cursor */
 .report-builder.rb-layout-readonly .react-grid-item,
 .report-builder .rb-layout-readonly .react-grid-item {
   cursor: default !important;
@@ -409,55 +398,50 @@
   min-height: 60vh;
 }
 
-/* Side panel directional shadows */
 .rb-panel-left-shadow {
-  box-shadow: 4px 0 16px rgba(0,0,0,0.05);
+  box-shadow: 1px 0 4px rgba(0,0,0,0.04);
 }
 .rb-panel-right-shadow {
-  box-shadow: -4px 0 16px rgba(0,0,0,0.05);
+  box-shadow: -1px 0 4px rgba(0,0,0,0.04);
 }
-.dark .rb-panel-left-shadow { box-shadow: 4px 0 16px rgba(0,0,0,0.2); }
-.dark .rb-panel-right-shadow { box-shadow: -4px 0 16px rgba(0,0,0,0.2); }
+.dark .rb-panel-left-shadow { box-shadow: 1px 0 4px rgba(0,0,0,0.3); }
+.dark .rb-panel-right-shadow { box-shadow: -1px 0 4px rgba(0,0,0,0.3); }
 
-/* Widget card minimum height */
 .report-builder .react-grid-item {
-  min-height: 20px;
+  min-height: 16px;
 }
 
-/* Style RGL resize handles */
 .report-builder .react-resizable-handle {
   background: none;
 }
 .report-builder .react-resizable-handle::after {
   border-color: var(--rb-accent) !important;
-  width: 7px !important;
-  height: 7px !important;
+  width: 6px !important;
+  height: 6px !important;
 }
 
 /* ─── Floating canvas toolbar ──────────────────────────────────── */
 .rb-floating-toolbar {
-  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
   z-index: 50; display: flex; align-items: center; gap: 1px;
-  padding: 4px 6px; border-radius: 9999px;
+  padding: 3px 5px; border-radius: 9999px;
   background: var(--rb-panel);
   border: 1px solid var(--rb-border);
-  box-shadow: var(--rb-elevation-3), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--rb-elevation-3);
 }
 .dark .rb-floating-toolbar {
   background: var(--rb-panel-dark);
-  box-shadow: var(--rb-elevation-3), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: var(--rb-elevation-3);
 }
 .rb-floating-toolbar button {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; border-radius: var(--rb-radius);
+  width: 28px; height: 28px; border-radius: var(--rb-radius);
   color: var(--rb-text-muted);
   transition: color var(--rb-transition-fast) ease,
-              background var(--rb-transition-fast) ease,
-              transform var(--rb-transition-fast) ease;
+              background var(--rb-transition-fast) ease;
 }
 .rb-floating-toolbar button:hover:not(:disabled) {
   color: var(--rb-text); background: var(--rb-accent-subtle);
-  transform: scale(1.05);
 }
 .rb-floating-toolbar button:active:not(:disabled) {
   transform: scale(0.95);
@@ -469,11 +453,11 @@
   color: var(--rb-accent); background: var(--rb-accent-subtle);
 }
 .rb-toolbar-divider {
-  width: 1px; height: 20px; background: var(--rb-border); margin: 0 5px;
+  width: 1px; height: 18px; background: var(--rb-border); margin: 0 4px;
 }
 .rb-toolbar-zoom-label {
   font-size: var(--rb-font-sm); font-weight: 600;
-  color: var(--rb-text-muted); min-width: 40px; text-align: center;
+  color: var(--rb-text-muted); min-width: 36px; text-align: center;
   user-select: none; font-variant-numeric: tabular-nums;
   padding: 2px 4px; border-radius: var(--rb-radius-sm);
   background: var(--rb-surface);
@@ -482,37 +466,34 @@
 /* ─── Widget selection handles + mini-toolbar ──────────────────── */
 .rb-selection-handle {
   position: absolute; z-index: 20;
-  width: 8px; height: 8px;
+  width: 7px; height: 7px;
   background: var(--rb-accent); border: 1.5px solid var(--rb-panel);
   border-radius: 2px; pointer-events: none;
 }
 .rb-widget-minitoolbar {
-  position: absolute; bottom: calc(100% + 8px);
+  position: absolute; bottom: calc(100% + 6px);
   left: 50%; transform: translateX(-50%); z-index: 30;
   display: flex; align-items: center; gap: 1px;
-  padding: 3px 5px; border-radius: 9999px;
+  padding: 2px 4px; border-radius: 9999px;
   background: var(--rb-text);
   box-shadow: var(--rb-elevation-4);
 }
 .rb-widget-minitoolbar button {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: var(--rb-radius);
+  width: 26px; height: 26px; border-radius: var(--rb-radius);
   color: var(--rb-text-inverse);
   opacity: 0.8;
   transition: opacity var(--rb-transition-fast) ease,
-              background var(--rb-transition-fast) ease,
-              transform var(--rb-transition-fast) ease;
+              background var(--rb-transition-fast) ease;
 }
 .rb-widget-minitoolbar button:hover {
   opacity: 1;
   background: rgba(255, 255, 255, 0.12);
-  transform: scale(1.08);
 }
 .rb-widget-minitoolbar button:active {
   transform: scale(0.92);
 }
 
-/* Drag handle */
 .rb-drag-handle {
   background: var(--rb-panel);
   border: 1px solid var(--rb-border);
@@ -531,7 +512,7 @@
 .rb-toolbox-accordion-header {
   width: 100%; display: flex; align-items: center;
   justify-content: space-between;
-  padding: 8px 12px; font-size: 10px; font-weight: 600;
+  padding: 6px 12px; font-size: 10px; font-weight: 700;
   color: var(--rb-text-muted); letter-spacing: 0.05em;
   text-transform: uppercase; cursor: pointer;
   user-select: none;
@@ -543,13 +524,9 @@
 }
 
 .rb-toolbox-item {
-  transition: transform var(--rb-transition-fast) var(--rb-ease-out),
-              box-shadow var(--rb-transition-fast) var(--rb-ease-out),
-              background var(--rb-transition-fast) ease;
+  transition: background var(--rb-transition-fast) ease;
 }
 .rb-toolbox-item:hover {
-  transform: scale(1.03);
-  box-shadow: var(--rb-elevation-2);
   background: var(--rb-accent-subtle);
 }
 
@@ -559,7 +536,7 @@
   background: var(--rb-surface); border: 1px solid var(--rb-border);
 }
 .rb-segmented-control button {
-  padding: 6px 16px; border-radius: var(--rb-radius); font-size: var(--rb-font-sm);
+  padding: 5px 14px; border-radius: var(--rb-radius); font-size: var(--rb-font-sm);
   font-weight: 600;
   transition: all var(--rb-transition-fast) ease;
   color: var(--rb-text-muted);
@@ -570,22 +547,21 @@
 }
 
 .rb-color-group {
-  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
 }
 .rb-color-swatch {
-  width: 20px; height: 20px; border-radius: var(--rb-radius-sm); cursor: pointer;
+  width: 18px; height: 18px; border-radius: var(--rb-radius-sm); cursor: pointer;
   border: 1.5px solid var(--rb-border);
-  transition: border-color var(--rb-transition-fast) ease,
-              transform var(--rb-transition-fast) var(--rb-ease-spring);
+  transition: border-color var(--rb-transition-fast) ease;
   padding: 0; background: transparent;
 }
 .rb-color-swatch:hover {
-  border-color: var(--rb-accent); transform: scale(1.15);
+  border-color: var(--rb-accent);
 }
 
 .rb-threshold-rule {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 10px; border-radius: var(--rb-radius);
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-radius: var(--rb-radius);
   background: var(--rb-surface);
 }
 
@@ -597,7 +573,7 @@
   max-height: 240px; overflow-y: auto;
 }
 .rb-formula-dropdown-item {
-  padding: 10px 12px; cursor: pointer;
+  padding: 8px 10px; cursor: pointer;
   border-bottom: 1px solid var(--rb-border-subtle);
   transition: background var(--rb-transition-fast) ease;
 }
@@ -607,8 +583,8 @@
 }
 
 .rb-formula-validation {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 10px; border-radius: var(--rb-radius);
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 8px; border-radius: var(--rb-radius);
   font-size: var(--rb-font-xs);
 }
 .rb-formula-validation.error {
@@ -625,7 +601,7 @@
 }
 
 .rb-formula-tag-chip {
-  display: inline-flex; padding: 1px 6px;
+  display: inline-flex; padding: 1px 5px;
   border-radius: var(--rb-radius-sm); font-size: var(--rb-font-xs);
   font-family: monospace;
   background: var(--rb-accent-subtle);
@@ -633,11 +609,11 @@
   border: 1px solid color-mix(in srgb, var(--rb-accent) 20%, transparent);
 }
 
-/* ─── Status badges — filled pills ─────────────────────────────── */
+/* ─── Status badges ─────────────────────────────────────────────── */
 .rb-status-badge-active {
   display: inline-flex; align-items: center;
-  font-size: 10px; font-weight: 600;
-  padding: 2px 8px; border-radius: 9999px;
+  font-size: 9px; font-weight: 600;
+  padding: 2px 6px; border-radius: 9999px;
   background: var(--rb-success-subtle);
   color: #059669;
 }
@@ -647,151 +623,49 @@
 }
 .rb-status-badge-off {
   display: inline-flex; align-items: center;
-  font-size: 10px; font-weight: 600;
-  padding: 2px 8px; border-radius: 9999px;
-  background: hsl(220, 10%, 93%);
-  color: hsl(220, 10%, 47%);
+  font-size: 9px; font-weight: 600;
+  padding: 2px 6px; border-radius: 9999px;
+  background: #f1f3f5;
+  color: #868e96;
 }
 .dark .rb-status-badge-off {
-  background: hsl(222, 22%, 18%);
-  color: hsl(220, 10%, 63%);
+  background: rgba(255,255,255,0.06);
+  color: #9ca3af;
 }
 
-/* Two-tone mapping chips */
 .rb-mapping-chip {
   display: inline-flex; align-items: center; gap: 0;
   border-radius: var(--rb-radius); overflow: hidden;
   font-size: 11px; border: 1px solid var(--rb-border);
 }
 .rb-mapping-chip-input {
-  padding: 3px 8px;
+  padding: 2px 6px;
   background: var(--rb-surface);
   font-family: monospace; font-weight: 600;
   color: var(--rb-text);
 }
 .rb-mapping-chip-arrow {
-  padding: 3px 4px; color: var(--rb-text-muted);
+  padding: 2px 3px; color: var(--rb-text-muted);
 }
 .rb-mapping-chip-output {
-  padding: 3px 8px;
+  padding: 2px 6px;
   background: var(--rb-panel);
   color: var(--rb-text);
 }
 
-/* Settings tab bar */
 .rb-settings-tab {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 16px; font-size: 12px;
-  font-weight: 500; color: var(--rb-text-muted);
-  border-bottom: 3px solid transparent;
-  transition: all var(--rb-transition-fast) ease;
+  font-size: var(--rb-font-sm);
+  font-weight: 600;
+  padding: 6px 14px;
+  border-bottom: 2px solid transparent;
+  color: var(--rb-text-muted);
+  transition: color var(--rb-transition-fast) ease,
+              border-color var(--rb-transition-fast) ease;
 }
 .rb-settings-tab:hover {
   color: var(--rb-text);
-  background: var(--rb-accent-subtle);
-  border-radius: var(--rb-radius) var(--rb-radius) 0 0;
 }
 .rb-settings-tab.active {
   color: var(--rb-accent);
-  border-bottom-color: var(--rb-accent);
-  font-weight: 600;
-}
-
-/* Sidebar category headers */
-.rb-sidenav-category {
-  font-size: 9px; font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--rb-text-muted);
-  padding: 12px 12px 4px;
-  transition: opacity var(--rb-transition-normal) ease, height var(--rb-transition-normal) ease;
-}
-.rb-sidenav-category.collapsed {
-  opacity: 0; height: 0; padding: 0; overflow: hidden;
-}
-
-/* LIVE/DEMO indicator bar */
-.rb-env-indicator {
-  position: fixed; top: 0; left: 0; right: 0;
-  height: 3px; z-index: 9999;
-}
-.rb-env-indicator.live { background: var(--rb-success); }
-.rb-env-indicator.demo { background: var(--rb-warning); }
-
-/* ─── Animation utility classes (transform + opacity only) ────── */
-.report-builder .rb-fade-in {
-  animation: rb-fade-in var(--rb-transition-normal) var(--rb-ease-out) both;
-}
-
-.report-builder .rb-slide-up {
-  animation: rb-slide-up var(--rb-transition-normal) var(--rb-ease-out) both;
-}
-
-.report-builder .rb-scale-in {
-  animation: rb-scale-in var(--rb-transition-fast) var(--rb-ease-spring) both;
-}
-
-@keyframes rb-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes rb-slide-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes rb-scale-in {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .report-builder .rb-fade-in,
-  .report-builder .rb-slide-up,
-  .report-builder .rb-scale-in {
-    animation: none;
-  }
-}
-
-/* ─── uPlot overrides — industrial dark theme ──────────────────── */
-.uplot-container .u-wrap {
-  font-family: monospace;
-}
-.uplot-container .u-legend {
-  font-size: 10px;
-  font-family: monospace;
-  padding: 4px 0 0;
-  line-height: 1.4;
-  text-align: left;
-}
-.uplot-container .u-legend .u-series {
-  padding: 1px 6px;
-}
-.uplot-container .u-legend .u-series .u-marker {
-  width: 10px;
-  height: 3px;
-  border-radius: 1px;
-}
-.uplot-container .u-legend .u-label {
-  font-size: 10px;
-  color: #9ca3af;
-}
-.dark .uplot-container .u-legend .u-label {
-  color: #9ca3af;
-}
-.uplot-container .u-legend .u-value {
-  font-size: 10px;
-  color: #64748b;
-}
-.uplot-container .u-cursor-x,
-.uplot-container .u-cursor-y {
-  border-color: rgba(148, 163, 184, 0.3) !important;
-}
-.dark .uplot-container .u-cursor-x,
-.dark .uplot-container .u-cursor-y {
-  border-color: rgba(148, 163, 184, 0.2) !important;
-}
-.uplot-container .u-select {
-  background: rgba(37, 99, 171, 0.08) !important;
+  border-color: var(--rb-accent);
 }

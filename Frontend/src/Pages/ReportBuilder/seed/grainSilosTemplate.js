@@ -52,7 +52,7 @@ function stat(title, tagName, unit = '', decimals = 1, x, y, w = 2, h = 1) {
     },
   };
 }
-function silo(title, levelTag, capacityTag, tonsTag, x, y, w = 3, h = 3) {
+function silo(title, levelTag, capacityTag, tonsTag, x, y, w = 2, h = 3) {
   return {
     id: wid(),
     type: 'silo',
@@ -168,14 +168,17 @@ export function buildGrainSilosTemplate(templateId) {
   // Row 2: Section label (compact)
   widgets.push(text('Silo Status & Capacity', 'h3', y, 12));
   y += 1;
-  // Rows 3–4: 8 Silos in 2 rows of 4 (w=3 each, h=2)
-  for (let row = 0; row < 2; row++) {
-    for (let col = 0; col < 4; col++) {
-      const n = row * 4 + col + 1;
-      widgets.push(silo(`S${n}`, `Silo${n}_Level`, `Silo${n}_Capacity`, `Silo${n}_Tons`, col * 3, y, 3, 2));
-    }
-    y += 2;
+  // Rows 3–5: 8 Silos — 6 per row (w=2, h=3)
+  for (let i = 0; i < 6; i++) {
+    const n = i + 1;
+    widgets.push(silo(`S${n}`, `Silo${n}_Level`, `Silo${n}_Capacity`, `Silo${n}_Tons`, i * 2, y, 2, 3));
   }
+  y += 3;
+  for (let i = 6; i < 8; i++) {
+    const n = i + 1;
+    widgets.push(silo(`S${n}`, `Silo${n}_Level`, `Silo${n}_Capacity`, `Silo${n}_Tons`, (i - 6) * 2, y, 2, 3));
+  }
+  y += 3;
   // Row 5: Silo table + utilization chart side by side
   widgets.push(table(
     'Silo %',

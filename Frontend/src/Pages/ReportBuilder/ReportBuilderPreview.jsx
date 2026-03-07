@@ -20,7 +20,7 @@ import './reportBuilderTheme.css';
 
 const GRID_COLS_DEFAULT = 12;
 const GRID_ROW_H_DEFAULT = 40;
-const GRID_MARGIN = [8, 8];
+const GRID_MARGIN = [4, 4];
 const GRID_PADDING = [0, 0];
 
 export default function ReportBuilderPreview() {
@@ -365,7 +365,7 @@ export default function ReportBuilderPreview() {
                   const cardClass = isInvisible
                     ? 'overflow-visible flex flex-col min-h-0'
                     : showCard
-                      ? 'rounded-lg rb-widget-card overflow-hidden flex flex-col'
+                      ? 'rounded rb-widget-card overflow-hidden flex flex-col'
                       : 'overflow-hidden flex flex-col min-h-0 p-0.5';
                   return (
                     <div

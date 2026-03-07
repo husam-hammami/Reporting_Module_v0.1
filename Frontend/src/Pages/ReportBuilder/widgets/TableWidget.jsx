@@ -407,9 +407,9 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   /* ── Empty state ── */
   if (columns.length === 0) {
     return (
-      <div className="flex flex-col h-full overflow-hidden relative" style={{ padding: 'var(--rb-widget-padding, 16px)' }}>
+      <div className="flex flex-col h-full overflow-hidden relative" style={{ padding: '4px 6px' }}>
         {safeConfig.title && (
-          <h4 className="rb-heading mb-3 truncate">{safeConfig.title}</h4>
+          <h4 className="rb-widget-title mb-1 truncate">{safeConfig.title}</h4>
         )}
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <p className="rb-caption mb-4 text-[var(--rb-text-muted)]">Add columns to build your table</p>
@@ -441,12 +441,12 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
     );
   }
 
-  const cellPy = compact ? 'py-1.5' : 'py-2.5';
+  const cellPy = compact ? 'py-0.5' : 'py-1';
 
   return (
-    <div className="flex flex-col h-full overflow-hidden relative" style={{ padding: 'var(--rb-widget-padding, 16px)' }}>
+    <div className="flex flex-col h-full overflow-hidden relative" style={{ padding: '4px 6px' }}>
       {safeConfig.title && (
-        <h4 className="rb-heading mb-3 truncate">{safeConfig.title}</h4>
+        <h4 className="rb-widget-title mb-1 truncate">{safeConfig.title}</h4>
       )}
 
       <div

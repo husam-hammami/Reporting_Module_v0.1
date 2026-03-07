@@ -4,8 +4,6 @@ import { useThumbnailCapture } from '../ThumbnailCaptureContext';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import { TITLE_FONT_SIZES } from './widgetDefaults';
 
-// ----- Data helpers -----
-
 function resolveValue(config, tagValues, key = 'dataSource') {
   const ds = config[key] || config.dataSource;
   if (!ds) return tagValues?.[config.tagName] ?? null;
@@ -32,7 +30,6 @@ function getZoneColor(percent, zones, defaultColor = '#3b82f6') {
   return defaultColor;
 }
 
-// Default blue for Equipment-status style when no zones configured
 const DEFAULT_FILL_BLUE = '#3b82f6';
 
 function useAnimatedValue(target, skipAnimation) {
@@ -67,8 +64,6 @@ function useAnimatedValue(target, skipAnimation) {
   return current;
 }
 
-// ----- 3D cylindrical vessel with metallic gradient, wave animation, zone glows -----
-
 function Silo2DSvg({ fillPercent, fillColor, skipAnimation }) {
   const fillRatio = Math.max(0, Math.min(1, fillPercent / 100));
   const bodyTop = 22;
@@ -90,52 +85,45 @@ function Silo2DSvg({ fillPercent, fillColor, skipAnimation }) {
   return (
     <svg
       viewBox="0 0 100 118"
-      className="w-full h-full max-h-[200px]"
-      preserveAspectRatio="xMidYMax meet"
+      className="w-full h-full"
+      preserveAspectRatio="xMidYMid meet"
       aria-hidden
       role="img"
     >
       <defs>
-        {/* Metallic body gradient */}
         <linearGradient id={`${uniqueId}-metal`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="#a0b0c0" />
           <stop offset="30%" stopColor="#c8d4e0" />
           <stop offset="50%" stopColor="#b8c8d8" />
           <stop offset="100%" stopColor="#788898" />
         </linearGradient>
-        {/* Fill gradient using zone color */}
         <linearGradient id={`${uniqueId}-fill`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor={fillColor} stopOpacity="0.9" />
           <stop offset="50%" stopColor={fillColor} stopOpacity="1" />
           <stop offset="100%" stopColor={fillColor} stopOpacity="0.7" />
         </linearGradient>
-        {/* Clip fill to body */}
         <clipPath id={`${uniqueId}-clip`}>
           <rect x={bodyLeft} y={bodyTop} width={bodyW} height={bodyH} rx={2} />
         </clipPath>
       </defs>
 
-      {/* Body - rounded rectangle with metallic gradient */}
       <rect
         x={bodyLeft} y={bodyTop} width={bodyW} height={bodyH} rx={2}
         fill={`url(#${uniqueId}-metal)`}
         stroke="#556677" strokeWidth="0.8"
       />
 
-      {/* Top dome - ellipse for 3D perspective */}
       <ellipse cx={cx} cy={bodyTop} rx={bodyW / 2} ry={ry}
         fill={`url(#${uniqueId}-metal)`}
         stroke="#556677" strokeWidth="0.8"
       />
 
-      {/* Fill area (clipped to body) */}
       {fillH > 0 && (
         <g clipPath={`url(#${uniqueId}-clip)`}>
           <rect
             x={bodyLeft} y={fillY} width={bodyW} height={fillH + 2}
             fill={`url(#${uniqueId}-fill)`}
           />
-          {/* Wave on fill surface */}
           {showWave && !skipAnimation && (
             <g style={{ animation: 'silo-wave-slide 3s linear infinite' }}>
               <path
@@ -156,24 +144,20 @@ function Silo2DSvg({ fillPercent, fillColor, skipAnimation }) {
               />
             </g>
           )}
-          {/* Fill surface ellipse for 3D effect */}
           <ellipse cx={cx} cy={fillY} rx={bodyW / 2 - 1} ry={3}
             fill={fillColor} opacity="0.6"
           />
         </g>
       )}
 
-      {/* Bottom ellipse - 3D base */}
       <ellipse cx={cx} cy={bodyBottom} rx={bodyW / 2} ry={6}
         fill="#667788" stroke="#556677" strokeWidth="0.8"
       />
 
-      {/* Highlight line on left edge */}
       <line x1={bodyLeft + 2} y1={bodyTop + 10} x2={bodyLeft + 2} y2={bodyBottom - 10}
         stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round"
       />
 
-      {/* Percentage text overlay */}
       <text x={cx} y={bodyTop + bodyH / 2 + 4} textAnchor="middle"
         fontSize="18" fontWeight="600" fontFamily="monospace"
         fill="white" opacity="0.9"
@@ -182,13 +166,10 @@ function Silo2DSvg({ fillPercent, fillColor, skipAnimation }) {
         {Math.round(fillPercent)}%
       </text>
 
-      {/* Zone glow effects */}
       {showHighGlow && (
         <rect x={bodyLeft} y={fillY} width={bodyW} height={fillH}
           fill="none"
-          style={{
-            filter: 'drop-shadow(0 0 6px #10b981)',
-          }}
+          style={{ filter: 'drop-shadow(0 0 6px #10b981)' }}
           clipPath={`url(#${uniqueId}-clip)`}
         />
       )}
@@ -196,14 +177,11 @@ function Silo2DSvg({ fillPercent, fillColor, skipAnimation }) {
         <rect x={bodyLeft} y={fillY} width={bodyW} height={fillH}
           fill="none"
           className={skipAnimation ? '' : 'silo-low-pulse'}
-          style={{
-            filter: 'drop-shadow(0 0 8px #ef4444)',
-          }}
+          style={{ filter: 'drop-shadow(0 0 8px #ef4444)' }}
           clipPath={`url(#${uniqueId}-clip)`}
         />
       )}
 
-      {/* Inline styles for animations */}
       <style>{`
         @keyframes silo-wave-slide {
           0% { transform: translateX(0); }
@@ -224,12 +202,6 @@ function Silo2DSvg({ fillPercent, fillColor, skipAnimation }) {
   );
 }
 
-// ----- Widget -----
-
-/**
- * Silo widget: 2D cylinder with fill level; matches other widget card style (same background and text).
- * Layout: label above, cylinder, percentage and optional tons below.
- */
 export default function SiloWidget({ config, tagValues }) {
   const prefersReducedMotion = useReducedMotion();
   const isCapturing = useThumbnailCapture();
@@ -261,12 +233,12 @@ export default function SiloWidget({ config, tagValues }) {
 
   return (
     <div
-      className="flex flex-col items-center justify-center h-full min-h-0 rounded-lg overflow-hidden"
-      style={{ padding: 'var(--rb-widget-padding, clamp(8px, 1.2vw, 16px))' }}
+      className="flex flex-col items-center h-full min-h-0 overflow-hidden"
+      style={{ padding: '4px 6px' }}
     >
       {showTitle && config.title && (
         <p
-          className="rb-widget-title mb-2 truncate w-full text-center"
+          className="rb-widget-title mb-1 truncate w-full text-center flex-shrink-0"
           style={{ fontSize: titleFontSize }}
         >
           {config.title}
@@ -274,21 +246,21 @@ export default function SiloWidget({ config, tagValues }) {
       )}
 
       <div
-        className="w-full flex-1 min-h-0 min-h-[40px] max-h-[200px] flex items-center justify-center cursor-help"
+        className="w-full flex-1 min-h-0 flex items-center justify-center cursor-help"
         title={`${displayPercent}${unit !== '%' ? ` ${unit}` : '%'}${tons != null ? ` • ${displayTons} t` : ''}`}
       >
         <Silo2DSvg fillPercent={fillPercent} fillColor={fillColor} skipAnimation={skipAnimation} />
       </div>
 
-      <div className="flex flex-col items-center gap-0.5 w-full mt-2">
-        <span className="rb-value-primary text-lg">
+      <div className="flex flex-col items-center gap-0 w-full flex-shrink-0" style={{ marginTop: '2px' }}>
+        <span className="rb-value-primary" style={{ fontSize: '14px' }}>
           {displayPercent}{unit !== '%' ? ` ${unit}` : '%'}
         </span>
         {config.showTons !== false && (tons != null || displayTons !== '—') && (
-          <span className="rb-value-unit rb-tabular-nums">{displayTons}</span>
+          <span className="rb-value-unit rb-tabular-nums" style={{ fontSize: '9px' }}>{displayTons} t</span>
         )}
         {config.showCapacity && capacity != null && (
-          <span className="rb-caption rb-tabular-nums">cap. {Number(capacity).toFixed(0)}</span>
+          <span className="rb-caption rb-tabular-nums" style={{ fontSize: '9px' }}>cap. {Number(capacity).toFixed(0)}</span>
         )}
       </div>
     </div>

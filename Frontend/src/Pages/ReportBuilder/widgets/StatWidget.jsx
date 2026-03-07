@@ -63,12 +63,6 @@ function useAnimatedNumber(target, decimals, skipAnimation) {
   return Number(display).toFixed(decimals);
 }
 
-const ALIGN_CLASSES = {
-  left: 'items-start text-left',
-  center: 'items-center text-center',
-  right: 'items-end text-right',
-};
-
 export default function StatWidget({ config, tagValues }) {
   const prefersReducedMotion = useReducedMotion();
   const isCapturing = useThumbnailCapture();
@@ -85,27 +79,32 @@ export default function StatWidget({ config, tagValues }) {
   const valueFontSize = VALUE_FONT_SIZES[config.valueFontSize];
   const align = config.align || 'center';
 
+  const alignItems = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+
   return (
     <div
-      className={`flex flex-col ${ALIGN_CLASSES[align] || ALIGN_CLASSES.center} justify-center h-full min-h-0 rounded-lg`}
-      style={{ padding: 'var(--rb-widget-padding, clamp(6px, 1.2vw, 16px))' }}
+      className="flex flex-col justify-center h-full min-h-0"
+      style={{ padding: '6px 8px', alignItems }}
     >
       {showTitle && (
         <p
           className="rb-widget-title truncate w-full"
-          style={{ fontSize: titleFontSize }}
+          style={{ fontSize: titleFontSize, textAlign: align }}
         >
           {config.title || 'Stat'}
         </p>
       )}
       <span
-        className={`rb-value-primary mt-1 ${!valueFontSize ? 'text-4xl' : ''}`}
-        style={{ color, ...(valueFontSize ? { fontSize: valueFontSize } : {}) }}
+        className="rb-value-primary mt-0.5"
+        style={{
+          color,
+          fontSize: valueFontSize || 'clamp(18px, 3.5vw, 36px)',
+        }}
       >
         {display}
       </span>
       {config.unit && (
-        <span className="rb-value-unit mt-0.5">{config.unit}</span>
+        <span className="rb-value-unit">{config.unit}</span>
       )}
     </div>
   );

@@ -1,7 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { useThumbnailCapture } from '../ThumbnailCaptureContext';
-import { Gauge } from 'lucide-react';
 import { VALUE_FONT_SIZES, TITLE_FONT_SIZES } from './widgetDefaults';
 
 function useAnimatedValue(target, skipAnimation) {
@@ -51,11 +50,9 @@ export default function GaugeWidget({ config, tagValues }) {
   const clampedForDisplay = Math.max(min, Math.min(max, numValue));
   const displayValue = value != null ? clampedForDisplay.toLocaleString(undefined, { maximumFractionDigits: config.decimals ?? 0 }) : '—';
 
-  // Arc: 180° semi-circle, needle rotates from -180° (left) to 0° (right)
   const startAngle = -180;
   const endAngle = 0;
 
-  // Zones with optional status labels
   const zones = config.zones || [
     { from: 0, to: 40, color: '#ef5350', status: 'LOW' },
     { from: 40, to: 70, color: '#ff9900', status: 'CAUTION' },
@@ -100,19 +97,16 @@ export default function GaugeWidget({ config, tagValues }) {
   const valueFontSize = VALUE_FONT_SIZES[config.valueFontSize];
 
   return (
-    <div className={`flex flex-col h-full min-h-0 overflow-hidden ${config.showCard !== false ? 'rounded-xl bg-[var(--rb-panel)] border border-[var(--rb-border)]' : ''}`}>
+    <div className="flex flex-col h-full min-h-0 overflow-hidden" style={{ padding: '4px 6px' }}>
       {showTitle && (
-        <div className="flex items-center justify-between gap-2 flex-shrink-0" style={{ padding: 'var(--rb-space-3) var(--rb-space-3) var(--rb-space-2)' }}>
-          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-            <Gauge size={14} className="flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }} />
-            <span
-              className="rb-widget-title truncate min-w-0"
-              title={config.title || 'Gauge'}
-              style={{ fontSize: titleFontSize }}
-            >
-              {config.title || 'Gauge'}
-            </span>
-          </div>
+        <div className="flex items-center justify-between gap-1 flex-shrink-0 mb-0.5">
+          <span
+            className="rb-widget-title truncate min-w-0 flex-1"
+            title={config.title || 'Gauge'}
+            style={{ fontSize: titleFontSize }}
+          >
+            {config.title || 'Gauge'}
+          </span>
           {trend != null && (
             <span className="rb-badge flex-shrink-0" style={{ background: 'var(--rb-accent-subtle)', color: 'var(--rb-accent)' }}>
               {trend > 0 ? '+' : ''}{trend}%
@@ -121,12 +115,8 @@ export default function GaugeWidget({ config, tagValues }) {
         </div>
       )}
 
-      {/* Gauge SVG */}
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-2">
-        <svg viewBox="0 0 128 88" className="w-full max-w-[140px] flex-shrink-0">
-          <defs />
-
-          {/* Track arc (full range) */}
+      <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+        <svg viewBox="0 0 128 88" className="w-full flex-shrink-0" style={{ maxWidth: '160px' }}>
           <path
             d={describeArc(cx, cy, r, startAngle, endAngle)}
             fill="none"
@@ -135,7 +125,6 @@ export default function GaugeWidget({ config, tagValues }) {
             strokeLinecap="round"
           />
 
-          {/* Tick marks */}
           {Array.from({ length: tickCount }).map((_, i) => {
             const t = i / (tickCount - 1);
             const deg = startAngle + t * 180;
@@ -151,7 +140,6 @@ export default function GaugeWidget({ config, tagValues }) {
             );
           })}
 
-          {/* Filled arc (zone color) */}
           {animatedPercent > 0.002 && (
             <path
               d={describeArc(cx, cy, r, startAngle, startAngle + animatedPercent * 180)}
@@ -162,10 +150,8 @@ export default function GaugeWidget({ config, tagValues }) {
             />
           )}
 
-          {/* Center hub (pivot) */}
           <circle cx={cx} cy={cy} r="5" className="fill-gray-800 stroke-gray-500 dark:fill-[#0f172a] dark:stroke-[#334155]" strokeWidth="1" />
 
-          {/* Needle */}
           <g transform={`rotate(${needleRotation} ${cx} ${cy})`}>
             <line
               x1={cx}
@@ -177,17 +163,16 @@ export default function GaugeWidget({ config, tagValues }) {
               strokeLinecap="round"
             />
           </g>
-
         </svg>
 
-        <div className="flex flex-col items-center justify-center mt-0 pt-0.5 pb-2 flex-shrink-0">
+        <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ marginTop: '-2px' }}>
           <span
-            className={`rb-value-primary leading-none ${!valueFontSize ? 'text-xl' : ''}`}
-            style={valueFontSize ? { fontSize: valueFontSize } : undefined}
+            className="rb-value-primary leading-none"
+            style={{ fontSize: valueFontSize || '18px' }}
           >
             {valueWithUnit}
           </span>
-          <span className="rb-widget-title mt-1">
+          <span className="rb-widget-title mt-0.5">
             {statusLabel}
           </span>
         </div>

@@ -25,7 +25,7 @@ import './reportBuilderTheme.css';
 /* ── Grid: match report viewer; compact row height for less clutter ─────── */
 const GRID_COLS_DEFAULT   = 12;
 const GRID_ROW_H_DEFAULT  = 40;   // row height (px) — compact layout
-const GRID_MARGIN         = [8, 8];
+const GRID_MARGIN         = [4, 4];
 const GRID_PADDING        = [0, 0]; // outer container provides 12px 24px 24px 24px to match viewer
 
 /* ── Parameter Bar ─────────────────────────────────────────────── */
@@ -595,7 +595,7 @@ export default function ReportBuilderCanvas() {
                             isInvisible
                               ? ''
                               : showCard
-                                ? 'rounded-xl rb-widget-card border-2'
+                                ? 'rounded rb-widget-card'
                                 : 'rounded border border-dashed border-[var(--rb-border)]/60'
                           } ${
                             isSelected
