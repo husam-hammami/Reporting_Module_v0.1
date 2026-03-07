@@ -1,83 +1,89 @@
-import { useMemo } from 'react';
-import { BarChart3, Activity, Table2, Gauge, Container, Hash, Copy, Image, Type } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { BarChart3, Activity, Table2, Gauge, Container, Hash, Copy, Image, Type, LayoutGrid } from 'lucide-react';
 import { loadAndMigrateConfig } from './state/templateSchema';
 
-/* ── Widget type → icon + accent colors ────────────────────────── */
 const WIDGET_META = {
-  kpi:      { Icon: Hash,      color: 'bg-teal-500',    dot: 'bg-teal-500',    pillBg: 'bg-teal-50 dark:bg-teal-900/20',       pillText: 'text-teal-700 dark:text-teal-300',     label: 'KPI' },
-  stat:     { Icon: Activity,  color: 'bg-violet-500',  dot: 'bg-violet-500',  pillBg: 'bg-violet-50 dark:bg-violet-900/20',   pillText: 'text-violet-700 dark:text-violet-300', label: 'Stat' },
-  chart:    { Icon: BarChart3, color: 'bg-emerald-500', dot: 'bg-emerald-500', pillBg: 'bg-emerald-50 dark:bg-emerald-900/20', pillText: 'text-emerald-700 dark:text-emerald-300', label: 'Chart' },
-  barchart: { Icon: BarChart3, color: 'bg-emerald-500', dot: 'bg-emerald-500', pillBg: 'bg-emerald-50 dark:bg-emerald-900/20', pillText: 'text-emerald-700 dark:text-emerald-300', label: 'Bar' },
-  table:    { Icon: Table2,    color: 'bg-blue-500',    dot: 'bg-blue-500',    pillBg: 'bg-blue-50 dark:bg-blue-900/20',       pillText: 'text-blue-700 dark:text-blue-300',     label: 'Table' },
-  gauge:    { Icon: Gauge,     color: 'bg-amber-500',   dot: 'bg-amber-500',   pillBg: 'bg-amber-50 dark:bg-amber-900/20',     pillText: 'text-amber-700 dark:text-amber-300',   label: 'Gauge' },
-  silo:     { Icon: Container, color: 'bg-cyan-500',    dot: 'bg-cyan-500',    pillBg: 'bg-cyan-50 dark:bg-cyan-900/20',       pillText: 'text-cyan-700 dark:text-cyan-300',     label: 'Silo' },
-  image:    { Icon: Image,     color: 'bg-indigo-400',  dot: 'bg-indigo-400',  pillBg: 'bg-indigo-50 dark:bg-indigo-900/20',   pillText: 'text-indigo-700 dark:text-indigo-300', label: 'Image' },
-  text:     { Icon: Type,      color: 'bg-slate-500',   dot: 'bg-slate-500',   pillBg: 'bg-slate-50 dark:bg-slate-900/20',     pillText: 'text-slate-700 dark:text-slate-300',   label: 'Text' },
-  repeat:   { Icon: Copy,      color: 'bg-orange-500',  dot: 'bg-orange-500',  pillBg: 'bg-orange-50 dark:bg-orange-900/20',   pillText: 'text-orange-700 dark:text-orange-300', label: 'Repeat' },
+  kpi:      { Icon: Hash,      accent: '#14b8a6', accentDark: '#2dd4bf', label: 'KPI' },
+  stat:     { Icon: Activity,  accent: '#8b5cf6', accentDark: '#a78bfa', label: 'Stat' },
+  chart:    { Icon: BarChart3, accent: '#10b981', accentDark: '#34d399', label: 'Chart' },
+  barchart: { Icon: BarChart3, accent: '#10b981', accentDark: '#34d399', label: 'Bar' },
+  table:    { Icon: Table2,    accent: '#3b82f6', accentDark: '#60a5fa', label: 'Table' },
+  gauge:    { Icon: Gauge,     accent: '#f59e0b', accentDark: '#fbbf24', label: 'Gauge' },
+  silo:     { Icon: Container, accent: '#06b6d4', accentDark: '#22d3ee', label: 'Silo' },
+  image:    { Icon: Image,     accent: '#6366f1', accentDark: '#818cf8', label: 'Image' },
+  text:     { Icon: Type,      accent: '#64748b', accentDark: '#94a3b8', label: 'Text' },
+  repeat:   { Icon: Copy,      accent: '#f97316', accentDark: '#fb923c', label: 'Repeat' },
 };
 
-/* ── Category → gradient + label ───────────────────────────────── */
-const CATEGORY_GRADIENTS = {
-  kpi:      { light: 'from-teal-50 via-cyan-50 to-sky-50',       dark: 'dark:from-[#0c3547] dark:via-[#134e5e] dark:to-[#0e3d4a]',   label: 'KPI Dashboard',      iconColor: 'text-teal-400 dark:text-teal-500' },
-  stat:     { light: 'from-violet-50 via-indigo-50 to-blue-50',   dark: 'dark:from-[#1e1145] dark:via-[#1e2a5e] dark:to-[#162350]',   label: 'Statistics Panel',   iconColor: 'text-violet-400 dark:text-violet-500' },
-  chart:    { light: 'from-indigo-50 via-blue-50 to-violet-50',   dark: 'dark:from-[#162350] dark:via-[#1a2744] dark:to-[#1e1b4b]',   label: 'Analytics Report',   iconColor: 'text-emerald-400 dark:text-emerald-600' },
-  barchart: { light: 'from-indigo-50 via-blue-50 to-emerald-50',  dark: 'dark:from-[#162350] dark:via-[#1a2744] dark:to-[#0f3326]',   label: 'Chart Report',       iconColor: 'text-emerald-400 dark:text-emerald-600' },
-  table:    { light: 'from-blue-50 via-indigo-50 to-slate-50',    dark: 'dark:from-[#172044] dark:via-[#1e2a5e] dark:to-[#1e293b]',   label: 'Data Report',        iconColor: 'text-blue-400 dark:text-blue-500' },
-  gauge:    { light: 'from-amber-50 via-orange-50 to-yellow-50',  dark: 'dark:from-[#451a03] dark:via-[#4a2c0a] dark:to-[#3b2506]',   label: 'Process Monitor',    iconColor: 'text-amber-400 dark:text-amber-600' },
-  silo:     { light: 'from-cyan-50 via-teal-50 to-sky-50',        dark: 'dark:from-[#083344] dark:via-[#164e63] dark:to-[#0e4457]',   label: 'Equipment Overview', iconColor: 'text-cyan-400 dark:text-cyan-600' },
-  image:    { light: 'from-indigo-50 via-blue-50 to-slate-50',   dark: 'dark:from-[#1e1b4b] dark:via-[#172044] dark:to-[#1e293b]',   label: 'Visual Report',      iconColor: 'text-indigo-400 dark:text-indigo-500' },
-  text:     { light: 'from-slate-50 via-gray-50 to-zinc-50',     dark: 'dark:from-[#1e293b] dark:via-[#1a2332] dark:to-[#171f2e]',   label: 'Text Report',        iconColor: 'text-slate-400 dark:text-slate-500' },
-  repeat:   { light: 'from-orange-50 via-amber-50 to-yellow-50',  dark: 'dark:from-[#431407] dark:via-[#4a2c0a] dark:to-[#3b2506]',   label: 'Repeat Panel',       iconColor: 'text-orange-400 dark:text-orange-600' },
-  mixed:    { light: 'from-sky-50 via-emerald-50 to-amber-50',    dark: 'dark:from-[#0c1929] dark:via-[#111d2e] dark:to-[#1a1c23]',   label: 'Mixed Report',       iconColor: 'text-slate-400 dark:text-slate-500' },
+const CATEGORY_INFO = {
+  kpi:      { label: 'KPI Dashboard' },
+  stat:     { label: 'Statistics Panel' },
+  chart:    { label: 'Analytics Report' },
+  barchart: { label: 'Chart Report' },
+  table:    { label: 'Data Report' },
+  gauge:    { label: 'Process Monitor' },
+  silo:     { label: 'Equipment Overview' },
+  image:    { label: 'Visual Report' },
+  text:     { label: 'Text Report' },
+  repeat:   { label: 'Repeat Panel' },
+  mixed:    { label: 'Mixed Report' },
 };
 
-/**
- * Analyze widget composition to determine dominant type, pills, and gradient.
- */
 function analyzeComposition(widgets) {
   const counts = {};
   for (const w of widgets) {
     if (!w?.type) continue;
     counts[w.type] = (counts[w.type] || 0) + 1;
   }
-
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const total = entries.reduce((s, [, v]) => s + v, 0);
   if (total === 0) return null;
 
   const dominant = entries[0][0];
-  const pills = entries.slice(0, 4);
-  const remaining = Math.max(0, entries.length - 4);
-
-  // Determine if truly mixed (top type < 50% of total)
+  const pills = entries.slice(0, 5);
   const isMixed = entries.length > 2 && entries[0][1] / total < 0.5;
-  const gradientKey = isMixed ? 'mixed' : dominant;
-  const gradient = CATEGORY_GRADIENTS[gradientKey] || CATEGORY_GRADIENTS.mixed;
+  const category = isMixed ? 'mixed' : dominant;
 
-  return { dominant, pills, remaining, total, gradient, isMixed };
+  return { dominant, pills, total, category, isMixed };
 }
 
-/**
- * Composition pill — colored dot + label + count.
- */
-function CompositionPill({ type, count }) {
-  const meta = WIDGET_META[type];
-  if (!meta) return null;
+function MiniWidgetBlock({ widget, gridCols, gridH, isDark }) {
+  const meta = WIDGET_META[widget.type] || WIDGET_META.text;
+  const Icon = meta.Icon;
+  const accent = isDark ? meta.accentDark : meta.accent;
+
+  const colW = 100 / gridCols;
+  const x = (widget.x || 0) * colW;
+  const w = Math.min((widget.w || 1) * colW, 100 - x);
+  const y = (widget.y || 0) * gridH;
+  const h = (widget.h || 1) * gridH;
 
   return (
-    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${meta.pillBg} flex-shrink-0`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${meta.dot} flex-shrink-0`} />
-      <span className={`text-[8px] font-semibold ${meta.pillText} whitespace-nowrap`}>
-        {meta.label}&nbsp;×{count}
-      </span>
+    <div
+      className="absolute rounded-[3px] overflow-hidden transition-all duration-300"
+      style={{
+        left: `${x}%`,
+        top: `${y}px`,
+        width: `${w}%`,
+        height: `${h}px`,
+        background: isDark
+          ? `linear-gradient(135deg, ${accent}18, ${accent}08)`
+          : `linear-gradient(135deg, ${accent}12, ${accent}06)`,
+        border: `1px solid ${isDark ? accent + '30' : accent + '22'}`,
+        boxShadow: isDark ? `0 1px 4px ${accent}10` : `0 1px 3px ${accent}08`,
+      }}
+    >
+      <div className="w-full h-full flex items-center justify-center">
+        <Icon
+          size={Math.min(Math.max(h * 0.35, 7), 14)}
+          style={{ color: accent, opacity: isDark ? 0.6 : 0.45 }}
+          strokeWidth={1.8}
+        />
+      </div>
     </div>
   );
 }
 
-/**
- * Report thumbnail — composition summary design.
- * Shows a gradient hero with dominant type icon + composition strip with type pills.
- */
 export default function ReportThumbnail({ template }) {
   const { config } = useMemo(() => {
     const lc = template?.layout_config;
@@ -91,59 +97,137 @@ export default function ReportThumbnail({ template }) {
   }, [template?.layout_config]);
 
   const widgets = config?.widgets ?? [];
-
   const composition = useMemo(
     () => analyzeComposition(widgets.filter((w) => w && typeof w === 'object')),
     [widgets],
   );
 
-  /* ── Empty state ── */
   if (!composition) {
     return (
-      <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#0f172a] dark:to-[#1e293b] flex items-center justify-center">
-        <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl px-6 py-4 flex flex-col items-center gap-1.5">
-          <BarChart3 size={20} className="text-gray-300 dark:text-gray-600" />
-          <span className="text-[9px] font-semibold text-gray-400 dark:text-gray-600">Empty Report</span>
+      <div className="w-full h-full flex items-center justify-center"
+        style={{
+          background: 'linear-gradient(135deg, var(--rb-surface) 0%, var(--rb-panel) 100%)',
+        }}
+      >
+        <div className="flex flex-col items-center gap-2 opacity-40">
+          <LayoutGrid size={24} style={{ color: 'var(--rb-text-muted)' }} />
+          <span className="text-[9px] font-semibold" style={{ color: 'var(--rb-text-muted)' }}>Empty Report</span>
         </div>
       </div>
     );
   }
 
-  const { dominant, pills, remaining, total, gradient } = composition;
-  const DominantIcon = WIDGET_META[dominant]?.Icon || BarChart3;
+  const { dominant, pills, total, category } = composition;
+  const catInfo = CATEGORY_INFO[category] || CATEGORY_INFO.mixed;
+  const dominantMeta = WIDGET_META[dominant] || WIDGET_META.text;
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+  );
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const gridCols = config?.grid?.cols ?? config?.gridCols ?? 12;
+  const maxY = Math.max(...widgets.map(w => (w.y || 0) + (w.h || 1)), 6);
+  const thumbH = 130;
+  const gridH = Math.min(thumbH / maxY, 28);
+  const totalGridH = maxY * gridH;
+
+  const visibleWidgets = widgets
+    .filter(w => w && w.type)
+    .slice(0, 30);
+
+  const accentColor = isDark ? dominantMeta.accentDark : dominantMeta.accent;
 
   return (
-    <div className={`w-full h-full relative bg-gradient-to-br ${gradient.light} ${gradient.dark} flex flex-col overflow-hidden`}>
-      {/* ── Zone 1: Hero ── */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-1.5 relative min-h-0">
-        {/* Watermark icon */}
-        <div className="absolute bottom-2 right-3 pointer-events-none">
-          <DominantIcon size={44} className={`${gradient.iconColor} opacity-[0.06]`} strokeWidth={1.5} />
+    <div
+      className="w-full h-full relative overflow-hidden"
+      style={{
+        background: isDark
+          ? `linear-gradient(145deg, #0a1525 0%, #0d1a2d 50%, #0a1220 100%)`
+          : `linear-gradient(145deg, #f8fafc 0%, #f1f5f9 50%, #e8eef5 100%)`,
+      }}
+    >
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: isDark
+            ? `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)`
+            : `radial-gradient(circle at 1px 1px, rgba(0,0,0,0.03) 1px, transparent 0)`,
+          backgroundSize: '16px 16px',
+        }}
+      />
+
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: isDark
+            ? `radial-gradient(ellipse at 30% 20%, ${accentColor}08 0%, transparent 60%)`
+            : `radial-gradient(ellipse at 30% 20%, ${accentColor}06 0%, transparent 60%)`,
+        }}
+      />
+
+      <div className="relative px-3 pt-3 pb-2" style={{ height: `${thumbH}px` }}>
+        <div className="relative w-full" style={{ height: `${Math.min(totalGridH, thumbH - 12)}px` }}>
+          {visibleWidgets.map((w, i) => (
+            <MiniWidgetBlock
+              key={w.id || i}
+              widget={w}
+              gridCols={gridCols}
+              gridH={gridH}
+              isDark={isDark}
+            />
+          ))}
         </div>
-
-        <div className="w-[52px] h-[52px] rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-sm">
-          <DominantIcon size={22} className={gradient.iconColor} strokeWidth={2} />
-        </div>
-
-        <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 tracking-wide text-center leading-tight">
-          {gradient.label}
-        </span>
-
-        <span className="text-[9px] font-semibold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded-full border border-gray-200 dark:border-gray-700">
-          {total} widget{total !== 1 ? 's' : ''}
-        </span>
       </div>
 
-      {/* ── Zone 2: Composition Strip ── */}
-      <div className="flex-shrink-0 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-3 py-2 flex items-center gap-1.5 overflow-hidden">
-        {pills.map(([type, count]) => (
-          <CompositionPill key={type} type={type} count={count} />
-        ))}
-        {remaining > 0 && (
-          <span className="text-[8px] font-semibold text-black/30 dark:text-white/30 whitespace-nowrap flex-shrink-0">
-            +{remaining} more
+      <div
+        className="absolute bottom-0 left-0 right-0 px-3 py-2.5"
+        style={{
+          background: isDark
+            ? 'linear-gradient(to top, rgba(10,21,37,0.95) 0%, rgba(10,21,37,0.7) 60%, transparent 100%)'
+            : 'linear-gradient(to top, rgba(248,250,252,0.95) 0%, rgba(248,250,252,0.7) 60%, transparent 100%)',
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <dominantMeta.Icon size={11} style={{ color: accentColor, opacity: 0.7 }} strokeWidth={2} />
+            <span className="text-[10px] font-bold" style={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)' }}>
+              {catInfo.label}
+            </span>
+          </div>
+          <span className="text-[9px] font-semibold tabular-nums" style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)' }}>
+            {total} widget{total !== 1 ? 's' : ''}
           </span>
-        )}
+        </div>
+
+        <div className="flex items-center gap-1 mt-1.5 overflow-hidden">
+          {pills.map(([type, count]) => {
+            const meta = WIDGET_META[type];
+            if (!meta) return null;
+            const pillColor = isDark ? meta.accentDark : meta.accent;
+            return (
+              <div key={type} className="flex items-center gap-1 px-1.5 py-0.5 rounded flex-shrink-0"
+                style={{
+                  background: isDark ? `${pillColor}15` : `${pillColor}10`,
+                  border: `1px solid ${isDark ? pillColor + '20' : pillColor + '18'}`,
+                }}
+              >
+                <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: pillColor }} />
+                <span className="text-[7.5px] font-bold whitespace-nowrap"
+                  style={{ color: isDark ? `${pillColor}cc` : pillColor }}
+                >
+                  {meta.label} ×{count}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
