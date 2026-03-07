@@ -103,9 +103,6 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
   const fillLight = `rgb(${Math.min(rgb.r + 70, 255)}, ${Math.min(rgb.g + 70, 255)}, ${Math.min(rgb.b + 70, 255)})`;
   const fillVLight = `rgba(${Math.min(rgb.r + 100, 255)}, ${Math.min(rgb.g + 100, 255)}, ${Math.min(rgb.b + 100, 255)}, 0.5)`;
 
-  const bandCount = 7;
-  const bandSpacing = bodyH / (bandCount + 1);
-
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet" aria-hidden role="img">
       <defs>
@@ -174,24 +171,6 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
       <rect x={bodyL} y={bodyTop} width={bodyW} height={bodyH}
         fill={`url(#${uid}-metal)`} stroke="#8898a6" strokeWidth="0.7" />
 
-      {Array.from({ length: bandCount }, (_, i) => {
-        const by = bodyTop + bandSpacing * (i + 1);
-        return (
-          <g key={i}>
-            <line x1={bodyL} y1={by} x2={bodyR} y2={by}
-              stroke="rgba(0,0,0,0.08)" strokeWidth="1.2" />
-            <line x1={bodyL} y1={by - 1} x2={bodyR} y2={by - 1}
-              stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
-          </g>
-        );
-      })}
-
-      <rect x={bodyL} y={bodyTop} width={6} height={bodyH}
-        fill="rgba(255,255,255,0.06)" />
-      <line x1={bodyL + 3} y1={bodyTop + 4} x2={bodyL + 3} y2={bodyBot - 4}
-        stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeLinecap="round" />
-      <rect x={bodyR - 4} y={bodyTop} width={4} height={bodyH}
-        fill="rgba(0,0,0,0.06)" />
 
       {fillH > 0 && (
         <g clipPath={`url(#${uid}-body-clip)`}>
@@ -199,19 +178,6 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
             fill={`url(#${uid}-fill-h)`} />
           <rect x={bodyL} y={fillY} width={bodyW} height={fillH + 1}
             fill={`url(#${uid}-fill-v)`} />
-
-          {Array.from({ length: bandCount }, (_, i) => {
-            const by = bodyTop + bandSpacing * (i + 1);
-            if (by < fillY || by > bodyBot) return null;
-            return (
-              <g key={`fb-${i}`}>
-                <line x1={bodyL} y1={by} x2={bodyR} y2={by}
-                  stroke="rgba(0,0,0,0.06)" strokeWidth="1" />
-                <line x1={bodyL} y1={by - 1} x2={bodyR} y2={by - 1}
-                  stroke="rgba(255,255,255,0.08)" strokeWidth="0.4" />
-              </g>
-            );
-          })}
 
           {hasWave && (
             <>
