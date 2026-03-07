@@ -96,11 +96,11 @@
    DARK MODE — "MISSION CONTROL"
    ═══════════════════════════════════════════════════════════════ */
 .dark .report-builder {
-  --rb-bg-deep: #060c1a;
+  --rb-bg-deep: transparent;
   --rb-surface: #080d19;
   --rb-panel: #0d1a2a;
   --rb-panel-raised: #111c2e;
-  --rb-canvas: #060c1a;
+  --rb-canvas: transparent;
   --rb-input: #0d1a2a;
   --rb-card-bg: #0c1828;
 

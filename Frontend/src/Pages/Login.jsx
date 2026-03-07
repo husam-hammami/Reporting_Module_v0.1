@@ -77,8 +77,19 @@ function Login() {
 
   useEffect(() => { setLoading(false); }, []);
   useEffect(() => {
-    if (loginVideoRef.current) loginVideoRef.current.playbackRate = 0.75;
-  }, []);
+    const video = loginVideoRef.current;
+    if (!video) return;
+    video.playbackRate = 0.75;
+    const tryPlay = () => {
+      video.play().catch(() => {});
+    };
+    tryPlay();
+    video.addEventListener('canplay', tryPlay);
+    document.addEventListener('click', tryPlay, { once: true });
+    return () => {
+      video.removeEventListener('canplay', tryPlay);
+    };
+  }, [mode]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -91,7 +102,7 @@ function Login() {
               loop
               muted
               playsInline
-              preload="metadata"
+              preload="auto"
               className="absolute inset-0 w-full h-full object-cover pointer-events-none motion-reduce:hidden"
               style={{ zIndex: 0, opacity: 0.5 }}
             >
