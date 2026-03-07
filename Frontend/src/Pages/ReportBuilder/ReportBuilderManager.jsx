@@ -173,21 +173,15 @@ const TemplateCard = forwardRef(function TemplateCard({ template, onOpen, onDupl
           transition: 'box-shadow 300ms cubic-bezier(0.16,1,0.3,1), transform 300ms cubic-bezier(0.16,1,0.3,1)',
         }}
       >
-        <div className="relative h-48 w-full overflow-hidden">
+        <div className="relative h-36 w-full overflow-hidden">
           <ReportThumbnail template={template} />
-          <div className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'linear-gradient(180deg, transparent 40%, var(--rb-panel) 100%)',
-              opacity: 0.7,
-            }}
-          />
           <div className="absolute top-3 right-3 z-10">
             <StatusBadge status={status} />
           </div>
         </div>
 
-        <div className="p-4 relative" style={{ borderTop: '1px solid var(--rb-border)' }}>
-          <h3 className="text-[13px] font-bold truncate" style={{ color: 'var(--rb-text)' }}>{template.name}</h3>
+        <div className="p-4 pt-3 relative" style={{ borderTop: '1px solid var(--rb-border)' }}>
+          <h3 className="text-sm font-bold truncate" style={{ color: 'var(--rb-text)' }}>{template.name}</h3>
           {template.description && (
             <p className="text-[10px] mt-1 line-clamp-2 leading-relaxed" style={{ color: 'var(--rb-text-muted)' }}>{template.description}</p>
           )}
