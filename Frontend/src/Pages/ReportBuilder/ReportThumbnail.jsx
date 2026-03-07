@@ -4,7 +4,7 @@ import { loadAndMigrateConfig } from './state/templateSchema';
 
 const TYPE_COLOR = {
   kpi: '#0d9488', stat: '#7c3aed', chart: '#059669', barchart: '#059669',
-  table: '#2563eb', gauge: '#d97706', silo: '#0891b2', image: '#4f46e5',
+  table: '#2563eb', gauge: '#d97706', silo: '#22d3ee', image: '#4f46e5',
   text: '#64748b', repeat: '#ea580c',
 };
 
@@ -73,7 +73,7 @@ export default function ReportThumbnail({ template }) {
       <div style={{
         width: '100%', height: '100%',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: isDark ? '#0b1422' : '#f8f9fb',
+        background: isDark ? '#0c1520' : '#f8f9fb',
       }}>
         <div style={{ textAlign: 'center', opacity: 0.3 }}>
           <LayoutGrid size={24} style={{ color: isDark ? '#475569' : '#94a3b8', margin: '0 auto 6px' }} />
@@ -91,7 +91,7 @@ export default function ReportThumbnail({ template }) {
   return (
     <div style={{
       width: '100%', height: '100%', position: 'relative', overflow: 'hidden',
-      background: isDark ? '#0b1422' : '#f8f9fb',
+      background: isDark ? '#0c1520' : '#f8f9fb',
       display: 'flex', flexDirection: 'column',
     }}>
       <div style={{

@@ -68,48 +68,48 @@
   }
   
   .dark {
-    --background: 215 8% 78%;
-    --foreground: 215 20% 10%;
-    --muted: 215 8% 82%;
-    --muted-foreground: 215 10% 40%;
-    --popover: 215 8% 82%;
-    --popover-foreground: 215 20% 10%;
-    --card: 215 8% 84%;
-    --card-foreground: 215 20% 10%;
-    --border: 215 8% 68%;
-    --input: 215 8% 86%;
-    --primary: 187 80% 35%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 215 8% 82%;
-    --secondary-foreground: 215 20% 10%;
-    --accent: 187 80% 35%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 50%;
-    --destructive-foreground: 0 0% 100%;
-    --ring: 187 80% 35%;
+    --background: 200 35% 8%;
+    --foreground: 210 30% 93%;
+    --muted: 200 30% 12%;
+    --muted-foreground: 200 15% 55%;
+    --popover: 200 35% 8%;
+    --popover-foreground: 210 30% 93%;
+    --card: 200 30% 12%;
+    --card-foreground: 210 30% 93%;
+    --border: 200 25% 18%;
+    --input: 200 30% 12%;
+    --primary: 187 80% 53%;
+    --primary-foreground: 200 35% 5%;
+    --secondary: 200 30% 12%;
+    --secondary-foreground: 210 30% 93%;
+    --accent: 187 80% 53%;
+    --accent-foreground: 210 30% 93%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 30% 93%;
+    --ring: 187 80% 53%;
     --radius: 0.5rem;
 
-    --brand: #0891b2;
-    --brand-hover: #0e7490;
-    --brand-subtle: rgba(8, 145, 178, 0.08);
-    --brand-ring: rgba(8, 145, 178, 0.3);
-    --brand-glow: rgba(8, 145, 178, 0.15);
+    --brand: #22d3ee;
+    --brand-hover: #67e8f9;
+    --brand-subtle: rgba(34, 211, 238, 0.06);
+    --brand-ring: rgba(34, 211, 238, 0.3);
+    --brand-glow: rgba(34, 211, 238, 0.15);
 
-    --glass-bg: rgba(192, 198, 207, 0.9);
-    --glass-border: rgba(8, 145, 178, 0.15);
+    --glass-bg: rgba(10, 18, 28, 0.88);
+    --glass-border: rgba(34, 211, 238, 0.12);
     --glass-blur: 20px;
 
-    --surface-elevated: #d8dde5;
-    --surface-sunken: #c0c6cf;
-    --text-primary: #141820;
-    --text-secondary: #3c4452;
-    --text-muted: #606878;
-    --border-subtle: rgba(0, 0, 0, 0.1);
+    --surface-elevated: #162232;
+    --surface-sunken: #0c1520;
+    --text-primary: #e8edf5;
+    --text-secondary: #8899ab;
+    --text-muted: #556677;
+    --border-subtle: rgba(34, 211, 238, 0.08);
 
-    --scada-cyan: #0891b2;
-    --scada-cyan-glow: rgba(8, 145, 178, 0.15);
-    --scada-panel-bg: #d0d5dd;
-    --scada-panel-border: rgba(8, 145, 178, 0.2);
+    --scada-cyan: #22d3ee;
+    --scada-cyan-glow: rgba(34, 211, 238, 0.2);
+    --scada-panel-bg: #121e2e;
+    --scada-panel-border: rgba(34, 211, 238, 0.15);
   }
   
   @layer base {
@@ -118,21 +118,21 @@
     }
   
     body {
-      @apply font-sans antialiased bg-white dark:bg-[#c0c6cf] text-foreground;
+      @apply font-sans antialiased bg-white dark:bg-[#0c1520] text-foreground;
     }
   }
   
   @layer utilities {
     .dark-input-field .MuiOutlinedInput-root {
-      background-color: #d8dde5 !important;
+      background-color: #162232 !important;
     }
     
     .dark-input-field .MuiOutlinedInput-root:hover {
-      background-color: #d8dde5 !important;
+      background-color: #162232 !important;
     }
     
     .dark-input-field .MuiOutlinedInput-root.Mui-focused {
-      background-color: #d8dde5 !important;
+      background-color: #162232 !important;
     }
     
     .theme-transition {
@@ -234,7 +234,7 @@
     }
 
     .dark .loading-skeleton {
-      background: linear-gradient(90deg, #c8ced6 25%, #d8dde5 50%, #c8ced6 75%);
+      background: linear-gradient(90deg, #121e2e 25%, #1a2c40 50%, #121e2e 75%);
       background-size: 200% 100%;
     }
 
@@ -244,16 +244,16 @@
     }
 
     .dark canvas {
-      background-color: #b8bec8 !important;
+      background-color: #0a1218 !important;
     }
 
     .dark .min-h-screen.bg-gradient-to-br {
-      background: #c0c6cf !important;
+      background: #0c1520 !important;
       background-image: none !important;
     }
 
     .dark .min-h-screen.bg-zinc-100 {
-      background: #c0c6cf !important;
+      background: #0c1520 !important;
     }
 
     input[type="checkbox"].checkbox-cyan {

@@ -50,10 +50,10 @@ A full-stack industrial plant monitoring system with a React frontend and Flask 
 Complete app-shell redesign extending the Report Builder's Mission Control aesthetic to all pages. Zero backend changes.
 
 ### Design System (Global) — Industrial SCADA Theme
-- **Dark palette**: Deep control-room dark (`#050b18` body, `#070e1c` panels, `#0a1525`/`#0c1829` elevated surfaces)
+- **Dark palette**: Dark teal-gray control-room (`#0c1520` body, `#0f1824` navbar/sidenav, `#121e2e` panels, `#162232` elevated surfaces)
 - **Primary accent**: Cyan `#22d3ee` (dark mode), `#0284c7` (light mode) — used for active states, borders; glows only in dark mode
-- **Semantic colors**: Light mode uses muted professional tones (`#059669` success, `#d97706` warning, `#dc2626` danger); dark mode uses brighter variants (`#34d399`, `#ffaa33`, `#f43f5e`)
-- **Panel borders**: `rgba(34, 211, 238, 0.22)` widget cards, `rgba(34, 211, 238, 0.18)` tables/sections, with subtle box-shadow glow in dark mode
+- **Semantic colors**: Light mode uses muted professional tones (`#059669` success, `#d97706` warning, `#dc2626` danger); dark mode uses brighter variants (`#34d399`, `#fbbf24`, `#fb7185`)
+- **Panel borders**: `rgba(34, 211, 238, 0.22)` widget cards, `rgba(34, 211, 238, 0.15)` tables/sections, with subtle box-shadow glow in dark mode
 - **Typography**: Inter font, system-ui fallback; category headers bold uppercase with `tracking-[0.18em]`
 - **Utility classes**: `.scada-panel`, `.scada-panel-glow`, `.scada-header` for consistent instrument-panel look
 - **Scrollbars**: Cyan-tinted in dark mode (`rgba(34, 211, 238, 0.12)`)
@@ -69,7 +69,7 @@ Complete app-shell redesign extending the Report Builder's Mission Control aesth
 - File: `Frontend/src/Components/Navbar/Navbar.jsx`
 
 ### Sidebar Navigation
-- Dark mode: `#070e1c` background, cyan-tinted border `rgba(34, 211, 238, 0.1)`
+- Dark mode: `#0f1824` background, cyan-tinted border `rgba(34, 211, 238, 0.1)`
 - Category labels (BUILD, VIEW, CONFIGURE) in cyan-tinted `#22d3ee/60%`
 - Active item: cyan accent bar with glow, cyan border, subtle cyan background
 - Material Design icons: `MdDashboardCustomize`, `MdInsertChart`, `MdEngineering` (22px)

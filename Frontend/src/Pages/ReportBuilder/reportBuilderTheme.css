@@ -96,40 +96,40 @@
    DARK MODE — "MISSION CONTROL"
    ═══════════════════════════════════════════════════════════════ */
 .dark .report-builder {
-  --rb-bg-deep: #b8bec8;
-  --rb-surface: #c0c6cf;
-  --rb-panel: #c8ced6;
-  --rb-panel-raised: #d0d5dd;
-  --rb-canvas: #b8bec8;
-  --rb-input: #d8dde5;
-  --rb-card-bg: #d0d5dd;
+  --rb-bg-deep: #0a1218;
+  --rb-surface: #0c1520;
+  --rb-panel: #121e2e;
+  --rb-panel-raised: #1a2838;
+  --rb-canvas: #0a1218;
+  --rb-input: #121e2e;
+  --rb-card-bg: #142030;
 
-  --rb-border: rgba(0, 0, 0, 0.12);
-  --rb-border-subtle: rgba(0, 0, 0, 0.06);
-  --rb-card-border: rgba(8, 145, 178, 0.25);
+  --rb-border: rgba(34, 211, 238, 0.12);
+  --rb-border-subtle: rgba(34, 211, 238, 0.06);
+  --rb-card-border: rgba(34, 211, 238, 0.22);
 
-  --rb-text: #141820;
-  --rb-text-secondary: #3c4452;
-  --rb-text-muted: #606878;
-  --rb-text-inverse: #f0f2f5;
+  --rb-text: #e8edf5;
+  --rb-text-secondary: #8899ab;
+  --rb-text-muted: #5a7088;
+  --rb-text-inverse: #0f172a;
 
-  --rb-accent: #0891b2;
-  --rb-accent-hover: #0e7490;
-  --rb-accent-subtle: rgba(8, 145, 178, 0.08);
-  --rb-accent-glow: rgba(8, 145, 178, 0.15);
-  --rb-accent-bright: #06b6d4;
+  --rb-accent: #22d3ee;
+  --rb-accent-hover: #67e8f9;
+  --rb-accent-subtle: rgba(34, 211, 238, 0.08);
+  --rb-accent-glow: rgba(34, 211, 238, 0.20);
+  --rb-accent-bright: #67e8f9;
 
-  --rb-success: #059669;
-  --rb-success-subtle: rgba(5, 150, 105, 0.10);
-  --rb-warning: #d97706;
-  --rb-warning-subtle: rgba(217, 119, 6, 0.10);
-  --rb-danger: #e11d48;
-  --rb-danger-subtle: rgba(225, 29, 72, 0.10);
+  --rb-success: #34d399;
+  --rb-success-subtle: rgba(52, 211, 153, 0.10);
+  --rb-warning: #fbbf24;
+  --rb-warning-subtle: rgba(251, 191, 36, 0.10);
+  --rb-danger: #fb7185;
+  --rb-danger-subtle: rgba(251, 113, 133, 0.10);
 
-  --rb-elevation-1: 0 1px 3px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.04);
-  --rb-elevation-2: 0 2px 8px rgba(0,0,0,0.1), 0 0 1px rgba(0,0,0,0.06);
-  --rb-elevation-3: 0 4px 16px rgba(0,0,0,0.12), 0 0 1px rgba(0,0,0,0.08);
-  --rb-elevation-4: 0 8px 32px rgba(0,0,0,0.15), 0 0 2px rgba(0,0,0,0.08);
+  --rb-elevation-1: 0 1px 3px rgba(0,0,0,0.4), 0 0 1px rgba(34, 211, 238, 0.06);
+  --rb-elevation-2: 0 2px 8px rgba(0,0,0,0.5), 0 0 1px rgba(34, 211, 238, 0.08);
+  --rb-elevation-3: 0 4px 16px rgba(0,0,0,0.6), 0 0 1px rgba(34, 211, 238, 0.10);
+  --rb-elevation-4: 0 8px 32px rgba(0,0,0,0.7), 0 0 2px rgba(34, 211, 238, 0.12);
 
   --rb-silo-card-bg: var(--rb-panel);
 }
