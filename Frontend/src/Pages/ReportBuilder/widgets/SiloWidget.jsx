@@ -85,11 +85,11 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
   const bodyW = bodyR - bodyL;
   const bodyRx = bodyW / 2;
 
-  const domePeak = 16;
-  const domeBase = 38;
-  const domeEllipseRy = 10;
+  const capTop = 26;
+  const capBase = 38;
+  const capEllipseRy = 8;
 
-  const bodyTop = domeBase;
+  const bodyTop = capBase;
   const bodyBot = 172;
   const bodyH = bodyBot - bodyTop;
 
@@ -112,44 +112,38 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet" aria-hidden role="img">
       <defs>
-        <linearGradient id={`${uid}-metal`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#6b7d8d" />
-          <stop offset="8%" stopColor="#8899a8" />
-          <stop offset="20%" stopColor="#a8bac8" />
-          <stop offset="35%" stopColor="#c8d6e2" />
-          <stop offset="45%" stopColor="#dae6f0" />
-          <stop offset="50%" stopColor="#e4eef6" />
-          <stop offset="55%" stopColor="#dae6f0" />
-          <stop offset="65%" stopColor="#c0d0de" />
-          <stop offset="80%" stopColor="#98aab8" />
-          <stop offset="92%" stopColor="#7a8c9c" />
-          <stop offset="100%" stopColor="#68788a" />
+        <linearGradient id={`${uid}-concrete`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#5c6268" />
+          <stop offset="10%" stopColor="#6a7076" />
+          <stop offset="25%" stopColor="#7a8086" />
+          <stop offset="40%" stopColor="#868c92" />
+          <stop offset="50%" stopColor="#8c9298" />
+          <stop offset="60%" stopColor="#868c92" />
+          <stop offset="75%" stopColor="#7a8086" />
+          <stop offset="90%" stopColor="#6a7076" />
+          <stop offset="100%" stopColor="#5c6268" />
         </linearGradient>
 
-        <linearGradient id={`${uid}-metal-shadow`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#4a5a6a" />
-          <stop offset="15%" stopColor="#5a6a7a" />
-          <stop offset="35%" stopColor="#7a8a98" />
-          <stop offset="50%" stopColor="#8a9aa8" />
-          <stop offset="65%" stopColor="#7a8a98" />
-          <stop offset="85%" stopColor="#5a6a7a" />
-          <stop offset="100%" stopColor="#4a5a6a" />
+        <linearGradient id={`${uid}-concrete-bot`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#4a5058" />
+          <stop offset="20%" stopColor="#565c62" />
+          <stop offset="50%" stopColor="#626870" />
+          <stop offset="80%" stopColor="#565c62" />
+          <stop offset="100%" stopColor="#4a5058" />
         </linearGradient>
 
-        <linearGradient id={`${uid}-dome`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#7a8a9a" />
-          <stop offset="20%" stopColor="#a0b0c0" />
-          <stop offset="40%" stopColor="#c0d0dd" />
-          <stop offset="50%" stopColor="#d8e4ee" />
-          <stop offset="60%" stopColor="#c0d0dd" />
-          <stop offset="80%" stopColor="#90a0b0" />
-          <stop offset="100%" stopColor="#6a7a8a" />
+        <linearGradient id={`${uid}-cap`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#606870" />
+          <stop offset="25%" stopColor="#727a82" />
+          <stop offset="50%" stopColor="#7e868e" />
+          <stop offset="75%" stopColor="#727a82" />
+          <stop offset="100%" stopColor="#606870" />
         </linearGradient>
 
-        <linearGradient id={`${uid}-dome-v`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="white" stopOpacity="0.25" />
+        <linearGradient id={`${uid}-cap-v`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="white" stopOpacity="0.1" />
           <stop offset="60%" stopColor="white" stopOpacity="0" />
-          <stop offset="100%" stopColor="black" stopOpacity="0.12" />
+          <stop offset="100%" stopColor="black" stopOpacity="0.08" />
         </linearGradient>
 
         <linearGradient id={`${uid}-fill-h`} x1="0" y1="0" x2="1" y2="0">
@@ -170,13 +164,11 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
         </linearGradient>
 
         <linearGradient id={`${uid}-base-g`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#556270" />
-          <stop offset="15%" stopColor="#667888" />
-          <stop offset="35%" stopColor="#8090a0" />
-          <stop offset="50%" stopColor="#8898a8" />
-          <stop offset="65%" stopColor="#8090a0" />
-          <stop offset="85%" stopColor="#667888" />
-          <stop offset="100%" stopColor="#556270" />
+          <stop offset="0%" stopColor="#484e54" />
+          <stop offset="20%" stopColor="#565c62" />
+          <stop offset="50%" stopColor="#62686e" />
+          <stop offset="80%" stopColor="#565c62" />
+          <stop offset="100%" stopColor="#484e54" />
         </linearGradient>
 
         <clipPath id={`${uid}-body-clip`}>
@@ -184,15 +176,15 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
         </clipPath>
       </defs>
 
-      <rect x={bodyL - 6} y={baseTop + domeEllipseRy - 2} width={bodyW + 12} height={baseBot - baseTop - domeEllipseRy + 4}
+      <rect x={bodyL - 6} y={baseTop + capEllipseRy - 2} width={bodyW + 12} height={baseBot - baseTop - capEllipseRy + 4}
         fill={`url(#${uid}-base-g)`} rx="2" />
-      <line x1={bodyL - 6} y1={baseTop + domeEllipseRy - 2} x2={bodyR + 6} y2={baseTop + domeEllipseRy - 2}
-        stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
+      <line x1={bodyL - 6} y1={baseTop + capEllipseRy - 2} x2={bodyR + 6} y2={baseTop + capEllipseRy - 2}
+        stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
       <line x1={bodyL - 6} y1={baseBot + 2} x2={bodyR + 6} y2={baseBot + 2}
-        stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
+        stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
 
       <rect x={bodyL} y={bodyTop} width={bodyW} height={bodyH}
-        fill={`url(#${uid}-metal)`} stroke="#8898a6" strokeWidth="0.7" />
+        fill={`url(#${uid}-concrete)`} stroke="#6a7078" strokeWidth="0.7" />
 
       {Array.from({ length: bandCount }, (_, i) => {
         const by = bodyTop + bandSpacing * (i + 1);
@@ -206,12 +198,10 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
         );
       })}
 
-      <rect x={bodyL} y={bodyTop} width={6} height={bodyH}
-        fill="rgba(255,255,255,0.06)" />
-      <line x1={bodyL + 3} y1={bodyTop + 4} x2={bodyL + 3} y2={bodyBot - 4}
-        stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeLinecap="round" />
-      <rect x={bodyR - 4} y={bodyTop} width={4} height={bodyH}
-        fill="rgba(0,0,0,0.06)" />
+      <rect x={bodyL} y={bodyTop} width={4} height={bodyH}
+        fill="rgba(255,255,255,0.03)" />
+      <rect x={bodyR - 3} y={bodyTop} width={3} height={bodyH}
+        fill="rgba(0,0,0,0.04)" />
 
       {fillH > 0 && (
         <g clipPath={`url(#${uid}-body-clip)`}>
@@ -276,26 +266,21 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
         </g>
       )}
 
-      <ellipse cx={cx} cy={bodyBot} rx={bodyRx} ry={domeEllipseRy}
-        fill={`url(#${uid}-metal-shadow)`} stroke="#778899" strokeWidth="0.6" />
+      <ellipse cx={cx} cy={bodyBot} rx={bodyRx} ry={capEllipseRy}
+        fill={`url(#${uid}-concrete-bot)`} stroke="#586068" strokeWidth="0.6" />
 
-      <path
-        d={`M ${bodyL} ${domeBase}
-            Q ${bodyL} ${domePeak + 10}, ${cx} ${domePeak}
-            Q ${bodyR} ${domePeak + 10}, ${bodyR} ${domeBase}`}
-        fill={`url(#${uid}-dome)`} stroke="#8898a8" strokeWidth="0.7" />
-      <path
-        d={`M ${bodyL} ${domeBase}
-            Q ${bodyL} ${domePeak + 10}, ${cx} ${domePeak}
-            Q ${bodyR} ${domePeak + 10}, ${bodyR} ${domeBase}`}
-        fill={`url(#${uid}-dome-v)`} />
+      <rect x={bodyL} y={capTop} width={bodyW} height={capBase - capTop}
+        fill={`url(#${uid}-cap)`} stroke="#6a7078" strokeWidth="0.7" />
+      <rect x={bodyL} y={capTop} width={bodyW} height={capBase - capTop}
+        fill={`url(#${uid}-cap-v)`} />
 
-      <circle cx={cx} cy={domePeak - 2} r="2" fill="#8898a8" stroke="#7888a0" strokeWidth="0.5" />
+      <line x1={bodyL} y1={capTop} x2={bodyR} y2={capTop}
+        stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
 
-      <ellipse cx={cx} cy={domeBase} rx={bodyRx} ry={domeEllipseRy}
-        fill={`url(#${uid}-metal)`} stroke="#8898a8" strokeWidth="0.6" />
-      <ellipse cx={cx} cy={domeBase} rx={bodyRx - 4} ry={domeEllipseRy - 3}
-        fill="rgba(255,255,255,0.08)" />
+      <ellipse cx={cx} cy={capBase} rx={bodyRx} ry={capEllipseRy}
+        fill={`url(#${uid}-concrete)`} stroke="#6a7078" strokeWidth="0.6" />
+      <ellipse cx={cx} cy={capBase} rx={bodyRx - 4} ry={capEllipseRy - 2}
+        fill="rgba(255,255,255,0.04)" />
 
       <text x={cx} y={bodyTop + bodyH / 2 + 7} textAnchor="middle"
         fontSize="24" fontWeight="800"
