@@ -82,12 +82,14 @@ export default function SideNav() {
         open={open}
         PaperProps={{
           sx: {
-            background: '#f8f9fa',
+            background: 'rgba(248,249,250,0.92)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
             color: '#334155',
             paddingTop: '80px',
             borderRight: '1px solid rgba(0,0,0,0.08)',
             '.dark &': {
-              background: '#0a1020',
+              background: 'rgba(10,16,32,0.95)',
               color: '#e8edf5',
               borderRight: '1px solid rgba(34, 211, 238, 0.1)',
               boxShadow: '1px 0 8px rgba(0,0,0,0.3)',

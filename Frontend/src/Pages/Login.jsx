@@ -77,7 +77,7 @@ function Login() {
 
   return (
     <ThemeProvider theme={theme}>
-      <div className="min-h-screen flex items-center justify-center bg-[#f4f6f9] dark:bg-transparent relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center bg-transparent relative overflow-hidden">
         <div
           className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04]"
           style={{

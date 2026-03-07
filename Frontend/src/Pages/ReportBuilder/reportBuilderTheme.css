@@ -31,11 +31,11 @@
   --rb-pad-lg: 12px;
 
   /* ── Light mode surfaces ── */
-  --rb-bg-deep: #eef1f5;
-  --rb-surface: #e4e7ed;
-  --rb-panel: #ffffff;
-  --rb-panel-raised: #f8f9fb;
-  --rb-canvas: #e8ecf1;
+  --rb-bg-deep: transparent;
+  --rb-surface: rgba(228,231,237,0.85);
+  --rb-panel: rgba(255,255,255,0.9);
+  --rb-panel-raised: rgba(248,249,251,0.9);
+  --rb-canvas: transparent;
   --rb-input: #ffffff;
   --rb-card-bg: #ffffff;
 
