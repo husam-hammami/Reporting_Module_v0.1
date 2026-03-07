@@ -79,47 +79,43 @@ function Login() {
     <ThemeProvider theme={theme}>
       <div className="min-h-screen flex items-center justify-center bg-[#f4f6f9] dark:bg-[#040810] relative overflow-hidden">
         <div
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04]"
+          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
-            backgroundSize: '32px 32px',
+            backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 0.5px, transparent 0)`,
+            backgroundSize: '40px 40px',
           }}
         />
 
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--brand)] opacity-[0.03] dark:opacity-[0.05] rounded-full blur-[100px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[var(--brand)] opacity-[0.02] dark:opacity-[0.04] rounded-full blur-[80px]" />
+        <div className="absolute top-1/3 left-1/3 w-[500px] h-[500px] bg-[#22d3ee] opacity-[0.02] dark:opacity-[0.04] rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/3 w-[400px] h-[400px] bg-[#22d3ee] opacity-[0.01] dark:opacity-[0.03] rounded-full blur-[100px]" />
 
         {loading && <LoadingScreen />}
 
-        <div className="relative z-10 w-full max-w-[380px] mx-4 animate-scale-in">
+        <div className="relative z-10 w-full max-w-[400px] mx-4 animate-scale-in">
           <div className="text-center mb-8">
             <img
               src={HerculesNewLogo}
               alt="HERCULES"
-              className="h-10 w-auto mx-auto mb-4 dark:[filter:brightness(0)_invert(1)]"
+              className="h-14 w-auto mx-auto mb-5 dark:[filter:brightness(0)_invert(1)_brightness(0.85)]"
             />
-            <h1 className="text-xl font-bold text-[#0f1729] dark:text-[#f0f4f8] tracking-tight">
+            <h1 className="text-xl font-bold text-[#0f1729] dark:text-[#e8edf5] tracking-tight">
               Welcome back
             </h1>
-            <p className="text-[13px] text-[#64748b] dark:text-[#64748b] mt-1">
-              Sign in to your Mission Control
+            <p className="text-[13px] text-[#64748b] dark:text-[#556677] mt-1">
+              Sign in to your control panel
             </p>
           </div>
 
           <div
-            className="bg-white/90 dark:bg-[#0a1120]/90 rounded-2xl border border-black/[0.08] dark:border-white/[0.06] p-6 shadow-xl dark:shadow-2xl"
-            style={{
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-            }}
+            className="bg-white/90 dark:bg-[#0a1525]/95 rounded-xl border border-black/[0.08] dark:border-[#22d3ee]/15 p-6 shadow-xl dark:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.08)]"
           >
             <form onSubmit={formik.handleSubmit} className="flex flex-col gap-4">
               <div>
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#64748b] mb-1.5 block">
+                <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#64748b] dark:text-[#22d3ee]/50 mb-1.5 block">
                   Username
                 </label>
                 <div className="relative">
-                  <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
+                  <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#556677]" />
                   <input
                     type="text"
                     name="username"
@@ -127,10 +123,10 @@ function Login() {
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     placeholder="Enter username"
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#0f1a2e] border text-[13px] text-[#0f1729] dark:text-[#f0f4f8] placeholder:text-[#94a3b8] outline-none transition-all duration-200 ${
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#070e1c] border text-[13px] text-[#0f1729] dark:text-[#e8edf5] placeholder:text-[#94a3b8] dark:placeholder:text-[#445566] outline-none transition-all duration-200 ${
                       formik.touched.username && formik.errors.username
                         ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
-                        : 'border-black/[0.08] dark:border-white/[0.08] focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-ring)]'
+                        : 'border-black/[0.08] dark:border-[#22d3ee]/10 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-ring)] dark:focus:border-[#22d3ee]/40 dark:focus:ring-[#22d3ee]/15'
                     }`}
                   />
                 </div>
@@ -140,11 +136,11 @@ function Login() {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#64748b] mb-1.5 block">
+                <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#64748b] dark:text-[#22d3ee]/50 mb-1.5 block">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
+                  <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#556677]" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
@@ -152,16 +148,16 @@ function Login() {
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     placeholder="Enter password"
-                    className={`w-full pl-9 pr-10 py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#0f1a2e] border text-[13px] text-[#0f1729] dark:text-[#f0f4f8] placeholder:text-[#94a3b8] outline-none transition-all duration-200 ${
+                    className={`w-full pl-9 pr-10 py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#070e1c] border text-[13px] text-[#0f1729] dark:text-[#e8edf5] placeholder:text-[#94a3b8] dark:placeholder:text-[#445566] outline-none transition-all duration-200 ${
                       formik.touched.password && formik.errors.password
                         ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
-                        : 'border-black/[0.08] dark:border-white/[0.08] focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-ring)]'
+                        : 'border-black/[0.08] dark:border-[#22d3ee]/10 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-ring)] dark:focus:border-[#22d3ee]/40 dark:focus:ring-[#22d3ee]/15'
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(prev => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b] dark:hover:text-[#cbd5e1] transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b] dark:text-[#556677] dark:hover:text-[#8899ab] transition-colors"
                   >
                     {showPassword ? <AiOutlineEyeInvisible size={16} /> : <AiOutlineEye size={16} />}
                   </button>
@@ -173,14 +169,14 @@ function Login() {
 
               <button
                 type="submit"
-                className="w-full mt-2 py-2.5 rounded-lg bg-gradient-to-r from-[var(--brand)] to-[#0284c7] dark:from-[#0ea5e9] dark:to-[#38bdf8] text-white text-[13px] font-semibold shadow-lg shadow-[var(--brand)]/20 hover:shadow-xl hover:shadow-[var(--brand)]/30 transition-all duration-300 hover:translate-y-[-1px] active:translate-y-0"
+                className="w-full mt-2 py-2.5 rounded-lg bg-gradient-to-r from-[var(--brand)] to-[#0284c7] dark:from-[#0e7490] dark:to-[#22d3ee] text-white text-[13px] font-semibold shadow-lg shadow-[var(--brand)]/20 dark:shadow-[#22d3ee]/10 hover:shadow-xl transition-all duration-300 hover:translate-y-[-1px] active:translate-y-0"
               >
                 Sign in
               </button>
             </form>
           </div>
 
-          <p className="text-center text-[10px] text-[#94a3b8] dark:text-[#475569] mt-6 tracking-wider uppercase">
+          <p className="text-center text-[10px] text-[#94a3b8] dark:text-[#445566] mt-6 tracking-[0.15em] uppercase font-semibold">
             Hercules v2 Industrial SCADA
           </p>
         </div>

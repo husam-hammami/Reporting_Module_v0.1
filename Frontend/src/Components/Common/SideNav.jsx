@@ -17,15 +17,6 @@ const CATEGORY_MAP = {
   '/settings': 'CONFIGURE',
 };
 
-const CATEGORY_COLORS = {
-  'BUILD': { accent: '#64748b', bg: 'rgba(100, 116, 139, 0.06)' },
-  'VIEW': { accent: '#64748b', bg: 'rgba(100, 116, 139, 0.06)' },
-  'CONFIGURE': { accent: '#64748b', bg: 'rgba(100, 116, 139, 0.06)' },
-};
-
-const ACTIVE_COLOR = '#cbd5e1';
-const ACTIVE_COLOR_DARK = '#94a3b8';
-
 const drawerWidth = 220;
 
 const openedMixin = theme => ({
@@ -96,9 +87,10 @@ export default function SideNav() {
             paddingTop: '80px',
             borderRight: '1px solid rgba(0,0,0,0.08)',
             '.dark &': {
-              background: '#0a1120',
-              color: '#e2e8f0',
-              borderRight: '1px solid rgba(255,255,255,0.06)',
+              background: '#070e1c',
+              color: '#e8edf5',
+              borderRight: '1px solid rgba(34, 211, 238, 0.1)',
+              boxShadow: '1px 0 8px rgba(0,0,0,0.3)',
             },
           },
         }}
@@ -109,7 +101,6 @@ export default function SideNav() {
             const category = CATEGORY_MAP[item.link];
             const showCategory = category && category !== lastCategory;
             if (category) lastCategory = category;
-            const catColor = CATEGORY_COLORS[category] || CATEGORY_COLORS['BUILD'];
 
             return (
               <ListItem key={item.link} disablePadding sx={{ display: 'block', mb: 0.5 }}>
@@ -120,20 +111,14 @@ export default function SideNav() {
                   >
                     {open && (
                       <>
-                        <div
-                          className="w-1 h-3 rounded-full bg-[#94a3b8]/40 dark:bg-[#475569]/50"
-                        />
-                        <span
-                          className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#94a3b8] dark:text-[#475569]"
-                        >
+                        <div className="w-0.5 h-3 rounded-full bg-[#94a3b8]/40 dark:bg-[#22d3ee]/30" />
+                        <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#94a3b8] dark:text-[#22d3ee]/60">
                           {category}
                         </span>
                       </>
                     )}
                     {!open && (
-                      <div
-                        className="w-7 h-0.5 rounded-full bg-[#94a3b8]/25 dark:bg-[#475569]/30"
-                      />
+                      <div className="w-7 h-0.5 rounded-full bg-[#94a3b8]/25 dark:bg-[#22d3ee]/20" />
                     )}
                   </div>
                 )}
@@ -143,7 +128,7 @@ export default function SideNav() {
                     `block w-full rounded-lg transition-all duration-200 ${
                       isActive
                         ? ''
-                        : 'hover:bg-black/[0.04] dark:hover:bg-white/[0.04]'
+                        : 'hover:bg-black/[0.04] dark:hover:bg-[#22d3ee]/[0.04]'
                     }`
                   }
                 >
@@ -164,7 +149,7 @@ export default function SideNav() {
                               minHeight: 44,
                               px: open ? 1.5 : 1.25,
                               py: 1,
-                              borderRadius: '10px',
+                              borderRadius: '8px',
                               position: 'relative',
                               overflow: 'hidden',
                             },
@@ -174,12 +159,14 @@ export default function SideNav() {
                             isActive && {
                               background: 'rgba(100, 116, 139, 0.08)',
                               '.dark &': {
-                                background: 'rgba(148, 163, 184, 0.08)',
+                                background: 'rgba(34, 211, 238, 0.06)',
+                                border: '1px solid rgba(34, 211, 238, 0.12)',
+                                boxShadow: '0 0 8px rgba(34, 211, 238, 0.04)',
                               },
                               '&:hover': {
                                 background: 'rgba(100, 116, 139, 0.12)',
                                 '.dark &': {
-                                  background: 'rgba(148, 163, 184, 0.12)',
+                                  background: 'rgba(34, 211, 238, 0.08)',
                                 },
                               },
                             },
@@ -187,8 +174,11 @@ export default function SideNav() {
                         >
                           {isActive && (
                             <div
-                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-[#475569] dark:bg-[#94a3b8]"
-                              style={{ height: '55%' }}
+                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-[#475569] dark:bg-[#22d3ee]"
+                              style={{
+                                height: '55%',
+                                boxShadow: 'var(--scada-cyan-glow, none)',
+                              }}
                             />
                           )}
                           <div
@@ -197,13 +187,10 @@ export default function SideNav() {
                             }`}
                           >
                             <item.icon
-                              style={{
-                                fontSize: 22,
-                                color: isActive ? undefined : undefined,
-                              }}
+                              style={{ fontSize: 22 }}
                               className={isActive
-                                ? 'text-[#334155] dark:text-[#e2e8f0]'
-                                : 'text-[#94a3b8] dark:text-[#64748b]'
+                                ? 'text-[#334155] dark:text-[#22d3ee]'
+                                : 'text-[#94a3b8] dark:text-[#556677]'
                               }
                             />
                           </div>
@@ -211,8 +198,8 @@ export default function SideNav() {
                             <span
                               className={`text-[14px] font-medium leading-tight truncate transition-colors duration-200 ${
                                 isActive
-                                  ? 'text-[#1e293b] dark:text-[#f1f5f9]'
-                                  : 'text-[#64748b] dark:text-[#94a3b8]'
+                                  ? 'text-[#1e293b] dark:text-[#e8edf5]'
+                                  : 'text-[#64748b] dark:text-[#8899ab]'
                               }`}
                             >
                               {item.name}
@@ -230,9 +217,9 @@ export default function SideNav() {
 
         {open && (
           <div className="mt-auto px-3 pb-3">
-            <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
-              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#64748b] dark:text-[#475569] mb-0.5">Hercules v2</p>
-              <p className="text-[10px] text-[#94a3b8] dark:text-[#334155]">Industrial SCADA</p>
+            <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-[#22d3ee]/[0.03] border border-black/[0.04] dark:border-[#22d3ee]/10">
+              <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-[#64748b] dark:text-[#22d3ee]/50 mb-0.5">Hercules v2</p>
+              <p className="text-[10px] text-[#94a3b8] dark:text-[#556677]">Industrial SCADA</p>
             </div>
           </div>
         )}

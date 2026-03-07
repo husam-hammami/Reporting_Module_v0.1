@@ -49,28 +49,31 @@ A full-stack industrial plant monitoring system with a React frontend and Flask 
 ## App-Wide "Mission Control" UI/UX Redesign
 Complete app-shell redesign extending the Report Builder's Mission Control aesthetic to all pages. Zero backend changes.
 
-### Design System (Global)
-- **Palette**: Deep space dark (`#060c18` deepest, `#0c1222` base), electric cyan accent (`#38bdf8` dark / `#0c7bb3` light), amber warnings (`#fbbf24`), neon green success (`#34d399`)
-- **Glass morphism**: `backdrop-blur(20px)` on Navbar, SideNav, Login card; custom utilities in Tailwind config
-- **Typography**: Inter font, system-ui fallback stack
-- **Animations**: `animate-live-pulse` (DEMO/LIVE badge), `animate-mc-glow` (accent elements)
-- **Scrollbars**: Premium thin dark scrollbars globally
+### Design System (Global) — Industrial SCADA Theme
+- **Dark palette**: Deep control-room dark (`#050b18` body, `#070e1c` panels, `#0a1525`/`#0c1829` elevated surfaces)
+- **Primary accent**: Cyan `#22d3ee` (dark mode), `#0c7bb3` (light mode) — used for active states, borders, glows
+- **Panel borders**: `rgba(34, 211, 238, 0.15)` with subtle box-shadow glow in dark mode
+- **Typography**: Inter font, system-ui fallback; category headers bold uppercase with `tracking-[0.18em]`
+- **Utility classes**: `.scada-panel`, `.scada-panel-glow`, `.scada-header` for consistent instrument-panel look
+- **Scrollbars**: Cyan-tinted in dark mode (`rgba(34, 211, 238, 0.12)`)
+- **Animations**: `animate-live-pulse`, `animate-mc-glow` (cyan glow pulse), `mc-border-glow`
 - **Files**: `Frontend/src/index.css`, `Frontend/tailwind.config.js`
 
-### Navbar (64px)
-- Frosted glass backdrop, larger Hercules logo (h-10), animated DEMO/LIVE badge with pulse dot, refined user avatar dropdown
-- No "Mission Control" text — clean logo-focused banner
-- Gradient divider line at bottom (steel-to-transparent)
-- All height references use 64px app-wide
+### Navbar (80px)
+- Original Hercules_New.png logo at `h-14`, clearly visible
+- Frosted glass backdrop, cyan gradient divider line at bottom with glow shadow in dark mode
+- DEMO/LIVE badge with animated pulse dot
+- User avatar with cyan border in dark mode
+- All height references use 80px app-wide
 - File: `Frontend/src/Components/Navbar/Navbar.jsx`
 
 ### Sidebar Navigation
-- Industrial tone palette: steel grays/slates instead of bright neon colors
-- Category labels (BUILD, VIEW, CONFIGURE) in muted `#94a3b8` / `#475569`
-- Active item has slate accent bar + subtle background, text becomes `#f1f5f9` in dark mode
+- Dark mode: `#070e1c` background, cyan-tinted border `rgba(34, 211, 238, 0.1)`
+- Category labels (BUILD, VIEW, CONFIGURE) in cyan-tinted `#22d3ee/60%`
+- Active item: cyan accent bar with glow, cyan border, subtle cyan background
 - Material Design icons: `MdDashboardCustomize`, `MdInsertChart`, `MdEngineering` (22px)
-- Menu item text at 14px for better readability, 44px min-height items
-- 220px open / 60px collapsed with smooth transitions
+- Active icons render in `#22d3ee` cyan, inactive in muted `#556677`
+- 220px open / 60px collapsed
 - File: `Frontend/src/Components/Common/SideNav.jsx`, `Frontend/src/Data/Navbar.js`
 
 ### Login Page

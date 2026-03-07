@@ -26,8 +26,8 @@ export default {
           '50%': { opacity: '0.6', transform: 'scale(0.85)' },
         },
         glowPulse: {
-          '0%, 100%': { boxShadow: '0 0 4px rgba(56, 189, 248, 0.2)' },
-          '50%': { boxShadow: '0 0 16px rgba(56, 189, 248, 0.5)' },
+          '0%, 100%': { boxShadow: '0 0 4px rgba(34, 211, 238, 0.2)' },
+          '50%': { boxShadow: '0 0 16px rgba(34, 211, 238, 0.5)' },
         },
       },
       colors: {
