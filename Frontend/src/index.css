@@ -95,12 +95,12 @@
     --brand-ring: rgba(34, 211, 238, 0.3);
     --brand-glow: rgba(34, 211, 238, 0.15);
 
-    --glass-bg: rgba(6, 12, 24, 0.85);
+    --glass-bg: rgba(13, 17, 23, 0.88);
     --glass-border: rgba(34, 211, 238, 0.12);
     --glass-blur: 20px;
 
-    --surface-elevated: #0c1829;
-    --surface-sunken: #050b18;
+    --surface-elevated: #1a1f28;
+    --surface-sunken: #0d1117;
     --text-primary: #e8edf5;
     --text-secondary: #8899ab;
     --text-muted: #556677;
@@ -108,7 +108,7 @@
 
     --scada-cyan: #22d3ee;
     --scada-cyan-glow: rgba(34, 211, 238, 0.2);
-    --scada-panel-bg: #0a1525;
+    --scada-panel-bg: #171c24;
     --scada-panel-border: rgba(34, 211, 238, 0.15);
   }
   
@@ -118,21 +118,21 @@
     }
   
     body {
-      @apply font-sans antialiased bg-white dark:bg-[#050b18] text-foreground;
+      @apply font-sans antialiased bg-white dark:bg-[#0d1117] text-foreground;
     }
   }
   
   @layer utilities {
     .dark-input-field .MuiOutlinedInput-root {
-      background-color: #0c1829 !important;
+      background-color: #1a1f28 !important;
     }
     
     .dark-input-field .MuiOutlinedInput-root:hover {
-      background-color: #0c1829 !important;
+      background-color: #1a1f28 !important;
     }
     
     .dark-input-field .MuiOutlinedInput-root.Mui-focused {
-      background-color: #0c1829 !important;
+      background-color: #1a1f28 !important;
     }
     
     .theme-transition {
@@ -244,16 +244,16 @@
     }
 
     .dark canvas {
-      background-color: #070e1c !important;
+      background-color: #12161c !important;
     }
 
     .dark .min-h-screen.bg-gradient-to-br {
-      background: #050b18 !important;
+      background: #0d1117 !important;
       background-image: none !important;
     }
 
     .dark .min-h-screen.bg-zinc-100 {
-      background: #050b18 !important;
+      background: #0d1117 !important;
     }
 
     input[type="checkbox"].checkbox-cyan {
