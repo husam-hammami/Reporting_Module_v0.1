@@ -17,9 +17,9 @@ export const VALUE_FONT_SIZES = {
 };
 
 export const TITLE_FONT_SIZES = {
-  sm: '0.5625rem',
-  md: '0.625rem',
-  lg: '0.75rem',
+  sm: '0.625rem',
+  md: '0.6875rem',
+  lg: '0.8125rem',
 };
 
 /* ── Widget Categories ─────────────────────────────────────────── */

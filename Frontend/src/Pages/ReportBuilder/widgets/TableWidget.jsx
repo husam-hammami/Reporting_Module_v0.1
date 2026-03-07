@@ -511,12 +511,12 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
           colSpan={totalColSpan}
           className="px-3 py-2 font-bold text-left border-b"
           style={{
-            backgroundColor: sectionHeaderBg || 'var(--rb-surface)',
-            color: sectionHeaderColor || 'var(--rb-text)',
-            borderColor: borderColor || 'var(--rb-border)',
+            ...(sectionHeaderBg ? { backgroundColor: sectionHeaderBg } : {}),
+            ...(sectionHeaderColor ? { color: sectionHeaderColor } : {}),
+            ...(borderColor ? { borderColor } : {}),
             fontSize: '11px',
             fontWeight: 700,
-            letterSpacing: '0.02em',
+            letterSpacing: '0.04em',
           }}
         >
           <span className="flex items-center gap-2">
@@ -594,9 +594,8 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
             <tr
               className="rb-table-header-row"
               style={{
-                ...(headerBg && { backgroundColor: headerBg }),
-                ...(headerColor && { color: headerColor }),
-                ...(!headerBg && { backgroundColor: 'var(--rb-surface)' }),
+                ...(headerBg ? { backgroundColor: headerBg } : {}),
+                ...(headerColor ? { color: headerColor } : {}),
               }}
             >
               {columns.map((col, ci) => {
@@ -609,7 +608,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                   style={{
                     ...(colMinWidth != null && { minWidth: colMinWidth }),
                     textAlign: col.align || 'left',
-                    borderColor: borderColor || 'var(--rb-border)',
+                    ...(borderColor ? { borderColor } : {}),
                   }}
                   title={canEdit ? `${col.label || `Col ${ci + 1}`}${col.unit ? ` (${col.unit})` : ''} — Double-click to edit` : undefined}
                 >
@@ -622,7 +621,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
               );
               })}
               {canEdit && (
-                <th className={`px-2 ${cellPy} border-b-2 w-[72px]`} style={{ borderColor: borderColor || 'var(--rb-border)', backgroundColor: headerBg || 'var(--rb-surface)' }}>
+                <th className={`px-2 ${cellPy} border-b-2 w-[72px]`} style={{ ...(borderColor ? { borderColor } : {}), ...(headerBg ? { backgroundColor: headerBg } : {}) }}>
                   <button
                     type="button"
                     onClick={() => openEditor('add')}
@@ -665,7 +664,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                     onDoubleClick={canEdit ? () => openEditor('edit', ci, col) : undefined}
                     className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${isNumeric ? 'font-mono rb-tabular-nums' : ''}`}
                     style={{
-                      borderColor: borderColor || 'var(--rb-border)',
+                      ...(borderColor ? { borderColor } : {}),
                       textAlign: col.align || 'left',
                       ...(thresholdColor ? { color: thresholdColor, fontWeight: 600 } : {}),
                       ...(fitInContainer && { overflow: 'hidden', textOverflow: 'ellipsis' }),
@@ -695,7 +694,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                   </td>
                 );
               })}
-              {canEdit && <td className={`px-2 ${cellPy} border-b`} style={{ borderColor: borderColor || 'var(--rb-border)' }} />}
+              {canEdit && <td className={`px-2 ${cellPy} border-b`} style={{ ...(borderColor ? { borderColor } : {}) }} />}
             </tr>
 
             {/* ── Static (configurable) data rows with section headers ── */}
@@ -708,7 +707,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                     className="rb-table-body-row"
                     style={{
                       backgroundColor: striped && (ri + 2) % 2 === 0 ? (stripedRowBg || 'var(--rb-panel)') : (rowBg || 'transparent'),
-                      borderColor: borderColor || 'var(--rb-border)',
+                      ...(borderColor ? { borderColor } : {}),
                     }}
                   >
                     {columns.map((col, ci) => {
@@ -730,7 +729,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                           onDoubleClick={canEdit ? () => openEditorForStaticCell(ri, ci) : undefined}
                           className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${cellConfig?.sourceType !== 'static' ? 'font-mono rb-tabular-nums' : ''}`}
                           style={{
-                            borderColor: borderColor || 'var(--rb-border)',
+                            ...(borderColor ? { borderColor } : {}),
                             textAlign: numericAlign ? 'right' : (col.align || 'left'),
                             ...(thresholdColor ? { color: thresholdColor, fontWeight: 600 } : {}),
                             ...(fitInContainer && { overflow: 'hidden', textOverflow: 'ellipsis' }),
@@ -752,7 +751,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                       );
                     })}
                     {canEdit && (
-                      <td className={`px-2 ${cellPy} border-b`} style={{ borderColor: borderColor || 'var(--rb-border)' }}>
+                      <td className={`px-2 ${cellPy} border-b`} style={{ ...(borderColor ? { borderColor } : {}) }}>
                         <button
                           type="button"
                           onClick={() => removeStaticRow(ri)}
@@ -777,7 +776,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                   key={`summary-${si}`}
                   className="font-bold border-t"
                   style={{
-                    borderColor: borderColor || 'var(--rb-border)',
+                    ...(borderColor ? { borderColor } : {}),
                     backgroundColor: striped
                       ? (rowIndex % 2 === 1 ? (stripedRowBg || 'var(--rb-panel)') : (rowBg || 'var(--rb-surface)'))
                       : (rowBg || 'var(--rb-surface)'),
@@ -793,7 +792,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                       <td
                         key={ci}
                         className={`px-3 ${cellPy} border-b font-mono rb-tabular-nums ${fitInContainer ? 'max-w-0 truncate' : ''}`}
-                        style={{ borderColor: borderColor || 'var(--rb-border)', textAlign: col.align || 'left' }}
+                        style={{ ...(borderColor ? { borderColor } : {}), textAlign: col.align || 'left' }}
                       >
                         {isFirst && (
                           <span className="rb-caption mr-2 font-sans font-semibold">
@@ -805,7 +804,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                     );
                   })}
                   {canEdit && (
-                    <td className={`px-2 ${cellPy} border-b`} style={{ borderColor: borderColor || 'var(--rb-border)' }}>
+                    <td className={`px-2 ${cellPy} border-b`} style={{ ...(borderColor ? { borderColor } : {}) }}>
                       <button
                         type="button"
                         onClick={() => removeSummaryRow(si)}
@@ -826,7 +825,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                 <td
                   colSpan={columns.length + 1}
                   className="px-3 py-3 border-b"
-                  style={{ borderColor: borderColor || 'var(--rb-border)' }}
+                  style={{ ...(borderColor ? { borderColor } : {}) }}
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     {!showTotalsOptions ? (

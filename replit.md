@@ -52,7 +52,7 @@ Complete app-shell redesign extending the Report Builder's Mission Control aesth
 ### Design System (Global) — Industrial SCADA Theme
 - **Dark palette**: Deep control-room dark (`#050b18` body, `#070e1c` panels, `#0a1525`/`#0c1829` elevated surfaces)
 - **Primary accent**: Cyan `#22d3ee` (dark mode), `#0c7bb3` (light mode) — used for active states, borders, glows
-- **Panel borders**: `rgba(34, 211, 238, 0.15)` with subtle box-shadow glow in dark mode
+- **Panel borders**: `rgba(34, 211, 238, 0.22)` widget cards, `rgba(34, 211, 238, 0.18)` tables/sections, with subtle box-shadow glow in dark mode
 - **Typography**: Inter font, system-ui fallback; category headers bold uppercase with `tracking-[0.18em]`
 - **Utility classes**: `.scada-panel`, `.scada-panel-glow`, `.scada-header` for consistent instrument-panel look
 - **Scrollbars**: Cyan-tinted in dark mode (`rgba(34, 211, 238, 0.12)`)
@@ -91,7 +91,7 @@ Complete creative rendering-layer redesign inspired by SpaceX mission control, B
 - **Gauge Widget**: Gradient arc stroke, glowing endpoint dot, digital value readout
 - **Silo Widget**: Enhanced metallic gradients, glossy liquid surface, dual-wave animation
 - **Chart Widget**: Edge-to-edge layout, Mission Control color palette (#00d4ff, #00e88f, #ffaa33)
-- **Table Widget**: Gradient header strip, monospace tabular-nums, section headers, multi-row static data, boolean checkboxes, weight/unit formatting, report header support
+- **Table Widget**: CSS-driven header/section styling (no inline overrides for defaults), gradient header strip, monospace tabular-nums, section headers with cyan color in dark mode, multi-row static data, boolean checkboxes, weight/unit formatting, report header support
 - **Stat Widget**: Large auto-sizing value with accent glow, left accent border strip
 - **Manager**: Holographic gradient-border cards, status badges with colored glow dots
 - **Canvas**: Deep dark workspace with cyan dot grid, frosted glass floating toolbar
