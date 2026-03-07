@@ -784,19 +784,24 @@
 }
 
 .rb-drag-handle {
-  background: var(--rb-panel);
-  border: 1px solid var(--rb-border);
+  background: transparent;
+  border: none;
   color: var(--rb-text-muted);
-  box-shadow: var(--rb-elevation-1);
+  box-shadow: none;
   border-radius: var(--rb-radius);
-  font-size: var(--rb-font-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: move;
+  opacity: 0.4;
+  transition: opacity 0.15s ease, background 0.15s ease;
 }
-.dark .rb-drag-handle {
-  background: rgba(17, 24, 39, 0.9);
-  border-color: rgba(34, 211, 238, 0.12);
+.rb-drag-handle:hover {
+  opacity: 0.9;
+  background: var(--rb-surface);
+  box-shadow: var(--rb-elevation-1);
+}
+.dark .rb-drag-handle:hover {
+  background: rgba(17, 24, 39, 0.85);
 }
 
 
@@ -834,10 +839,6 @@
 }
 .rb-toolbox-item:hover {
   background: var(--rb-accent-subtle);
-}
-.dark .rb-toolbox-item:hover {
-  background: var(--rb-accent-subtle);
-  box-shadow: 0 0 8px var(--rb-accent-glow);
 }
 
 

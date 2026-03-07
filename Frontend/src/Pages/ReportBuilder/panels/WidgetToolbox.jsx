@@ -347,17 +347,15 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                               className="rb-toolbox-item flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg cursor-grab active:cursor-grabbing"
                               style={{
                                 background: isItemActive ? 'var(--rb-accent-subtle)' : 'transparent',
-                                boxShadow: isItemActive ? '0 0 8px var(--rb-accent-glow)' : 'none',
                               }}
                             >
                               <div
                                 className="w-10 h-10 rounded-lg flex items-center justify-center"
                                 style={{
-                                  background: 'var(--rb-surface)',
+                                  background: isItemActive ? 'var(--rb-accent-subtle)' : 'var(--rb-surface)',
                                   border: isItemActive
                                     ? '1px solid var(--rb-accent)'
-                                    : '1px solid var(--rb-border)',
-                                  boxShadow: isItemActive ? '0 0 6px var(--rb-accent-glow)' : 'none',
+                                    : '1px solid transparent',
                                   transition: 'all 150ms ease',
                                 }}
                               >
@@ -401,18 +399,16 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                               ? '1px solid var(--rb-accent)'
                               : '1px solid transparent',
                             background: isItemActive ? 'var(--rb-accent-subtle)' : 'transparent',
-                            boxShadow: isItemActive ? '0 0 8px var(--rb-accent-glow)' : 'none',
                             transition: 'all 150ms ease',
                           }}
                         >
                           <div
                             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                             style={{
-                              background: 'var(--rb-surface)',
+                              background: isItemActive ? 'var(--rb-accent-subtle)' : 'var(--rb-surface)',
                               border: isItemActive
                                 ? '1px solid var(--rb-accent)'
-                                : '1px solid var(--rb-border)',
-                              boxShadow: isItemActive ? '0 0 6px var(--rb-accent-glow)' : 'none',
+                                : '1px solid transparent',
                               transition: 'all 150ms ease',
                             }}
                           >

@@ -90,7 +90,7 @@ Complete app-shell redesign extending the Report Builder's Mission Control aesth
 Complete creative rendering-layer redesign inspired by SpaceX mission control, Bloomberg Terminal, and SCADA HMIs.
 - **KPI Widget**: Massive centered value with glowing accent bar, gradient-filled area sparkline
 - **Gauge Widget**: Gradient arc stroke, glowing endpoint dot, digital value readout
-- **Silo Widget**: Enhanced metallic gradients, glossy liquid surface, dual-wave animation
+- **Silo Widget**: Premium industrial design with taller proportions, support legs, measurement marks, polished metallic gradients (120x160 viewBox), liquid surface with dual-wave animation, low-fill red pulse warning, high-fill glow
 - **Chart Widget**: Edge-to-edge layout, Mission Control color palette (#00d4ff, #00e88f, #ffaa33)
 - **Table Widget**: Grafana/Power BI-inspired CSS-driven styling. Header rows: 11px bold uppercase `rb-table-header-row`. Body rows: 13px `rb-table-body-row` with `rb-row-striped`, `rb-cell-numeric` (mono tabular-nums), `rb-cell-threshold`, `rb-cell-hint`. Section headers: `rb-section-header-row` cyan uppercase. Summary/totals: `rb-summary-row` bold with accent top border. Compact density: `rb-table-compact` modifier class on `.rb-production-table`. Title: `rb-table-title` (13px bold). All padding/font/border controlled via CSS, only user-configurable colors (borderColor, headerBg, etc.) applied as inline styles. Multi-row static data, boolean checkboxes, weight/unit formatting, report header support
 - **Stat Widget**: Large auto-sizing value with accent glow, left accent border strip

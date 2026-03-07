@@ -14,9 +14,7 @@ function Section({ icon: Icon, title, children, defaultOpen = true, isFirst = fa
         className="w-full flex items-center gap-2.5 py-3 px-5 hover:bg-[var(--rb-surface)] transition-colors text-left group"
       >
         {Icon && (
-          <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--rb-accent-subtle)] border border-[var(--rb-accent)]/20">
-            <Icon size={12} className="text-[var(--rb-accent)]" />
-          </span>
+          <Icon size={14} className="text-[var(--rb-text-muted)] group-hover:text-[var(--rb-accent)] transition-colors" />
         )}
         <span className="flex-1 text-[10px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.08em]">{title}</span>
         <motion.span
