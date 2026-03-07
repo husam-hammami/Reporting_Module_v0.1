@@ -85,7 +85,7 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
   const bodyW = bodyR - bodyL;
   const bodyRx = bodyW / 2;
 
-  const roofPeak = 18;
+  const roofPeak = 28;
   const roofBase = 42;
   const roofEllipseRy = 10;
 
@@ -261,18 +261,15 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
 
       <path
         d={`M ${bodyL} ${roofBase}
-            Q ${bodyL} ${roofPeak + 8}, ${cx} ${roofPeak}
-            Q ${bodyR} ${roofPeak + 8}, ${bodyR} ${roofBase}`}
+            Q ${bodyL} ${roofPeak + 4}, ${cx} ${roofPeak}
+            Q ${bodyR} ${roofPeak + 4}, ${bodyR} ${roofBase}`}
         fill={`url(#${uid}-roof)`} stroke="#8898a8" strokeWidth="0.7" />
       <path
         d={`M ${bodyL} ${roofBase}
-            Q ${bodyL} ${roofPeak + 8}, ${cx} ${roofPeak}
-            Q ${bodyR} ${roofPeak + 8}, ${bodyR} ${roofBase}`}
+            Q ${bodyL} ${roofPeak + 4}, ${cx} ${roofPeak}
+            Q ${bodyR} ${roofPeak + 4}, ${bodyR} ${roofBase}`}
         fill={`url(#${uid}-roof-v)`} />
 
-      <path d={`M ${cx} ${roofPeak} L ${cx} ${roofPeak - 6}`}
-        stroke="#8898a8" strokeWidth="2" strokeLinecap="round" />
-      <circle cx={cx} cy={roofPeak - 8} r="2.5" fill="#a0b0c0" stroke="#8090a0" strokeWidth="0.6" />
 
       <ellipse cx={cx} cy={roofBase} rx={bodyRx} ry={roofEllipseRy}
         fill={`url(#${uid}-metal)`} stroke="#8898a8" strokeWidth="0.6" />
