@@ -423,9 +423,9 @@ function SingleReportView({ reportId, onBack }) {
   if (loading) return <div className="flex items-center justify-center h-[calc(100vh-80px)] text-[12px] text-[#8898aa]">Loading report...</div>;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] bg-[#f8f9fb] dark:bg-[#0c1520]">
+    <div className="flex flex-col h-[calc(100vh-80px)] bg-[#f8f9fb] dark:bg-[#060c1a]">
       {/* ── Toolbar: back + title | date/time + time filters (left, centered) | actions ── */}
-      <div className="bg-white dark:bg-[#162232] border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
+      <div className="bg-white dark:bg-[#111c2e] border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
         {/* Left: back + report name */}
         <button onClick={onBack} className="p-2 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0">
           <FaChevronLeft size={14} />
@@ -444,8 +444,8 @@ function SingleReportView({ reportId, onBack }) {
                 onClick={() => setTimePreset(p.id)}
                 className={`px-3 py-2 text-[12px] font-semibold rounded-lg border-2 transition-colors ${
                   timePreset === p.id
-                    ? 'border-brand bg-brand-subtle text-brand dark:bg-[#0f2840] dark:text-brand dark:border-brand'
-                    : 'border-[#e3e9f0] dark:border-[#22d3ee]/10 text-[#5a6d80] dark:text-[#8898aa] hover:border-[#0e749080] hover:bg-[#f0f7ff] dark:hover:bg-[#1a2838]'
+                    ? 'border-brand bg-brand-subtle text-brand dark:bg-[#0a1e38] dark:text-brand dark:border-brand'
+                    : 'border-[#e3e9f0] dark:border-[#22d3ee]/10 text-[#5a6d80] dark:text-[#8898aa] hover:border-[#0e749080] hover:bg-[#f0f7ff] dark:hover:bg-[#111c2e]'
                 }`}
               >
                 {p.label}
@@ -480,26 +480,26 @@ function SingleReportView({ reportId, onBack }) {
 
       {/* ── Custom date range (only when custom selected) ── */}
       {timePreset === 'custom' && (
-        <div className="bg-white dark:bg-[#162232] border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2 flex items-center gap-3 print:hidden">
+        <div className="bg-white dark:bg-[#111c2e] border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2 flex items-center gap-3 print:hidden">
           <label className="text-[10px] font-medium text-[#6b7f94]">From</label>
           <input type="datetime-local" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
-            className="text-[11px] rounded-md border border-[#e3e9f0] bg-white dark:bg-[#162232] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
+            className="text-[11px] rounded-md border border-[#e3e9f0] bg-white dark:bg-[#111c2e] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
           <label className="text-[10px] font-medium text-[#6b7f94]">To</label>
           <input type="datetime-local" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
-            className="text-[11px] rounded-md border border-[#e3e9f0] bg-white dark:bg-[#162232] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
+            className="text-[11px] rounded-md border border-[#e3e9f0] bg-white dark:bg-[#111c2e] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
         </div>
       )}
 
       {/* ── Shift selector (when shift selected) ── */}
       {timePreset === 'shift' && (
-        <div className="bg-white dark:bg-[#162232] border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2 flex items-center gap-3 print:hidden">
+        <div className="bg-white dark:bg-[#111c2e] border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2 flex items-center gap-3 print:hidden">
           {shiftsConfig?.shifts?.length > 0 ? (
             <>
               <label className="text-[10px] font-medium text-[#6b7f94]">Shift</label>
               <select
                 value={selectedShift}
                 onChange={(e) => setSelectedShift(e.target.value)}
-                className="px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white dark:bg-[#0d1825] text-[#2a3545] dark:text-[#e1e8f0] focus:outline-none focus:border-brand"
+                className="px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white dark:bg-[#080d19] text-[#2a3545] dark:text-[#e1e8f0] focus:outline-none focus:border-brand"
               >
                 <option value="">Select shift...</option>
                 {shiftsConfig.shifts.map((s, i) => (
@@ -636,8 +636,8 @@ export default function ReportViewer() {
   if (id) return <SingleReportView reportId={id} onBack={() => navigate('/reporting')} />;
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-[#f8f9fb] dark:bg-[#0c1520]">
-      <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white dark:bg-[#162232]">
+    <div className="min-h-[calc(100vh-80px)] bg-[#f8f9fb] dark:bg-[#060c1a]">
+      <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white dark:bg-[#111c2e]">
         <h1 className="text-[15px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Reporting</h1>
         <p className="text-[11px] text-[#8898aa] mt-0.5">Select a report to view with live or historical data</p>
       </div>

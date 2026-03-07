@@ -96,17 +96,17 @@
    DARK MODE — "MISSION CONTROL"
    ═══════════════════════════════════════════════════════════════ */
 .dark .report-builder {
-  --rb-bg-deep: #0a1218;
-  --rb-surface: #0c1520;
-  --rb-panel: #121e2e;
-  --rb-panel-raised: #1a2838;
-  --rb-canvas: #0a1218;
-  --rb-input: #121e2e;
-  --rb-card-bg: #142030;
+  --rb-bg-deep: #060c1a;
+  --rb-surface: #080d19;
+  --rb-panel: #0d1a2a;
+  --rb-panel-raised: #111c2e;
+  --rb-canvas: #060c1a;
+  --rb-input: #0d1a2a;
+  --rb-card-bg: #0c1828;
 
-  --rb-border: rgba(34, 211, 238, 0.12);
-  --rb-border-subtle: rgba(34, 211, 238, 0.06);
-  --rb-card-border: rgba(34, 211, 238, 0.22);
+  --rb-border: rgba(34, 211, 238, 0.14);
+  --rb-border-subtle: rgba(34, 211, 238, 0.07);
+  --rb-card-border: rgba(34, 211, 238, 0.28);
 
   --rb-text: #e8edf5;
   --rb-text-secondary: #8899ab;
@@ -126,10 +126,10 @@
   --rb-danger: #fb7185;
   --rb-danger-subtle: rgba(251, 113, 133, 0.10);
 
-  --rb-elevation-1: 0 1px 3px rgba(0,0,0,0.4), 0 0 1px rgba(34, 211, 238, 0.06);
-  --rb-elevation-2: 0 2px 8px rgba(0,0,0,0.5), 0 0 1px rgba(34, 211, 238, 0.08);
-  --rb-elevation-3: 0 4px 16px rgba(0,0,0,0.6), 0 0 1px rgba(34, 211, 238, 0.10);
-  --rb-elevation-4: 0 8px 32px rgba(0,0,0,0.7), 0 0 2px rgba(34, 211, 238, 0.12);
+  --rb-elevation-1: 0 1px 3px rgba(0,0,0,0.5), 0 0 2px rgba(34, 211, 238, 0.08);
+  --rb-elevation-2: 0 2px 8px rgba(0,0,0,0.6), 0 0 4px rgba(34, 211, 238, 0.10);
+  --rb-elevation-3: 0 4px 16px rgba(0,0,0,0.7), 0 0 6px rgba(34, 211, 238, 0.12);
+  --rb-elevation-4: 0 8px 32px rgba(0,0,0,0.8), 0 0 8px rgba(34, 211, 238, 0.15);
 
   --rb-silo-card-bg: var(--rb-panel);
 }
@@ -335,11 +335,12 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 .dark .report-builder .rb-widget-card {
-  border-color: rgba(34, 211, 238, 0.22);
+  border-color: rgba(34, 211, 238, 0.28);
   box-shadow:
-    0 0 1px rgba(34, 211, 238, 0.15),
-    0 0 12px rgba(34, 211, 238, 0.06),
-    inset 0 1px 0 rgba(34, 211, 238, 0.06);
+    0 0 1px rgba(34, 211, 238, 0.25),
+    0 0 8px rgba(34, 211, 238, 0.12),
+    0 0 20px rgba(34, 211, 238, 0.06),
+    inset 0 1px 0 rgba(34, 211, 238, 0.08);
 }
 
 .report-builder .rb-widget-card:hover {
@@ -347,11 +348,12 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .dark .report-builder .rb-widget-card:hover {
-  border-color: rgba(34, 211, 238, 0.35);
+  border-color: rgba(34, 211, 238, 0.42);
   box-shadow:
-    0 0 2px rgba(34, 211, 238, 0.2),
-    0 0 20px rgba(34, 211, 238, 0.1),
-    0 0 4px rgba(34, 211, 238, 0.08);
+    0 0 2px rgba(34, 211, 238, 0.3),
+    0 0 12px rgba(34, 211, 238, 0.15),
+    0 0 28px rgba(34, 211, 238, 0.08),
+    0 0 4px rgba(34, 211, 238, 0.12);
 }
 
 .report-builder .rb-widget-card.rb-widget-selected,

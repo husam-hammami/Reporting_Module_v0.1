@@ -40,8 +40,8 @@ const SettingsHome = () => {
   const showDefault = location.pathname === '/settings';
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-[#f8f9fb] dark:bg-[#0c1520]">
-      <div className="sticky top-0 z-10 bg-white/90 dark:bg-[#0f1824]/95 border-b border-black/[0.06] dark:border-[#22d3ee]/10 px-6 pt-4 pb-0"
+    <div className="min-h-[calc(100vh-80px)] bg-[#f8f9fb] dark:bg-[#060c1a]">
+      <div className="sticky top-0 z-10 bg-white/90 dark:bg-[#0a1020]/95 border-b border-black/[0.06] dark:border-[#22d3ee]/10 px-6 pt-4 pb-0"
         style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
       >
         <div className="flex items-center gap-2 mb-3">
@@ -73,7 +73,7 @@ const SettingsHome = () => {
       <div className="max-w-[1200px] mx-auto px-5 py-4">
         {showDefault ? (
           <div className="text-center py-16 px-6">
-            <div className="w-12 h-12 rounded-xl bg-[#f0f5fa] dark:bg-[#162232] dark:border dark:border-[#22d3ee]/10 flex items-center justify-center mx-auto mb-4">
+            <div className="w-12 h-12 rounded-xl bg-[#f0f5fa] dark:bg-[#111c2e] dark:border dark:border-[#22d3ee]/10 flex items-center justify-center mx-auto mb-4">
               <FaTags className="text-[#94a3b8] dark:text-[#22d3ee]/50 text-lg" />
             </div>
             <h2 className="text-[14px] font-semibold text-[#334155] dark:text-[#e8edf5] mb-1">Select a section</h2>

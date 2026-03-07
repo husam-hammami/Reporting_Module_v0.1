@@ -25,7 +25,7 @@ function Navbar({ isBlueprint = false }) {
       position="fixed"
       elevation={0}
       sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
-      className="!bg-white/95 dark:!bg-[#0f1824]/95 !shadow-none"
+      className="!bg-white/95 dark:!bg-[#0a1020]/95 !shadow-none"
       style={{
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
@@ -108,7 +108,7 @@ function Navbar({ isBlueprint = false }) {
                 <>
                   <div className="fixed inset-0 z-50" onClick={() => setMenuOpen(false)} />
                   <div
-                    className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-[#162232] border border-black/[0.08] dark:border-[#22d3ee]/15 rounded-lg shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.08)] min-w-[160px] py-1 animate-scale-in"
+                    className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-[#111c2e] border border-black/[0.08] dark:border-[#22d3ee]/15 rounded-lg shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.08)] min-w-[160px] py-1 animate-scale-in"
                   >
                     <div className="px-3 py-2 border-b border-black/[0.06] dark:border-[#22d3ee]/10">
                       <p className="text-[12px] font-semibold text-[#334155] dark:text-[#e8edf5]">{auth.username}</p>

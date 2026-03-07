@@ -77,7 +77,7 @@ function Login() {
 
   return (
     <ThemeProvider theme={theme}>
-      <div className="min-h-screen flex items-center justify-center bg-[#f4f6f9] dark:bg-[#0a1218] relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center bg-[#f4f6f9] dark:bg-[#060c1a] relative overflow-hidden">
         <div
           className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
           style={{
@@ -107,7 +107,7 @@ function Login() {
           </div>
 
           <div
-            className="bg-white/90 dark:bg-[#121e2e]/95 rounded-xl border border-black/[0.08] dark:border-[#22d3ee]/15 p-6 shadow-xl dark:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.08)]"
+            className="bg-white/90 dark:bg-[#0d1a2a]/95 rounded-xl border border-black/[0.08] dark:border-[#22d3ee]/15 p-6 shadow-xl dark:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.08)]"
           >
             <form onSubmit={formik.handleSubmit} className="flex flex-col gap-4">
               <div>
@@ -123,7 +123,7 @@ function Login() {
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     placeholder="Enter username"
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#0c1520] border text-[13px] text-[#0f1729] dark:text-[#e8edf5] placeholder:text-[#94a3b8] dark:placeholder:text-[#445566] outline-none transition-all duration-200 ${
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#080d19] border text-[13px] text-[#0f1729] dark:text-[#e8edf5] placeholder:text-[#94a3b8] dark:placeholder:text-[#445566] outline-none transition-all duration-200 ${
                       formik.touched.username && formik.errors.username
                         ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
                         : 'border-black/[0.08] dark:border-[#22d3ee]/10 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-ring)] dark:focus:border-[#22d3ee]/40 dark:focus:ring-[#22d3ee]/15'
@@ -148,7 +148,7 @@ function Login() {
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     placeholder="Enter password"
-                    className={`w-full pl-9 pr-10 py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#0c1520] border text-[13px] text-[#0f1729] dark:text-[#e8edf5] placeholder:text-[#94a3b8] dark:placeholder:text-[#445566] outline-none transition-all duration-200 ${
+                    className={`w-full pl-9 pr-10 py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#080d19] border text-[13px] text-[#0f1729] dark:text-[#e8edf5] placeholder:text-[#94a3b8] dark:placeholder:text-[#445566] outline-none transition-all duration-200 ${
                       formik.touched.password && formik.errors.password
                         ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
                         : 'border-black/[0.08] dark:border-[#22d3ee]/10 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-ring)] dark:focus:border-[#22d3ee]/40 dark:focus:ring-[#22d3ee]/15'
