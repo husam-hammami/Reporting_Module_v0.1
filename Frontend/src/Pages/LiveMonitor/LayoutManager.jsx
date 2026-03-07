@@ -197,7 +197,7 @@ const LayoutManager = () => {
                   type="text"
                   value={formData.layout_name}
                   onChange={(e) => setFormData({ ...formData, layout_name: e.target.value })}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                   placeholder="e.g., FCL Live Monitor"
                 />
               </div>
@@ -209,7 +209,7 @@ const LayoutManager = () => {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                   rows="3"
                   placeholder="Optional description"
                 />

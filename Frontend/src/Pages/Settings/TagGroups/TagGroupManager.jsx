@@ -376,7 +376,7 @@ const TagGroupManager = () => {
             placeholder="Search tag groups..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#0b111e] text-[#3a4a5c] dark:text-[#c1ccd9] focus:border-brand focus:ring-1 focus:ring-[#0e74904d] focus:outline-none placeholder:text-[#8898aa] transition-colors"
+            className="w-full pl-8 pr-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#081320] text-[#3a4a5c] dark:text-[#c1ccd9] focus:border-brand focus:ring-1 focus:ring-[#0e74904d] focus:outline-none placeholder:text-[#8898aa] transition-colors"
           />
         </div>
       </div>
@@ -432,7 +432,7 @@ const TagGroupManager = () => {
                     {group.tags.slice(0, 5).map((tag) => (
                       <span
                         key={tag.id}
-                        className="text-[10px] font-semibold rounded px-2 py-0.5 bg-[#f5f8fb] dark:bg-[#0b111e] text-[#3a4a5c] dark:text-[#c1ccd9] border border-[#e3e9f0] dark:border-[#1e2d40]"
+                        className="text-[10px] font-semibold rounded px-2 py-0.5 bg-[#f5f8fb] dark:bg-[#081320] text-[#3a4a5c] dark:text-[#c1ccd9] border border-[#e3e9f0] dark:border-[#1e2d40]"
                       >
                         {tag.tag_name}
                       </span>
@@ -453,9 +453,9 @@ const TagGroupManager = () => {
       {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#0b111e] rounded-xl border border-[#e3e9f0] dark:border-[#1e2d40] shadow-xl max-w-6xl w-full h-[85vh] flex flex-col overflow-hidden">
+          <div className="bg-white dark:bg-[#081320] rounded-xl border border-[#e3e9f0] dark:border-[#1e2d40] shadow-xl max-w-6xl w-full h-[85vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-white dark:bg-[#0b111e] border-b border-[#e3e9f0] dark:border-[#1e2d40] px-5 py-3 flex justify-between items-center flex-shrink-0">
+            <div className="bg-white dark:bg-[#081320] border-b border-[#e3e9f0] dark:border-[#1e2d40] px-5 py-3 flex justify-between items-center flex-shrink-0">
               <h3 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">
                 {editingGroup ? 'Edit Tag Group' : 'Create Tag Group'}
               </h3>
@@ -482,7 +482,7 @@ const TagGroupManager = () => {
                   type="text"
                   value={formData.group_name}
                   onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
-                  className="w-full px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#0b111e] text-[#3a4a5c] dark:text-[#c1ccd9] focus:border-brand focus:ring-1 focus:ring-[#0e74904d] focus:outline-none placeholder:text-[#8898aa] transition-colors"
+                  className="w-full px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#081320] text-[#3a4a5c] dark:text-[#c1ccd9] focus:border-brand focus:ring-1 focus:ring-[#0e74904d] focus:outline-none placeholder:text-[#8898aa] transition-colors"
                   placeholder="e.g., Sender Sources"
                 />
               </div>
@@ -495,7 +495,7 @@ const TagGroupManager = () => {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#0b111e] text-[#3a4a5c] dark:text-[#c1ccd9] focus:border-brand focus:ring-1 focus:ring-[#0e74904d] focus:outline-none placeholder:text-[#8898aa] transition-colors resize-none"
+                  className="w-full px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#081320] text-[#3a4a5c] dark:text-[#c1ccd9] focus:border-brand focus:ring-1 focus:ring-[#0e74904d] focus:outline-none placeholder:text-[#8898aa] transition-colors resize-none"
                   rows="3"
                   placeholder="Optional description"
                 />
@@ -510,7 +510,7 @@ const TagGroupManager = () => {
                   <button
                     type="button"
                     onClick={() => setTagsDropdownOpen(!tagsDropdownOpen)}
-                    className="w-full px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#0b111e] text-[#3a4a5c] dark:text-[#c1ccd9] flex items-center justify-between hover:border-brand focus:outline-none focus:ring-1 focus:ring-[#0e74904d] transition-colors flex-shrink-0"
+                    className="w-full px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#081320] text-[#3a4a5c] dark:text-[#c1ccd9] flex items-center justify-between hover:border-brand focus:outline-none focus:ring-1 focus:ring-[#0e74904d] transition-colors flex-shrink-0"
                   >
                     <span>
                       {formData.tag_names.length === 0
@@ -523,7 +523,7 @@ const TagGroupManager = () => {
                   {tagsDropdownOpen && (
                     <div 
                       ref={dropdownScrollRef}
-                      className="flex-1 mt-1.5 bg-white dark:bg-[#0b111e] border border-[#e3e9f0] dark:border-[#1e2d40] rounded-lg shadow-xl overflow-y-auto min-h-0"
+                      className="flex-1 mt-1.5 bg-white dark:bg-[#081320] border border-[#e3e9f0] dark:border-[#1e2d40] rounded-lg shadow-xl overflow-y-auto min-h-0"
                       onWheel={(e) => {
                         e.currentTarget.scrollTop += e.deltaY;
                         e.stopPropagation();
@@ -614,7 +614,7 @@ const TagGroupManager = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-2 px-5 py-3 border-t border-[#e3e9f0] dark:border-[#1e2d40] flex-shrink-0 bg-white dark:bg-[#0b111e]">
+            <div className="flex justify-end gap-2 px-5 py-3 border-t border-[#e3e9f0] dark:border-[#1e2d40] flex-shrink-0 bg-white dark:bg-[#081320]">
               <button
                 onClick={() => {
                   setShowForm(false);

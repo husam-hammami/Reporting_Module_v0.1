@@ -72,7 +72,7 @@ const LiveMonitorSectionBuilder = ({ section, onSave, onCancel }) => {
             type="text"
             value={formData.section_name}
             onChange={(e) => handleChange('section_name', e.target.value)}
-            className={`w-full p-2 border rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100 ${
+            className={`w-full p-2 border rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100 ${
               errors.section_name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
             }`}
             placeholder="e.g., Sender Sources, Key Metrics"
@@ -88,7 +88,7 @@ const LiveMonitorSectionBuilder = ({ section, onSave, onCancel }) => {
           <select
             value={formData.section_type}
             onChange={(e) => handleChange('section_type', e.target.value)}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
           >
             <option value="table">Table</option>
             <option value="kpi_cards">KPI Cards</option>
@@ -111,7 +111,7 @@ const LiveMonitorSectionBuilder = ({ section, onSave, onCancel }) => {
             min="1"
             value={formData.display_order}
             onChange={(e) => handleChange('display_order', parseInt(e.target.value) || 1)}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
           />
         </div>
 

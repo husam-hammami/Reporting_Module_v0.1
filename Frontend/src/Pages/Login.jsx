@@ -105,7 +105,7 @@ function Login() {
           </div>
 
           <div
-            className="bg-white/90 dark:bg-[#0d1a2a]/95 rounded-xl border border-black/[0.08] dark:border-[#22d3ee]/15 p-6 shadow-xl dark:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.08)]"
+            className="bg-white/90 dark:bg-[#091422]/95 rounded-xl border border-black/[0.08] dark:border-[#22d3ee]/25 p-6 shadow-xl dark:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.12)]"
           >
             <form onSubmit={formik.handleSubmit} className="flex flex-col gap-4">
               <div>

@@ -95,21 +95,21 @@
     --brand-ring: rgba(34, 211, 238, 0.3);
     --brand-glow: rgba(34, 211, 238, 0.15);
 
-    --glass-bg: rgba(6, 12, 26, 0.92);
-    --glass-border: rgba(34, 211, 238, 0.14);
+    --glass-bg: rgba(6, 12, 26, 0.94);
+    --glass-border: rgba(34, 211, 238, 0.22);
     --glass-blur: 20px;
 
-    --surface-elevated: #111c2e;
-    --surface-sunken: #080d19;
+    --surface-elevated: #0e1a2c;
+    --surface-sunken: #060e1a;
     --text-primary: #e8edf5;
     --text-secondary: #8899ab;
     --text-muted: #556677;
-    --border-subtle: rgba(34, 211, 238, 0.08);
+    --border-subtle: rgba(34, 211, 238, 0.10);
 
     --scada-cyan: #22d3ee;
-    --scada-cyan-glow: rgba(34, 211, 238, 0.25);
-    --scada-panel-bg: #0d1a2a;
-    --scada-panel-border: rgba(34, 211, 238, 0.18);
+    --scada-cyan-glow: rgba(34, 211, 238, 0.35);
+    --scada-panel-bg: #091422;
+    --scada-panel-border: rgba(34, 211, 238, 0.30);
   }
   
   @layer base {
@@ -162,15 +162,15 @@
   
   @layer utilities {
     .dark-input-field .MuiOutlinedInput-root {
-      background-color: #111c2e !important;
+      background-color: #091525 !important;
     }
     
     .dark-input-field .MuiOutlinedInput-root:hover {
-      background-color: #111c2e !important;
+      background-color: #091525 !important;
     }
     
     .dark-input-field .MuiOutlinedInput-root.Mui-focused {
-      background-color: #111c2e !important;
+      background-color: #091525 !important;
     }
     
     .theme-transition {
@@ -221,7 +221,7 @@
     }
 
     .dark .scada-panel {
-      box-shadow: 0 0 12px rgba(34, 211, 238, 0.04), inset 0 1px 0 rgba(34, 211, 238, 0.06);
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.08), 0 0 4px rgba(34, 211, 238, 0.06), inset 0 1px 0 rgba(34, 211, 238, 0.08);
     }
 
     .scada-panel-glow {
@@ -231,7 +231,7 @@
     }
 
     .dark .scada-panel-glow {
-      box-shadow: 0 0 20px rgba(34, 211, 238, 0.06), 0 0 4px rgba(34, 211, 238, 0.08), inset 0 1px 0 rgba(34, 211, 238, 0.08);
+      box-shadow: 0 0 24px rgba(34, 211, 238, 0.10), 0 0 8px rgba(34, 211, 238, 0.12), 0 0 2px rgba(34, 211, 238, 0.15), inset 0 1px 0 rgba(34, 211, 238, 0.10);
     }
 
     .scada-header {

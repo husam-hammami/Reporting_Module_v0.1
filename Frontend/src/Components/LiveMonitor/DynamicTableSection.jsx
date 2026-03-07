@@ -1538,7 +1538,7 @@ const DynamicTableSection = ({ section, tagValues, showHeader = true }) => {
         {/* Show column headers FIRST (before heading rows) */}
         {showHeader && (dataColumns.length > 0 || sortedColumns.length > 0) && (
         <thead>
-          <tr className="bg-gray-100 dark:!bg-[#0b111e]">
+          <tr className="bg-gray-100 dark:!bg-[#081320]">
               {/* If we have data columns, show them. Otherwise show all columns (backward compatibility) */}
               {(dataColumns.length > 0 ? dataColumns : sortedColumns).map((column) => {
                 // Normalize alignment: handle case variations and ensure valid value
@@ -1649,7 +1649,7 @@ const DynamicTableSection = ({ section, tagValues, showHeader = true }) => {
               return (
                 <tr
                   key={rowKey}
-                  className="hover:bg-gray-50 dark:hover:bg-[#0b111e] transition-colors"
+                  className="hover:bg-gray-50 dark:hover:bg-[#081320] transition-colors"
                 >
                   {/* Use dataColumns if available, otherwise use all columns (backward compatibility) */}
                   {(dataColumns.length > 0 ? dataColumns : sortedColumns).map((column) => {

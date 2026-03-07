@@ -89,7 +89,7 @@ const KpiConfig = () => {
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-gray-100 dark:!bg-[#0b111e] border-b border-gray-200 dark:!border-gray-700">
+              <tr className="bg-gray-100 dark:!bg-[#081320] border-b border-gray-200 dark:!border-gray-700">
                 <th className="text-left py-3 px-4 font-semibold dark:text-gray-100">KPI Name</th>
                 <th className="text-left py-3 px-4 font-semibold dark:text-gray-100">Layout</th>
                 <th className="text-left py-3 px-4 font-semibold dark:text-gray-100">Formula</th>
@@ -109,7 +109,7 @@ const KpiConfig = () => {
                 kpis.map((kpi) => (
                   <tr
                     key={kpi.id}
-                    className="border-b border-gray-200 dark:!border-gray-700 hover:bg-gray-50 dark:hover:!bg-[#0b111e]/50"
+                    className="border-b border-gray-200 dark:!border-gray-700 hover:bg-gray-50 dark:hover:!bg-[#081320]/50"
                   >
                     <td className="py-3 px-4 font-medium dark:text-gray-200">{kpi.kpi_name}</td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{kpi.layout_name ?? '—'}</td>

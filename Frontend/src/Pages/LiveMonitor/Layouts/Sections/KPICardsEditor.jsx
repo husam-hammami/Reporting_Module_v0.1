@@ -359,7 +359,7 @@ const KPICardsEditor = () => {
                       type="text"
                       value={card.card_label || ''}
                       onChange={(e) => updateCard(card.id, 'card_label', e.target.value)}
-                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                       placeholder="e.g., Total Flow Rate, Average Weight"
                     />
                   </div>
@@ -372,7 +372,7 @@ const KPICardsEditor = () => {
                     <select
                       value={card.source_type || 'tag'}
                       onChange={(e) => updateCard(card.id, 'source_type', e.target.value)}
-                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                     >
                       <option value="tag">Tag</option>
                       <option value="formula">Formula</option>
@@ -406,7 +406,7 @@ const KPICardsEditor = () => {
                             type="text"
                             value={typeof card.formula === 'string' ? card.formula : ''}
                             onChange={(e) => updateCard(card.id, 'formula', e.target.value)}
-                            className="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100 font-mono"
+                            className="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100 font-mono"
                             placeholder="e.g. flowrate/2 or (flour_1 / receiver_2) * 100"
                           />
                           <button
@@ -432,14 +432,14 @@ const KPICardsEditor = () => {
                                 type="text"
                                 value={m.alias_name || ''}
                                 onChange={(e) => updateTagMapping(card.id, idx, 'alias_name', e.target.value)}
-                                className="w-28 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100 font-mono"
+                                className="w-28 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100 font-mono"
                                 placeholder="alias"
                               />
                               <span className="text-gray-500">→</span>
                               <select
                                 value={m.tag_id ?? ''}
                                 onChange={(e) => setTagMappingTag(card.id, idx, e.target.value)}
-                                className="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                className="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                               >
                                 <option value="">Select tag...</option>
                                 {tags.map(t => (
@@ -480,7 +480,7 @@ const KPICardsEditor = () => {
                       type="text"
                       value={card.unit || ''}
                       onChange={(e) => updateCard(card.id, 'unit', e.target.value)}
-                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                       placeholder="e.g., t/h, kg, %"
                     />
                   </div>
@@ -496,7 +496,7 @@ const KPICardsEditor = () => {
                       max="10"
                       value={card.decimals !== undefined ? card.decimals : 2}
                       onChange={(e) => updateCard(card.id, 'decimals', parseInt(e.target.value) || 0)}
-                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                     />
                   </div>
 
@@ -509,7 +509,7 @@ const KPICardsEditor = () => {
                       type="text"
                       value={card.icon || ''}
                       onChange={(e) => updateCard(card.id, 'icon', e.target.value)}
-                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                       placeholder="e.g., fa-chart-line, fa-weight"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -533,7 +533,7 @@ const KPICardsEditor = () => {
                         type="text"
                         value={card.color || '#3B82F6'}
                         onChange={(e) => updateCard(card.id, 'color', e.target.value)}
-                        className="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                        className="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                         placeholder="#3B82F6"
                       />
                     </div>

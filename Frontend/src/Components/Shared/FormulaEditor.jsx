@@ -182,7 +182,7 @@ const FormulaEditor = ({ value = '', onChange, onSave, onCancel, formulaName = '
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
             placeholder="e.g., Total_Produced, Efficiency_Percentage"
           />
         </div>
@@ -200,7 +200,7 @@ const FormulaEditor = ({ value = '', onChange, onSave, onCancel, formulaName = '
             setError('');
             if (onChange) onChange(e.target.value);
           }}
-          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100 font-mono text-sm"
+          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100 font-mono text-sm"
           rows="4"
           placeholder="e.g., Sender1_Weight + Sender2_Weight"
         />
@@ -217,7 +217,7 @@ const FormulaEditor = ({ value = '', onChange, onSave, onCancel, formulaName = '
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Available Tags
         </label>
-        <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 bg-gray-50 dark:bg-[#0b111e] rounded-md border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 bg-gray-50 dark:bg-[#081320] rounded-md border border-gray-200 dark:border-gray-700">
           {availableTags.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">No tags available. Create tags in Settings → Tags.</p>
           ) : (
@@ -272,7 +272,7 @@ const FormulaEditor = ({ value = '', onChange, onSave, onCancel, formulaName = '
       </div>
 
       {/* Test Formula */}
-      <div className="mb-4 p-4 bg-gray-50 dark:bg-[#0b111e] rounded-md border border-gray-200 dark:border-gray-700">
+      <div className="mb-4 p-4 bg-gray-50 dark:bg-[#081320] rounded-md border border-gray-200 dark:border-gray-700">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Test Formula (Enter test values for tags)
         </label>

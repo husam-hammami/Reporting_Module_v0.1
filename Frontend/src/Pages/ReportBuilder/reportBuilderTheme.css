@@ -97,16 +97,17 @@
    ═══════════════════════════════════════════════════════════════ */
 .dark .report-builder {
   --rb-bg-deep: transparent;
-  --rb-surface: rgba(8,13,25,0.85);
-  --rb-panel: #0d1a2a;
-  --rb-panel-raised: #111c2e;
+  --rb-surface: rgba(8,13,25,0.92);
+  --rb-panel: #091525;
+  --rb-panel-raised: #0e1a2c;
   --rb-canvas: transparent;
-  --rb-input: #0d1a2a;
-  --rb-card-bg: #0c1828;
+  --rb-input: #091525;
+  --rb-card-bg: #081320;
+  --rb-card-bg-elevated: #0a1728;
 
-  --rb-border: rgba(34, 211, 238, 0.14);
-  --rb-border-subtle: rgba(34, 211, 238, 0.07);
-  --rb-card-border: rgba(34, 211, 238, 0.28);
+  --rb-border: rgba(34, 211, 238, 0.20);
+  --rb-border-subtle: rgba(34, 211, 238, 0.10);
+  --rb-card-border: rgba(34, 211, 238, 0.38);
 
   --rb-text: #e8edf5;
   --rb-text-secondary: #8899ab;
@@ -116,7 +117,7 @@
   --rb-accent: #22d3ee;
   --rb-accent-hover: #67e8f9;
   --rb-accent-subtle: rgba(34, 211, 238, 0.08);
-  --rb-accent-glow: rgba(34, 211, 238, 0.20);
+  --rb-accent-glow: rgba(34, 211, 238, 0.28);
   --rb-accent-bright: #67e8f9;
 
   --rb-success: #34d399;
@@ -335,12 +336,12 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 .dark .report-builder .rb-widget-card {
-  border-color: rgba(34, 211, 238, 0.28);
+  border-color: rgba(34, 211, 238, 0.38);
   box-shadow:
-    0 0 1px rgba(34, 211, 238, 0.25),
-    0 0 8px rgba(34, 211, 238, 0.12),
-    0 0 20px rgba(34, 211, 238, 0.06),
-    inset 0 1px 0 rgba(34, 211, 238, 0.08);
+    0 0 1px rgba(34, 211, 238, 0.35),
+    0 0 10px rgba(34, 211, 238, 0.16),
+    0 0 24px rgba(34, 211, 238, 0.08),
+    inset 0 1px 0 rgba(34, 211, 238, 0.10);
 }
 
 .report-builder .rb-widget-card:hover {
@@ -348,12 +349,12 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .dark .report-builder .rb-widget-card:hover {
-  border-color: rgba(34, 211, 238, 0.42);
+  border-color: rgba(34, 211, 238, 0.52);
   box-shadow:
-    0 0 2px rgba(34, 211, 238, 0.3),
-    0 0 12px rgba(34, 211, 238, 0.15),
-    0 0 28px rgba(34, 211, 238, 0.08),
-    0 0 4px rgba(34, 211, 238, 0.12);
+    0 0 2px rgba(34, 211, 238, 0.4),
+    0 0 14px rgba(34, 211, 238, 0.20),
+    0 0 30px rgba(34, 211, 238, 0.10),
+    0 0 4px rgba(34, 211, 238, 0.15);
 }
 
 .report-builder .rb-widget-card.rb-widget-selected,

@@ -166,7 +166,7 @@ const LiveMonitorLayoutForm = ({ layout, onSave, onCancel }) => {
             type="text"
             value={formData.layout_name}
             onChange={(e) => handleChange('layout_name', e.target.value)}
-            className={`w-full p-2 border rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100 ${
+            className={`w-full p-2 border rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100 ${
               errors.layout_name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
             }`}
             placeholder="e.g., FCL Live Monitor, Energy Dashboard"
@@ -182,7 +182,7 @@ const LiveMonitorLayoutForm = ({ layout, onSave, onCancel }) => {
           <textarea
             value={formData.description}
             onChange={(e) => handleChange('description', e.target.value)}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
             rows="3"
             placeholder="Describe the purpose and usage of this live monitor layout"
           />
@@ -247,7 +247,7 @@ const LiveMonitorLayoutForm = ({ layout, onSave, onCancel }) => {
                   console.log('[LiveMonitorLayoutForm] Dropdown opened, reloading tags...');
                   loadTags();
                 }}
-                className={`w-full p-2 border rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100 ${
+                className={`w-full p-2 border rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100 ${
                   errors.line_running_tag_name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                 }`}
               >

@@ -215,7 +215,7 @@ function TableData({ headers, data, dataKeys, actions, useFilter }) {
   };
 
   return (
-    <Paper className="w-full mt-5 !rounded-lg !bg-white dark:!bg-[#0b111e] dark:!text-white">
+    <Paper className="w-full mt-5 !rounded-lg !bg-white dark:!bg-[#081320] dark:!text-white">
       <TableContainer className="overflow-x-auto rounded-lg shadow-md" sx={{ minWidth: 550 }}>
         {/* Filter Section */}
         {useFilter && (
@@ -283,7 +283,7 @@ function TableData({ headers, data, dataKeys, actions, useFilter }) {
                   key={row.id || rowIndex}
                   className={`transition-all duration-300 ease-in-out ${
                     rowIndex % 2 === 0 
-                      ? 'bg-white dark:bg-[#0b111e]' 
+                      ? 'bg-white dark:bg-[#081320]' 
                       : 'bg-zinc-50 dark:bg-[#131b2d]'
                   } hover:!bg-zinc-200 dark:hover:!bg-[#131b2d] ${
                     auth.username === row.username &&

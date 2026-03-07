@@ -418,7 +418,7 @@ const LiveMonitorChartSectionEditor = () => {
               <select
                 value={config.chart_type || 'line'}
                 onChange={(e) => updateSectionConfig('chart_type', e.target.value)}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
               >
                 {chartTypes.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -442,7 +442,7 @@ const LiveMonitorChartSectionEditor = () => {
                 step="0.5"
                 value={config.refresh_interval || 1}
                 onChange={(e) => updateSectionConfig('refresh_interval', parseFloat(e.target.value) || 1)}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 How often to update the chart data (in seconds). Minimum: 0.5 seconds.
@@ -461,7 +461,7 @@ const LiveMonitorChartSectionEditor = () => {
                 <button
                   type="button"
                   onClick={() => setXAxisDropdownOpen(!xAxisDropdownOpen)}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100 text-left flex items-center justify-between"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100 text-left flex items-center justify-between"
                 >
                   <span className="truncate">
                     {(() => {
@@ -494,7 +494,7 @@ const LiveMonitorChartSectionEditor = () => {
                       className="fixed inset-0 z-10"
                       onClick={() => setXAxisDropdownOpen(false)}
                     />
-                    <div className="absolute z-20 w-full mt-1 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] shadow-lg">
+                    <div className="absolute z-20 w-full mt-1 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] shadow-lg">
                       {availableTagNames.length === 0 ? (
                         <p className="text-sm text-gray-500 dark:text-gray-400 p-2">Loading tag names...</p>
                       ) : (
@@ -587,7 +587,7 @@ const LiveMonitorChartSectionEditor = () => {
                         value={dataset.label || ''}
                         onChange={(e) => updateDataset(dataset.id, 'label', e.target.value)}
                         placeholder="e.g., Temperature, Pressure"
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                       />
                     </div>
 
@@ -607,7 +607,7 @@ const LiveMonitorChartSectionEditor = () => {
                           value={dataset.color || '#3B82F6'}
                           onChange={(e) => updateDataset(dataset.id, 'color', e.target.value)}
                           placeholder="#3B82F6"
-                          className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                          className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                         />
                       </div>
                     </div>
@@ -622,7 +622,7 @@ const LiveMonitorChartSectionEditor = () => {
                         max="10"
                         value={dataset.borderWidth || 2}
                         onChange={(e) => updateDataset(dataset.id, 'borderWidth', parseInt(e.target.value) || 2)}
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                       />
                     </div>
                   </div>

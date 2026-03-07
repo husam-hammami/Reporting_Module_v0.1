@@ -50,11 +50,11 @@ A full-stack industrial plant monitoring system with a React frontend and Flask 
 Complete app-shell redesign extending the Report Builder's Mission Control aesthetic to all pages. Zero backend changes.
 
 ### Design System (Global) — Industrial SCADA Theme
-- **Dark palette**: Deep navy control-room (`#060c1a` body, `#0a1020` navbar/sidenav, `#0d1a2a` panels, `#111c2e` elevated surfaces)
+- **Dark palette**: Deep navy control-room (`#060c1a` body, `#070e1c` navbar, `#071018` sidenav, `#091422`/`#091525` panels, `#0e1a2c` elevated surfaces, `#081320` card backgrounds)
 - **Video background**: `bg-video.mp4` (futuristic neon wave) in `Frontend/index.html` (outside React `#root`). Both modes: `#root { position:relative; z-index:1 }` sits above fixed video at `z-index:0`. Dark mode: 40% opacity, no filter, dark gradient overlay. Light mode: 18% opacity with `invert(1) hue-rotate(180deg) saturate(0.3) brightness(1.4)` filter, light gradient overlay. All page containers use `bg-transparent` or semi-transparent (`bg-white/90`, `rgba(...)`) with `backdrop-blur` for frosted-glass effect.
 - **Primary accent**: Cyan `#22d3ee` (dark mode), `#0284c7` (light mode) — used for active states, borders; glows only in dark mode
 - **Semantic colors**: Light mode uses muted professional tones (`#059669` success, `#d97706` warning, `#dc2626` danger); dark mode uses brighter variants (`#34d399`, `#fbbf24`, `#fb7185`)
-- **Panel borders**: `rgba(34, 211, 238, 0.28)` widget cards, `rgba(34, 211, 238, 0.18)` tables/sections, with prominent box-shadow glow in dark mode
+- **Panel borders**: `rgba(34, 211, 238, 0.38)` widget cards, `rgba(34, 211, 238, 0.30)` panels, with prominent multi-layer box-shadow glow in dark mode
 - **Typography**: Inter font, system-ui fallback; category headers bold uppercase with `tracking-[0.18em]`
 - **Utility classes**: `.scada-panel`, `.scada-panel-glow`, `.scada-header` for consistent instrument-panel look
 - **Scrollbars**: Cyan-tinted in dark mode (`rgba(34, 211, 238, 0.12)`)

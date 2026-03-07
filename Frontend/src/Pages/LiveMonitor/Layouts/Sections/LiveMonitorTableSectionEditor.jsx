@@ -514,7 +514,7 @@ const LiveMonitorTableSectionEditor = () => {
                       }
                     }));
                   }}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                   placeholder="e.g., Setpoints, Sender, Receiver"
                 />
               </div>
@@ -550,7 +550,7 @@ const LiveMonitorTableSectionEditor = () => {
             step="0.5"
             value={refreshInterval}
             onChange={(e) => updateSectionConfig('refresh_interval', parseFloat(e.target.value) || 1)}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
           />
           <p className="text-base text-gray-500 dark:text-gray-400 mt-1">
             How often to update the table data (in seconds). Minimum: 0.5 seconds.
@@ -654,7 +654,7 @@ const LiveMonitorTableSectionEditor = () => {
                             value={column.column_label || ''}
                             onChange={(e) => updateColumn(column.id, 'column_label', e.target.value)}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full p-2 text-base border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                            className="w-full p-2 text-base border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                             placeholder="e.g., Micro Ingredient 1, Setpoint Values"
                           />
                           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">
@@ -673,7 +673,7 @@ const LiveMonitorTableSectionEditor = () => {
                               value={column.column_label || ''}
                               onChange={(e) => updateColumn(column.id, 'column_label', e.target.value)}
                               onClick={(e) => e.stopPropagation()}
-                              className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                              className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                               placeholder="e.g., Bran reciver, Weight, Material"
                             />
                             <p className="text-base text-gray-500 dark:text-gray-400 mt-1">
@@ -690,7 +690,7 @@ const LiveMonitorTableSectionEditor = () => {
                               value={column.alignment || 'left'}
                               onChange={(e) => updateColumn(column.id, 'alignment', e.target.value)}
                               onClick={(e) => e.stopPropagation()}
-                              className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                              className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                             >
                               <option value="left">Left</option>
                               <option value="center">Center</option>
@@ -748,7 +748,7 @@ const LiveMonitorTableSectionEditor = () => {
             <select
               value={tagGroup}
               onChange={(e) => updateSectionConfig('tag_group', e.target.value)}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
             >
               <option value="">Select Tag Group...</option>
               {tagGroups.map(group => (
@@ -956,7 +956,7 @@ const LiveMonitorTableSectionEditor = () => {
                                           }
                       }}
                       placeholder="Row label (e.g., Bran Fine)"
-                                        className="w-full p-2 text-base border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                        className="w-full p-2 text-base border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                         onClick={(e) => e.stopPropagation()}
                                       />
                   </div>
@@ -1022,7 +1022,7 @@ const LiveMonitorTableSectionEditor = () => {
                                   updateStaticRows(updated);
                                                     }
                                 }}
-                                className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                                   onClick={(e) => e.stopPropagation()}
                               >
                                 <option value="name">Tag Name</option>
@@ -1070,7 +1070,7 @@ const LiveMonitorTableSectionEditor = () => {
                                     updateStaticRows(updated);
                                                       }
                                   }}
-                                  className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                  className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                                     onClick={(e) => e.stopPropagation()}
                                 >
                                   <option value="tag">Use Tag Name</option>
@@ -1118,7 +1118,7 @@ const LiveMonitorTableSectionEditor = () => {
                                                       }
                                   }}
                                   placeholder="Enter custom name..."
-                                  className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                  className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                                     onClick={(e) => e.stopPropagation()}
                                 />
                               </div>
@@ -1251,7 +1251,7 @@ const LiveMonitorTableSectionEditor = () => {
                                                       }
                                   }}
                                   placeholder="e.g., kg, t/h, %"
-                                  className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                  className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                                     onClick={(e) => e.stopPropagation()}
                                 />
                               </div>
@@ -1370,7 +1370,7 @@ const LiveMonitorTableSectionEditor = () => {
                                   }
                                 }}
                                 placeholder="Heading text (e.g., Micro Ingredient 1)"
-                                className="w-full p-2 text-base border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                className="w-full p-2 text-base border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                 onClick={(e) => e.stopPropagation()}
                               />
                             </div>
@@ -1450,7 +1450,7 @@ const LiveMonitorTableSectionEditor = () => {
                                             }
                                           }}
                                           placeholder="Row label (e.g., Bran Fine)"
-                                          className="w-full p-2 text-base border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                          className="w-full p-2 text-base border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                           onClick={(e) => e.stopPropagation()}
                                         />
                   </div>
@@ -1515,7 +1515,7 @@ const LiveMonitorTableSectionEditor = () => {
                                                         updateStaticRows(updated);
                                                       }
                                                     }}
-                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                                     onClick={(e) => e.stopPropagation()}
                     >
                                                     <option value="name">Tag Name</option>
@@ -1563,7 +1563,7 @@ const LiveMonitorTableSectionEditor = () => {
                                                           updateStaticRows(updated);
                                                         }
                                                       }}
-                                                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                                       onClick={(e) => e.stopPropagation()}
                                                     >
                                                       <option value="tag">Use Tag Name</option>
@@ -1611,7 +1611,7 @@ const LiveMonitorTableSectionEditor = () => {
                                                         }
                                                       }}
                                                       placeholder="Enter custom name..."
-                                                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                                       onClick={(e) => e.stopPropagation()}
                                                     />
               </div>
@@ -1743,7 +1743,7 @@ const LiveMonitorTableSectionEditor = () => {
                                                         }
                                                       }}
                                                       placeholder="e.g., kg, t/h, %"
-                                                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                                                      className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                                                       onClick={(e) => e.stopPropagation()}
                                                     />
       </div>

@@ -121,7 +121,7 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
               type="text"
               value={formData.group_name}
               onChange={(e) => handleChange('group_name', e.target.value)}
-              className={`w-full p-2 border rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100 ${
+              className={`w-full p-2 border rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100 ${
                 errors.group_name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
               placeholder="e.g., Sender Sources, Receiver Destinations"
@@ -137,7 +137,7 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
             <textarea
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
               rows="2"
               placeholder="Optional description of this tag group"
             />
@@ -159,7 +159,7 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
                       e.target.value = '';
                     }
                   }}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                 >
                   <option value="">Add a tag...</option>
                   {availableTagsToAdd.map(tag => (
@@ -183,7 +183,7 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
                       onDragStart={() => handleDragStart(index)}
                       onDragOver={handleDragOver}
                       onDrop={() => handleDrop(index)}
-                      className="flex items-center gap-3 p-3 bg-gray-50 dark:!bg-[#0b111e] border border-gray-200 dark:border-gray-700 rounded-md cursor-move"
+                      className="flex items-center gap-3 p-3 bg-gray-50 dark:!bg-[#081320] border border-gray-200 dark:border-gray-700 rounded-md cursor-move"
                     >
                       <FaGripVertical className="text-gray-400" />
                       <span className="flex-1 text-sm font-medium dark:text-gray-100">

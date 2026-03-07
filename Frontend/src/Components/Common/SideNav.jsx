@@ -89,7 +89,7 @@ export default function SideNav() {
             paddingTop: '80px',
             borderRight: '1px solid rgba(0,0,0,0.08)',
             '.dark &': {
-              background: 'rgba(10,16,32,0.95)',
+              background: 'rgba(7,14,28,0.96)',
               color: '#e8edf5',
               borderRight: '1px solid rgba(34, 211, 238, 0.1)',
               boxShadow: '1px 0 8px rgba(0,0,0,0.3)',

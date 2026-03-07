@@ -138,7 +138,7 @@ export function ReceiverPanel({ receiverRows = [] }) {
             return (
               <div
                 key={idx}
-                className="p-4 rounded-lg bg-gray-50 dark:bg-[#0b111e] border border-gray-200 dark:border-gray-700"
+                className="p-4 rounded-lg bg-gray-50 dark:bg-[#081320] border border-gray-200 dark:border-gray-700"
               >
                 <p className="text-sm font-medium text-brand dark:text-cyan-400">
                   ID {row.id}
@@ -198,7 +198,7 @@ export function SetpointsPanel({ setpoints = [] }) {
           {standardItems.map(({ id, label, display, pct, Icon }) => (
             <div
               key={id}
-              className="flex flex-col items-center p-4 rounded-lg bg-gray-50 dark:bg-[#0b111e] border border-gray-200 dark:border-gray-700"
+              className="flex flex-col items-center p-4 rounded-lg bg-gray-50 dark:bg-[#081320] border border-gray-200 dark:border-gray-700"
             >
               <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-2">
                 <Icon className="text-lg" />
@@ -218,7 +218,7 @@ export function SetpointsPanel({ setpoints = [] }) {
             return (
               <div
                 key={sp.id || idx}
-                className="flex flex-col items-center p-3 rounded-lg bg-gray-50 dark:bg-[#0b111e] border border-gray-200 dark:border-gray-700"
+                className="flex flex-col items-center p-3 rounded-lg bg-gray-50 dark:bg-[#081320] border border-gray-200 dark:border-gray-700"
               >
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400 text-center">{sp.id}</span>
                 <p className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1">{display}</p>

@@ -165,7 +165,7 @@ const ExportImport = () => {
               <label className="text-[11px] font-medium text-[#6b7f94] mb-1.5 block">
                 Select JSON File
               </label>
-              <label className="w-full px-3 py-2.5 bg-[#f5f8fb] dark:bg-[#0b111e] hover:bg-[#edf2f7] dark:hover:bg-[#131b2d] text-[#6b7f94] text-[12px] font-medium rounded-lg flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-[#e3e9f0] dark:border-[#1e2d40] transition-colors">
+              <label className="w-full px-3 py-2.5 bg-[#f5f8fb] dark:bg-[#081320] hover:bg-[#edf2f7] dark:hover:bg-[#131b2d] text-[#6b7f94] text-[12px] font-medium rounded-lg flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-[#e3e9f0] dark:border-[#1e2d40] transition-colors">
                 <FaUpload className="text-[12px]" />
                 Choose File
                 <input

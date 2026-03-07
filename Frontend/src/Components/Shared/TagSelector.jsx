@@ -70,7 +70,7 @@ const TagSelector = ({ value, onChange, sourceTypeFilter, placeholder = "Select 
     ? tags.filter(t => t.source_type === sourceTypeFilter && t.is_active)
     : tags.filter(t => t.is_active);
 
-  const defaultClassName = `w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#0b111e] text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand focus:border-brand ${className}`;
+  const defaultClassName = `w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand focus:border-brand ${className}`;
 
   if (loading) {
     return (

@@ -315,7 +315,7 @@ const DynamicKPISection = ({ section, tagValues, kpiValues = {} }) => {
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 chartType === value
                   ? 'bg-brand text-white shadow'
-                  : 'bg-gray-200 dark:bg-[#0b111e] text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-[#131b2d]'
+                  : 'bg-gray-200 dark:bg-[#081320] text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-[#131b2d]'
               }`}
             >
               {label}

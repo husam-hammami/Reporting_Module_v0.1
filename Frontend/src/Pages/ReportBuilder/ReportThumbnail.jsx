@@ -73,7 +73,7 @@ export default function ReportThumbnail({ template }) {
       <div style={{
         width: '100%', height: '100%',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: isDark ? '#060c1a' : 'rgba(255,255,255,0.85)',
+        background: isDark ? '#071018' : 'rgba(255,255,255,0.85)',
       }}>
         <div style={{ textAlign: 'center', opacity: 0.3 }}>
           <LayoutGrid size={24} style={{ color: isDark ? '#475569' : '#94a3b8', margin: '0 auto 6px' }} />
@@ -91,7 +91,7 @@ export default function ReportThumbnail({ template }) {
   return (
     <div style={{
       width: '100%', height: '100%', position: 'relative', overflow: 'hidden',
-      background: isDark ? '#060c1a' : 'rgba(255,255,255,0.85)',
+      background: isDark ? '#071018' : 'rgba(255,255,255,0.85)',
       display: 'flex', flexDirection: 'column',
     }}>
       <div style={{
