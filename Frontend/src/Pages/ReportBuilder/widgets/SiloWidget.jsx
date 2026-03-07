@@ -76,18 +76,18 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
   const fillRatio = Math.max(0, Math.min(1, fillPercent / 100));
   const uid = React.useId ? React.useId() : `s-${Math.random().toString(36).slice(2, 8)}`;
 
-  const W = 140;
+  const W = 120;
   const H = 170;
   const cx = W / 2;
 
-  const bodyL = 12;
-  const bodyR = W - 12;
+  const bodyL = 20;
+  const bodyR = W - 20;
   const bodyW = bodyR - bodyL;
   const rx = bodyW / 2;
-  const ry = 14;
+  const ry = 12;
 
-  const topY = 18;
-  const botY = 152;
+  const topY = 16;
+  const botY = 154;
   const bodyH = botY - topY;
 
   const fillH = bodyH * fillRatio;
@@ -103,29 +103,29 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet" aria-hidden role="img">
       <defs>
         <linearGradient id={`${uid}-body`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#3a4048" />
-          <stop offset="18%" stopColor="#4a5058" />
-          <stop offset="40%" stopColor="#585e66" />
-          <stop offset="50%" stopColor="#5e646c" />
-          <stop offset="60%" stopColor="#585e66" />
-          <stop offset="82%" stopColor="#4a5058" />
-          <stop offset="100%" stopColor="#3a4048" />
+          <stop offset="0%" stopColor="#6b7280" />
+          <stop offset="15%" stopColor="#7d8594" />
+          <stop offset="35%" stopColor="#929aa6" />
+          <stop offset="50%" stopColor="#9ca3af" />
+          <stop offset="65%" stopColor="#929aa6" />
+          <stop offset="85%" stopColor="#7d8594" />
+          <stop offset="100%" stopColor="#6b7280" />
         </linearGradient>
 
         <linearGradient id={`${uid}-top`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#444a52" />
-          <stop offset="30%" stopColor="#565c64" />
-          <stop offset="50%" stopColor="#62686e" />
-          <stop offset="70%" stopColor="#565c64" />
-          <stop offset="100%" stopColor="#444a52" />
+          <stop offset="0%" stopColor="#78808c" />
+          <stop offset="30%" stopColor="#8e96a2" />
+          <stop offset="50%" stopColor="#9aa2ae" />
+          <stop offset="70%" stopColor="#8e96a2" />
+          <stop offset="100%" stopColor="#78808c" />
         </linearGradient>
 
         <linearGradient id={`${uid}-bot`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#303840" />
-          <stop offset="30%" stopColor="#404850" />
-          <stop offset="50%" stopColor="#484e56" />
-          <stop offset="70%" stopColor="#404850" />
-          <stop offset="100%" stopColor="#303840" />
+          <stop offset="0%" stopColor="#5c6370" />
+          <stop offset="30%" stopColor="#6e7580" />
+          <stop offset="50%" stopColor="#787f8a" />
+          <stop offset="70%" stopColor="#6e7580" />
+          <stop offset="100%" stopColor="#5c6370" />
         </linearGradient>
 
         <linearGradient id={`${uid}-fill`} x1="0" y1="0" x2="1" y2="0">
@@ -172,12 +172,12 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
       )}
 
       <ellipse cx={cx} cy={topY} rx={rx} ry={ry}
-        fill={`url(#${uid}-top)`} stroke="#555d65" strokeWidth="0.5" />
+        fill={`url(#${uid}-top)`} stroke="#8890a0" strokeWidth="0.5" />
 
       <line x1={bodyL} y1={topY} x2={bodyL} y2={botY}
-        stroke="#555d65" strokeWidth="0.5" />
+        stroke="#8890a0" strokeWidth="0.4" />
       <line x1={bodyR} y1={topY} x2={bodyR} y2={botY}
-        stroke="#333b43" strokeWidth="0.5" />
+        stroke="#5a6270" strokeWidth="0.4" />
 
       <text x={cx} y={topY + bodyH / 2 + 8} textAnchor="middle"
         fontSize="22" fontWeight="700"
@@ -258,7 +258,7 @@ export default function SiloWidget({ config, tagValues }) {
       <div
         className="w-full flex-1 min-h-0 flex items-center justify-center cursor-help"
         title={`${displayPercent}${unit !== '%' ? ` ${unit}` : '%'}${tons != null ? ` • ${displayTons} t` : ''}`}
-        style={{ maxWidth: '200px', margin: '0 auto' }}
+        style={{ maxWidth: '140px', margin: '0 auto' }}
       >
         <GrainSilo3D fillPercent={fillPercent} fillColor={fillColor} skipAnimation={skipAnimation} />
       </div>
