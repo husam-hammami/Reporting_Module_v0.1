@@ -10,7 +10,23 @@
     <title>HERCULES-V2</title>
   </head>
   <body>
+    <video id="bg-video" autoplay loop muted playsinline preload="auto">
+      <source src="/bg-video.mp4" type="video/mp4" />
+    </video>
+    <div id="bg-video-overlay"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      (function() {
+        var v = document.getElementById('bg-video');
+        if (!v) return;
+        v.playbackRate = 0.75;
+        function tp() { v.play().catch(function(){}); }
+        tp();
+        v.addEventListener('canplay', tp);
+        document.addEventListener('click', tp, { once: true });
+        document.addEventListener('touchstart', tp, { once: true });
+      })();
+    </script>
   </body>
 </html>

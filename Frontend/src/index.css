@@ -121,6 +121,42 @@
       @apply font-sans antialiased bg-white dark:bg-[#060c1a] text-foreground;
     }
   }
+
+  #bg-video {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .dark #bg-video {
+    display: block;
+  }
+
+  #bg-video-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+    background: linear-gradient(180deg, rgba(6,12,26,0.82) 0%, rgba(6,12,26,0.72) 40%, rgba(6,12,26,0.85) 100%);
+  }
+  .dark #bg-video-overlay {
+    display: block;
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+  }
   
   @layer utilities {
     .dark-input-field .MuiOutlinedInput-root {
