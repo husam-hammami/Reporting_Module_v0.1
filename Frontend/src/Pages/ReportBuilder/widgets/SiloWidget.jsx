@@ -90,13 +90,8 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
   const roofEllipseRy = 10;
 
   const bodyTop = roofBase;
-  const bodyBot = 148;
+  const bodyBot = 182;
   const bodyH = bodyBot - bodyTop;
-
-  const hopperBot = 170;
-  const hopperEllipseRy = 6;
-
-  const legBot = 192;
 
   const fillH = bodyH * fillRatio;
   const fillY = bodyBot - fillH;
@@ -171,43 +166,10 @@ function GrainSilo3D({ fillPercent, fillColor, skipAnimation }) {
           <stop offset="100%" stopColor="black" stopOpacity="0.18" />
         </linearGradient>
 
-        <linearGradient id={`${uid}-hopper`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#5a6a78" />
-          <stop offset="30%" stopColor="#8898a8" />
-          <stop offset="50%" stopColor="#a0b0c0" />
-          <stop offset="70%" stopColor="#8898a8" />
-          <stop offset="100%" stopColor="#5a6a78" />
-        </linearGradient>
-
-        <linearGradient id={`${uid}-leg-g`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#556677" />
-          <stop offset="50%" stopColor="#8899aa" />
-          <stop offset="100%" stopColor="#556677" />
-        </linearGradient>
-
         <clipPath id={`${uid}-body-clip`}>
           <rect x={bodyL} y={bodyTop} width={bodyW} height={bodyH} />
         </clipPath>
       </defs>
-
-      <line x1={bodyL + 8} y1={bodyBot + hopperEllipseRy} x2={bodyL - 2} y2={legBot}
-        stroke={`url(#${uid}-leg-g)`} strokeWidth="3" strokeLinecap="round" />
-      <line x1={bodyR - 8} y1={bodyBot + hopperEllipseRy} x2={bodyR + 2} y2={legBot}
-        stroke={`url(#${uid}-leg-g)`} strokeWidth="3" strokeLinecap="round" />
-      <line x1={cx - 6} y1={hopperBot} x2={cx - 6} y2={legBot}
-        stroke={`url(#${uid}-leg-g)`} strokeWidth="2.5" strokeLinecap="round" />
-      <line x1={cx + 6} y1={hopperBot} x2={cx + 6} y2={legBot}
-        stroke={`url(#${uid}-leg-g)`} strokeWidth="2.5" strokeLinecap="round" />
-
-      <line x1={bodyL + 2} y1={legBot - 8} x2={bodyR - 2} y2={legBot - 8}
-        stroke="#667788" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1={bodyL - 4} y1={legBot} x2={bodyR + 4} y2={legBot}
-        stroke="#778899" strokeWidth="2.5" strokeLinecap="round" />
-
-      <path d={`M ${bodyL} ${bodyBot} L ${cx - 8} ${hopperBot} L ${cx + 8} ${hopperBot} L ${bodyR} ${bodyBot}`}
-        fill={`url(#${uid}-hopper)`} stroke="#778899" strokeWidth="0.7" strokeLinejoin="round" />
-      <ellipse cx={cx} cy={hopperBot} rx="8" ry={hopperEllipseRy - 2}
-        fill="#667788" stroke="#556677" strokeWidth="0.5" />
 
       <rect x={bodyL} y={bodyTop} width={bodyW} height={bodyH}
         fill={`url(#${uid}-metal)`} stroke="#8898a6" strokeWidth="0.7" />
