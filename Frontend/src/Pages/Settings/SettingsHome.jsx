@@ -40,13 +40,13 @@ const SettingsHome = () => {
   const showDefault = location.pathname === '/settings';
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-[#f8f9fb] dark:bg-[#050b18]">
-      <div className="sticky top-0 z-10 bg-white/90 dark:bg-[#070e1c]/95 border-b border-black/[0.06] dark:border-[#22d3ee]/10 px-6 pt-4 pb-0"
+    <div className="min-h-[calc(100vh-80px)] bg-[#f8f9fb] dark:bg-[#c0c6cf]">
+      <div className="sticky top-0 z-10 bg-white/90 dark:bg-[#c8ced6]/95 border-b border-black/[0.06] dark:border-[#0891b2]/10 px-6 pt-4 pb-0"
         style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
       >
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-1 h-4 rounded-full bg-[#a78bfa] dark:bg-[#22d3ee]" />
-          <h1 className="text-[15px] font-bold text-[#0f1729] dark:text-[#e8edf5] tracking-tight">Engineering</h1>
+          <div className="w-1 h-4 rounded-full bg-[#a78bfa] dark:bg-[#0891b2]" />
+          <h1 className="text-[15px] font-bold text-[#0f1729] dark:text-[#141820] tracking-tight">Engineering</h1>
         </div>
         <nav className="flex gap-0 -mb-px overflow-x-auto">
           {filteredNavItems.map((item) => {
@@ -59,7 +59,7 @@ const SettingsHome = () => {
                 className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium whitespace-nowrap border-b-2 transition-all duration-200 ${
                   active
                     ? 'border-[var(--brand)] text-[var(--brand)] bg-[var(--brand-subtle)]'
-                    : 'border-transparent text-[#64748b] dark:text-[#556677] hover:text-[#334155] dark:hover:text-[#8899ab] hover:border-[#cbd5e1] dark:hover:border-[#22d3ee]/20'
+                    : 'border-transparent text-[#64748b] dark:text-[#606878] hover:text-[#334155] dark:hover:text-[#3c4452] hover:border-[#cbd5e1] dark:hover:border-[#0891b2]/20'
                 }`}
               >
                 <Icon size={12} />
@@ -73,11 +73,11 @@ const SettingsHome = () => {
       <div className="max-w-[1200px] mx-auto px-5 py-4">
         {showDefault ? (
           <div className="text-center py-16 px-6">
-            <div className="w-12 h-12 rounded-xl bg-[#f0f5fa] dark:bg-[#0c1829] dark:border dark:border-[#22d3ee]/10 flex items-center justify-center mx-auto mb-4">
-              <FaTags className="text-[#94a3b8] dark:text-[#22d3ee]/50 text-lg" />
+            <div className="w-12 h-12 rounded-xl bg-[#f0f5fa] dark:bg-[#d8dde5] dark:border dark:border-[#0891b2]/10 flex items-center justify-center mx-auto mb-4">
+              <FaTags className="text-[#94a3b8] dark:text-[#0891b2]/60 text-lg" />
             </div>
-            <h2 className="text-[14px] font-semibold text-[#334155] dark:text-[#e8edf5] mb-1">Select a section</h2>
-            <p className="text-[12px] text-[#94a3b8] dark:text-[#556677] max-w-sm mx-auto">
+            <h2 className="text-[14px] font-semibold text-[#334155] dark:text-[#141820] mb-1">Select a section</h2>
+            <p className="text-[12px] text-[#94a3b8] dark:text-[#606878] max-w-sm mx-auto">
               Choose a tab above to manage tags, groups, mappings, or system settings.
             </p>
           </div>

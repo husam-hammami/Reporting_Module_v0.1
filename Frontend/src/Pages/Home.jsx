@@ -26,7 +26,7 @@ function Home() {
       <Box
         component="main"
         sx={{ flexGrow: 1, p: 0, overflow: 'hidden' }}
-        className="bg-[#f8f9fb] dark:bg-[#0d1117]"
+        className="bg-[#f8f9fb] dark:bg-[#c0c6cf]"
       >
         <DrawerHeader />
         <ThemeProvider theme={theme}>

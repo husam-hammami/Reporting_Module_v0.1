@@ -25,7 +25,7 @@ function Navbar({ isBlueprint = false }) {
       position="fixed"
       elevation={0}
       sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
-      className="!bg-white/95 dark:!bg-[#070e1c]/95 !shadow-none"
+      className="!bg-white/95 dark:!bg-[#c8ced6]/95 !shadow-none"
       style={{
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
@@ -43,7 +43,7 @@ function Navbar({ isBlueprint = false }) {
                 size="small"
                 edge="start"
                 onClick={() => setOpen?.((prev) => !prev)}
-                className="!text-[#64748b] dark:!text-[#8899ab] hover:!bg-black/[0.04] dark:hover:!bg-[#22d3ee]/[0.06] !p-1.5 !rounded-lg !transition-all !duration-200"
+                className="!text-[#64748b] dark:!text-[#3c4452] hover:!bg-black/[0.04] dark:hover:!bg-[#0891b2]/[0.08] !p-1.5 !rounded-lg !transition-all !duration-200"
               >
                 {open ? <X size={18} strokeWidth={2} /> : <Menu size={18} strokeWidth={2} />}
               </IconButton>
@@ -53,7 +53,7 @@ function Navbar({ isBlueprint = false }) {
           <img
             src={HerculesNewLogo}
             alt="HERCULES"
-            className="h-14 w-auto object-contain shrink-0 dark:[filter:brightness(0)_invert(1)_brightness(0.85)]"
+            className="h-14 w-auto object-contain shrink-0"
           />
 
           <div className="flex items-center gap-1.5 ml-1">
@@ -82,41 +82,41 @@ function Navbar({ isBlueprint = false }) {
           <img
             src={AsmLogo}
             alt="ASM"
-            className="h-9 w-auto object-contain shrink-0 opacity-60 hover:opacity-100 transition-opacity duration-300 dark:[filter:brightness(0)_invert(1)_brightness(0.7)]"
+            className="h-9 w-auto object-contain shrink-0 opacity-60 hover:opacity-100 transition-opacity duration-300"
           />
           {auth && (
             <div className="relative">
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-black/[0.04] dark:hover:bg-[#22d3ee]/[0.06] transition-all duration-200 group"
+                className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-black/[0.04] dark:hover:bg-[#0891b2]/[0.08] transition-all duration-200 group"
               >
-                <div className="w-8 h-8 rounded bg-gradient-to-br from-[#475569] to-[#334155] dark:from-[#0a1525] dark:to-[#0c1829] dark:border dark:border-[#22d3ee]/20 text-white dark:text-[#22d3ee] text-[12px] font-bold flex items-center justify-center">
+                <div className="w-8 h-8 rounded bg-gradient-to-br from-[#475569] to-[#334155] dark:from-[#0891b2] dark:to-[#0e7490] dark:border dark:border-[#0891b2]/30 text-white text-[12px] font-bold flex items-center justify-center">
                   {auth.username?.charAt(0)?.toUpperCase()}
                 </div>
                 <div className="hidden sm:flex flex-col items-start">
-                  <span className="text-[12px] font-medium text-[#334155] dark:text-[#e8edf5] leading-tight">
+                  <span className="text-[12px] font-medium text-[#334155] dark:text-[#141820] leading-tight">
                     {auth.username}
                   </span>
-                  <span className="text-[10px] text-[#94a3b8] dark:text-[#556677] capitalize leading-tight">
+                  <span className="text-[10px] text-[#94a3b8] dark:text-[#606878] capitalize leading-tight">
                     {auth.role}
                   </span>
                 </div>
-                <ChevronDown size={13} className="text-[#94a3b8] dark:text-[#556677] group-hover:text-[#64748b] dark:group-hover:text-[#8899ab] transition-colors" />
+                <ChevronDown size={13} className="text-[#94a3b8] dark:text-[#606878] group-hover:text-[#64748b] dark:group-hover:text-[#3c4452] transition-colors" />
               </button>
 
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-50" onClick={() => setMenuOpen(false)} />
                   <div
-                    className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-[#0c1829] border border-black/[0.08] dark:border-[#22d3ee]/15 rounded-lg shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.08)] min-w-[160px] py-1 animate-scale-in"
+                    className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-[#d8dde5] border border-black/[0.08] dark:border-[#0891b2]/20 rounded-lg shadow-xl dark:shadow-[0_4px_16px_rgba(0,0,0,0.12)] min-w-[160px] py-1 animate-scale-in"
                   >
-                    <div className="px-3 py-2 border-b border-black/[0.06] dark:border-[#22d3ee]/10">
-                      <p className="text-[12px] font-semibold text-[#334155] dark:text-[#e8edf5]">{auth.username}</p>
-                      <p className="text-[10px] text-[#94a3b8] dark:text-[#556677] capitalize">{auth.role}</p>
+                    <div className="px-3 py-2 border-b border-black/[0.06] dark:border-[#0891b2]/15">
+                      <p className="text-[12px] font-semibold text-[#334155] dark:text-[#141820]">{auth.username}</p>
+                      <p className="text-[10px] text-[#94a3b8] dark:text-[#606878] capitalize">{auth.role}</p>
                     </div>
                     <button
                       onClick={() => { setMenuOpen(false); logout(); }}
-                      className="w-full text-left px-3 py-2 text-[12px] text-[#64748b] dark:text-[#8899ab] hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 text-[12px] text-[#64748b] dark:text-[#3c4452] hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2"
                     >
                       <LogOut size={14} />
                       Sign out
