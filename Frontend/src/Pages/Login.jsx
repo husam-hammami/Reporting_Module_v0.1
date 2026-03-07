@@ -3,7 +3,7 @@ import Navbar from '../Components/Navbar/Navbar';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { DarkModeContext } from '../Context/DarkModeProvider';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import axios from '../API/axios';
 import { AUTH_TOKEN_KEY } from '../API/axios';
 import endpoints from '../API/endpoints';
@@ -73,21 +73,47 @@ function Login() {
   const { mode } = useContext(DarkModeContext);
   const theme = createTheme({ colorSchemes: { dark: mode === 'dark' } });
 
+  const loginVideoRef = useRef(null);
+
   useEffect(() => { setLoading(false); }, []);
+  useEffect(() => {
+    if (loginVideoRef.current) loginVideoRef.current.playbackRate = 0.75;
+  }, []);
 
   return (
     <ThemeProvider theme={theme}>
       <div className="min-h-screen flex items-center justify-center bg-[#f4f6f9] dark:bg-[#060c1a] relative overflow-hidden">
+        {mode === 'dark' && (
+          <>
+            <video
+              ref={loginVideoRef}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none motion-reduce:hidden"
+              style={{ zIndex: 0, opacity: 0.5 }}
+            >
+              <source src="/bg-video.mp4" type="video/mp4" />
+            </video>
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                zIndex: 1,
+                background: 'radial-gradient(ellipse at center, rgba(6,12,26,0.65) 0%, rgba(6,12,26,0.85) 70%, rgba(6,12,26,0.95) 100%)',
+              }}
+            />
+          </>
+        )}
         <div
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
+          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04]"
           style={{
+            zIndex: 2,
             backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 0.5px, transparent 0)`,
             backgroundSize: '40px 40px',
           }}
         />
-
-        <div className="absolute top-1/3 left-1/3 w-[500px] h-[500px] bg-[#22d3ee] opacity-[0.02] dark:opacity-[0.04] rounded-full blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/3 w-[400px] h-[400px] bg-[#22d3ee] opacity-[0.01] dark:opacity-[0.03] rounded-full blur-[100px]" />
 
         {loading && <LoadingScreen />}
 
