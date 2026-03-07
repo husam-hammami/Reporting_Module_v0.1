@@ -50,20 +50,20 @@
   --rb-text-muted: #6b7a8d;
   --rb-text-inverse: #f0f4f8;
 
-  /* ── Accent: Electric Cyan ── */
-  --rb-accent: #0ea5e9;
-  --rb-accent-hover: #0284c7;
-  --rb-accent-subtle: rgba(14, 165, 233, 0.08);
-  --rb-accent-glow: rgba(14, 165, 233, 0.35);
-  --rb-accent-bright: #38bdf8;
+  /* ── Accent: Professional Blue ── */
+  --rb-accent: #0284c7;
+  --rb-accent-hover: #0369a1;
+  --rb-accent-subtle: rgba(2, 132, 199, 0.07);
+  --rb-accent-glow: rgba(2, 132, 199, 0.18);
+  --rb-accent-bright: #0ea5e9;
 
   /* ── Semantic ── */
-  --rb-success: #00d68f;
-  --rb-success-subtle: rgba(0, 214, 143, 0.08);
-  --rb-warning: #ffaa33;
-  --rb-warning-subtle: rgba(255, 170, 51, 0.08);
-  --rb-danger: #f43f5e;
-  --rb-danger-subtle: rgba(244, 63, 94, 0.08);
+  --rb-success: #059669;
+  --rb-success-subtle: rgba(5, 150, 105, 0.07);
+  --rb-warning: #d97706;
+  --rb-warning-subtle: rgba(217, 119, 6, 0.07);
+  --rb-danger: #dc2626;
+  --rb-danger-subtle: rgba(220, 38, 38, 0.07);
 
   /* ── Radius ── */
   --rb-radius-sm: 4px;
@@ -264,6 +264,9 @@
 }
 .report-builder .rb-btn-primary:hover:not(:disabled) {
   background: var(--rb-accent-hover);
+  box-shadow: var(--rb-elevation-2);
+}
+.dark .report-builder .rb-btn-primary:hover:not(:disabled) {
   box-shadow: 0 0 16px var(--rb-accent-glow), var(--rb-elevation-2);
 }
 .report-builder .rb-btn-primary:active:not(:disabled) {
@@ -286,11 +289,14 @@
   -webkit-font-smoothing: antialiased;
 }
 .report-builder .rb-btn-success:hover:not(:disabled) {
-  filter: brightness(1.1);
-  box-shadow: 0 0 16px rgba(0, 214, 143, 0.3), var(--rb-elevation-2);
+  filter: brightness(1.08);
+  box-shadow: var(--rb-elevation-2);
+}
+.dark .report-builder .rb-btn-success:hover:not(:disabled) {
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.25), var(--rb-elevation-2);
 }
 .report-builder .rb-btn-success:active:not(:disabled) { transform: scale(0.97); }
-.report-builder .rb-btn-success:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(0, 214, 143, 0.3); }
+.report-builder .rb-btn-success:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--rb-success-subtle); }
 
 .report-builder .rb-btn-ghost {
   font-size: var(--rb-font-sm);
@@ -351,13 +357,20 @@
 .report-builder .rb-widget-card.rb-widget-selected,
 .report-builder .rb-widget-selected {
   border-color: var(--rb-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--rb-accent) 18%, transparent);
+}
+.dark .report-builder .rb-widget-card.rb-widget-selected,
+.dark .report-builder .rb-widget-selected {
   box-shadow: 0 0 20px var(--rb-accent-glow), 0 0 0 2px color-mix(in srgb, var(--rb-accent) 18%, transparent);
 }
 
 .report-builder .rb-widget-card.rb-widget-dragging {
-  box-shadow: 0 0 24px var(--rb-accent-glow), var(--rb-elevation-3);
+  box-shadow: var(--rb-elevation-3);
   border-color: var(--rb-accent);
   opacity: 0.95;
+}
+.dark .report-builder .rb-widget-card.rb-widget-dragging {
+  box-shadow: 0 0 24px var(--rb-accent-glow), var(--rb-elevation-3);
 }
 
 .report-builder .rb-widget-card-transparent {
@@ -685,6 +698,8 @@
 .rb-floating-toolbar button.active {
   color: var(--rb-accent);
   background: var(--rb-accent-subtle);
+}
+.dark .rb-floating-toolbar button.active {
   box-shadow: 0 0 8px var(--rb-accent-glow);
 }
 .rb-toolbar-divider {
@@ -733,8 +748,9 @@
   gap: 2px;
   padding: 3px 5px;
   border-radius: 9999px;
-  background: var(--rb-text);
-  box-shadow: var(--rb-elevation-4);
+  background: var(--rb-panel);
+  border: 1px solid var(--rb-border);
+  box-shadow: var(--rb-elevation-3);
 }
 .dark .rb-widget-minitoolbar {
   background: #1e293b;
@@ -747,8 +763,8 @@
   width: 28px;
   height: 28px;
   border-radius: var(--rb-radius);
-  color: var(--rb-text-inverse);
-  opacity: 0.8;
+  color: var(--rb-text-secondary);
+  opacity: 0.85;
   transition: all var(--rb-transition-fast) ease;
 }
 .dark .rb-widget-minitoolbar button {
@@ -756,7 +772,8 @@
 }
 .rb-widget-minitoolbar button:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--rb-accent);
+  background: var(--rb-accent-subtle);
 }
 .dark .rb-widget-minitoolbar button:hover {
   background: rgba(34, 211, 238, 0.15);
@@ -845,6 +862,9 @@
 .rb-segmented-control button.active {
   background: var(--rb-accent);
   color: white;
+  box-shadow: var(--rb-elevation-1);
+}
+.dark .rb-segmented-control button.active {
   box-shadow: 0 0 8px var(--rb-accent-glow);
 }
 
@@ -1017,12 +1037,12 @@
   transition: all 350ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .rb-holo-card:hover {
-  background: linear-gradient(135deg, var(--rb-accent), rgba(34, 211, 238, 0.3), var(--rb-accent));
-  box-shadow: 0 0 24px var(--rb-accent-glow), var(--rb-elevation-3);
+  background: linear-gradient(135deg, var(--rb-accent), color-mix(in srgb, var(--rb-accent) 30%, transparent), var(--rb-accent));
+  box-shadow: var(--rb-elevation-3);
   transform: translateY(-2px);
 }
 .rb-holo-card:hover .rb-holo-card-inner {
-  box-shadow: inset 0 0 30px rgba(34, 211, 238, 0.03);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.02);
 }
 
 .dark .rb-holo-card {

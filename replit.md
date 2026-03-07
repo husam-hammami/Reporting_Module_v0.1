@@ -51,7 +51,8 @@ Complete app-shell redesign extending the Report Builder's Mission Control aesth
 
 ### Design System (Global) — Industrial SCADA Theme
 - **Dark palette**: Deep control-room dark (`#050b18` body, `#070e1c` panels, `#0a1525`/`#0c1829` elevated surfaces)
-- **Primary accent**: Cyan `#22d3ee` (dark mode), `#0c7bb3` (light mode) — used for active states, borders, glows
+- **Primary accent**: Cyan `#22d3ee` (dark mode), `#0284c7` (light mode) — used for active states, borders; glows only in dark mode
+- **Semantic colors**: Light mode uses muted professional tones (`#059669` success, `#d97706` warning, `#dc2626` danger); dark mode uses brighter variants (`#34d399`, `#ffaa33`, `#f43f5e`)
 - **Panel borders**: `rgba(34, 211, 238, 0.22)` widget cards, `rgba(34, 211, 238, 0.18)` tables/sections, with subtle box-shadow glow in dark mode
 - **Typography**: Inter font, system-ui fallback; category headers bold uppercase with `tracking-[0.18em]`
 - **Utility classes**: `.scada-panel`, `.scada-panel-glow`, `.scada-header` for consistent instrument-panel look
