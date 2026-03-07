@@ -498,7 +498,6 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
     );
   }
 
-  const cellPy = compact ? 'py-0.5' : 'py-1';
 
   const totalColSpan = columns.length + (canEdit ? 1 : 0);
 
@@ -509,14 +508,11 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
       <tr key={`section-header-${sh._idx}`} className="rb-section-header-row">
         <td
           colSpan={totalColSpan}
-          className="px-3 py-2 font-bold text-left border-b"
+          className="text-left"
           style={{
             ...(sectionHeaderBg ? { backgroundColor: sectionHeaderBg } : {}),
             ...(sectionHeaderColor ? { color: sectionHeaderColor } : {}),
             ...(borderColor ? { borderColor } : {}),
-            fontSize: '11px',
-            fontWeight: 700,
-            letterSpacing: '0.04em',
           }}
         >
           <span className="flex items-center gap-2">
@@ -539,7 +535,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden relative rb-production-table" style={{ padding: '6px 8px' }}>
+    <div className={`flex flex-col h-full overflow-hidden relative rb-production-table ${compact ? 'rb-table-compact' : ''}`} style={{ padding: '6px 8px' }}>
       {reportHeader?.show && (
         <div className="rb-report-header mb-2 pb-2" style={{ borderBottom: `1px solid ${borderColor || 'var(--rb-border)'}` }}>
           <div className="flex items-start justify-between gap-4">
@@ -576,7 +572,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
       )}
 
       {safeConfig.title && !reportHeader?.show && (
-        <h4 className="rb-widget-title mb-1.5 truncate">{safeConfig.title}</h4>
+        <h4 className="rb-heading mb-1.5 truncate rb-table-title">{safeConfig.title}</h4>
       )}
 
       <div
@@ -604,7 +600,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                 <th
                   key={ci}
                   onDoubleClick={canEdit ? () => openEditor('edit', ci, col) : undefined}
-                  className={`px-3 ${cellPy} text-left border-b-2 rb-widget-title ${canEdit ? 'cursor-pointer hover:bg-[var(--rb-accent-subtle)]/50 transition-colors group select-none' : ''} ${fitInContainer ? 'truncate' : ''}`}
+                  className={`text-left ${canEdit ? 'cursor-pointer hover:bg-[var(--rb-accent-subtle)]/50 transition-colors group select-none' : ''} ${fitInContainer ? 'truncate' : ''}`}
                   style={{
                     ...(colMinWidth != null && { minWidth: colMinWidth }),
                     textAlign: col.align || 'left',
@@ -614,14 +610,14 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                 >
                   <span className={`flex items-center gap-1.5 min-w-0 ${canEdit ? 'truncate' : ''}`}>
                     <span className="truncate">{col.label || `Col ${ci + 1}`}</span>
-                    {col.unit && <span className="rb-caption font-normal lowercase flex-shrink-0">({col.unit})</span>}
+                    {col.unit && <span className="text-[9px] font-normal normal-case opacity-60 flex-shrink-0 tracking-normal">({col.unit})</span>}
                     {canEdit && <Settings2 size={12} className="opacity-0 group-hover:opacity-50 transition-opacity ml-auto flex-shrink-0" />}
                   </span>
                 </th>
               );
               })}
               {canEdit && (
-                <th className={`px-2 ${cellPy} border-b-2 w-[72px]`} style={{ ...(borderColor ? { borderColor } : {}), ...(headerBg ? { backgroundColor: headerBg } : {}) }}>
+                <th className="w-[72px]" style={{ ...(borderColor ? { borderColor } : {}), ...(headerBg ? { backgroundColor: headerBg } : {}) }}>
                   <button
                     type="button"
                     onClick={() => openEditor('add')}
@@ -638,11 +634,9 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
             {renderSectionHeaderRows(0)}
             {/* ── Live data row ── */}
             <tr
-              className="rb-table-body-row hover:opacity-90"
+              className={`rb-table-body-row ${striped ? 'rb-row-striped' : ''}`}
               style={{
-                backgroundColor: striped
-                  ? (rowBg || 'var(--rb-surface)')
-                  : (rowBg || 'transparent'),
+                ...(rowBg ? { backgroundColor: rowBg } : {}),
               }}
             >
               {columns.map((col, ci) => {
@@ -662,11 +656,11 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                   <td
                     key={ci}
                     onDoubleClick={canEdit ? () => openEditor('edit', ci, col) : undefined}
-                    className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${isNumeric ? 'font-mono rb-tabular-nums' : ''}`}
+                    className={`${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${isNumeric ? 'rb-cell-numeric' : ''} ${thresholdColor ? 'rb-cell-threshold' : ''}`}
                     style={{
                       ...(borderColor ? { borderColor } : {}),
                       textAlign: col.align || 'left',
-                      ...(thresholdColor ? { color: thresholdColor, fontWeight: 600 } : {}),
+                      ...(thresholdColor ? { color: thresholdColor } : {}),
                       ...(fitInContainer && { overflow: 'hidden', textOverflow: 'ellipsis' }),
                     }}
                     title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit') : undefined}
@@ -679,12 +673,12 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                       </span>
                     ) : (
                       showResolvedValue ? (
-                        <span className={`${hasLiveValue ? '' : 'rb-caption italic'} ${fitInContainer ? 'block truncate' : ''}`}>
+                        <span className={`${hasLiveValue ? '' : 'rb-cell-hint'} ${fitInContainer ? 'block truncate' : ''}`}>
                           {displayText}
                         </span>
                       ) : (
                         <span
-                          className={`rb-body leading-tight min-w-0 ${fitInContainer ? 'truncate block' : 'break-words'} ${hint ? 'font-mono text-[var(--rb-text-muted)]' : 'rb-caption italic'}`}
+                          className={`leading-tight min-w-0 ${fitInContainer ? 'truncate block' : 'break-words'} ${hint ? 'rb-cell-numeric text-[var(--rb-text-muted)]' : 'rb-cell-hint'}`}
                           title={canEdit && hint ? `${badge.label}: ${hint}` : displayText}
                         >
                           {displayText}
@@ -694,19 +688,21 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                   </td>
                 );
               })}
-              {canEdit && <td className={`px-2 ${cellPy} border-b`} style={{ ...(borderColor ? { borderColor } : {}) }} />}
+              {canEdit && <td className="px-2 py-1.5" style={{ ...(borderColor ? { borderColor } : {}) }} />}
             </tr>
 
             {/* ── Static (configurable) data rows with section headers ── */}
             {staticDataRows.map((rowCells, ri) => {
               const rowIndex = ri + 1;
+              const isStriped = striped && (ri + 2) % 2 === 0;
               return (
                 <React.Fragment key={`static-group-${ri}`}>
                   {renderSectionHeaderRows(rowIndex)}
                   <tr
-                    className="rb-table-body-row"
+                    className={`rb-table-body-row ${isStriped ? 'rb-row-striped' : ''}`}
                     style={{
-                      backgroundColor: striped && (ri + 2) % 2 === 0 ? (stripedRowBg || 'var(--rb-panel)') : (rowBg || 'transparent'),
+                      ...(isStriped && stripedRowBg ? { backgroundColor: stripedRowBg } : {}),
+                      ...(!isStriped && rowBg ? { backgroundColor: rowBg } : {}),
                       ...(borderColor ? { borderColor } : {}),
                     }}
                   >
@@ -723,15 +719,16 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                         ? (hasValue ? formatted.text : (hint || '—'))
                         : (hint || 'Double-click to set');
                       const numericAlign = (cellConfig.format === 'number' || cellConfig.format === 'percentage' || cellConfig.format === 'weight') && cellConfig.sourceType !== 'static';
+                      const isNumericCell = cellConfig?.sourceType !== 'static';
                       return (
                         <td
                           key={ci}
                           onDoubleClick={canEdit ? () => openEditorForStaticCell(ri, ci) : undefined}
-                          className={`px-3 ${cellPy} border-b ${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${cellConfig?.sourceType !== 'static' ? 'font-mono rb-tabular-nums' : ''}`}
+                          className={`${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${isNumericCell ? 'rb-cell-numeric' : ''} ${thresholdColor ? 'rb-cell-threshold' : ''}`}
                           style={{
                             ...(borderColor ? { borderColor } : {}),
                             textAlign: numericAlign ? 'right' : (col.align || 'left'),
-                            ...(thresholdColor ? { color: thresholdColor, fontWeight: 600 } : {}),
+                            ...(thresholdColor ? { color: thresholdColor } : {}),
                             ...(fitInContainer && { overflow: 'hidden', textOverflow: 'ellipsis' }),
                           }}
                           title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit cell') : undefined}
@@ -743,7 +740,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                               ) : null}
                             </span>
                           ) : (
-                            <span className={`${hasValue || showResolvedValue ? '' : 'rb-caption italic'} ${fitInContainer ? 'block truncate' : ''}`}>
+                            <span className={`${hasValue || showResolvedValue ? '' : 'rb-cell-hint'} ${fitInContainer ? 'block truncate' : ''}`}>
                               {displayText}
                             </span>
                           )}
@@ -751,7 +748,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                       );
                     })}
                     {canEdit && (
-                      <td className={`px-2 ${cellPy} border-b`} style={{ ...(borderColor ? { borderColor } : {}) }}>
+                      <td className="px-2 py-1.5" style={{ ...(borderColor ? { borderColor } : {}) }}>
                         <button
                           type="button"
                           onClick={() => removeStaticRow(ri)}
@@ -770,16 +767,12 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
             {/* ── Summary / aggregation rows ── */}
             {summaryData.map((sValues, si) => {
               const sr = summaryRows[si];
-              const rowIndex = 1 + si; // 0 = data row, 1+ = summary rows
               return (
                 <tr
                   key={`summary-${si}`}
-                  className="font-bold border-t"
+                  className="rb-summary-row"
                   style={{
                     ...(borderColor ? { borderColor } : {}),
-                    backgroundColor: striped
-                      ? (rowIndex % 2 === 1 ? (stripedRowBg || 'var(--rb-panel)') : (rowBg || 'var(--rb-surface)'))
-                      : (rowBg || 'var(--rb-surface)'),
                   }}
                 >
                   {columns.map((col, ci) => {
@@ -791,11 +784,11 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                     return (
                       <td
                         key={ci}
-                        className={`px-3 ${cellPy} border-b font-mono rb-tabular-nums ${fitInContainer ? 'max-w-0 truncate' : ''}`}
+                        className={`rb-cell-numeric ${fitInContainer ? 'max-w-0 truncate' : ''}`}
                         style={{ ...(borderColor ? { borderColor } : {}), textAlign: col.align || 'left' }}
                       >
                         {isFirst && (
-                          <span className="rb-caption mr-2 font-sans font-semibold">
+                          <span className="mr-2 font-sans font-semibold text-[11px] uppercase tracking-wider opacity-70">
                             {sr.label}
                           </span>
                         )}
@@ -804,7 +797,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                     );
                   })}
                   {canEdit && (
-                    <td className={`px-2 ${cellPy} border-b`} style={{ ...(borderColor ? { borderColor } : {}) }}>
+                    <td className="px-2 py-1.5" style={{ ...(borderColor ? { borderColor } : {}) }}>
                       <button
                         type="button"
                         onClick={() => removeSummaryRow(si)}

@@ -370,62 +370,180 @@
 
 
 /* ═══════════════════════════════════════════════════════════════
-   TABLE STYLING
+   TABLE STYLING — Grafana / Power BI inspired
    ═══════════════════════════════════════════════════════════════ */
+
+/* ── Base table ── */
+.report-builder .rb-production-table table {
+  border: 1px solid var(--rb-border);
+  border-radius: var(--rb-radius);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.dark .report-builder .rb-production-table table {
+  border-color: rgba(34, 211, 238, 0.15);
+}
+
+/* ── Header row ── */
 .report-builder .rb-table-header-row {
   box-shadow: none;
   background-color: var(--rb-surface);
 }
 .dark .report-builder .rb-table-header-row {
   box-shadow: none;
-  background-color: rgba(34, 211, 238, 0.05);
+  background-color: rgba(34, 211, 238, 0.06);
 }
-.report-builder .rb-table-header-row th,
-.report-builder .rb-table-header-row td {
-  border-bottom-color: var(--rb-border);
+.report-builder .rb-table-header-row th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--rb-text-secondary);
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--rb-border);
+  white-space: nowrap;
 }
-.dark .report-builder .rb-table-header-row th,
-.dark .report-builder .rb-table-header-row td {
-  color: #8899ab;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  border-bottom-color: rgba(34, 211, 238, 0.18);
+.dark .report-builder .rb-table-header-row th {
+  color: #8ea3b8;
+  border-bottom-color: rgba(34, 211, 238, 0.20);
 }
+
+/* ── Body rows ── */
 .report-builder .rb-table-body-row {
   transition: background-color var(--rb-transition-fast) ease;
 }
 .report-builder .rb-table-body-row:hover {
-  background: var(--rb-accent-subtle) !important;
+  background-color: var(--rb-accent-subtle) !important;
 }
 .report-builder .rb-table-body-row td {
-  border-bottom-color: var(--rb-border);
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--rb-border-subtle);
+  font-size: 13px;
+  color: var(--rb-text);
 }
 .dark .report-builder .rb-table-body-row td {
-  border-bottom-color: rgba(34, 211, 238, 0.08);
+  border-bottom-color: rgba(34, 211, 238, 0.07);
+  color: #d0d8e4;
 }
-.report-builder .rb-production-table table {
-  border-color: var(--rb-border);
+
+/* ── Striped rows ── */
+.report-builder .rb-table-body-row.rb-row-striped {
+  background-color: var(--rb-panel-raised);
 }
-.dark .report-builder .rb-production-table table {
-  border-color: rgba(34, 211, 238, 0.18);
+.dark .report-builder .rb-table-body-row.rb-row-striped {
+  background-color: rgba(34, 211, 238, 0.025);
 }
+
+/* ── Numeric cells ── */
+.report-builder .rb-table-body-row td.rb-cell-numeric {
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  letter-spacing: -0.01em;
+}
+.dark .report-builder .rb-table-body-row td.rb-cell-numeric {
+  color: #e8edf5;
+}
+
+/* ── Section header rows ── */
 .report-builder .rb-section-header-row td {
   background-color: var(--rb-surface);
   color: var(--rb-text);
   border-color: var(--rb-border);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   border-top: 2px solid var(--rb-border);
-  padding-top: 8px;
-  padding-bottom: 6px;
+  padding: 10px 12px 7px 12px;
 }
 .dark .report-builder .rb-section-header-row td {
-  background-color: rgba(34, 211, 238, 0.04);
+  background-color: rgba(34, 211, 238, 0.05);
   color: #22d3ee;
-  border-color: rgba(34, 211, 238, 0.18);
+  border-color: rgba(34, 211, 238, 0.12);
   border-top-color: rgba(34, 211, 238, 0.25);
+}
+
+/* ── Summary / totals rows ── */
+.report-builder .rb-summary-row {
+  background-color: var(--rb-surface);
+  border-top: 2px solid var(--rb-border);
+}
+.report-builder .rb-summary-row td {
+  font-weight: 700;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--rb-text);
+}
+.dark .report-builder .rb-summary-row {
+  background-color: rgba(34, 211, 238, 0.04);
+  border-top-color: rgba(34, 211, 238, 0.20);
+}
+.dark .report-builder .rb-summary-row td {
+  color: #e8edf5;
+}
+
+/* ── Report header ── */
+.report-builder .rb-report-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.dark .report-builder .rb-report-header h3 {
+  color: #e8edf5;
+}
+.report-builder .rb-report-header .rb-report-stat {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Threshold value highlight ── */
+.report-builder .rb-cell-threshold {
+  font-weight: 600;
+}
+
+/* ── Empty / hint cells ── */
+.report-builder .rb-cell-hint {
+  color: var(--rb-text-muted);
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* ── Table widget title ── */
+.report-builder .rb-table-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.dark .report-builder .rb-table-title {
+  color: #e8edf5;
+}
+
+/* ── Numeric cells in summary rows ── */
+.report-builder .rb-summary-row td.rb-cell-numeric {
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  letter-spacing: -0.01em;
+}
+.dark .report-builder .rb-summary-row td.rb-cell-numeric {
+  color: #e8edf5;
+}
+
+/* ── Compact table density ── */
+.report-builder .rb-table-compact .rb-table-header-row th {
+  padding: 5px 10px;
+  font-size: 10px;
+}
+.report-builder .rb-table-compact .rb-table-body-row td {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.report-builder .rb-table-compact .rb-summary-row td {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.report-builder .rb-table-compact .rb-section-header-row td {
+  padding: 7px 10px 5px 10px;
+  font-size: 10.5px;
 }
 
 

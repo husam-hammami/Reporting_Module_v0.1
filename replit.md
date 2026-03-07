@@ -91,7 +91,7 @@ Complete creative rendering-layer redesign inspired by SpaceX mission control, B
 - **Gauge Widget**: Gradient arc stroke, glowing endpoint dot, digital value readout
 - **Silo Widget**: Enhanced metallic gradients, glossy liquid surface, dual-wave animation
 - **Chart Widget**: Edge-to-edge layout, Mission Control color palette (#00d4ff, #00e88f, #ffaa33)
-- **Table Widget**: CSS-driven header/section styling (no inline overrides for defaults), gradient header strip, monospace tabular-nums, section headers with cyan color in dark mode, multi-row static data, boolean checkboxes, weight/unit formatting, report header support
+- **Table Widget**: Grafana/Power BI-inspired CSS-driven styling. Header rows: 11px bold uppercase `rb-table-header-row`. Body rows: 13px `rb-table-body-row` with `rb-row-striped`, `rb-cell-numeric` (mono tabular-nums), `rb-cell-threshold`, `rb-cell-hint`. Section headers: `rb-section-header-row` cyan uppercase. Summary/totals: `rb-summary-row` bold with accent top border. Compact density: `rb-table-compact` modifier class on `.rb-production-table`. Title: `rb-table-title` (13px bold). All padding/font/border controlled via CSS, only user-configurable colors (borderColor, headerBg, etc.) applied as inline styles. Multi-row static data, boolean checkboxes, weight/unit formatting, report header support
 - **Stat Widget**: Large auto-sizing value with accent glow, left accent border strip
 - **Manager**: Holographic gradient-border cards, status badges with colored glow dots
 - **Canvas**: Deep dark workspace with cyan dot grid, frosted glass floating toolbar
