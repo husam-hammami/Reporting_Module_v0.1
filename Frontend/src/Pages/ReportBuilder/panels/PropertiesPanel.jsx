@@ -14,7 +14,7 @@ function Section({ icon: Icon, title, children, defaultOpen = true, isFirst = fa
         className="w-full flex items-center gap-2.5 py-3 px-5 hover:bg-[var(--rb-surface)] transition-colors text-left group"
       >
         {Icon && (
-          <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--rb-accent-subtle)] border border-[var(--rb-accent)]/20 shadow-[0_0_6px_var(--rb-accent-glow)]">
+          <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--rb-accent-subtle)] border border-[var(--rb-accent)]/20">
             <Icon size={12} className="text-[var(--rb-accent)]" />
           </span>
         )}
@@ -30,8 +30,8 @@ function Section({ icon: Icon, title, children, defaultOpen = true, isFirst = fa
         {open && (
           <motion.div
             initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={prefersReducedMotion ? undefined : { height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1, overflow: 'visible' }}
+            exit={prefersReducedMotion ? undefined : { height: 0, opacity: 0, overflow: 'hidden' }}
             transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             style={{ overflow: 'hidden' }}
           >
@@ -150,7 +150,7 @@ function TagPicker({ tags, value, onChange, placeholder = 'Select tag...' }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(''); }} />
-          <div className="absolute z-50 mt-2 w-full rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] shadow-xl max-h-56 overflow-hidden backdrop-blur-sm">
+          <div className="absolute z-50 mt-2 w-full rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] shadow-xl max-h-56 overflow-hidden backdrop-blur-sm" data-wheel-scroll>
             <div className="p-2 border-b border-[var(--rb-border)]">
               <input
                 type="text"
@@ -218,7 +218,7 @@ function FormulaDropdown({ savedFormulas, onSelect }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(''); }} />
-          <div className="rb-formula-dropdown absolute z-50 mt-1 w-full">
+          <div className="rb-formula-dropdown absolute z-50 mt-1 w-full" data-wheel-scroll>
             {savedFormulas.length > 5 && (
               <div className="p-2 border-b border-[var(--rb-border)]">
                 <input

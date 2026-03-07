@@ -675,14 +675,13 @@ export default function ReportBuilderCanvas() {
                             </div>
                           )}
 
-                          {/* Drag handle overlay — light style */}
-                          <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity no-drag">
+                          {/* Drag handle overlay */}
+                          <div className="absolute top-1 left-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                             <div
-                              className="widget-drag-handle rb-drag-handle inline-flex items-center gap-2 px-2 py-1 cursor-move"
+                              className="widget-drag-handle rb-drag-handle inline-flex items-center gap-1 px-1.5 py-0.5 cursor-move"
                               title="Drag widget"
                             >
                               <span className="opacity-60">⋮⋮</span>
-                              <span>{widget.type}</span>
                             </div>
                           </div>
 
