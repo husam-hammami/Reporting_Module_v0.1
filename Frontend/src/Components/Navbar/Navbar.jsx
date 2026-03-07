@@ -4,7 +4,7 @@ import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import { Menu, X } from 'lucide-react';
 import DarkModeButton from '../Common/DarkModeButton';
-import HerculesLogo from '../../Assets/herculeslogo_clean.png';
+import HerculesNewLogo from '../../Assets/Hercules_New.png';
 import AsmLogo from '../../Assets/Asm_Logo.png';
 import { NavbarContext } from '../../Context/NavbarContext';
 import { AuthContext } from '../../Context/AuthProvider';
@@ -33,7 +33,7 @@ function Navbar({ isBlueprint = false }) {
     >
       <Toolbar
         variant="dense"
-        className="!min-h-[64px] !px-4 flex justify-between items-center"
+        className="!min-h-[80px] !px-4 flex justify-between items-center"
       >
         <div className="flex items-center gap-3 shrink-0">
           {!isBlueprint && auth && (
@@ -50,9 +50,9 @@ function Navbar({ isBlueprint = false }) {
           )}
 
           <img
-            src={HerculesLogo}
-            alt="HERCULES V2.0"
-            className="h-11 w-auto object-contain shrink-0 dark:[filter:brightness(0)_invert(1)_brightness(0.9)]"
+            src={HerculesNewLogo}
+            alt="HERCULES"
+            className="h-14 w-auto object-contain shrink-0 dark:[filter:brightness(0)_invert(1)_brightness(0.9)]"
           />
 
           <div className="flex items-center gap-1.5 ml-1">

@@ -93,7 +93,7 @@ export default function SideNav() {
           sx: {
             background: '#f8f9fa',
             color: '#334155',
-            paddingTop: '64px',
+            paddingTop: '80px',
             borderRight: '1px solid rgba(0,0,0,0.08)',
             '.dark &': {
               background: '#0a1120',

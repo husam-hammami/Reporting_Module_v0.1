@@ -394,7 +394,7 @@ export default function ReportBuilderCanvas() {
   /* ── Loading state ─────────────────────────────────────────── */
   if (loading) {
     return (
-      <div className="report-builder flex flex-col h-[calc(100vh-64px)] overflow-hidden">
+      <div className="report-builder flex flex-col h-[calc(100vh-80px)] overflow-hidden">
         <div className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-8 h-8 border-2 border-[var(--rb-accent)] border-t-transparent rounded-full animate-spin" />
@@ -414,7 +414,7 @@ export default function ReportBuilderCanvas() {
 
   /* ═══════════════════════  RENDER  ═══════════════════════════ */
   return (
-    <div className="report-builder flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-[var(--rb-surface)]">
+    <div className="report-builder flex flex-col h-[calc(100vh-80px)] overflow-hidden bg-[var(--rb-surface)]">
       {/* ── Top Toolbar ── */}
       <div className="flex items-center justify-between px-4 py-1.5 rb-panel-surface border-b border-[var(--rb-border)] flex-shrink-0">
         <div className="flex items-center gap-4 min-w-0">

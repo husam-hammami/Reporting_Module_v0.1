@@ -40,7 +40,7 @@ const SettingsHome = () => {
   const showDefault = location.pathname === '/settings';
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-[#f8f9fb] dark:bg-[#060c18]">
+    <div className="min-h-[calc(100vh-80px)] bg-[#f8f9fb] dark:bg-[#060c18]">
       <div className="sticky top-0 z-10 bg-white/90 dark:bg-[#0a1120]/90 border-b border-black/[0.06] dark:border-white/[0.06] px-6 pt-4 pb-0"
         style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
       >
