@@ -18,12 +18,15 @@ const CATEGORY_MAP = {
 };
 
 const CATEGORY_COLORS = {
-  'BUILD': { accent: '#38bdf8', bg: 'rgba(56, 189, 248, 0.06)' },
-  'VIEW': { accent: '#34d399', bg: 'rgba(52, 211, 153, 0.06)' },
-  'CONFIGURE': { accent: '#a78bfa', bg: 'rgba(167, 139, 250, 0.06)' },
+  'BUILD': { accent: '#64748b', bg: 'rgba(100, 116, 139, 0.06)' },
+  'VIEW': { accent: '#64748b', bg: 'rgba(100, 116, 139, 0.06)' },
+  'CONFIGURE': { accent: '#64748b', bg: 'rgba(100, 116, 139, 0.06)' },
 };
 
-const drawerWidth = 200;
+const ACTIVE_COLOR = '#cbd5e1';
+const ACTIVE_COLOR_DARK = '#94a3b8';
+
+const drawerWidth = 220;
 
 const openedMixin = theme => ({
   width: drawerWidth,
@@ -40,9 +43,9 @@ const closedMixin = theme => ({
     duration: 200,
   }),
   overflowX: 'hidden',
-  width: 56,
+  width: 60,
   [theme.breakpoints.up('sm')]: {
-    width: 56,
+    width: 60,
   },
 });
 
@@ -88,19 +91,19 @@ export default function SideNav() {
         open={open}
         PaperProps={{
           sx: {
-            background: '#fafbfc',
+            background: '#f8f9fa',
             color: '#334155',
-            paddingTop: '52px',
-            borderRight: '1px solid rgba(0,0,0,0.06)',
+            paddingTop: '64px',
+            borderRight: '1px solid rgba(0,0,0,0.08)',
             '.dark &': {
-              background: '#060c18',
+              background: '#0a1120',
               color: '#e2e8f0',
               borderRight: '1px solid rgba(255,255,255,0.06)',
             },
           },
         }}
       >
-        <List sx={{ px: open ? 1.25 : 0.75, pt: 1.5 }}>
+        <List sx={{ px: open ? 1.5 : 1, pt: 2 }}>
           {uniqueMenuItems.map((item) => {
             if (!auth || !item.roles.includes(auth.role)) return null;
             const category = CATEGORY_MAP[item.link];
@@ -109,21 +112,19 @@ export default function SideNav() {
             const catColor = CATEGORY_COLORS[category] || CATEGORY_COLORS['BUILD'];
 
             return (
-              <ListItem key={item.link} disablePadding sx={{ display: 'block', mb: 0.25 }}>
+              <ListItem key={item.link} disablePadding sx={{ display: 'block', mb: 0.5 }}>
                 {showCategory && (
                   <div
-                    className={`flex items-center gap-1.5 mb-1 ${open ? 'px-2' : 'px-0 justify-center'}`}
-                    style={{ marginTop: lastCategory !== category ? 0 : 12 }}
+                    className={`flex items-center gap-1.5 mb-1.5 ${open ? 'px-2' : 'px-0 justify-center'}`}
+                    style={{ marginTop: lastCategory !== category ? 0 : 16 }}
                   >
                     {open && (
                       <>
                         <div
-                          className="w-1 h-3 rounded-full"
-                          style={{ background: catColor.accent }}
+                          className="w-1 h-3 rounded-full bg-[#94a3b8]/40 dark:bg-[#475569]/50"
                         />
                         <span
-                          className="text-[9px] font-bold tracking-[0.2em] uppercase"
-                          style={{ color: catColor.accent, opacity: 0.7 }}
+                          className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#94a3b8] dark:text-[#475569]"
                         >
                           {category}
                         </span>
@@ -131,8 +132,7 @@ export default function SideNav() {
                     )}
                     {!open && (
                       <div
-                        className="w-6 h-0.5 rounded-full opacity-30"
-                        style={{ background: catColor.accent }}
+                        className="w-7 h-0.5 rounded-full bg-[#94a3b8]/25 dark:bg-[#475569]/30"
                       />
                     )}
                   </div>
@@ -142,14 +142,12 @@ export default function SideNav() {
                   className={({ isActive }) =>
                     `block w-full rounded-lg transition-all duration-200 ${
                       isActive
-                        ? 'shadow-sm'
-                        : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
+                        ? ''
+                        : 'hover:bg-black/[0.04] dark:hover:bg-white/[0.04]'
                     }`
                   }
                 >
                   {({ isActive }) => {
-                    const activeCat = CATEGORY_MAP[item.link];
-                    const activeColor = activeCat ? CATEGORY_COLORS[activeCat]?.accent : catColor.accent;
                     return (
                       <Tooltip
                         title={<span style={{ fontSize: 12 }}>{item.tooltip}</span>}
@@ -163,10 +161,10 @@ export default function SideNav() {
                         <ListItemButton
                           sx={[
                             {
-                              minHeight: 36,
+                              minHeight: 44,
                               px: open ? 1.5 : 1.25,
-                              py: 0.75,
-                              borderRadius: '8px',
+                              py: 1,
+                              borderRadius: '10px',
                               position: 'relative',
                               overflow: 'hidden',
                             },
@@ -174,41 +172,48 @@ export default function SideNav() {
                               ? { justifyContent: 'initial' }
                               : { justifyContent: 'center' },
                             isActive && {
-                              background: `${activeColor}08`,
-                              '&:hover': { background: `${activeColor}12` },
+                              background: 'rgba(100, 116, 139, 0.08)',
+                              '.dark &': {
+                                background: 'rgba(148, 163, 184, 0.08)',
+                              },
+                              '&:hover': {
+                                background: 'rgba(100, 116, 139, 0.12)',
+                                '.dark &': {
+                                  background: 'rgba(148, 163, 184, 0.12)',
+                                },
+                              },
                             },
                           ]}
                         >
                           {isActive && (
                             <div
-                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
-                              style={{
-                                height: '60%',
-                                background: activeColor,
-                                boxShadow: `0 0 8px ${activeColor}40`,
-                              }}
+                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-[#475569] dark:bg-[#94a3b8]"
+                              style={{ height: '55%' }}
                             />
                           )}
                           <div
                             className={`flex justify-center items-center flex-shrink-0 ${
-                              open ? 'mr-2.5' : 'mr-0'
+                              open ? 'mr-3' : 'mr-0'
                             }`}
                           >
                             <item.icon
                               style={{
-                                fontSize: 15,
-                                color: isActive ? activeColor : undefined,
-                                filter: isActive ? `drop-shadow(0 0 4px ${activeColor}40)` : undefined,
+                                fontSize: 22,
+                                color: isActive ? undefined : undefined,
                               }}
-                              className={isActive ? '' : 'text-[#94a3b8] dark:text-[#64748b]'}
+                              className={isActive
+                                ? 'text-[#334155] dark:text-[#e2e8f0]'
+                                : 'text-[#94a3b8] dark:text-[#64748b]'
+                              }
                             />
                           </div>
                           {open && (
                             <span
-                              className={`text-[12px] font-medium leading-tight truncate transition-colors duration-200`}
-                              style={{
-                                color: isActive ? activeColor : undefined,
-                              }}
+                              className={`text-[14px] font-medium leading-tight truncate transition-colors duration-200 ${
+                                isActive
+                                  ? 'text-[#1e293b] dark:text-[#f1f5f9]'
+                                  : 'text-[#64748b] dark:text-[#94a3b8]'
+                              }`}
                             >
                               {item.name}
                             </span>
@@ -225,9 +230,9 @@ export default function SideNav() {
 
         {open && (
           <div className="mt-auto px-3 pb-3">
-            <div className="p-2.5 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
-              <p className="text-[9px] font-semibold tracking-[0.15em] uppercase text-[#94a3b8] dark:text-[#475569] mb-0.5">Hercules v2</p>
-              <p className="text-[10px] text-[#cbd5e1] dark:text-[#334155]">Industrial SCADA</p>
+            <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
+              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-[#64748b] dark:text-[#475569] mb-0.5">Hercules v2</p>
+              <p className="text-[10px] text-[#94a3b8] dark:text-[#334155]">Industrial SCADA</p>
             </div>
           </div>
         )}

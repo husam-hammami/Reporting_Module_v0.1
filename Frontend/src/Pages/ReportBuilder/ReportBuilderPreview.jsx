@@ -190,7 +190,7 @@ export default function ReportBuilderPreview() {
   }
 
   return (
-    <div className="report-builder h-[calc(100vh-52px)] flex flex-col overflow-hidden" style={{ background: 'var(--rb-canvas)' }}>
+    <div className="report-builder h-[calc(100vh-64px)] flex flex-col overflow-hidden" style={{ background: 'var(--rb-canvas)' }}>
       {/* Top bar */}
       <div
         className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 print:hidden rb-panel-surface"

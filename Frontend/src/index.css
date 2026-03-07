@@ -46,9 +46,9 @@
     --theme-light: hsl(200, 100%, 97%);
     --theme-dark: hsl(200, 75%, 30%);
 
-    --nav-height: 52px;
-    --sidebar-width: 200px;
-    --sidebar-collapsed: 56px;
+    --nav-height: 64px;
+    --sidebar-width: 220px;
+    --sidebar-collapsed: 60px;
 
     --glass-bg: rgba(255, 255, 255, 0.82);
     --glass-border: rgba(255, 255, 255, 0.5);

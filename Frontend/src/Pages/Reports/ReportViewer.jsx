@@ -420,10 +420,10 @@ function SingleReportView({ reportId, onBack }) {
     [widgets],
   );
 
-  if (loading) return <div className="flex items-center justify-center h-[calc(100vh-52px)] text-[12px] text-[#8898aa]">Loading report...</div>;
+  if (loading) return <div className="flex items-center justify-center h-[calc(100vh-64px)] text-[12px] text-[#8898aa]">Loading report...</div>;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-52px)] bg-[#f8f9fb] dark:bg-[#060c18]">
+    <div className="flex flex-col h-[calc(100vh-64px)] bg-[#f8f9fb] dark:bg-[#060c18]">
       {/* ── Toolbar: back + title | date/time + time filters (left, centered) | actions ── */}
       <div className="bg-white dark:bg-[#131b2d] border-b border-[#e3e9f0] dark:border-[#1e2d40] px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
         {/* Left: back + report name */}
@@ -636,7 +636,7 @@ export default function ReportViewer() {
   if (id) return <SingleReportView reportId={id} onBack={() => navigate('/reporting')} />;
 
   return (
-    <div className="min-h-[calc(100vh-52px)] bg-[#f8f9fb] dark:bg-[#060c18]">
+    <div className="min-h-[calc(100vh-64px)] bg-[#f8f9fb] dark:bg-[#060c18]">
       <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#131b2d]">
         <h1 className="text-[15px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Reporting</h1>
         <p className="text-[11px] text-[#8898aa] mt-0.5">Select a report to view with live or historical data</p>

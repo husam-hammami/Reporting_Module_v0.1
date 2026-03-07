@@ -10,7 +10,7 @@ function Home() {
   const { mode } = contextValue || {};
 
   const DrawerHeader = styled('div')(() => ({
-    minHeight: 52,
+    minHeight: 64,
   }));
 
   const theme = createTheme({
@@ -30,7 +30,7 @@ function Home() {
       >
         <DrawerHeader />
         <ThemeProvider theme={theme}>
-          <div id="main-scroll-container" className="h-[calc(100vh-52px)] overflow-auto">
+          <div id="main-scroll-container" className="h-[calc(100vh-64px)] overflow-auto">
             <Outlet />
           </div>
         </ThemeProvider>

@@ -57,17 +57,21 @@ Complete app-shell redesign extending the Report Builder's Mission Control aesth
 - **Scrollbars**: Premium thin dark scrollbars globally
 - **Files**: `Frontend/src/index.css`, `Frontend/tailwind.config.js`
 
-### Navbar (52px)
-- Frosted glass backdrop, animated DEMO/LIVE badge with pulse dot, refined user avatar dropdown
-- Gradient divider line at bottom (cyan-to-transparent in dark mode)
-- All height references migrated from 70px to 52px app-wide
+### Navbar (64px)
+- Frosted glass backdrop, larger Hercules logo (h-10), animated DEMO/LIVE badge with pulse dot, refined user avatar dropdown
+- No "Mission Control" text — clean logo-focused banner
+- Gradient divider line at bottom (steel-to-transparent)
+- All height references use 64px app-wide
 - File: `Frontend/src/Components/Navbar/Navbar.jsx`
 
 ### Sidebar Navigation
-- Color-coded categories: BUILD=cyan (`#38bdf8`), VIEW=green (`#34d399`), CONFIGURE=purple (`#a78bfa`)
-- Active item has left accent bar + subtle background glow
-- 200px open / 56px collapsed with smooth transitions
-- File: `Frontend/src/Components/Common/SideNav.jsx`
+- Industrial tone palette: steel grays/slates instead of bright neon colors
+- Category labels (BUILD, VIEW, CONFIGURE) in muted `#94a3b8` / `#475569`
+- Active item has slate accent bar + subtle background, text becomes `#f1f5f9` in dark mode
+- Material Design icons: `MdDashboardCustomize`, `MdInsertChart`, `MdEngineering` (22px)
+- Menu item text at 14px for better readability, 44px min-height items
+- 220px open / 60px collapsed with smooth transitions
+- File: `Frontend/src/Components/Common/SideNav.jsx`, `Frontend/src/Data/Navbar.js`
 
 ### Login Page
 - Centered frosted glass card on grid-pattern background
