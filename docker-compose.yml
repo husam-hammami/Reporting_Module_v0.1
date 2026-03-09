@@ -1,0 +1,55 @@
+# Reporting Module — run alongside existing herculesv20docker (ports 8080, 5000, 5432).
+# This stack uses 8081, 5001, 5433 so both can run at once.
+# From repo root: docker compose up -d --build
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: dynamic_db_hercules
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Hercules}
+    volumes:
+      - reporting_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dynamic_db_hercules"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file: ./backend/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      POSTGRES_DB: dynamic_db_hercules
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Hercules}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5002:5001"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/api/settings/system-status')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Frontend/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+
+volumes:
+  reporting_pgdata:

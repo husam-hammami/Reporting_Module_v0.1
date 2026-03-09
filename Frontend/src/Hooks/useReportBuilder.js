@@ -70,6 +70,19 @@ export function collectWidgetTagNames(widgets) {
     if (Array.isArray(c.tableColumns)) {
       c.tableColumns.forEach((col) => { if (col?.tagName) names.add(col.tagName); });
     }
+    // Table static row cells: each cell can be tag/formula/group — collect tag names so live/preview request them
+    if (Array.isArray(c.staticDataRows)) {
+      c.staticDataRows.forEach((row) => {
+        if (Array.isArray(row)) {
+          row.forEach((cell) => {
+            if (cell && typeof cell === 'object') {
+              if (cell.sourceType === 'tag' && cell.tagName) names.add(cell.tagName);
+              if (Array.isArray(cell.groupTags)) cell.groupTags.forEach((t) => { if (t) names.add(t); });
+            }
+          });
+        }
+      });
+    }
     if (c.capacityTag) names.add(c.capacityTag);
     if (c.tonsTag) names.add(c.tonsTag);
   });

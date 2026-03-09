@@ -24,6 +24,19 @@ from utils.kpi_engine import get_kpi_tag_names_for_layout
 
 logger = logging.getLogger(__name__)
 
+
+def _get_db_connection_func():
+    """Resolve get_db_connection from app or __main__ (avoids circular import when run as python app.py)."""
+    import sys
+    for mod_name in ('app', '__main__'):
+        mod = sys.modules.get(mod_name)
+        if mod is not None:
+            fn = getattr(mod, 'get_db_connection', None)
+            if fn is not None:
+                return fn
+    raise RuntimeError("Could not get database connection function")
+
+
 # Store order trackers per layout
 order_trackers = {}
 
@@ -146,7 +159,7 @@ def dynamic_monitor_worker():
 
     # Log initial state once
     try:
-        from app import get_db_connection
+        get_db_connection = _get_db_connection_func()
         from utils.dynamic_tables import get_active_monitors
 
         initial_monitors = get_active_monitors(get_db_connection)
@@ -158,7 +171,7 @@ def dynamic_monitor_worker():
 
     while True:
         try:
-            from app import get_db_connection
+            get_db_connection = _get_db_connection_func()
             from utils.dynamic_tables import get_active_monitors
 
             # Get all active monitors

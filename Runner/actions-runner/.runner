@@ -1,0 +1,9 @@
+﻿{
+  "agentId": 2,
+  "agentName": "reporting_runner",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus2.actions.githubusercontent.com/ByUaxsFedWQV8cgIc3yrgkaEi1waO34omxHeebv4Zn5f8iiOLD/",
+  "gitHubUrl": "https://github.com/husam-hammami/Reporting_Module_v0.1",
+  "workFolder": "_work"
+}

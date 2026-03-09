@@ -4,6 +4,20 @@ This folder records notable modifications to the Reporting Module.
 
 ---
 
+## 2026-03-09
+
+### Report Builder: table cell tags now requested for live/preview (fix tag name showing as text)
+
+- **Summary:** Table cells that use a Tag (e.g. `totalizer_kg`) were showing the tag name as text in Preview and Live instead of the actual PLC value.
+- **Cause:** The function `collectWidgetTagNames(widgets)` in `Frontend/src/Hooks/useReportBuilder.js` is used to build the list of tag names requested from the API for live and preview. It only collected tags from column definitions (`tableColumns`), widget-level config (`dataSource`, `series`, etc.), and similar fields. It did **not** collect tag names from **table static data row cells** (`staticDataRows`). So tags used only inside a cell (e.g. the F2 cell with `totalizer_kg`) were never added to the request list → the API did not return them → `tagValues['totalizer_kg']` was missing → the table fell back to showing the hint (the tag name) instead of a value.
+- **Fix:** In `Frontend/src/Hooks/useReportBuilder.js`, `collectWidgetTagNames` was extended to iterate over each widget’s `config.staticDataRows`. For each row and each cell that is an object:
+  - If `sourceType === 'tag'` and `tagName` is set, that `tagName` is added to the set of requested tags.
+  - If the cell has `groupTags`, those tag names are also added so group-type cells receive live values.
+- **Result:** Tags like `totalizer_kg` used only in table cells are now included in the live/preview tag request. The API returns their values and the table displays the actual PLC values instead of the tag name.
+- **File changed:** `Frontend/src/Hooks/useReportBuilder.js`
+
+---
+
 ## 2025-02-25
 
 ### Tags page: load values for all tags (no 50-tag limit)

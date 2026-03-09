@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Tag Value Cache — Read-once, share-many pattern for PLC tag values.
 

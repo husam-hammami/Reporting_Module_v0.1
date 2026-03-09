@@ -17,13 +17,16 @@ report_builder_bp = Blueprint('report_builder_bp', __name__)
 
 
 def _get_db_connection():
-    """Helper function to get database connection, avoiding circular imports"""
+    """Helper function to get database connection, avoiding circular imports.
+    When run as python app.py, the app is loaded as __main__; when run via gunicorn it's 'app'.
+    """
     import sys
-    if 'app' in sys.modules:
-        app_module = sys.modules['app']
-        get_db_connection = getattr(app_module, 'get_db_connection', None)
-        if get_db_connection:
-            return get_db_connection
+    for mod_name in ('app', '__main__'):
+        mod = sys.modules.get(mod_name)
+        if mod is not None:
+            get_db_connection = getattr(mod, 'get_db_connection', None)
+            if get_db_connection is not None:
+                return get_db_connection
     raise RuntimeError("Could not get database connection function")
 
 

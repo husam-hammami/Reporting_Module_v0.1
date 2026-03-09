@@ -263,7 +263,7 @@ Tag Group
 
 ### Tag Collection
 
-The `collectWidgetTagNames()` function in `useReportBuilder.js` walks all widgets and extracts every tag name from `dataSource.tagName`, `series[].dataSource.tagName`, `tableColumns[].tagName`, `capacityTag`, `tonsTag`, and legacy `config.tagName` / `config.tags[]` fields. These collected tag names are used to:
+The `collectWidgetTagNames()` function in `useReportBuilder.js` walks all widgets and extracts every tag name from `dataSource.tagName`, `series[].dataSource.tagName`, `tableColumns[].tagName`, **table static row cells** (`staticDataRows`: each cell with `sourceType === 'tag'` and `tagName`, or with `groupTags`), `capacityTag`, `tonsTag`, and legacy `config.tagName` / `config.tags[]` fields. These collected tag names are used to:
 
 1. Subscribe to live tag values via the emulator or WebSocket
 2. Build tag history for chart rendering

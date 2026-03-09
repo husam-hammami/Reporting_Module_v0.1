@@ -838,4 +838,4 @@ if __name__ == '__main__':
     logger.info("Server will listen on: http://0.0.0.0:5000")
     logger.info("Test endpoint available at: http://localhost:5000/test")
     # Eventlet handles HTTP and WebSocket requests properly
-    socketio.run(app, debug=False, host='0.0.0.0', port=8000, use_reloader=False)
+    socketio.run(app, debug=False, host='0.0.0.0', port=5001, use_reloader=False)

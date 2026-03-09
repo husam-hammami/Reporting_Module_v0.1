@@ -10,8 +10,7 @@ Provides:
 import logging
 import threading
 import snap7
-import snap7.type as snap7_types
-import snap7.type as snap7types
+from snap7 import types as snap7_types
 
 logger = logging.getLogger(__name__)
 
