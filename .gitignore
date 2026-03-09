@@ -21,6 +21,9 @@ build/
 .DS_Store
 Thumbs.db
 
+# GitHub Actions self-hosted runner (do not track runner binaries)
+Runner/
+
 # Logs
 *.log
 

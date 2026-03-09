@@ -4,15 +4,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-runner:
+  test:
     runs-on: self-hosted
 
     steps:
-      - name: Check Runner
-        run: echo "Runner is working!"
-
-      - name: Show Server Info
+      - name: Show server hostname
         run: hostname
 
-      - name: Check Docker
+      - name: Check Docker containers
         run: docker ps
+
+      - name: Restart Docker containers
+        run: |
+          cd C:\Users\Administrator\Desktop\Config_system\V3\Reporting_Module_v0.1\Reporting_Module_v0.1
+          docker compose up -d
