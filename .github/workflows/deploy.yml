@@ -13,22 +13,26 @@ runs-on: self-hosted
 steps:
 
   - name: Pull latest code
+    shell: powershell
     run: |
-      cd C:\Users\Administrator\Desktop\Config_system\V3\Reporting_Module_v0.1\Reporting_Module_v0.1
+      cd "C:\Users\Administrator\Desktop\Config_system\V3\Reporting_Module_v0.1\Reporting_Module_v0.1"
       git pull origin main
 
   - name: Rebuild backend
+    shell: powershell
     run: |
-      cd C:\Users\Administrator\Desktop\Config_system\V3\Reporting_Module_v0.1\Reporting_Module_v0.1
+      cd "C:\Users\Administrator\Desktop\Config_system\V3\Reporting_Module_v0.1\Reporting_Module_v0.1"
       docker compose -p reporting_module_v01 build backend
       docker compose -p reporting_module_v01 up -d backend
 
   - name: Rebuild frontend
+    shell: powershell
     run: |
-      cd C:\Users\Administrator\Desktop\Config_system\V3\Reporting_Module_v0.1\Reporting_Module_v0.1
+      cd "C:\Users\Administrator\Desktop\Config_system\V3\Reporting_Module_v0.1\Reporting_Module_v0.1"
       docker compose -p reporting_module_v01 build frontend
       docker compose -p reporting_module_v01 up -d frontend
 
   - name: Verify containers
+    shell: powershell
     run: docker ps
 ```
