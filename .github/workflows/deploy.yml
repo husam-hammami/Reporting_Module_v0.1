@@ -1,0 +1,34 @@
+name: Deploy Reporting Module
+
+on:
+push:
+branches:
+- main
+
+jobs:
+deploy:
+runs-on: self-hosted
+
+```
+steps:
+
+  - name: Pull latest code
+    run: |
+      cd C:\Users\Administrator\Desktop\Config_system\V3\Reporting_Module_v0.1\Reporting_Module_v0.1
+      git pull origin main
+
+  - name: Rebuild backend
+    run: |
+      cd C:\Users\Administrator\Desktop\Config_system\V3\Reporting_Module_v0.1\Reporting_Module_v0.1
+      docker compose -p reporting_module_v01 build backend
+      docker compose -p reporting_module_v01 up -d backend
+
+  - name: Rebuild frontend
+    run: |
+      cd C:\Users\Administrator\Desktop\Config_system\V3\Reporting_Module_v0.1\Reporting_Module_v0.1
+      docker compose -p reporting_module_v01 build frontend
+      docker compose -p reporting_module_v01 up -d frontend
+
+  - name: Verify containers
+    run: docker ps
+```

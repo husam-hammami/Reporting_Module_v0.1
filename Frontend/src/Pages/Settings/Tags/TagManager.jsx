@@ -38,6 +38,8 @@ const TagManager = () => {
   const [sortBy, setSortBy] = useState('tag_name');
   const [sortOrder, setSortOrder] = useState('asc');
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
   const { socket, isConnected } = useSocket();
   const { enabled: emulatorOn, tagValues: emulatorValues } = useEmulator();
 
@@ -85,6 +87,7 @@ const TagManager = () => {
       return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
     });
     setFilteredTags(filtered);
+    setPage(1);
   }, [tags, searchTerm, sourceTypeFilter, sortBy, sortOrder]);
 
   const loadTagsFromAPI = async () => {
@@ -248,6 +251,10 @@ const TagManager = () => {
     Manual: 'bg-[#f5f5f4] text-[#57534e] dark:bg-[#1c1917] dark:text-[#a8a29e]',
   };
 
+  const totalPages = Math.max(1, Math.ceil(filteredTags.length / PAGE_SIZE));
+  const start = (page - 1) * PAGE_SIZE;
+  const paginatedTags = filteredTags.slice(start, start + PAGE_SIZE);
+
   return (
     <div className="p-5">
       {/* ── Toolbar ── */}
@@ -335,7 +342,7 @@ const TagManager = () => {
                   </td>
                 </tr>
               ) : (
-                filteredTags.map((tag) => (
+                paginatedTags.map((tag) => (
                   <tr key={tag.id} className="hover:bg-[#f9fbfd] dark:hover:bg-[#111d2e] transition-colors">
                     <td className="px-4 py-2.5 font-medium text-[#2a3545] dark:text-[#e1e8f0]">{tag.tag_name}</td>
                     <td className="px-4 py-2.5 text-[#6b7f94]">{tag.display_name || '—'}</td>
@@ -377,6 +384,34 @@ const TagManager = () => {
           </table>
         </div>
       </div>
+
+      {/* ── Pagination ── */}
+      {filteredTags.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between mt-3 px-1">
+          <span className="text-[11px] text-[#8898aa]">
+            Showing {start + 1}–{Math.min(start + PAGE_SIZE, filteredTags.length)} of {filteredTags.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-2.5 py-1.5 text-[11px] font-medium rounded border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] transition-colors"
+            >
+              Previous
+            </button>
+            <span className="px-2 text-[11px] text-[#6b7f94]">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-2.5 py-1.5 text-[11px] font-medium rounded border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Tag Form Modal ── */}
       {showForm && (
