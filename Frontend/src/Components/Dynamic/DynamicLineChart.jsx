@@ -77,8 +77,12 @@ const DynamicLineChart = ({ config, data }) => {
     plugins: {
       legend: {
         position: config.legend_position || 'top',
+        maxHeight: 60,
         labels: {
           color: isDark ? '#E5E7EB' : '#374151',
+          boxWidth: 12,
+          padding: 8,
+          font: { size: 11 },
         },
       },
       title: {
@@ -137,7 +141,7 @@ const DynamicLineChart = ({ config, data }) => {
           {config.title}
         </h3>
       )}
-      <div style={{ height: config.height || '300px' }}>
+      <div style={{ height: config.height || 'clamp(220px, 35vh, 400px)' }}>
         <Line data={chartData} options={options} />
       </div>
     </div>

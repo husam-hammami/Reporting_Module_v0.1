@@ -295,7 +295,7 @@ const DynamicChartSection = ({ section, tagValues, showTitle = true }) => {
           <h3 className="text-xl font-semibold dark:text-gray-100">{section.section_name}</h3>
         </div>
       )}
-      <div style={{ height: '400px', position: 'relative' }}>
+      <div style={{ height: 'clamp(250px, 40vh, 500px)', position: 'relative' }}>
         {renderChart()}
       </div>
     </div>

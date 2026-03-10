@@ -460,7 +460,7 @@ export default function ReportBuilderCanvas() {
           )}
         </div>
 
-        <div className="hidden md:flex items-center gap-1">
+        <div className="flex items-center gap-1">
           <Tooltip title="Components panel" placement="bottom" arrow disableInteractive>
             <button
               onClick={() => setShowToolbox(!showToolbox)}
@@ -527,10 +527,10 @@ export default function ReportBuilderCanvas() {
           {showToolbox && (
             <motion.div
               initial={skipAnimations ? false : { width: 0, opacity: 0, x: -20 }}
-              animate={{ width: 260, opacity: 1, x: 0 }}
+              animate={{ width: typeof window !== 'undefined' && window.innerWidth < 768 ? 220 : 260, opacity: 1, x: 0 }}
               exit={skipAnimations ? { width: 0, opacity: 0 } : { width: 0, opacity: 0, x: -20 }}
               transition={skipAnimations ? { duration: 0 } : { duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="flex-shrink-0 rb-panel-surface border-r border-[var(--rb-border)] overflow-hidden rb-panel-left-shadow"
+              className="flex-shrink-0 rb-panel-surface border-r border-[var(--rb-border)] overflow-hidden rb-panel-left-shadow max-w-[70vw]"
             >
               <WidgetToolbox
                 onAddWidget={handleAddWidget}
@@ -556,7 +556,7 @@ export default function ReportBuilderCanvas() {
             onWheelCapture={handleWheelCapture}
           >
             {/* Centering wrapper */}
-            <div className="flex justify-center py-6 px-6">
+            <div className="flex justify-center py-4 px-2 sm:py-6 sm:px-6">
               {/* Page container — zoom via transform: scale() */}
               <div
                 className={`rb-page-container w-full ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}
@@ -566,7 +566,7 @@ export default function ReportBuilderCanvas() {
                   transition: skipAnimations ? 'none' : 'max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease-out',
                 }}
               >
-                <div ref={containerRef} className="px-6 pt-3 pb-6 rb-canvas-perspective" style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}>
+                <div ref={containerRef} className="px-2 sm:px-6 pt-3 pb-6 rb-canvas-perspective" style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}>
                   {widgets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
                     <div className="rb-empty-state-icon w-16 h-16 rounded-2xl flex items-center justify-center mb-5">
@@ -765,10 +765,10 @@ export default function ReportBuilderCanvas() {
           {showProperties && (
             <motion.div
               initial={skipAnimations ? false : { width: 0, opacity: 0, x: 20 }}
-              animate={{ width: 324, opacity: 1, x: 0 }}
+              animate={{ width: typeof window !== 'undefined' && window.innerWidth < 768 ? 280 : 324, opacity: 1, x: 0 }}
               exit={skipAnimations ? { width: 0, opacity: 0 } : { width: 0, opacity: 0, x: 20 }}
               transition={skipAnimations ? { duration: 0 } : { duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="flex-shrink-0 rb-panel-surface border-l border-[var(--rb-border)] overflow-hidden rb-panel-right-shadow"
+              className="flex-shrink-0 rb-panel-surface border-l border-[var(--rb-border)] overflow-hidden rb-panel-right-shadow max-w-[85vw]"
             >
               <PropertiesPanel
                 widget={selectedWidget}

@@ -1168,3 +1168,18 @@
     font-family: 'Courier New', monospace;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   uPlot Legend — constrain height to prevent overflow
+   ═══════════════════════════════════════════════════════════════ */
+.uplot-container .u-legend {
+  max-height: 56px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-wrap: wrap;
+  font-size: 10px;
+}
+
+.uplot-container .u-legend .u-series {
+  white-space: nowrap;
+}

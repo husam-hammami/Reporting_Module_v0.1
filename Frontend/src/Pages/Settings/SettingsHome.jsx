@@ -41,14 +41,14 @@ const SettingsHome = () => {
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-transparent">
-      <div className="sticky top-0 z-10 bg-white/90 dark:bg-[#0a1020]/95 border-b border-black/[0.06] dark:border-[#22d3ee]/10 px-6 pt-4 pb-0"
+      <div className="sticky top-0 z-10 bg-white/90 dark:bg-[#0a1020]/95 border-b border-black/[0.06] dark:border-[#22d3ee]/10 px-3 sm:px-6 pt-4 pb-0"
         style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
       >
         <div className="flex items-center gap-2 mb-3">
           <div className="w-1 h-4 rounded-full bg-[#a78bfa] dark:bg-[#22d3ee]" />
           <h1 className="text-[15px] font-bold text-[#0f1729] dark:text-[#e8edf5] tracking-tight">Engineering</h1>
         </div>
-        <nav className="flex gap-0 -mb-px overflow-x-auto">
+        <nav className="flex gap-0 -mb-px overflow-x-auto scrollbar-none">
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.link);
@@ -70,7 +70,7 @@ const SettingsHome = () => {
         </nav>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-5 py-4">
+      <div className="max-w-[1200px] mx-auto px-3 sm:px-5 py-4">
         {showDefault ? (
           <div className="text-center py-16 px-6">
             <div className="w-12 h-12 rounded-xl bg-[#f0f5fa] dark:bg-[#0a1525] dark:border dark:border-[#22d3ee]/10 flex items-center justify-center mx-auto mb-4">

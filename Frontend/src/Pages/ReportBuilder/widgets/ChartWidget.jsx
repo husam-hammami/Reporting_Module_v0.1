@@ -168,6 +168,7 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
         display: config.showLegend !== false,
         position: 'bottom',
         align: 'start',
+        maxHeight: 60,
         labels: {
           color: 'var(--rb-text-muted, #64748b)',
           boxWidth: 8,
