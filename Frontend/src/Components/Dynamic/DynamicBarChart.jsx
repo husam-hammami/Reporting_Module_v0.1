@@ -24,6 +24,8 @@ ChartJS.register(
  * Used for comparing values across categories
  */
 const DynamicBarChart = ({ config, data }) => {
+  const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
   if (!config || !config.series || !Array.isArray(config.series)) {
     return (
       <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded">
@@ -77,9 +79,7 @@ const DynamicBarChart = ({ config, data }) => {
       legend: {
         position: config.legend_position || 'top',
         labels: {
-          color: window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? '#E5E7EB' 
-            : '#374151',
+          color: isDark ? '#E5E7EB' : '#374151',
         },
       },
       title: {
@@ -93,14 +93,10 @@ const DynamicBarChart = ({ config, data }) => {
     scales: {
       x: {
         grid: {
-          color: window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? '#374151' 
-            : '#E5E7EB',
+          color: isDark ? '#374151' : '#E5E7EB',
         },
         ticks: {
-          color: window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? '#9CA3AF' 
-            : '#6B7280',
+          color: isDark ? '#9CA3AF' : '#6B7280',
         },
       },
       y: {
@@ -109,14 +105,10 @@ const DynamicBarChart = ({ config, data }) => {
           text: config.y_axis_label || 'Value',
         },
         grid: {
-          color: window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? '#374151' 
-            : '#E5E7EB',
+          color: isDark ? '#374151' : '#E5E7EB',
         },
         ticks: {
-          color: window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? '#9CA3AF' 
-            : '#6B7280',
+          color: isDark ? '#9CA3AF' : '#6B7280',
         },
       },
     },
