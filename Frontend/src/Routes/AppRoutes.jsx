@@ -19,6 +19,7 @@ import LayoutManager from '../Pages/LiveMonitor/LayoutManager';
 import ReportBuilderManager from '../Pages/ReportBuilder/ReportBuilderManager';
 import ReportBuilderCanvas from '../Pages/ReportBuilder/ReportBuilderCanvas';
 import ReportBuilderPreview from '../Pages/ReportBuilder/ReportBuilderPreview';
+import PaginatedReportBuilder from '../Pages/ReportBuilder/PaginatedReportBuilder';
 import ReportViewer from '../Pages/Reports/ReportViewer';
 import FormulaManager from '../Pages/Settings/Formulas/FormulaManager';
 import EmailSettings from '../Pages/Settings/Email/EmailSettings';
@@ -149,6 +150,14 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
                 <ReportBuilderPreview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="report-builder/:id/paginated"
+            element={
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+                <PaginatedReportBuilder />
               </ProtectedRoute>
             }
           />

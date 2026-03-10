@@ -9,6 +9,7 @@ import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '../ReportBuilder/widgets/WidgetRenderer';
 import ReportThumbnail from '../ReportBuilder/ReportThumbnail';
+import PaginatedReportView from './PaginatedReportViewer';
 import '../ReportBuilder/reportBuilderTheme.css';
 import axios from '../../API/axios';
 
@@ -81,6 +82,7 @@ function ReportList({ onSelect }) {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
       {templates.map((t) => {
         const status = t.status || 'draft';
+        const reportType = (() => { try { const lc = typeof t?.layout_config === 'string' ? JSON.parse(t.layout_config) : (t?.layout_config || {}); return lc.reportType || 'dashboard'; } catch { return 'dashboard'; } })();
         return (
           <button
             key={t.id}
@@ -91,6 +93,11 @@ function ReportList({ onSelect }) {
             <div className="relative h-56 w-full flex items-stretch overflow-hidden">
               <ReportThumbnail template={t} />
               <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                {reportType === 'paginated' && (
+                  <span className="px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide rounded bg-purple-500/10 text-purple-500">
+                    Paginated
+                  </span>
+                )}
                 <span className={`px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide rounded ${STATUS_STYLE[status] || STATUS_STYLE.draft}`}>
                   {status}
                 </span>
@@ -122,6 +129,17 @@ function SingleReportView({ reportId, onBack }) {
   const { tags } = useAvailableTags();
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
   const { socket } = useSocket();
+
+  // Detect paginated report type and render dedicated viewer
+  const isPaginated = useMemo(() => {
+    if (!template) return false;
+    const lc = typeof template.layout_config === 'string' ? JSON.parse(template.layout_config) : (template.layout_config || {});
+    return lc.reportType === 'paginated';
+  }, [template]);
+
+  if (!loading && isPaginated) {
+    return <PaginatedReportView reportId={reportId} onBack={onBack} />;
+  }
 
   const [timePreset, setTimePreset] = useState('live');
   const [customFrom, setCustomFrom] = useState('');

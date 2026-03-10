@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, Trash2, Search, LayoutGrid, BarChart3, FileText, X, Zap, Layers } from 'lucide-react';
+import { Plus, Copy, Trash2, Search, LayoutGrid, BarChart3, FileText, X, Zap, Layers, Table2 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useReportTemplates } from '../../Hooks/useReportBuilder';
 import ReportThumbnail from './ReportThumbnail';
@@ -39,9 +39,27 @@ const STATUS_CONFIG = {
 
 const FILTER_TABS = ['all', 'draft', 'validated', 'published'];
 
+const REPORT_TYPES = [
+  {
+    key: 'dashboard',
+    label: 'Dashboard',
+    icon: LayoutGrid,
+    description: 'Drag-and-drop canvas with widgets (charts, KPIs, gauges, tables)',
+    color: '#0284c7',
+  },
+  {
+    key: 'paginated',
+    label: 'Paginated Report',
+    icon: Table2,
+    description: 'Professional A4 document with sections, tables, and KPI summaries',
+    color: '#7c3aed',
+  },
+];
+
 function CreateModal({ open, onClose, onCreate }) {
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
+  const [reportType, setReportType] = useState('dashboard');
   const [submitting, setSubmitting] = useState(false);
   const shouldReduce = useReducedMotion();
 
@@ -51,7 +69,7 @@ function CreateModal({ open, onClose, onCreate }) {
     e.preventDefault();
     if (!name.trim()) return;
     setSubmitting(true);
-    try { await onCreate({ name: name.trim(), description: desc.trim() }); setName(''); setDesc(''); onClose(); }
+    try { await onCreate({ name: name.trim(), description: desc.trim(), reportType }); setName(''); setDesc(''); setReportType('dashboard'); onClose(); }
     finally { setSubmitting(false); }
   };
 
@@ -65,7 +83,7 @@ function CreateModal({ open, onClose, onCreate }) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={shouldReduce ? undefined : { opacity: 0, scale: 0.94, y: 12 }}
         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md rounded-xl overflow-hidden"
+        className="w-full max-w-lg rounded-xl overflow-hidden"
         style={{
           background: 'var(--rb-panel)',
           border: '1px solid var(--rb-border)',
@@ -96,6 +114,44 @@ function CreateModal({ open, onClose, onCreate }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Report Type Selection */}
+          <div>
+            <label className="block text-[9px] font-bold uppercase tracking-widest mb-2.5" style={{ color: 'var(--rb-accent)' }}>Report Type</label>
+            <div className="grid grid-cols-2 gap-3">
+              {REPORT_TYPES.map((rt) => {
+                const selected = reportType === rt.key;
+                return (
+                  <button
+                    key={rt.key}
+                    type="button"
+                    onClick={() => setReportType(rt.key)}
+                    className="relative flex flex-col items-center gap-2 p-4 rounded-xl text-center transition-all duration-200"
+                    style={{
+                      border: `2px solid ${selected ? rt.color : 'var(--rb-border)'}`,
+                      background: selected ? `${rt.color}08` : 'var(--rb-surface)',
+                      boxShadow: selected ? `0 0 16px ${rt.color}20` : 'none',
+                    }}
+                  >
+                    {selected && (
+                      <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center"
+                        style={{ background: rt.color }}>
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                    )}
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{ background: `${rt.color}15`, border: `1px solid ${rt.color}25` }}>
+                      <rt.icon size={20} style={{ color: rt.color }} />
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-bold" style={{ color: selected ? rt.color : 'var(--rb-text)' }}>{rt.label}</div>
+                      <div className="text-[9px] mt-0.5 leading-snug" style={{ color: 'var(--rb-text-muted)' }}>{rt.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div>
             <label className="block text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--rb-accent)' }}>Report Name</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Daily Production Summary" autoFocus className="rb-input-base w-full" />
@@ -143,11 +199,20 @@ function StatusBadge({ status }) {
 
 const TemplateCard = forwardRef(function TemplateCard({ template, onOpen, onDuplicate, onDelete, index, shouldReduce }, ref) {
   const status = template.status || 'draft';
+  const reportType = (() => {
+    try {
+      const lc = template?.layout_config;
+      if (!lc) return 'dashboard';
+      const parsed = typeof lc === 'string' ? JSON.parse(lc) : lc;
+      return parsed?.reportType || 'dashboard';
+    } catch { return 'dashboard'; }
+  })();
   const widgetCount = (() => {
     try {
       const lc = template?.layout_config;
       if (!lc) return 0;
       const parsed = typeof lc === 'string' ? JSON.parse(lc) : lc;
+      if (parsed?.reportType === 'paginated') return parsed?.paginatedSections?.length || 0;
       return parsed?.widgets?.length || 0;
     } catch { return 0; }
   })();
@@ -200,6 +265,16 @@ const TemplateCard = forwardRef(function TemplateCard({ template, onOpen, onDupl
                   {widgetCount}
                 </span>
               )}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold"
+                style={{
+                  background: reportType === 'paginated' ? 'rgba(124, 58, 237, 0.08)' : 'var(--rb-accent-subtle)',
+                  color: reportType === 'paginated' ? '#7c3aed' : 'var(--rb-accent)',
+                  border: `1px solid ${reportType === 'paginated' ? 'rgba(124, 58, 237, 0.15)' : 'rgba(56, 189, 248, 0.12)'}`,
+                }}
+              >
+                {reportType === 'paginated' ? <Table2 size={8} /> : <LayoutGrid size={8} />}
+                {reportType === 'paginated' ? 'Paginated' : 'Dashboard'}
+              </span>
             </div>
             <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <button
@@ -283,10 +358,29 @@ export default function ReportBuilderManager() {
     return list;
   }, [templates, search, statusFilter]);
 
-  const handleOpen = (id) => navigate(`/report-builder/${id}`);
+  const getReportType = (t) => {
+    try {
+      const lc = typeof t?.layout_config === 'string' ? JSON.parse(t.layout_config) : (t?.layout_config || {});
+      return lc.reportType || 'dashboard';
+    } catch { return 'dashboard'; }
+  };
+
+  const handleOpen = (id) => {
+    const t = templates.find((t) => t.id === id);
+    const rt = getReportType(t);
+    if (rt === 'paginated') navigate(`/report-builder/${id}/paginated`);
+    else navigate(`/report-builder/${id}`);
+  };
   const handleCreate = async (data) => {
-    const created = await createTemplate(data);
-    if (created?.id) navigate(`/report-builder/${created.id}`);
+    const reportType = data.reportType || 'dashboard';
+    const layoutConfig = reportType === 'paginated'
+      ? { reportType: 'paginated', paginatedSections: [], widgets: [], grid: { cols: 12, rowHeight: 40 } }
+      : { widgets: [], grid: { cols: 12, rowHeight: 40 } };
+    const created = await createTemplate({ name: data.name, description: data.description, layout_config: layoutConfig });
+    if (created?.id) {
+      if (reportType === 'paginated') navigate(`/report-builder/${created.id}/paginated`);
+      else navigate(`/report-builder/${created.id}`);
+    }
   };
   const handleDelete = (id) => { if (window.confirm('Delete this report? This cannot be undone.')) deleteTemplate(id); };
   const handleClearAll = () => {
