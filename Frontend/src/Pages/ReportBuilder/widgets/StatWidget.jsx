@@ -124,6 +124,11 @@ export default function StatWidget({ config, tagValues }) {
           fontVariantNumeric: 'tabular-nums',
           letterSpacing: '-0.03em',
           textShadow: `0 0 20px ${color}33`,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          maxWidth: '100%',
+          display: 'block',
         }}
       >
         {display}

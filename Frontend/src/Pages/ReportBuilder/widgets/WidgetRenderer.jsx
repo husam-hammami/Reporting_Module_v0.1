@@ -1,3 +1,4 @@
+import React from 'react';
 import KPIWidget from './KPIWidget';
 import ChartWidget from './ChartWidget';
 import GaugeWidget from './GaugeWidget';
@@ -6,6 +7,39 @@ import TableWidget from './TableWidget';
 import StatWidget from './StatWidget';
 import ImageWidget from './ImageWidget';
 import TextWidget from './TextWidget';
+
+/* ── Error Boundary — catches widget render crashes ── */
+class WidgetErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error(`Widget "${this.props.widgetType}" crashed:`, error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-full w-full flex items-center justify-center bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-3">
+          <div className="text-center">
+            <p className="text-[11px] font-semibold text-red-600 dark:text-red-400 mb-1">Widget Error</p>
+            <p className="text-[9px] text-red-400 dark:text-red-500 max-w-[180px] truncate">{this.state.error?.message || 'Render failed'}</p>
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+              className="mt-2 text-[9px] px-2 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const RENDERERS = {
   kpi: KPIWidget,
@@ -48,17 +82,19 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
   const isInvisible = INVISIBLE_WRAPPER_TYPES.has(widget.type);
 
   return (
-    <div className={isInvisible ? 'h-full w-full' : 'h-full w-full flex flex-col min-h-0 overflow-hidden'}>
-      <Component
-        config={widget.config || {}}
-        tagValues={tagValues || {}}
-        isPreview={isPreview}
-        {...tableProps}
-        {...siloProps}
-        {...kpiProps}
-        {...chartProps}
-        {...imageProps}
-      />
-    </div>
+    <WidgetErrorBoundary widgetType={widget.type} key={widget.id || widgetId}>
+      <div className={isInvisible ? 'h-full w-full' : 'h-full w-full flex flex-col min-h-0 overflow-hidden'}>
+        <Component
+          config={widget.config || {}}
+          tagValues={tagValues || {}}
+          isPreview={isPreview}
+          {...tableProps}
+          {...siloProps}
+          {...kpiProps}
+          {...chartProps}
+          {...imageProps}
+        />
+      </div>
+    </WidgetErrorBoundary>
   );
 }

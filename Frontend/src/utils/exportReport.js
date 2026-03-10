@@ -1,16 +1,38 @@
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
+/**
+ * Reset any CSS transform on the element before capture, then restore.
+ * This ensures html2canvas captures at true 1:1 scale regardless of zoom.
+ */
+function withResetTransform(element, fn) {
+  // Walk up and find any scaled container
+  const scaledEl = element.closest('[style*="transform"]') || element.parentElement;
+  const origTransform = scaledEl?.style?.transform || '';
+  if (scaledEl && origTransform) {
+    scaledEl.style.transform = 'none';
+  }
+  try {
+    return fn();
+  } finally {
+    if (scaledEl && origTransform) {
+      scaledEl.style.transform = origTransform;
+    }
+  }
+}
+
 export async function exportAsPNG(element, filename = 'report') {
   const originalBg = element.style.backgroundColor;
   element.style.backgroundColor = '#ffffff';
 
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: '#ffffff',
-    logging: false,
-  });
+  const canvas = await withResetTransform(element, () =>
+    html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+    })
+  );
 
   element.style.backgroundColor = originalBg;
 
@@ -24,29 +46,92 @@ export async function exportAsPNG(element, filename = 'report') {
   }, 'image/png');
 }
 
-export async function exportAsPDF(element, filename = 'report') {
+/**
+ * Export as multi-page PDF with auto-detected orientation and page numbers.
+ * @param {HTMLElement} element - The report container to capture
+ * @param {string} filename - Base filename (without extension)
+ * @param {object} options - { orientation: 'portrait'|'landscape'|'auto', pageMode: 'a4'|'full' }
+ */
+export async function exportAsPDF(element, filename = 'report', options = {}) {
   const originalBg = element.style.backgroundColor;
   element.style.backgroundColor = '#ffffff';
 
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: '#ffffff',
-    logging: false,
-  });
+  const canvas = await withResetTransform(element, () =>
+    html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+    })
+  );
 
   element.style.backgroundColor = originalBg;
 
-  const imgData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF('landscape', 'mm', 'a4');
+  // Auto-detect orientation: use portrait for A4/narrow content, landscape for wide dashboards
+  let orientation = options.orientation || 'auto';
+  if (orientation === 'auto') {
+    const pageMode = options.pageMode || 'a4';
+    orientation = pageMode === 'a4' ? 'portrait' : 'landscape';
+  }
+
+  const pdf = new jsPDF(orientation, 'mm', 'a4');
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
+
+  const imgData = canvas.toDataURL('image/png');
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
-  const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-  const x = (pdfWidth - imgWidth * ratio) / 2;
-  const y = 0;
 
-  pdf.addImage(imgData, 'PNG', x, y, imgWidth * ratio, imgHeight * ratio);
+  // Scale image to fit page width
+  const scaledWidth = pdfWidth - 16; // 8mm margin each side
+  const scaledHeight = (imgHeight / imgWidth) * scaledWidth;
+
+  // Content area height (leave room for page number footer)
+  const footerHeight = 8; // mm
+  const contentHeight = pdfHeight - 8 - footerHeight; // 8mm top margin
+
+  // Calculate total pages needed
+  const totalPages = Math.ceil(scaledHeight / contentHeight);
+
+  for (let page = 0; page < totalPages; page++) {
+    if (page > 0) pdf.addPage();
+
+    // Calculate which portion of the image to show on this page
+    const srcY = (page * contentHeight / scaledHeight) * imgHeight;
+    const srcH = Math.min((contentHeight / scaledHeight) * imgHeight, imgHeight - srcY);
+
+    // Create a canvas slice for this page
+    const pageCanvas = document.createElement('canvas');
+    pageCanvas.width = imgWidth;
+    pageCanvas.height = Math.ceil(srcH);
+    const ctx = pageCanvas.getContext('2d');
+    ctx.drawImage(canvas, 0, srcY, imgWidth, srcH, 0, 0, imgWidth, srcH);
+
+    const pageImgData = pageCanvas.toDataURL('image/png');
+    const sliceScaledHeight = (srcH / imgWidth) * scaledWidth;
+
+    pdf.addImage(pageImgData, 'PNG', 8, 8, scaledWidth, sliceScaledHeight);
+
+    // Page number footer
+    pdf.setFontSize(8);
+    pdf.setTextColor(150);
+    pdf.text(
+      `Page ${page + 1} of ${totalPages}`,
+      pdfWidth / 2,
+      pdfHeight - 4,
+      { align: 'center' }
+    );
+
+    // Date stamp on first page
+    if (page === 0) {
+      pdf.text(
+        new Date().toLocaleString(),
+        pdfWidth - 8,
+        pdfHeight - 4,
+        { align: 'right' }
+      );
+    }
+  }
+
   pdf.save(`${filename}_${new Date().toISOString().slice(0, 10)}.pdf`);
 }

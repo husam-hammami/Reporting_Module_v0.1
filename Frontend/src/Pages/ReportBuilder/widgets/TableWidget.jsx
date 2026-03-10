@@ -282,8 +282,8 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const sectionHeaderColor = safeConfig.sectionHeaderColor || '';
 
   const canEdit = Boolean(isSelected && onUpdate && widgetId);
-  /** In builder workspace always fit table (no horizontal scroll); in preview allow scroll/minWidth. */
-  const fitInContainer = Boolean(isReportBuilderWorkspace);
+  /** Allow horizontal scroll everywhere so wide tables remain usable. */
+  const fitInContainer = false;
   const tableBodyMin = canEdit ? tableBodyMinHeight(layoutH, layoutRowHeight) : undefined;
 
   /* ── Editing state ── */
@@ -567,14 +567,22 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
         <h4 className="rb-heading mb-1.5 truncate rb-table-title">{safeConfig.title}</h4>
       )}
 
-      <div
-        className={`flex-1 min-h-0 ${fitInContainer ? 'overflow-hidden' : 'overflow-auto'}`}
+      {columns.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-center py-8 px-4">
+          <div>
+            <p className="text-[12px] font-medium text-[var(--rb-text-muted)] mb-1">No columns configured</p>
+            {canEdit && <p className="text-[10px] text-[var(--rb-text-muted)]/60">Open the Properties panel to add table columns</p>}
+          </div>
+        </div>
+      ) : null}
+
+      {columns.length > 0 && <div
+        className="flex-1 min-h-0 overflow-auto"
         style={tableBodyMin != null ? { minHeight: `${tableBodyMin}px` } : undefined}
       >
         <table
           className="w-full rb-body border-collapse"
           style={{
-            ...(fitInContainer && { tableLayout: 'fixed' }),
             ...(borderColor && { borderColor }),
           }}
         >
@@ -587,21 +595,21 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
               }}
             >
               {columns.map((col, ci) => {
-                const colMinWidth = fitInContainer ? undefined : (col.width || 100);
+                const colMinWidth = col.width || 100;
                 return (
                 <th
                   key={ci}
                   onDoubleClick={canEdit ? () => openEditor('edit', ci, col) : undefined}
-                  className={`text-left ${canEdit ? 'cursor-pointer hover:bg-[var(--rb-accent-subtle)]/50 transition-colors group select-none' : ''} ${fitInContainer ? 'truncate' : ''}`}
+                  className={`text-left ${canEdit ? 'cursor-pointer hover:bg-[var(--rb-accent-subtle)]/50 transition-colors group select-none' : ''}`}
                   style={{
-                    ...(colMinWidth != null && { minWidth: colMinWidth }),
+                    minWidth: Math.max(colMinWidth, 80),
                     textAlign: col.align || 'left',
                     ...(borderColor ? { borderColor } : {}),
                   }}
                   title={canEdit ? `${col.label || `Col ${ci + 1}`}${col.unit ? ` (${col.unit})` : ''} — Double-click to edit` : undefined}
                 >
-                  <span className={`flex items-center gap-1.5 min-w-0 ${canEdit ? 'truncate' : ''}`}>
-                    <span className="truncate">{col.label || `Col ${ci + 1}`}</span>
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="line-clamp-2 leading-tight">{col.label || `Col ${ci + 1}`}</span>
                     {col.unit && <span className="text-[9px] font-normal normal-case opacity-60 flex-shrink-0 tracking-normal">({col.unit})</span>}
                     {canEdit && <Settings2 size={12} className="opacity-0 group-hover:opacity-50 transition-opacity ml-auto flex-shrink-0" />}
                   </span>
@@ -648,13 +656,12 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                   <td
                     key={ci}
                     onDoubleClick={canEdit ? () => openEditor('edit', ci, col) : undefined}
-                    className={`${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${isNumeric ? 'rb-cell-numeric' : ''} ${thresholdColor ? 'rb-cell-threshold' : ''}`}
+                    className={`${canEdit ? 'cursor-pointer select-none' : ''}  ${isNumeric ? 'rb-cell-numeric' : ''} ${thresholdColor ? 'rb-cell-threshold' : ''}`}
                     style={{
                       ...(borderColor ? { borderColor } : {}),
                       textAlign: col.align || 'left',
                       ...(thresholdColor ? { color: thresholdColor } : {}),
-                      ...(fitInContainer && { overflow: 'hidden', textOverflow: 'ellipsis' }),
-                    }}
+                                          }}
                     title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit') : undefined}
                   >
                     {showResolvedValue && formatted.type === 'boolean' ? (
@@ -665,12 +672,12 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                       </span>
                     ) : (
                       showResolvedValue ? (
-                        <span className={`${hasLiveValue ? '' : 'rb-cell-hint'} ${fitInContainer ? 'block truncate' : ''}`}>
+                        <span className={`${hasLiveValue ? '' : 'rb-cell-hint'}`}>
                           {displayText}
                         </span>
                       ) : (
                         <span
-                          className={`leading-tight min-w-0 ${fitInContainer ? 'truncate block' : 'break-words'} ${hint ? 'rb-cell-numeric text-[var(--rb-text-muted)]' : 'rb-cell-hint'}`}
+                          className={`leading-tight min-w-0 break-words ${hint ? 'rb-cell-numeric text-[var(--rb-text-muted)]' : 'rb-cell-hint'}`}
                           title={canEdit && hint ? `${badge.label}: ${hint}` : displayText}
                         >
                           {displayText}
@@ -716,13 +723,12 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                         <td
                           key={ci}
                           onDoubleClick={canEdit ? () => openEditorForStaticCell(ri, ci) : undefined}
-                          className={`${canEdit ? 'cursor-pointer select-none' : ''} ${fitInContainer ? 'max-w-0' : ''} ${isNumericCell ? 'rb-cell-numeric' : ''} ${thresholdColor ? 'rb-cell-threshold' : ''}`}
+                          className={`${canEdit ? 'cursor-pointer select-none' : ''}  ${isNumericCell ? 'rb-cell-numeric' : ''} ${thresholdColor ? 'rb-cell-threshold' : ''}`}
                           style={{
                             ...(borderColor ? { borderColor } : {}),
                             textAlign: numericAlign ? 'right' : (col.align || 'left'),
                             ...(thresholdColor ? { color: thresholdColor } : {}),
-                            ...(fitInContainer && { overflow: 'hidden', textOverflow: 'ellipsis' }),
-                          }}
+                                                      }}
                           title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit cell') : undefined}
                         >
                           {showResolvedValue && formatted.type === 'boolean' ? (
@@ -732,7 +738,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                               ) : null}
                             </span>
                           ) : (
-                            <span className={`${hasValue || showResolvedValue ? '' : 'rb-cell-hint'} ${fitInContainer ? 'block truncate' : ''}`}>
+                            <span className={`${hasValue || showResolvedValue ? '' : 'rb-cell-hint'}`}>
                               {displayText}
                             </span>
                           )}
@@ -776,7 +782,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                     return (
                       <td
                         key={ci}
-                        className={`rb-cell-numeric ${fitInContainer ? 'max-w-0 truncate' : ''}`}
+                        className={`rb-cell-numeric `}
                         style={{ ...(borderColor ? { borderColor } : {}), textAlign: col.align || 'left' }}
                       >
                         {isFirst && (
@@ -784,7 +790,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                             {sr.label}
                           </span>
                         )}
-                        <span className={fitInContainer ? 'truncate block' : ''}>{summaryText}</span>
+                        <span>{summaryText}</span>
                       </td>
                     );
                   })}
@@ -875,7 +881,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {/* ── Column editor panel (slides in from right) ── */}
       {editingCol && draft && (
