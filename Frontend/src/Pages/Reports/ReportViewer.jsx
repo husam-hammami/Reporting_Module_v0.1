@@ -9,6 +9,7 @@ import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '../ReportBuilder/widgets/WidgetRenderer';
 import ReportThumbnail from '../ReportBuilder/ReportThumbnail';
+import PaginatedReportView from './PaginatedReportViewer';
 import '../ReportBuilder/reportBuilderTheme.css';
 import axios from '../../API/axios';
 
@@ -81,6 +82,7 @@ function ReportList({ onSelect }) {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
       {templates.map((t) => {
         const status = t.status || 'draft';
+        const reportType = (() => { try { const lc = typeof t?.layout_config === 'string' ? JSON.parse(t.layout_config) : (t?.layout_config || {}); return lc.reportType || 'dashboard'; } catch { return 'dashboard'; } })();
         return (
           <button
             key={t.id}
@@ -91,6 +93,11 @@ function ReportList({ onSelect }) {
             <div className="relative h-56 w-full flex items-stretch overflow-hidden">
               <ReportThumbnail template={t} />
               <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                {reportType === 'paginated' && (
+                  <span className="px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide rounded bg-purple-500/10 text-purple-500">
+                    Paginated
+                  </span>
+                )}
                 <span className={`px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide rounded ${STATUS_STYLE[status] || STATUS_STYLE.draft}`}>
                   {status}
                 </span>
@@ -123,6 +130,17 @@ function SingleReportView({ reportId, onBack }) {
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
   const { socket } = useSocket();
 
+  // Detect paginated report type and render dedicated viewer
+  const isPaginated = useMemo(() => {
+    if (!template) return false;
+    const lc = typeof template.layout_config === 'string' ? JSON.parse(template.layout_config) : (template.layout_config || {});
+    return lc.reportType === 'paginated';
+  }, [template]);
+
+  if (!loading && isPaginated) {
+    return <PaginatedReportView reportId={reportId} onBack={onBack} />;
+  }
+
   const [timePreset, setTimePreset] = useState('live');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -131,6 +149,9 @@ function SingleReportView({ reportId, onBack }) {
   const [shiftsConfig, setShiftsConfig] = useState(null);
   const [selectedShift, setSelectedShift] = useState('');
   const [now, setNow] = useState(() => new Date());
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'tabular'
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [tablePage, setTablePage] = useState({}); // { [widgetId]: pageNumber }
   const [liveTagValues, setLiveTagValues] = useState({});
   const [liveError, setLiveError] = useState(null);
   const [historicalTagValues, setHistoricalTagValues] = useState({});
@@ -380,7 +401,7 @@ function SingleReportView({ reportId, onBack }) {
     setExporting(true);
     try {
       const el = document.getElementById('report-print-section');
-      await exportAsPDF(el, template?.name || 'report');
+      await exportAsPDF(el, template?.name || 'report', { pageMode });
     } finally { setExporting(false); }
   };
   const handleExportPNG = async () => {
@@ -395,6 +416,17 @@ function SingleReportView({ reportId, onBack }) {
     if (!document.fullscreenElement) { document.documentElement.requestFullscreen?.(); setFullscreen(true); }
     else { document.exitFullscreen?.(); setFullscreen(false); }
   };
+
+  const hasTableWidgets = useMemo(() =>
+    Array.isArray(widgets) && widgets.some((w) => w?.type === 'table'),
+    [widgets]
+  );
+
+  // Sort widgets by y then x position for tabular flow
+  const sortedWidgets = useMemo(() => {
+    if (!Array.isArray(widgets)) return [];
+    return [...widgets].sort((a, b) => (a.y ?? 0) - (b.y ?? 0) || (a.x ?? 0) - (b.x ?? 0));
+  }, [widgets]);
 
   const gridCols = template?.layout_config?.grid?.cols ?? GRID_COLS_DEFAULT;
   const gridRowH = template?.layout_config?.grid?.rowHeight ?? GRID_ROW_H_DEFAULT;
@@ -454,8 +486,26 @@ function SingleReportView({ reportId, onBack }) {
           </div>
         </div>
 
-        {/* Right: fullscreen + print */}
+        {/* Right: view toggle + fullscreen + print */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {hasTableWidgets && (
+            <div className="flex rounded-lg border border-[#e3e9f0] dark:border-[#22d3ee]/10 overflow-hidden">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${viewMode === 'grid' ? 'bg-brand text-white' : 'text-[#6b7f94] hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                title="Grid layout"
+              >
+                Grid
+              </button>
+              <button
+                onClick={() => setViewMode('tabular')}
+                className={`px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${viewMode === 'tabular' ? 'bg-brand text-white' : 'text-[#6b7f94] hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                title="Tabular layout — tables expand full width with pagination"
+              >
+                Tabular
+              </button>
+            </div>
+          )}
           <button onClick={toggleFullscreen} className="p-2 rounded-lg text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors border border-transparent hover:border-[#e3e9f0]" title="Fullscreen">
             {fullscreen ? <FaCompress size={14} /> : <FaExpand size={14} />}
           </button>
@@ -521,15 +571,15 @@ function SingleReportView({ reportId, onBack }) {
         <div className={`border-b px-4 py-1 flex items-center gap-2 print:hidden ${
           liveError
             ? 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30'
-            : emulatorOn
+            : (emulatorOn || Object.keys(liveTagValues).length > 0)
               ? 'bg-[#ecfdf5] dark:bg-[#0d2e1f] border-[#a7f3d0] dark:border-[#065f46]'
               : 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30'
         }`}>
           {liveError
             ? <><span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" /><span className="text-[10px] font-medium text-[#ef4444]">{liveError}</span></>
-            : emulatorOn
-              ? <><span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" /><span className="text-[10px] font-medium text-[#059669]">Live</span></>
-              : <><FaClock size={9} className="text-[#d97706]" /><span className="text-[10px] font-medium text-[#d97706]">Emulator off — enable in Engineering</span></>
+            : (emulatorOn || Object.keys(liveTagValues).length > 0)
+              ? <><span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" /><span className="text-[10px] font-medium text-[#059669]">{emulatorOn ? 'Live (Emulator)' : 'Live'}</span></>
+              : <><FaClock size={9} className="text-[#d97706]" /><span className="text-[10px] font-medium text-[#d97706]">Waiting for live data…</span></>
           }
         </div>
       ) : (
@@ -559,14 +609,98 @@ function SingleReportView({ reportId, onBack }) {
       {/* ── Report content: full width; scrollable with mouse wheel ── */}
       <div
         ref={scrollContainerRef}
-        className="report-builder flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-behavior-auto"
+        className="report-builder flex-1 min-h-0 overflow-y-auto overflow-x-auto overscroll-behavior-auto"
         style={{ WebkitOverflowScrolling: 'touch', background: 'var(--rb-canvas)' }}
         onWheelCapture={handleWheelCapture}
       >
         <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}>
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
             <div className="text-center py-16 text-[12px] text-[#6b7f94] dark:text-[#8898aa]">No widgets in this report.</div>
+          ) : viewMode === 'tabular' ? (
+            /* ══ Tabular View — tables render full-width with pagination ══ */
+            <div className="report-builder rb-canvas-perspective rb-layout-readonly pt-3 pb-6 px-4 sm:px-6 space-y-6">
+              {sortedWidgets.map((widget) => {
+                if (!widget?.id) return null;
+                const wt = widget.type;
+                const isTable = wt === 'table';
+                const isInvisible = wt === 'text';
+                const showCard = isInvisible
+                  ? false
+                  : CARDLESS_WIDGET_TYPES.has(wt)
+                    ? widget.config?.showCard === true
+                    : widget.config?.showCard !== false;
+
+                if (isTable) {
+                  // Render table with pagination
+                  const staticRows = widget.config?.staticDataRows || [];
+                  const totalRows = staticRows.length + 1; // +1 for live data row
+                  const currentPage = tablePage[widget.id] || 0;
+                  const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+                  const showPagination = totalRows > rowsPerPage;
+
+                  return (
+                    <div key={widget.id} className={`${showCard ? 'rb-widget-card rounded-lg' : ''}`}>
+                      <div className="overflow-x-auto">
+                        <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
+                      </div>
+                      {showPagination && (
+                        <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white/60 dark:bg-[#0a1525]/60">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-[#6b7f94]">Rows per page:</span>
+                            <select
+                              value={rowsPerPage}
+                              onChange={(e) => { setRowsPerPage(Number(e.target.value)); setTablePage({}); }}
+                              className="text-[11px] px-1.5 py-0.5 rounded border border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white dark:bg-[#0a1525] text-[#3a4a5c] dark:text-[#c1ccd9]"
+                            >
+                              <option value={10}>10</option>
+                              <option value={25}>25</option>
+                              <option value={50}>50</option>
+                              <option value={100}>100</option>
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-[#6b7f94]">
+                              Page {currentPage + 1} of {totalPages} ({totalRows} rows)
+                            </span>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => setTablePage((p) => ({ ...p, [widget.id]: Math.max(0, currentPage - 1) }))}
+                                disabled={currentPage === 0}
+                                className="px-2 py-1 text-[11px] rounded border border-[#e3e9f0] dark:border-[#22d3ee]/10 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                              >
+                                Prev
+                              </button>
+                              <button
+                                onClick={() => setTablePage((p) => ({ ...p, [widget.id]: Math.min(totalPages - 1, currentPage + 1) }))}
+                                disabled={currentPage >= totalPages - 1}
+                                className="px-2 py-1 text-[11px] rounded border border-[#e3e9f0] dark:border-[#22d3ee]/10 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Non-table widgets: render inline at natural size
+                const minH = wt === 'chart' || wt === 'barchart' ? '300px' : wt === 'gauge' || wt === 'silo' ? '200px' : 'auto';
+                const cardClass = isInvisible
+                  ? ''
+                  : showCard
+                    ? 'rounded-lg rb-widget-card overflow-hidden'
+                    : 'overflow-hidden';
+                return (
+                  <div key={widget.id} className={cardClass} style={{ minHeight: minH }}>
+                    <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
+                  </div>
+                );
+              })}
+            </div>
           ) : (
+            /* ══ Grid View — original react-grid-layout rendering ══ */
             <div
               ref={containerRef}
               className="report-builder rb-canvas-perspective rb-layout-readonly pt-3 pb-6 px-6"

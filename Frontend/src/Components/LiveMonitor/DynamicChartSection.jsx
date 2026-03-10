@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -27,6 +27,18 @@ ChartJS.register(
   Filler
 );
 
+// Deep-compare helper: returns a stable reference when the value hasn't changed
+function useDeepMemo(factory, value) {
+  const ref = useRef();
+  const serialized = JSON.stringify(value);
+  const prevSerialized = useRef(serialized);
+  if (prevSerialized.current !== serialized || ref.current === undefined) {
+    prevSerialized.current = serialized;
+    ref.current = factory();
+  }
+  return ref.current;
+}
+
 const DynamicChartSection = ({ section, tagValues, showTitle = true }) => {
   const [chartData, setChartData] = useState(null);
   const [timeLabels, setTimeLabels] = useState([]);
@@ -35,16 +47,15 @@ const DynamicChartSection = ({ section, tagValues, showTitle = true }) => {
   const chartType = config.chart_type || 'line';
   const chartConfig = config.chart_config || {};
   const datasets = chartConfig.datasets || [];
-  
-  // Memoize datasets to prevent infinite loops - use JSON.stringify for deep comparison
-  const datasetsMemo = useMemo(() => datasets, [JSON.stringify(datasets)]);
-  
-  // Get the selected tag names (array) for X-axis - memoize to prevent infinite loops
-  const xAxisTags = useMemo(() => {
-    return Array.isArray(chartConfig.xAxisLabel) 
-      ? chartConfig.xAxisLabel 
+
+  // Stable references for datasets and xAxisTags using deep comparison
+  const datasetsMemo = useDeepMemo(() => datasets, datasets);
+
+  const xAxisTags = useDeepMemo(() => {
+    return Array.isArray(chartConfig.xAxisLabel)
+      ? chartConfig.xAxisLabel
       : (chartConfig.xAxisLabel ? [chartConfig.xAxisLabel] : []);
-  }, [JSON.stringify(chartConfig.xAxisLabel)]);
+  }, chartConfig.xAxisLabel);
   
   const yAxisLabel = chartConfig.yAxisLabel || '';
   
@@ -104,13 +115,14 @@ const DynamicChartSection = ({ section, tagValues, showTitle = true }) => {
         const currentValue = tagValues[tagName];
         const baseValue = typeof currentValue === 'number' ? currentValue : 0;
         
-        // Generate data points - use current value with slight variation for preview
+        // Generate data points - use current value with deterministic variation for preview
         // In production, this would use actual historical data from the API
         const data = labels.map((_, idx) => {
           // Create a trend from past to present
           const progress = idx / (labels.length - 1);
-          // Add slight variation to show trend
-          const variation = (Math.random() - 0.5) * (baseValue * 0.1 || 5);
+          // Deterministic variation based on index (avoids random re-render flicker)
+          const seed = ((idx + 1) * 2654435761) % 1000 / 1000; // hash-like spread
+          const variation = (seed - 0.5) * (baseValue * 0.1 || 5);
           return Math.max(0, baseValue + variation * (1 - progress * 0.5));
         });
 
@@ -154,9 +166,9 @@ const DynamicChartSection = ({ section, tagValues, showTitle = true }) => {
     );
   }
 
-  // Detect dark mode
-  const isDarkMode = typeof document !== 'undefined' && 
-    (document.documentElement.classList.contains('dark') || 
+  // Detect dark mode (safe for SSR)
+  const isDarkMode = typeof window !== 'undefined' &&
+    (document.documentElement.classList.contains('dark') ||
      window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   // Get dataset labels for Y-axis
@@ -283,7 +295,7 @@ const DynamicChartSection = ({ section, tagValues, showTitle = true }) => {
           <h3 className="text-xl font-semibold dark:text-gray-100">{section.section_name}</h3>
         </div>
       )}
-      <div style={{ height: '400px', position: 'relative' }}>
+      <div style={{ height: 'clamp(250px, 40vh, 500px)', position: 'relative' }}>
         {renderChart()}
       </div>
     </div>

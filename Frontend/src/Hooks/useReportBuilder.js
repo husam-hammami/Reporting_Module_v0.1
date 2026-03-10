@@ -229,11 +229,12 @@ export function useReportTemplates() {
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
 
   const createTemplate = useCallback(async (data) => {
+    const layoutConfig = data.layout_config || { ...EMPTY_LAYOUT_CONFIG };
     try {
       const payload = {
         name: data.name || 'Untitled Report',
         description: data.description || '',
-        layout_config: { ...EMPTY_LAYOUT_CONFIG },
+        layout_config: layoutConfig,
       };
       const res = await reportBuilderApi.create(payload);
       const created = res?.data?.data;
@@ -249,7 +250,7 @@ export function useReportTemplates() {
       name: data.name || 'Untitled Report',
       description: data.description || '',
       status: 'draft',
-      layout_config: { ...EMPTY_LAYOUT_CONFIG },
+      layout_config: layoutConfig,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

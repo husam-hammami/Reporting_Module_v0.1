@@ -21,6 +21,7 @@ from live_monitor_bp import live_monitor_bp
 from historian_bp import historian_bp
 from kpi_config_bp import kpi_config_bp
 from report_builder_bp import report_builder_bp
+from mappings_bp import mappings_bp
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -148,6 +149,7 @@ app.register_blueprint(live_monitor_bp, url_prefix='/api')
 app.register_blueprint(historian_bp, url_prefix='/api')
 app.register_blueprint(kpi_config_bp, url_prefix='/api')
 app.register_blueprint(report_builder_bp, url_prefix='/api')
+app.register_blueprint(mappings_bp, url_prefix='/api')
 
 # Demo mode: single source of truth for Production vs Demo (emulator)
 @app.route('/api/settings/demo-mode', methods=['GET'])

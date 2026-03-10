@@ -1168,3 +1168,28 @@
     font-family: 'Courier New', monospace;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   uPlot Legend — constrain height to prevent overflow
+   ═══════════════════════════════════════════════════════════════ */
+.uplot-container .u-legend {
+  max-height: 56px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-wrap: wrap;
+  font-size: 10px;
+}
+
+.uplot-container .u-legend .u-series {
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Grid snap visual — dot pattern overlay when snap is enabled
+   ═══════════════════════════════════════════════════════════════ */
+.rb-canvas-dots.rb-grid-snap-active {
+  background-image:
+    radial-gradient(circle, var(--rb-border) 0.5px, transparent 0.5px) !important;
+  background-size: 40px 40px !important;
+  background-position: 0 0 !important;
+}

@@ -908,24 +908,14 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
   );
 }
 
-const MAPPINGS_STORAGE_KEY = 'system_mappings_v2';
-
-function getMappingsFromStorage() {
-  try {
-    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(MAPPINGS_STORAGE_KEY) : null;
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+import { getCachedMappings, refreshMappingsCache } from '../../../utils/mappingsCache';
+refreshMappingsCache();
 
 function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas = [] }) {
   const safeConfig = config || {};
   const columns = Array.isArray(safeConfig.tableColumns) ? safeConfig.tableColumns : [];
   const updateColumns = (newCols) => onUpdate({ tableColumns: newCols });
-  const mappings = getMappingsFromStorage();
+  const mappings = getCachedMappings();
 
   const getSourcePreview = (col) => {
     const src = col.sourceType || 'tag';

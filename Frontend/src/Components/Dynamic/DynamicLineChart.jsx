@@ -29,6 +29,8 @@ ChartJS.register(
  * Supports multiple series and time-based data
  */
 const DynamicLineChart = ({ config, data }) => {
+  const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
   if (!config || !config.series || !Array.isArray(config.series)) {
     return (
       <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded">
@@ -75,10 +77,12 @@ const DynamicLineChart = ({ config, data }) => {
     plugins: {
       legend: {
         position: config.legend_position || 'top',
+        maxHeight: 60,
         labels: {
-          color: window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? '#E5E7EB' 
-            : '#374151',
+          color: isDark ? '#E5E7EB' : '#374151',
+          boxWidth: 12,
+          padding: 8,
+          font: { size: 11 },
         },
       },
       title: {
@@ -107,14 +111,10 @@ const DynamicLineChart = ({ config, data }) => {
           text: config.x_axis_label || 'Time',
         },
         grid: {
-          color: window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? '#374151' 
-            : '#E5E7EB',
+          color: isDark ? '#374151' : '#E5E7EB',
         },
         ticks: {
-          color: window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? '#9CA3AF' 
-            : '#6B7280',
+          color: isDark ? '#9CA3AF' : '#6B7280',
         },
       },
       y: {
@@ -125,14 +125,10 @@ const DynamicLineChart = ({ config, data }) => {
         min: config.y_min !== undefined ? config.y_min : undefined,
         max: config.y_max !== undefined ? config.y_max : undefined,
         grid: {
-          color: window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? '#374151' 
-            : '#E5E7EB',
+          color: isDark ? '#374151' : '#E5E7EB',
         },
         ticks: {
-          color: window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? '#9CA3AF' 
-            : '#6B7280',
+          color: isDark ? '#9CA3AF' : '#6B7280',
         },
       },
     },
@@ -145,7 +141,7 @@ const DynamicLineChart = ({ config, data }) => {
           {config.title}
         </h3>
       )}
-      <div style={{ height: config.height || '300px' }}>
+      <div style={{ height: config.height || 'clamp(220px, 35vh, 400px)' }}>
         <Line data={chartData} options={options} />
       </div>
     </div>

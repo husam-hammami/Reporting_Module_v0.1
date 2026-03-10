@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLenisScroll } from '../../../Hooks/useLenisScroll';
 import { FaDownload, FaUpload, FaFileExport, FaFileImport } from 'react-icons/fa';
+import axios from '../../../API/axios';
 
 const ExportImport = () => {
   useLenisScroll();
@@ -8,22 +9,28 @@ const ExportImport = () => {
   const [importFile, setImportFile] = useState(null);
   const [importPreview, setImportPreview] = useState(null);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const data = {};
 
     if (exportType === 'full' || exportType === 'tags') {
-      const tags = localStorage.getItem('system_tags');
-      if (tags) data.tags = JSON.parse(tags);
+      try {
+        const res = await axios.get('/api/tags');
+        if (res.data?.tags) data.tags = res.data.tags;
+      } catch { /* skip */ }
     }
 
     if (exportType === 'full' || exportType === 'tag_groups') {
-      const tagGroups = localStorage.getItem('system_tag_groups');
-      if (tagGroups) data.tag_groups = JSON.parse(tagGroups);
+      try {
+        const res = await axios.get('/api/tag-groups');
+        if (res.data?.groups) data.tag_groups = res.data.groups;
+      } catch { /* skip */ }
     }
 
     if (exportType === 'full' || exportType === 'mappings') {
-      const mappings = localStorage.getItem('system_mappings');
-      if (mappings) data.mappings = JSON.parse(mappings);
+      try {
+        const res = await axios.get('/api/mappings');
+        if (res.data?.mappings) data.mappings = res.data.mappings;
+      } catch { /* skip */ }
     }
 
     if (exportType === 'full' || exportType === 'reports') {
@@ -62,7 +69,7 @@ const ExportImport = () => {
     reader.readAsText(file);
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!importFile) {
       alert('Please select a file first');
       return;
@@ -84,8 +91,12 @@ const ExportImport = () => {
       }
 
       if (importFile.mappings) {
-        localStorage.setItem('system_mappings', JSON.stringify(importFile.mappings));
-        window.dispatchEvent(new Event('mappingsUpdated'));
+        try {
+          await axios.post('/api/mappings/migrate-from-local', importFile.mappings);
+          window.dispatchEvent(new Event('mappingsUpdated'));
+        } catch (e) {
+          console.error('Failed to import mappings:', e);
+        }
       }
 
       if (importFile.reports) {
