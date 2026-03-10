@@ -126,9 +126,8 @@ def resolve_column_value(column, tag_values, bin_id=None, tag_group_members=None
     elif source_type == 'mapping':
         if not mapping_name:
             return None
-        # Look up value in mapping
-        # For now, return the mapping name (can be enhanced later)
-        return mapping_name
+        # Resolve the mapping: look up the input tag's value in the mapping's lookup table
+        return resolve_mapping_value(mapping_name, tag_values)
     
     elif source_type == 'text':
         return text_value
@@ -240,6 +239,75 @@ def resolve_weight_value(source_tag_name, bin_id, tag_values):
                     return weight_value
     
     return None
+
+
+def resolve_mapping_value(mapping_name, tag_values):
+    """
+    Resolve a mapping value by looking up the input tag's current value
+    in the mapping's lookup table (stored in the database).
+
+    Args:
+        mapping_name: Name of the mapping (e.g., 'Bin → Material')
+        tag_values: Dictionary of tag_name -> value
+
+    Returns:
+        Resolved output string, fallback, or None
+    """
+    try:
+        import sys
+        if 'app' not in sys.modules:
+            logger.warning("app module not loaded, cannot resolve mapping")
+            return None
+
+        app_module = sys.modules['app']
+        get_db_connection = getattr(app_module, 'get_db_connection', None)
+        if not get_db_connection:
+            return None
+
+        with closing(get_db_connection()) as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("""
+                SELECT input_tag, lookup, fallback
+                FROM mappings
+                WHERE LOWER(name) = LOWER(%s) AND is_active = true
+            """, (mapping_name,))
+            row = cursor.fetchone()
+
+        if not row:
+            logger.debug(f"Mapping '{mapping_name}' not found in database")
+            return None
+
+        input_tag = row['input_tag']
+        lookup = row['lookup']
+        fallback = row.get('fallback', 'Unknown')
+
+        if isinstance(lookup, str):
+            import json
+            lookup = json.loads(lookup)
+
+        # Get the input tag's current value
+        input_value = tag_values.get(input_tag)
+        if input_value is None:
+            # Try case-insensitive match
+            for k, v in tag_values.items():
+                if k.lower() == input_tag.lower():
+                    input_value = v
+                    break
+
+        if input_value is None:
+            return fallback
+
+        # Lookup: round numeric values to int for key matching
+        try:
+            key = str(int(round(float(input_value))))
+        except (ValueError, TypeError):
+            key = str(input_value).strip()
+
+        return lookup.get(key, fallback)
+
+    except Exception as e:
+        logger.warning(f"Error resolving mapping '{mapping_name}': {e}")
+        return None
 
 
 def evaluate_formula(formula, value_or_dict):

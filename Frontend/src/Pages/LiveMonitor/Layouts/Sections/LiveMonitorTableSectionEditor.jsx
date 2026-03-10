@@ -123,16 +123,17 @@ const LiveMonitorTableSectionEditor = () => {
     // Call the async function
     loadTagGroups();
 
-    // Load mappings
-    try {
-      const saved = localStorage.getItem('system_mappings');
-      if (saved) {
-        const data = JSON.parse(saved);
-        setMappings(data.mappings?.filter(m => m.is_active) || []);
+    // Load mappings from API
+    const loadMappings = async () => {
+      try {
+        const res = await axios.get('/api/mappings');
+        const list = (res.data?.mappings || []).filter(m => m.is_active);
+        setMappings(list);
+      } catch (e) {
+        console.error('Error loading mappings:', e);
       }
-    } catch (e) {
-      console.error('Error loading mappings:', e);
-    }
+    };
+    loadMappings();
   };
 
   const saveSection = async () => {

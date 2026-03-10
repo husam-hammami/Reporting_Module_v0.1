@@ -1,103 +1,116 @@
-import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaTag } from 'react-icons/fa';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
 import { ArrowRight } from 'lucide-react';
 import MappingForm from './MappingForm';
 import { useEmulator } from '../../../Context/EmulatorContext';
+import axios from '../../../API/axios';
 import '../../ReportBuilder/reportBuilderTheme.css';
-
-/* ── Salalah seed mappings ── */
-const SEED_MAPPINGS = [
-  {
-    id: 'map_bin_material',
-    name: 'Bin → Material',
-    input_tag: 'Sender1BinId',
-    output_tag_name: 'Sender1_Material',
-    description: 'Reads bin ID from PLC, outputs the material stored in that bin',
-    lookup: { '21': 'Wheat (Hard Red Winter)', '22': 'Wheat (Soft White)', '23': 'Wheat (Durum)', '25': 'Wheat (Spring)', '27': 'Barley', '28': 'Corn / Maize', '29': 'Premium Flour', '31': 'Semolina', '32': 'Bran (Coarse)', '94': 'Bran (Fine)' },
-    fallback: 'Unknown Material',
-    is_active: true,
-  },
-  {
-    id: 'map_prd_code',
-    name: 'Product Code → Product',
-    input_tag: 'PrdCode',
-    output_tag_name: 'ProductName',
-    description: 'Converts numeric product code to product name',
-    lookup: { '9101': 'Premium Flour 50kg', '9102': 'Standard Flour 50kg', '9103': 'Semolina 25kg', '9104': 'Bran (Coarse) Bulk', '9105': 'Bran (Fine) Bulk', '9201': 'Whole Wheat Flour 25kg', '9301': 'Animal Feed Mix' },
-    fallback: 'Unknown Product',
-    is_active: true,
-  },
-  {
-    id: 'map_dest_silo',
-    name: 'Dest Bin → Silo Location',
-    input_tag: 'DestBinId',
-    output_tag_name: 'DestSiloName',
-    description: 'Converts destination bin ID to physical silo name',
-    lookup: { '21': 'Silo 021 (Wheat Reception)', '211': 'Silo 021A (1st Clean)', '212': 'Silo 021B (2nd Clean)', '213': 'Silo 021C (Tempering)', '29': 'Flour Silo 029', '31': 'Semolina Silo 031', '32': 'Bran Silo 032' },
-    fallback: 'Unknown Silo',
-    is_active: true,
-  },
-  {
-    id: 'map_job_status',
-    name: 'Job Status → Label',
-    input_tag: 'Job_status_code',
-    output_tag_name: 'JobStatusLabel',
-    description: 'Converts PLC job status code to readable label',
-    lookup: { '0': 'Idle', '1': 'Starting', '2': 'Running', '3': 'Paused', '4': 'Stopping', '5': 'Completed', '6': 'Error', '7': 'Cleaning' },
-    fallback: 'Unknown',
-    is_active: true,
-  },
-];
 
 function resolveLookup(mapping, inputValue) {
   if (inputValue == null) return mapping.fallback || '—';
   const key = String(Math.round(Number(inputValue)));
-  return mapping.lookup[key] || mapping.fallback || '—';
+  return (mapping.lookup || {})[key] || mapping.fallback || '—';
 }
 
 const MappingManager = () => {
   const [mappings, setMappings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingMapping, setEditingMapping] = useState(null);
   const { tagValues, enabled: emulatorOn } = useEmulator();
 
-  useEffect(() => { loadMappings(); }, []);
-
-  const loadMappings = () => {
+  const loadMappings = useCallback(async () => {
     try {
-      const saved = localStorage.getItem('system_mappings_v2');
-      if (saved) {
-        const loaded = JSON.parse(saved) || [];
-        if (loaded.length > 0) { setMappings(loaded); return; }
+      setError(null);
+      const res = await axios.get('/api/mappings');
+      const list = res.data?.mappings || [];
+      setMappings(list);
+
+      // One-time migration: if DB is empty but localStorage has data, migrate it
+      if (list.length === 0) {
+        const saved = localStorage.getItem('system_mappings_v2');
+        if (saved) {
+          try {
+            const local = JSON.parse(saved);
+            if (Array.isArray(local) && local.length > 0) {
+              const migrateRes = await axios.post('/api/mappings/migrate-from-local', local);
+              if (migrateRes.data?.imported > 0) {
+                // Reload from DB after migration
+                const res2 = await axios.get('/api/mappings');
+                setMappings(res2.data?.mappings || []);
+                // Clear localStorage after successful migration
+                localStorage.removeItem('system_mappings_v2');
+              }
+            }
+          } catch (migrateErr) {
+            console.warn('Failed to migrate localStorage mappings:', migrateErr);
+          }
+        }
+
+        // If still empty after migration attempt, seed defaults
+        const currentMappings = mappings.length > 0 ? mappings : (await axios.get('/api/mappings')).data?.mappings || [];
+        if (currentMappings.length === 0) {
+          await axios.post('/api/mappings/seed');
+          const res3 = await axios.get('/api/mappings');
+          setMappings(res3.data?.mappings || []);
+        }
       }
-    } catch { /* ignore */ }
-    localStorage.setItem('system_mappings_v2', JSON.stringify(SEED_MAPPINGS));
-    setMappings(SEED_MAPPINGS);
-  };
-
-  const save = (updated) => {
-    localStorage.setItem('system_mappings_v2', JSON.stringify(updated));
-    setMappings(updated);
-    window.dispatchEvent(new Event('mappingsUpdated'));
-  };
-
-  const handleSave = (data) => {
-    if (editingMapping) {
-      save(mappings.map(m => m.id === editingMapping.id ? { ...data, id: editingMapping.id } : m));
-    } else {
-      save([...mappings, { ...data, id: `map_${Date.now()}` }]);
+    } catch (err) {
+      console.error('Error loading mappings:', err);
+      setError('Failed to load mappings from server');
+    } finally {
+      setLoading(false);
     }
-    setShowForm(false);
-    setEditingMapping(null);
+  }, []);
+
+  useEffect(() => { loadMappings(); }, [loadMappings]);
+
+  const handleSave = async (data) => {
+    try {
+      if (editingMapping) {
+        await axios.put(`/api/mappings/${editingMapping.id}`, data);
+      } else {
+        await axios.post('/api/mappings', data);
+      }
+      setShowForm(false);
+      setEditingMapping(null);
+      loadMappings();
+      window.dispatchEvent(new Event('mappingsUpdated'));
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      alert('Error saving mapping: ' + msg);
+    }
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Delete this mapping?')) save(mappings.filter(m => m.id !== id));
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this mapping?')) return;
+    try {
+      await axios.delete(`/api/mappings/${id}`);
+      loadMappings();
+      window.dispatchEvent(new Event('mappingsUpdated'));
+    } catch (err) {
+      alert('Error deleting mapping: ' + (err.response?.data?.message || err.message));
+    }
   };
 
-  const handleToggle = (id) => {
-    save(mappings.map(m => m.id === id ? { ...m, is_active: !m.is_active } : m));
+  const handleToggle = async (id) => {
+    try {
+      await axios.patch(`/api/mappings/${id}/toggle`);
+      loadMappings();
+      window.dispatchEvent(new Event('mappingsUpdated'));
+    } catch (err) {
+      alert('Error toggling mapping: ' + (err.response?.data?.message || err.message));
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="p-5">
+        <div className="text-center py-12 text-[12px] text-[#8898aa]">Loading mappings...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-5">
@@ -113,6 +126,13 @@ const MappingManager = () => {
           <FaPlus size={10} /> New Mapping
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 px-3 py-2 rounded-lg bg-[#fef2f2] border border-[#fecaca] text-[11px] text-[#dc2626]">
+          {error}
+          <button onClick={loadMappings} className="ml-2 font-medium underline hover:no-underline">Retry</button>
+        </div>
+      )}
 
       {/* Cards */}
       <div className="space-y-3">

@@ -4,18 +4,10 @@ import { Plus, Trash2, X, Settings2, GripVertical } from 'lucide-react';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import FormulaEditor from '../formulas/FormulaEditor';
 
-const MAPPINGS_STORAGE_KEY = 'system_mappings_v2';
+import { getCachedMappings, refreshMappingsCache } from '../../../utils/mappingsCache';
 
-function getMappingsFromStorage() {
-  try {
-    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(MAPPINGS_STORAGE_KEY) : null;
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+// Trigger initial cache load
+refreshMappingsCache();
 
 function resolveLookup(mapping, inputValue) {
   if (inputValue == null) return mapping?.fallback || '—';
@@ -58,7 +50,7 @@ function resolveColumnValue(col, tagValues) {
   }
 
   if (src === 'mapping' && col.mappingName) {
-    const mappings = getMappingsFromStorage();
+    const mappings = getCachedMappings();
     const mapping = mappings.find((m) => (m.name || m.id) === col.mappingName);
     if (!mapping) return null;
     const inputValue = tagValues?.[mapping.input_tag];
@@ -1058,7 +1050,7 @@ function ColumnEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagVa
                     className={inputCls}
                   >
                     <option value="">— Select mapping —</option>
-                    {getMappingsFromStorage().map((m) => (
+                    {getCachedMappings().map((m) => (
                       <option key={m.id || m.name} value={m.name || m.id || ''}>{m.name || m.id || 'Unnamed'}</option>
                     ))}
                   </select>
