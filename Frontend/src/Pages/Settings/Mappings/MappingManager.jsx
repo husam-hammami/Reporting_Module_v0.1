@@ -36,24 +36,15 @@ const MappingManager = () => {
             if (Array.isArray(local) && local.length > 0) {
               const migrateRes = await axios.post('/api/mappings/migrate-from-local', local);
               if (migrateRes.data?.imported > 0) {
-                // Reload from DB after migration
                 const res2 = await axios.get('/api/mappings');
                 setMappings(res2.data?.mappings || []);
-                // Clear localStorage after successful migration
-                localStorage.removeItem('system_mappings_v2');
               }
+              // Clear localStorage after migration attempt
+              localStorage.removeItem('system_mappings_v2');
             }
           } catch (migrateErr) {
             console.warn('Failed to migrate localStorage mappings:', migrateErr);
           }
-        }
-
-        // If still empty after migration attempt, seed defaults
-        const currentMappings = mappings.length > 0 ? mappings : (await axios.get('/api/mappings')).data?.mappings || [];
-        if (currentMappings.length === 0) {
-          await axios.post('/api/mappings/seed');
-          const res3 = await axios.get('/api/mappings');
-          setMappings(res3.data?.mappings || []);
         }
       }
     } catch (err) {
