@@ -553,15 +553,15 @@ function SingleReportView({ reportId, onBack }) {
         <div className={`border-b px-4 py-1 flex items-center gap-2 print:hidden ${
           liveError
             ? 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30'
-            : emulatorOn
+            : (emulatorOn || Object.keys(liveTagValues).length > 0)
               ? 'bg-[#ecfdf5] dark:bg-[#0d2e1f] border-[#a7f3d0] dark:border-[#065f46]'
               : 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30'
         }`}>
           {liveError
             ? <><span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" /><span className="text-[10px] font-medium text-[#ef4444]">{liveError}</span></>
-            : emulatorOn
-              ? <><span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" /><span className="text-[10px] font-medium text-[#059669]">Live</span></>
-              : <><FaClock size={9} className="text-[#d97706]" /><span className="text-[10px] font-medium text-[#d97706]">Emulator off — enable in Engineering</span></>
+            : (emulatorOn || Object.keys(liveTagValues).length > 0)
+              ? <><span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" /><span className="text-[10px] font-medium text-[#059669]">{emulatorOn ? 'Live (Emulator)' : 'Live'}</span></>
+              : <><FaClock size={9} className="text-[#d97706]" /><span className="text-[10px] font-medium text-[#d97706]">Waiting for live data…</span></>
           }
         </div>
       ) : (
