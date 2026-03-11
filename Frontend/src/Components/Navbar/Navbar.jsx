@@ -61,7 +61,7 @@ function Navbar({ isBlueprint = false }) {
 
             {!statusLoading && demoMode !== null && (
               <Tooltip title={demoMode ? "Demo mode — simulated data" : "Live mode — real PLC data"} placement="bottom" arrow disableInteractive>
-                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider select-none cursor-default transition-all duration-300 ${
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider select-none cursor-default transition-all duration-300 ${
                   demoMode
                     ? 'bg-amber-500/10 text-amber-500 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-500/20'
                     : 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-500/20'
@@ -94,7 +94,7 @@ function Navbar({ isBlueprint = false }) {
                   {auth.username?.charAt(0)?.toUpperCase()}
                 </div>
                 <div className="hidden sm:flex flex-col items-start">
-                  <span className="text-[12px] font-medium text-[#334155] dark:text-[#e8edf5] leading-tight">
+                  <span className="text-[13px] font-medium text-[#334155] dark:text-[#e8edf5] leading-tight">
                     {auth.username}
                   </span>
                   <span className="text-[10px] text-[#94a3b8] dark:text-[#556677] capitalize leading-tight">

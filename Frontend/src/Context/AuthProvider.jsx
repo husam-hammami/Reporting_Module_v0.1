@@ -9,7 +9,7 @@ export const AuthContext = createContext();
 // ── DEV / LOCAL TEST MODE ──────────────────────────────────────────
 // Set to true to skip all backend auth and use a mock admin user.
 // Set to false to restore normal backend authentication.
-const DEV_MODE = true;
+const DEV_MODE = false;
 // ────────────────────────────────────────────────────────────────────
 
 export const AuthProvider = ({ children }) => {

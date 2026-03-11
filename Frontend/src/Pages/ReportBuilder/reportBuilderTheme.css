@@ -8,10 +8,10 @@
    ═══════════════════════════════════════════════════════════════ */
 .report-builder {
   /* ── Typography scale ── */
-  --rb-font-xs: 0.5625rem;     /* 9px  — micro labels */
-  --rb-font-sm: 0.6875rem;     /* 11px — captions */
-  --rb-font-base: 0.75rem;     /* 12px — body */
-  --rb-font-md: 0.8125rem;     /* 13px — headings */
+  --rb-font-xs: 0.625rem;      /* 10px — micro labels */
+  --rb-font-sm: 0.75rem;       /* 12px — captions */
+  --rb-font-base: 0.8125rem;   /* 13px — body */
+  --rb-font-md: 0.875rem;      /* 14px — headings */
   --rb-font-lg: 0.9375rem;     /* 15px — titles */
   --rb-font-xl: 1.125rem;      /* 18px — large */
   --rb-font-2xl: 1.5rem;       /* 24px — value displays */
@@ -25,10 +25,10 @@
   --rb-space-5: 1.25rem;
   --rb-space-6: 1.5rem;
   --rb-space-8: 2rem;
-  --rb-pad-xs: 4px;
-  --rb-pad-sm: 6px;
-  --rb-pad-md: 8px;
-  --rb-pad-lg: 12px;
+  --rb-pad-xs: 5px;
+  --rb-pad-sm: 7px;
+  --rb-pad-md: 10px;
+  --rb-pad-lg: 14px;
 
   /* ── Light mode surfaces ── */
   --rb-bg-deep: transparent;
@@ -410,12 +410,12 @@
   background-color: rgba(34, 211, 238, 0.06);
 }
 .report-builder .rb-table-header-row th {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rb-text-secondary);
-  padding: 8px 12px;
+  padding: 9px 12px;
   border-bottom: 2px solid var(--rb-border);
   white-space: nowrap;
 }
@@ -432,7 +432,7 @@
   background-color: var(--rb-accent-subtle) !important;
 }
 .report-builder .rb-table-body-row td {
-  padding: 7px 12px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--rb-border-subtle);
   font-size: 13px;
   color: var(--rb-text);
@@ -664,8 +664,8 @@
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 6px;
+  gap: 4px;
+  padding: 5px 8px;
   border-radius: 9999px;
   background: var(--rb-panel);
   border: 1px solid var(--rb-border);
@@ -681,8 +681,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--rb-radius);
   color: var(--rb-text-muted);
   transition: all var(--rb-transition-fast) ease;
@@ -719,7 +719,7 @@
   text-align: center;
   user-select: none;
   font-variant-numeric: tabular-nums;
-  padding: 3px 6px;
+  padding: 4px 8px;
   border-radius: var(--rb-radius-sm);
   background: var(--rb-surface);
 }
@@ -748,8 +748,8 @@
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px 5px;
+  gap: 4px;
+  padding: 4px 6px;
   border-radius: 9999px;
   background: var(--rb-panel);
   border: 1px solid var(--rb-border);
@@ -763,8 +763,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--rb-radius);
   color: var(--rb-text-secondary);
   opacity: 0.85;
@@ -1099,6 +1099,11 @@
    PRINT STYLES — Professional PDF/Print Layout
    ═══════════════════════════════════════════════════════════════ */
 @media print {
+  @page {
+    margin: 5mm;
+    size: A4 portrait;
+  }
+
   .report-builder .rb-production-table {
     padding: 0 !important;
   }
@@ -1113,7 +1118,7 @@
   .report-builder .rb-production-table th,
   .report-builder .rb-production-table td {
     border: 1px solid #999;
-    padding: 4px 8px;
+    padding: 3px 6px;
     color: #000 !important;
     background: #fff !important;
   }
@@ -1130,13 +1135,13 @@
     font-size: 11px;
     border-top: 2px solid #333;
     border-bottom: 1px solid #666;
-    padding: 6px 8px;
+    padding: 5px 6px;
   }
 
   .report-builder .rb-report-header {
     border-bottom: 2px solid #333 !important;
-    margin-bottom: 8px;
-    padding-bottom: 6px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
   }
 
   .report-builder .rb-report-header h3 {
@@ -1166,6 +1171,47 @@
 
   .report-builder .font-mono {
     font-family: 'Courier New', monospace;
+  }
+
+  /* Paginated report page breaks */
+  .paginated-page {
+    page-break-after: always;
+    break-after: page;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+  .paginated-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .paginated-page-break {
+    display: none !important;
+  }
+
+  /* Paginated report tables — clean print */
+  .paginated-page table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .paginated-page th,
+  .paginated-page td {
+    color: #000 !important;
+    border-color: #999 !important;
+    padding: 3px 6px !important;
+  }
+  .paginated-page thead th {
+    background: #f0f0f0 !important;
+  }
+
+  /* Remove all decorative elements in print */
+  .report-builder {
+    background: white !important;
+  }
+  .rb-widget-card {
+    box-shadow: none !important;
+    border-radius: 0 !important;
   }
 }
 

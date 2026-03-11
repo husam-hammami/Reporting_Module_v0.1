@@ -218,6 +218,20 @@ function resolveKpiValue(kpi, tagValues) {
   }, tagValues);
 }
 
+/* ── Check if a row should be hidden (bin inactive) ──────────────── */
+
+function isRowHidden(row, section, tagValues) {
+  if (!row.hideWhenInactive) return false;
+  const refCol = row.hideReferenceCol ?? 0;
+  const cell = row.cells?.[refCol];
+  if (!cell) return false;
+  const resolved = resolveCellValue(cell, tagValues);
+  // Hide when resolved value is 0, "0", "0.0", or dash (no data)
+  if (resolved === '—' || resolved === '') return true;
+  const num = Number(String(resolved).replace(/[^0-9.\-]/g, ''));
+  return !isNaN(num) && num === 0;
+}
+
 /* ── Collect all tag names from paginated config ─────────────────── */
 
 export function collectPaginatedTagNames(sections) {
@@ -529,6 +543,11 @@ function TableSectionEditor({ section, tags, onChange }) {
     rows[rowIdx] = { ...rows[rowIdx], cells };
     onChange({ ...section, rows });
   };
+  const updateRow = (idx, updates) => {
+    const rows = [...section.rows];
+    rows[idx] = { ...rows[idx], ...updates };
+    onChange({ ...section, rows });
+  };
   const addRow = () => {
     onChange({
       ...section,
@@ -568,16 +587,16 @@ function TableSectionEditor({ section, tags, onChange }) {
             <Plus size={10} /> Column
           </button>
         </div>
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-2 flex-wrap">
           {section.columns.map((col, i) => (
             <div key={col.id} className="flex items-center gap-1 p-1 rounded-md" style={{ background: 'var(--rb-surface)', border: '1px solid var(--rb-border)' }}>
               <input
                 value={col.header}
                 onChange={(e) => updateColumn(i, { header: e.target.value })}
-                className="rb-input-base text-[10px] py-0.5 px-1.5 w-20"
+                className="rb-input-base text-[10px] py-0.5 px-1.5 w-24"
               />
               <select value={col.align || 'left'} onChange={(e) => updateColumn(i, { align: e.target.value })}
-                className="rb-input-base text-[9px] py-0.5 px-1 w-14">
+                className="rb-input-base text-[9px] py-0.5 px-1 w-16">
                 <option value="left">Left</option>
                 <option value="center">Center</option>
                 <option value="right">Right</option>
@@ -601,20 +620,44 @@ function TableSectionEditor({ section, tags, onChange }) {
             <Plus size={10} /> Row
           </button>
         </div>
-        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
           {section.rows.map((row, ri) => (
             <div key={row.id} className="p-2 rounded-lg" style={{ background: 'var(--rb-surface)', border: '1px solid var(--rb-border)' }}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[9px] font-semibold" style={{ color: 'var(--rb-text-muted)' }}>Row {ri + 1}</span>
-                <div className="flex gap-0.5">
-                  <button onClick={() => duplicateRow(ri)} className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5" title="Duplicate row">
-                    <Copy size={10} style={{ color: 'var(--rb-text-muted)' }} />
-                  </button>
-                  {section.rows.length > 1 && (
-                    <button onClick={() => removeRow(ri)} className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete row">
-                      <Trash2 size={10} className="text-red-400" />
-                    </button>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1 text-[8px]" style={{ color: 'var(--rb-text-muted)' }} title="Hide this row when the reference bin tag value is 0 (inactive)">
+                    <input
+                      type="checkbox"
+                      checked={row.hideWhenInactive || false}
+                      onChange={(e) => updateRow(ri, { hideWhenInactive: e.target.checked })}
+                      className="rounded"
+                      style={{ width: 12, height: 12 }}
+                    />
+                    Hide inactive
+                  </label>
+                  {row.hideWhenInactive && (
+                    <select
+                      value={row.hideReferenceCol ?? 0}
+                      onChange={(e) => updateRow(ri, { hideReferenceCol: Number(e.target.value) })}
+                      className="rb-input-base text-[8px] py-0 px-1"
+                      title="Column to check — row hides when this cell's resolved value is 0"
+                    >
+                      {section.columns.map((col, ci) => (
+                        <option key={ci} value={ci}>{col.header}</option>
+                      ))}
+                    </select>
                   )}
+                  <div className="flex gap-0.5">
+                    <button onClick={() => duplicateRow(ri)} className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5" title="Duplicate row">
+                      <Copy size={10} style={{ color: 'var(--rb-text-muted)' }} />
+                    </button>
+                    {section.rows.length > 1 && (
+                      <button onClick={() => removeRow(ri)} className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete row">
+                        <Trash2 size={10} className="text-red-400" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${section.columns.length}, 1fr)` }}>
@@ -813,194 +856,253 @@ function SectionCard({ section, tags, index, total, onUpdate, onRemove, onMove, 
    A4 PREVIEW RENDERER (used in both builder preview and viewer)
    ══════════════════════════════════════════════════════════════════ */
 
+/* A4 dimensions: 210mm x 297mm. With 8mm padding top/bottom, usable height per page ≈ 281mm */
+const A4_PAGE_HEIGHT_PX = 1122; // 297mm ≈ 1122px at 96dpi
+const A4_PAGE_PADDING_PX = 30;  // 8mm ≈ 30px
+const A4_USABLE_HEIGHT = A4_PAGE_HEIGHT_PX - 2 * A4_PAGE_PADDING_PX - 20; // minus footer
+
 export function PaginatedReportPreview({ sections, tagValues, dateRange, compact = false }) {
+  const containerRef = useRef(null);
+  const [pageBreaks, setPageBreaks] = useState([]);
+
   const formatDate = (d) => {
     if (!d) return '';
     try { return new Date(d).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
     catch { return d; }
   };
 
-  return (
-    <div className={`bg-white text-[#1a1a2e] font-[Inter,system-ui,sans-serif] ${compact ? '' : 'shadow-lg'}`}
-      style={{
-        width: compact ? '100%' : '210mm',
-        minHeight: compact ? 'auto' : '297mm',
-        padding: compact ? '16px' : '20mm 18mm',
-        margin: compact ? 0 : '0 auto',
-        border: compact ? 'none' : '1px solid #e5e7eb',
-        borderRadius: compact ? 0 : '4px',
-        lineHeight: 1.5,
-      }}
-    >
-      {(sections || []).map((section) => {
-        switch (section.type) {
-          /* ── Header ─── */
-          case 'header':
-            return (
-              <div key={section.id} className="mb-6" style={{ textAlign: section.align || 'center' }}>
-                <h1 className="text-[20px] font-bold tracking-tight text-[#0f172a] mb-1">
-                  {section.title || 'Untitled Report'}
-                </h1>
-                {section.subtitle && (
-                  <p className="text-[12px] text-[#64748b] mb-1">{section.subtitle}</p>
-                )}
-                {section.showDateRange && dateRange && (
-                  <p className="text-[11px] text-[#94a3b8] font-medium">
-                    ({formatDate(dateRange.from)} to {formatDate(dateRange.to)})
-                  </p>
-                )}
-                <div className="mt-3 h-[2px] w-full" style={{ background: 'linear-gradient(90deg, #0284c7, #22d3ee, #0284c7)' }} />
-              </div>
-            );
+  // Measure content and calculate page breaks
+  useEffect(() => {
+    if (compact || !containerRef.current) return;
+    const children = containerRef.current.children;
+    if (!children || children.length === 0) return;
 
-          /* ── KPI Row ─── */
-          case 'kpi-row':
-            return (
-              <div key={section.id} className="mb-5">
-                {section.label && (
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] mb-2">{section.label}</div>
-                )}
-                <div className="flex justify-end gap-6 flex-wrap">
-                  {(section.kpis || []).map((kpi) => {
-                    const resolved = resolveKpiValue(kpi, tagValues);
-                    const isBoolean = resolved && typeof resolved === 'object' && resolved.type === 'boolean';
-                    return (
-                      <div key={kpi.id} className="text-right flex items-center gap-1.5 justify-end">
-                        <span className="text-[10px] font-medium text-[#64748b]">{kpi.label}: </span>
-                        {isBoolean ? (
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded border-2 border-[#94a3b8] bg-white text-[#0f172a]" title={resolved.checked ? 'Yes' : 'No'}>
-                            {resolved.checked ? <Check size={12} strokeWidth={3} className="text-[#16a34a]" /> : null}
-                          </span>
-                        ) : (
-                          <span className="text-[13px] font-bold text-[#0f172a] tabular-nums">{resolved}</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
+    const breaks = [];
+    let cumHeight = 0;
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      if (child.classList.contains('paginated-page-break')) continue;
+      const h = child.offsetHeight + (parseFloat(getComputedStyle(child).marginBottom) || 0);
+      cumHeight += h;
+      if (cumHeight > A4_USABLE_HEIGHT) {
+        breaks.push(i);
+        cumHeight = h; // start new page with this element
+      }
+    }
+    // Only update if changed to avoid infinite loops
+    const key = breaks.join(',');
+    setPageBreaks((prev) => prev.join(',') === key ? prev : breaks);
+  }, [compact, sections, tagValues]);
 
-          /* ── Table ─── */
-          case 'table':
-            return (
-              <div key={section.id} className="mb-5">
-                {section.label && (
-                  <div className="text-[12px] font-bold text-[#0f172a] mb-2">{section.label}</div>
-                )}
-                <table className="w-full border-collapse text-[11px]">
-                  <thead>
-                    <tr>
-                      {(section.columns || []).map((col) => (
-                        <th
-                          key={col.id}
-                          className="px-3 py-2 font-bold border border-[#d1d5db] bg-[#f1f5f9] text-[#334155]"
-                          style={{ textAlign: col.align || 'left', width: col.width !== 'auto' ? col.width : undefined }}
-                        >
-                          {col.header}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(section.rows || []).map((row, ri) => (
-                      <tr key={row.id} className={ri % 2 === 1 ? 'bg-[#f8fafc]' : ''}>
-                        {(row.cells || []).map((cell, ci) => {
-                          const col = section.columns[ci];
-                          const resolved = resolveCellValue(cell, tagValues);
-                          const isBoolean = resolved && typeof resolved === 'object' && resolved.type === 'boolean';
-                          return (
-                            <td
-                              key={ci}
-                              className="px-3 py-1.5 border border-[#e2e8f0]"
-                              style={{ textAlign: col?.align || 'left' }}
-                            >
-                              {isBoolean ? (
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded border-2 border-[#94a3b8] bg-white text-[#0f172a]" title={resolved.checked ? 'Yes' : 'No'}>
-                                  {resolved.checked ? <Check size={12} strokeWidth={3} className="text-[#16a34a]" /> : null}
-                                </span>
-                              ) : (
-                                resolved
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                    {section.showSummaryRow && (
-                      <tr className="font-bold bg-[#f1f5f9]">
-                        <td
-                          className="px-3 py-2 border border-[#d1d5db] text-right"
-                          colSpan={Math.max(1, (section.columns || []).length - 1)}
-                        >
-                          {section.summaryLabel || 'Total'}
-                        </td>
-                        <td className="px-3 py-2 border border-[#d1d5db] text-right tabular-nums">
-                          {resolveCellValue({
-                            sourceType: section.summaryFormula ? 'formula' : 'static',
-                            formula: section.summaryFormula,
-                            value: '',
-                            unit: section.summaryUnit,
-                            decimals: 1,
-                          }, tagValues)}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            );
+  const totalRows = (sections || []).filter((s) => s.type === 'table').reduce((sum, s) => sum + (s.rows?.length || 0), 0);
 
-          /* ── Text Block ─── */
-          case 'text-block':
-            return (
-              <div key={section.id} className="mb-3" style={{
-                fontSize: section.fontSize || '14px',
-                fontWeight: section.fontWeight || '600',
-                textAlign: section.align || 'left',
-                color: section.color || '#0f172a',
-              }}>
-                {section.content}
-              </div>
-            );
-
-          /* ── Spacer ─── */
-          case 'spacer':
-            return <div key={section.id} style={{ height: section.height || 16 }} />;
-
-          /* ── Signature Block ─── */
-          case 'signature-block':
-            return (
-              <div key={section.id} className="mt-8 mb-4">
-                <div className="flex gap-12">
-                  {(section.fields || []).map((f) => (
-                    <div key={f.id} className="flex-1">
-                      <div className="text-[10px] font-medium text-[#64748b] mb-8">{f.label}</div>
-                      <div className="border-b border-[#cbd5e1] pb-1">
-                        <span className="text-[11px] text-[#334155]">{f.value || '\u00a0'}</span>
-                      </div>
-                      <div className="text-[9px] text-[#94a3b8] mt-1">Date: _______________</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-
-          default:
-            return null;
-        }
-      })}
-
-      {/* Records count footer */}
-      {(() => {
-        const totalRows = (sections || []).filter((s) => s.type === 'table').reduce((sum, s) => sum + (s.rows?.length || 0), 0);
-        if (totalRows === 0) return null;
+  // Build rendered sections
+  const renderedSections = (sections || []).map((section) => {
+    switch (section.type) {
+      /* ── Header ─── */
+      case 'header':
         return (
-          <div className="mt-4 text-[9px] text-[#94a3b8]">
-            Records: {totalRows}
+          <div key={section.id} className="mb-3" style={{ textAlign: section.align || 'center' }}>
+            <h1 className="text-[18px] font-bold tracking-tight text-[#0f172a] mb-0.5">
+              {section.title || 'Untitled Report'}
+            </h1>
+            {section.subtitle && (
+              <p className="text-[11px] text-[#64748b] mb-0.5">{section.subtitle}</p>
+            )}
+            {section.showDateRange && dateRange && (
+              <p className="text-[10px] text-[#94a3b8] font-medium">
+                ({formatDate(dateRange.from)} to {formatDate(dateRange.to)})
+              </p>
+            )}
+            <div className="mt-2 h-[1.5px] w-full" style={{ background: 'linear-gradient(90deg, #0284c7, #22d3ee, #0284c7)' }} />
           </div>
         );
-      })()}
+
+      /* ── KPI Row ─── */
+      case 'kpi-row':
+        return (
+          <div key={section.id} className="mb-2">
+            {section.label && (
+              <div className="text-[9px] font-bold uppercase tracking-wider text-[#94a3b8] mb-1">{section.label}</div>
+            )}
+            <div className="flex justify-end gap-4 flex-wrap">
+              {(section.kpis || []).map((kpi) => (
+                <div key={kpi.id} className="text-right">
+                  <span className="text-[9px] font-medium text-[#64748b]">{kpi.label}: </span>
+                  <span className="text-[12px] font-bold text-[#0f172a] tabular-nums">{resolveKpiValue(kpi, tagValues)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      /* ── Table ─── */
+      case 'table':
+        return (
+          <div key={section.id} className="mb-2">
+            {section.label && (
+              <div className="text-[11px] font-bold text-[#0f172a] mb-1">{section.label}</div>
+            )}
+            <table className="w-full border-collapse text-[10px]">
+              <thead>
+                <tr>
+                  {(section.columns || []).map((col) => (
+                    <th
+                      key={col.id}
+                      className="px-2 py-1 font-bold border border-[#d1d5db] bg-[#f1f5f9] text-[#334155]"
+                      style={{ textAlign: col.align || 'left', width: col.width !== 'auto' ? col.width : undefined }}
+                    >
+                      {col.header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(section.rows || []).filter((row) => !isRowHidden(row, section, tagValues)).map((row, ri) => (
+                  <tr key={row.id} className={ri % 2 === 1 ? 'bg-[#f8fafc]' : ''}>
+                    {(row.cells || []).map((cell, ci) => {
+                      const col = section.columns[ci];
+                      return (
+                        <td
+                          key={ci}
+                          className="px-2 py-0.5 border border-[#e2e8f0]"
+                          style={{ textAlign: col?.align || 'left' }}
+                        >
+                          {resolveCellValue(cell, tagValues)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                {section.showSummaryRow && (
+                  <tr className="font-bold bg-[#f1f5f9]">
+                    <td
+                      className="px-2 py-1 border border-[#d1d5db] text-right"
+                      colSpan={Math.max(1, (section.columns || []).length - 1)}
+                    >
+                      {section.summaryLabel || 'Total'}
+                    </td>
+                    <td className="px-2 py-1 border border-[#d1d5db] text-right tabular-nums">
+                      {resolveCellValue({
+                        sourceType: section.summaryFormula ? 'formula' : 'static',
+                        formula: section.summaryFormula,
+                        value: '',
+                        unit: section.summaryUnit,
+                        decimals: 1,
+                      }, tagValues)}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        );
+
+      /* ── Text Block ─── */
+      case 'text-block':
+        return (
+          <div key={section.id} className="mb-1.5" style={{
+            fontSize: section.fontSize || '14px',
+            fontWeight: section.fontWeight || '600',
+            textAlign: section.align || 'left',
+            color: section.color || '#0f172a',
+          }}>
+            {section.content}
+          </div>
+        );
+
+      /* ── Spacer ─── */
+      case 'spacer':
+        return <div key={section.id} style={{ height: section.height || 16 }} />;
+
+      /* ── Signature Block ─── */
+      case 'signature-block':
+        return (
+          <div key={section.id} className="mt-6 mb-2">
+            <div className="flex gap-8">
+              {(section.fields || []).map((f) => (
+                <div key={f.id} className="flex-1">
+                  <div className="text-[9px] font-medium text-[#64748b] mb-6">{f.label}</div>
+                  <div className="border-b border-[#cbd5e1] pb-1">
+                    <span className="text-[10px] text-[#334155]">{f.value || '\u00a0'}</span>
+                  </div>
+                  <div className="text-[8px] text-[#94a3b8] mt-1">Date: _______________</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  });
+
+  // Insert page breaks into rendered output
+  const pagesOutput = [];
+  let currentPageSections = [];
+  let pageNum = 1;
+
+  renderedSections.forEach((node, idx) => {
+    if (!compact && pageBreaks.includes(idx) && currentPageSections.length > 0) {
+      // End current page
+      pagesOutput.push(
+        <div key={`page-${pageNum}`} className="paginated-page" style={{
+          minHeight: compact ? 'auto' : `${A4_PAGE_HEIGHT_PX}px`,
+          maxHeight: compact ? 'none' : `${A4_PAGE_HEIGHT_PX}px`,
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          {currentPageSections}
+          <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-[8px] text-[#94a3b8] print:text-[7pt]">
+            <span>Records: {totalRows}</span>
+            <span>Page {pageNum}</span>
+          </div>
+        </div>
+      );
+      // Add visual page separator (not shown in print)
+      pagesOutput.push(
+        <div key={`break-${pageNum}`} className="paginated-page-break print:hidden"
+          style={{ height: '8px', background: '#d1d5db', margin: '0 auto', width: '100%' }} />
+      );
+      currentPageSections = [];
+      pageNum++;
+    }
+    currentPageSections.push(node);
+  });
+
+  // Last page
+  if (currentPageSections.length > 0) {
+    pagesOutput.push(
+      <div key={`page-${pageNum}`} className="paginated-page" style={{
+        minHeight: compact ? 'auto' : `${A4_PAGE_HEIGHT_PX}px`,
+        position: 'relative',
+      }}>
+        {currentPageSections}
+        {!compact && (
+          <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-[8px] text-[#94a3b8] print:text-[7pt]">
+            <span>{totalRows > 0 ? `Records: ${totalRows}` : ''}</span>
+            <span>Page {pageNum}{pageBreaks.length > 0 ? ` of ${pageNum}` : ''}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={`bg-white text-[#1a1a2e] font-[Inter,system-ui,sans-serif] ${compact ? '' : 'shadow-lg'}`}
+      style={{
+        width: compact ? '100%' : '210mm',
+        padding: compact ? '12px' : '8mm 10mm',
+        margin: compact ? 0 : '0 auto',
+        border: compact ? 'none' : '1px solid #e5e7eb',
+        borderRadius: compact ? 0 : '2px',
+        lineHeight: 1.4,
+      }}
+    >
+      {compact ? renderedSections : pagesOutput}
     </div>
   );
 }
@@ -1152,7 +1254,7 @@ export default function PaginatedReportBuilder() {
           <span className="text-[11px] font-bold" style={{ color: 'var(--rb-text-muted)' }}>PREVIEW — {reportMeta.name || 'Untitled'}</span>
           <div />
         </div>
-        <div className="py-8" style={{ background: '#e5e7eb' }}>
+        <div className="py-3" style={{ background: '#e5e7eb' }}>
           <PaginatedReportPreview
             sections={sections}
             tagValues={liveTagValues}
@@ -1199,7 +1301,7 @@ export default function PaginatedReportBuilder() {
       {/* ── Main content: Editor + Live Preview ── */}
       <div className="flex gap-0 min-h-[calc(100vh-130px)]">
         {/* Left: Section editor list */}
-        <div className="w-[480px] flex-shrink-0 overflow-y-auto p-4 space-y-3"
+        <div className="w-[540px] flex-shrink-0 overflow-y-auto p-3 space-y-2.5 min-w-0"
           style={{ borderRight: '1px solid var(--rb-border)', maxHeight: 'calc(100vh - 130px)' }}>
 
           <AnimatePresence mode="popLayout">
@@ -1245,7 +1347,7 @@ export default function PaginatedReportBuilder() {
         </div>
 
         {/* Right: Live A4 preview */}
-        <div className="flex-1 overflow-auto p-6" style={{ background: '#e5e7eb' }}>
+        <div className="flex-1 overflow-auto p-3" style={{ background: '#e5e7eb' }}>
           <div className="sticky top-0 z-10 mb-4 flex items-center justify-center">
             <span className="text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full"
               style={{ background: 'rgba(0,0,0,0.6)', color: 'white', backdropFilter: 'blur(8px)' }}>

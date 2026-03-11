@@ -158,7 +158,7 @@ const DynamicChartSection = ({ section, tagValues, showTitle = true }) => {
   
   if (!chartData || tagsToUse.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#121e2c] border border-gray-200 dark:border-cyan-900 rounded-lg p-8 text-center">
+      <div className="bg-white dark:bg-[#0a1525] border border-gray-200 dark:border-cyan-900 rounded-lg p-8 text-center">
         <p className="text-gray-500 dark:text-gray-400">
           No chart data configured. Please select tags in the section configuration.
         </p>
@@ -289,7 +289,7 @@ const DynamicChartSection = ({ section, tagValues, showTitle = true }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-[#121e2c] border border-gray-200 dark:border-cyan-900 rounded-lg p-6">
+    <div className="bg-white dark:bg-[#0a1525] border border-gray-200 dark:border-cyan-900 rounded-lg p-6">
       {showTitle && section.section_name && (
         <div className="mb-4">
           <h3 className="text-xl font-semibold dark:text-gray-100">{section.section_name}</h3>
