@@ -45,7 +45,11 @@ export default function UserManagement() {
   const fetchUsers = () => {
     axios.get(endpoints.users.list)
       .then(res => { setUsers(res.data || []); setLoading(false); })
-      .catch(() => { toast.error('Failed to load users'); setLoading(false); });
+      .catch((err) => {
+        const detail = err.response?.data?.detail || err.response?.data?.error || err.message || '';
+        toast.error('Failed to load users' + (detail ? `: ${detail}` : ''));
+        setLoading(false);
+      });
   };
 
   useEffect(() => { fetchUsers(); }, []);

@@ -298,7 +298,10 @@ def delete_emulator_custom_offset_route():
 
 
 # Error handling decorator - include detail in response for debugging (e.g. missing table, wrong DB)
+from functools import wraps
+
 def handle_db_errors(f):
+    @wraps(f)
     def wrapper_func(*args, **kwargs):
         try:
             return f(*args, **kwargs)
@@ -314,11 +317,9 @@ def handle_db_errors(f):
                 'error': 'An unexpected error occurred.',
                 'detail': str(e)
             }), 500
-    wrapper_func.__name__ = f.__name__
     return wrapper_func
 
 # Role-based access control decorator
-from functools import wraps
 
 def require_role(*roles):
     def decorator(f):
