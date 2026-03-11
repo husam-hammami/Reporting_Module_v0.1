@@ -137,10 +137,6 @@ function SingleReportView({ reportId, onBack }) {
     return lc.reportType === 'paginated';
   }, [template]);
 
-  if (!loading && isPaginated) {
-    return <PaginatedReportView reportId={reportId} onBack={onBack} />;
-  }
-
   const [timePreset, setTimePreset] = useState('live');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -451,6 +447,10 @@ function SingleReportView({ reportId, onBack }) {
     () => new Map((Array.isArray(widgets) ? widgets : []).filter((w) => w?.id).map((w) => [w.id, w])),
     [widgets],
   );
+
+  if (!loading && isPaginated) {
+    return <PaginatedReportView reportId={reportId} onBack={onBack} />;
+  }
 
   if (loading) return <div className="flex items-center justify-center h-[calc(100vh-80px)] text-[12px] text-[#8898aa]">Loading report...</div>;
 

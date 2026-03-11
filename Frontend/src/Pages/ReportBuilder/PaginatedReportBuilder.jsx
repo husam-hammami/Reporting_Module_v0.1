@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useReportCanvas, useAvailableTags } from '../../Hooks/useReportBuilder';
 import { evaluateFormula, extractTagRefs } from './formulas/formulaEngine';
 import { getCachedMappings, refreshMappingsCache } from '../../utils/mappingsCache';
+import axios from '../../API/axios';
 
 refreshMappingsCache();
 
@@ -857,7 +858,29 @@ export default function PaginatedReportBuilder() {
   const [showAddPalette, setShowAddPalette] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [liveTagValues, setLiveTagValues] = useState({});
   const saveTimerRef = useRef(null);
+
+  // Collect tag names from all sections (tables, KPIs)
+  const tagNames = useMemo(() => collectPaginatedTagNames(sections), [sections]);
+
+  // Fetch live tag values for preview (initial + refresh every 15s)
+  useEffect(() => {
+    if (tagNames.length === 0) return;
+    const fetchValues = async () => {
+      try {
+        const res = await axios.post('/api/tags/get-values', { tag_names: tagNames }, { timeout: 10000 });
+        if (res.data?.status === 'success' && res.data.tag_values) {
+          setLiveTagValues((prev) => ({ ...prev, ...res.data.tag_values }));
+        }
+      } catch {
+        // API unavailable (e.g. demo mode); keep previous values or empty
+      }
+    };
+    fetchValues();
+    const intervalId = setInterval(fetchValues, 15000);
+    return () => clearInterval(intervalId);
+  }, [tagNames.join(',')]);
 
   // Load sections from template
   useEffect(() => {
@@ -969,7 +992,7 @@ export default function PaginatedReportBuilder() {
         <div className="py-8" style={{ background: '#e5e7eb' }}>
           <PaginatedReportPreview
             sections={sections}
-            tagValues={{}}
+            tagValues={liveTagValues}
             dateRange={{ from: new Date().toISOString(), to: new Date().toISOString() }}
           />
         </div>
@@ -1068,7 +1091,7 @@ export default function PaginatedReportBuilder() {
           </div>
           <PaginatedReportPreview
             sections={sections}
-            tagValues={{}}
+            tagValues={liveTagValues}
             dateRange={{ from: new Date().toISOString(), to: new Date().toISOString() }}
           />
         </div>
