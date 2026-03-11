@@ -10,7 +10,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Save, Eye, Plus, Trash2, ChevronDown, ChevronUp,
-  Table2, Hash, Type, Minus, Copy, X,
+  Table2, Hash, Type, Minus, Copy, X, Check,
   AlignLeft, AlignCenter, AlignRight, LayoutTemplate, PenLine,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,6 +24,56 @@ refreshMappingsCache();
 /* ══════════════════════════════════════════════════════════════════
    CONSTANTS & HELPERS
    ══════════════════════════════════════════════════════════════════ */
+
+/* Predefined units for cell display; __checkbox__ = show 1/0 as checkbox, __custom__ = use customUnit text */
+const PREDEFINED_UNITS = [
+  { value: '', label: 'None' },
+  { value: '%', label: '%' },
+  { value: 'kg', label: 'kg' },
+  { value: 't', label: 't' },
+  { value: 't/h', label: 't/h' },
+  { value: '°C', label: '°C' },
+  { value: 'm³/h', label: 'm³/h' },
+  { value: '__checkbox__', label: 'Checkbox (1=Yes, 0=No)' },
+  { value: '__custom__', label: 'Custom…' },
+];
+
+function effectiveUnit(cell) {
+  if (!cell) return '';
+  if (cell.unit === '__custom__') return cell.customUnit ?? '';
+  if (cell.unit === '__checkbox__') return '';
+  return cell.unit ?? '';
+}
+
+function UnitSelector({ cell, onChange, className = '' }) {
+  const selectValue = PREDEFINED_UNITS.some((u) => u.value === cell.unit) ? cell.unit : '__custom__';
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      <select
+        value={selectValue}
+        onChange={(e) => {
+          const v = e.target.value;
+          onChange({ ...cell, unit: v, ...(v !== '__custom__' ? {} : { customUnit: cell.customUnit ?? cell.unit ?? '' }) });
+        }}
+        className={`rb-input-base text-[10px] py-1 px-2 flex-shrink-0 ${className}`}
+        title="Unit or display type"
+      >
+        {PREDEFINED_UNITS.map((u) => (
+          <option key={u.value || 'none'} value={u.value}>{u.label}</option>
+        ))}
+      </select>
+      {selectValue === '__custom__' && (
+        <input
+          type="text"
+          value={cell.unit === '__custom__' ? (cell.customUnit ?? '') : (cell.unit ?? '')}
+          onChange={(e) => onChange({ ...cell, unit: '__custom__', customUnit: e.target.value })}
+          placeholder="Unit"
+          className="rb-input-base text-[10px] py-1 px-2 w-16 flex-shrink-0"
+        />
+      )}
+    </div>
+  );
+}
 
 const SECTION_TYPES = [
   { type: 'header', label: 'Report Header', icon: LayoutTemplate, description: 'Title, subtitle, date range, logo' },
@@ -111,18 +161,22 @@ function resolveCellValue(cell, tagValues) {
     if (raw == null) return '—';
     const n = Number(raw);
     if (isNaN(n)) return raw;
+    if (cell.unit === '__checkbox__') return { type: 'boolean', checked: n === 1 || n === '1' };
     const d = cell.decimals ?? 1;
     const formatted = n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
-    return cell.unit ? `${formatted} ${cell.unit}` : formatted;
+    const suffix = effectiveUnit(cell);
+    return suffix ? `${formatted} ${suffix}` : formatted;
   }
   if (cell.sourceType === 'formula') {
     const result = evaluateFormula(cell.formula || '', tagValues);
     if (result == null) return '—';
     const n = Number(result);
     if (isNaN(n)) return result;
+    if (cell.unit === '__checkbox__') return { type: 'boolean', checked: n === 1 || n === '1' };
     const d = cell.decimals ?? 1;
     const formatted = n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
-    return cell.unit ? `${formatted} ${cell.unit}` : formatted;
+    const suffix = effectiveUnit(cell);
+    return suffix ? `${formatted} ${suffix}` : formatted;
   }
   if (cell.sourceType === 'group') {
     const vals = (cell.groupTags || []).map((t) => Number(tagValues?.[t]) || 0);
@@ -134,9 +188,11 @@ function resolveCellValue(cell, tagValues) {
     else if (agg === 'max') n = Math.max(...vals);
     else if (agg === 'count') n = vals.length;
     else n = vals.reduce((a, b) => a + b, 0) / vals.length;
+    if (cell.unit === '__checkbox__') return { type: 'boolean', checked: n === 1 || n === '1' };
     const d = cell.decimals ?? 1;
     const formatted = Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
-    return cell.unit ? `${formatted} ${cell.unit}` : formatted;
+    const suffix = effectiveUnit(cell);
+    return suffix ? `${formatted} ${suffix}` : formatted;
   }
   if (cell.sourceType === 'mapping') {
     const mappings = getCachedMappings();
@@ -154,6 +210,7 @@ function resolveKpiValue(kpi, tagValues) {
     tagName: kpi.tagName,
     formula: kpi.formula,
     unit: kpi.unit,
+    customUnit: kpi.customUnit,
     decimals: kpi.decimals,
     groupTags: kpi.groupTags,
     aggregation: kpi.aggregation,
@@ -279,43 +336,33 @@ function CellEditor({ cell, tags, onChange }) {
         />
       )}
       {srcType === 'tag' && (
-        <div className="flex gap-1 min-w-[140px]" style={{ minWidth: 'max(140px, 100%)' }}>
-          <select
-            value={cell.tagName || ''}
-            onChange={(e) => onChange({ ...cell, tagName: e.target.value })}
-            className="rb-input-base text-[10px] py-1 px-2 flex-1 min-w-0"
-            title="Select a tag"
-          >
-            <option value="">Select tag...</option>
-            {safeTags.map((t) => (
-              <option key={t.tag_name} value={t.tag_name}>{t.display_name || t.tag_name}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            value={cell.unit || ''}
-            onChange={(e) => onChange({ ...cell, unit: e.target.value })}
-            placeholder="Unit"
-            className="rb-input-base text-[10px] py-1 px-2 w-12 flex-shrink-0"
-          />
+        <div className="flex flex-col gap-1.5 min-w-0" style={{ minWidth: 'max(140px, 100%)' }}>
+          <div className="flex gap-1">
+            <select
+              value={cell.tagName || ''}
+              onChange={(e) => onChange({ ...cell, tagName: e.target.value })}
+              className="rb-input-base text-[10px] py-1 px-2 flex-1 min-w-0"
+              title="Select a tag"
+            >
+              <option value="">Select tag...</option>
+              {safeTags.map((t) => (
+                <option key={t.tag_name} value={t.tag_name}>{t.display_name || t.tag_name}</option>
+              ))}
+            </select>
+          </div>
+          <UnitSelector cell={cell} onChange={onChange} />
         </div>
       )}
       {srcType === 'formula' && (
-        <div className="flex gap-1">
+        <div className="flex flex-col gap-1.5">
           <input
             type="text"
             value={cell.formula || ''}
             onChange={(e) => onChange({ ...cell, formula: e.target.value })}
             placeholder="{Tag1} + {Tag2}"
-            className="rb-input-base text-[10px] py-1 px-2 flex-1 font-mono"
+            className="rb-input-base text-[10px] py-1 px-2 w-full font-mono"
           />
-          <input
-            type="text"
-            value={cell.unit || ''}
-            onChange={(e) => onChange({ ...cell, unit: e.target.value })}
-            placeholder="Unit"
-            className="rb-input-base text-[10px] py-1 px-2 w-12"
-          />
+          <UnitSelector cell={cell} onChange={onChange} />
         </div>
       )}
       {srcType === 'group' && (
@@ -354,7 +401,7 @@ function CellEditor({ cell, tags, onChange }) {
               <option value="count">Count</option>
             </select>
           </div>
-          <input type="text" value={cell.unit || ''} onChange={(e) => onChange({ ...cell, unit: e.target.value })} placeholder="Unit" className="rb-input-base text-[10px] py-1 px-2 w-12" />
+          <UnitSelector cell={cell} onChange={onChange} />
         </div>
       )}
       {srcType === 'mapping' && (
@@ -814,12 +861,22 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                   <div className="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] mb-2">{section.label}</div>
                 )}
                 <div className="flex justify-end gap-6 flex-wrap">
-                  {(section.kpis || []).map((kpi) => (
-                    <div key={kpi.id} className="text-right">
-                      <span className="text-[10px] font-medium text-[#64748b]">{kpi.label}: </span>
-                      <span className="text-[13px] font-bold text-[#0f172a] tabular-nums">{resolveKpiValue(kpi, tagValues)}</span>
-                    </div>
-                  ))}
+                  {(section.kpis || []).map((kpi) => {
+                    const resolved = resolveKpiValue(kpi, tagValues);
+                    const isBoolean = resolved && typeof resolved === 'object' && resolved.type === 'boolean';
+                    return (
+                      <div key={kpi.id} className="text-right flex items-center gap-1.5 justify-end">
+                        <span className="text-[10px] font-medium text-[#64748b]">{kpi.label}: </span>
+                        {isBoolean ? (
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded border-2 border-[#94a3b8] bg-white text-[#0f172a]" title={resolved.checked ? 'Yes' : 'No'}>
+                            {resolved.checked ? <Check size={12} strokeWidth={3} className="text-[#16a34a]" /> : null}
+                          </span>
+                        ) : (
+                          <span className="text-[13px] font-bold text-[#0f172a] tabular-nums">{resolved}</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -850,13 +907,21 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                       <tr key={row.id} className={ri % 2 === 1 ? 'bg-[#f8fafc]' : ''}>
                         {(row.cells || []).map((cell, ci) => {
                           const col = section.columns[ci];
+                          const resolved = resolveCellValue(cell, tagValues);
+                          const isBoolean = resolved && typeof resolved === 'object' && resolved.type === 'boolean';
                           return (
                             <td
                               key={ci}
                               className="px-3 py-1.5 border border-[#e2e8f0]"
                               style={{ textAlign: col?.align || 'left' }}
                             >
-                              {resolveCellValue(cell, tagValues)}
+                              {isBoolean ? (
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded border-2 border-[#94a3b8] bg-white text-[#0f172a]" title={resolved.checked ? 'Yes' : 'No'}>
+                                  {resolved.checked ? <Check size={12} strokeWidth={3} className="text-[#16a34a]" /> : null}
+                                </span>
+                              ) : (
+                                resolved
+                              )}
                             </td>
                           );
                         })}
