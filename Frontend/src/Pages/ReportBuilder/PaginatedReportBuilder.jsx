@@ -568,16 +568,16 @@ function TableSectionEditor({ section, tags, onChange }) {
             <Plus size={10} /> Column
           </button>
         </div>
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex gap-2 flex-wrap">
           {section.columns.map((col, i) => (
             <div key={col.id} className="flex items-center gap-1 p-1 rounded-md" style={{ background: 'var(--rb-surface)', border: '1px solid var(--rb-border)' }}>
               <input
                 value={col.header}
                 onChange={(e) => updateColumn(i, { header: e.target.value })}
-                className="rb-input-base text-[10px] py-0.5 px-1.5 w-20"
+                className="rb-input-base text-[10px] py-0.5 px-1.5 w-24"
               />
               <select value={col.align || 'left'} onChange={(e) => updateColumn(i, { align: e.target.value })}
-                className="rb-input-base text-[9px] py-0.5 px-1 w-14">
+                className="rb-input-base text-[9px] py-0.5 px-1 w-16">
                 <option value="left">Left</option>
                 <option value="center">Center</option>
                 <option value="right">Right</option>
@@ -601,7 +601,7 @@ function TableSectionEditor({ section, tags, onChange }) {
             <Plus size={10} /> Row
           </button>
         </div>
-        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
           {section.rows.map((row, ri) => (
             <div key={row.id} className="p-2 rounded-lg" style={{ background: 'var(--rb-surface)', border: '1px solid var(--rb-border)' }}>
               <div className="flex items-center justify-between mb-1.5">

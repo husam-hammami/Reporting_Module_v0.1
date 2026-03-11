@@ -91,7 +91,7 @@ export default function SideNav() {
             '.dark &': {
               background: 'rgba(7,14,28,0.96)',
               color: '#e8edf5',
-              borderRight: '1px solid rgba(34, 211, 238, 0.1)',
+              borderRight: '1px solid rgba(34, 211, 238, 0.18)',
               boxShadow: '1px 0 8px rgba(0,0,0,0.3)',
             },
           },
@@ -105,7 +105,7 @@ export default function SideNav() {
             if (category) lastCategory = category;
 
             return (
-              <ListItem key={item.link} disablePadding sx={{ display: 'block', mb: 0.5 }}>
+              <ListItem key={item.link} disablePadding sx={{ display: 'block', mb: 0.75 }}>
                 {showCategory && (
                   <div
                     className={`flex items-center gap-1.5 mb-1.5 ${open ? 'px-2' : 'px-0 justify-center'}`}
@@ -114,7 +114,7 @@ export default function SideNav() {
                     {open && (
                       <>
                         <div className="w-0.5 h-3 rounded-full bg-[#94a3b8]/40 dark:bg-[#22d3ee]/30" />
-                        <span className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#94a3b8] dark:text-[#22d3ee]/60">
+                        <span className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#94a3b8] dark:text-[#22d3ee]/60">
                           {category}
                         </span>
                       </>

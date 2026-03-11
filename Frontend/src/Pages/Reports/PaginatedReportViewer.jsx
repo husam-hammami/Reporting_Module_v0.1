@@ -287,7 +287,7 @@ export default function PaginatedReportView({ reportId, onBack }) {
   return (
     <div className="report-builder min-h-screen" style={{ background: 'var(--rb-surface)' }}>
       {/* ── Toolbar ── */}
-      <div className="sticky top-0 z-20 px-3 py-2 flex items-center gap-2 print:hidden"
+      <div className="sticky top-0 z-20 px-3 py-2.5 flex items-center gap-2 print:hidden"
         style={{ background: 'var(--rb-panel)', borderBottom: '1px solid var(--rb-border)', boxShadow: 'var(--rb-elevation-1)' }}>
         <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
           <ArrowLeft size={15} style={{ color: 'var(--rb-text)' }} />
@@ -303,7 +303,7 @@ export default function PaginatedReportView({ reportId, onBack }) {
           <select
             value={preset}
             onChange={(e) => setPreset(e.target.value)}
-            className="rb-input-base text-[10px] py-1 px-2"
+            className="rb-input-base text-[11px] py-1.5 px-2"
           >
             {PRESETS.map((p) => (
               <option key={p.key} value={p.key}>{p.label}</option>
@@ -315,14 +315,14 @@ export default function PaginatedReportView({ reportId, onBack }) {
                 type="datetime-local"
                 value={customFrom ? customFrom.slice(0, 16) : ''}
                 onChange={(e) => setCustomFrom(new Date(e.target.value).toISOString())}
-                className="rb-input-base text-[10px] py-1 px-2"
+                className="rb-input-base text-[11px] py-1.5 px-2"
               />
               <span className="text-[10px]" style={{ color: 'var(--rb-text-muted)' }}>to</span>
               <input
                 type="datetime-local"
                 value={customTo ? customTo.slice(0, 16) : ''}
                 onChange={(e) => setCustomTo(new Date(e.target.value).toISOString())}
-                className="rb-input-base text-[10px] py-1 px-2"
+                className="rb-input-base text-[11px] py-1.5 px-2"
               />
             </>
           )}
@@ -356,29 +356,29 @@ export default function PaginatedReportView({ reportId, onBack }) {
 
       {/* ── Status bar ── */}
       {currentError && (
-        <div className="px-4 py-1 flex items-center gap-2 bg-[#fef2f2] dark:bg-[#1a0c0c] border-b border-[#fca5a5]/30 print:hidden">
+        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#fef2f2] dark:bg-[#1a0c0c] border-b border-[#fca5a5]/30 print:hidden">
           <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
-          <span className="text-[10px] font-medium text-[#ef4444]">{currentError}</span>
+          <span className="text-[11px] font-medium text-[#ef4444]">{currentError}</span>
         </div>
       )}
       {currentLoading && !currentError && (
-        <div className="px-4 py-1 flex items-center gap-2 bg-[#eff6ff] dark:bg-[#0c1a2e] border-b border-[#93c5fd]/30 print:hidden">
+        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#eff6ff] dark:bg-[#0c1a2e] border-b border-[#93c5fd]/30 print:hidden">
           <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse" />
-          <span className="text-[10px] font-medium text-[#3b82f6]">Loading data...</span>
+          <span className="text-[11px] font-medium text-[#3b82f6]">Loading data...</span>
         </div>
       )}
       {isLive && !liveError && (
-        <div className="px-4 py-1 flex items-center gap-2 bg-[#ecfdf5] dark:bg-[#0d2e1f] border-b border-[#a7f3d0] dark:border-[#065f46] print:hidden">
+        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#ecfdf5] dark:bg-[#0d2e1f] border-b border-[#a7f3d0] dark:border-[#065f46] print:hidden">
           <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
-          <span className="text-[10px] font-medium text-[#059669]">
+          <span className="text-[11px] font-medium text-[#059669]">
             {emulatorOn ? 'Live (Emulator)' : 'Live'} — {Object.keys(mergedTagValues).length} tags
           </span>
         </div>
       )}
       {!isLive && !currentLoading && !currentError && hasData && (
-        <div className="px-4 py-1 flex items-center gap-2 bg-[#ecfdf5] dark:bg-[#0d2e1f] border-b border-[#a7f3d0] dark:border-[#065f46] print:hidden">
+        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#ecfdf5] dark:bg-[#0d2e1f] border-b border-[#a7f3d0] dark:border-[#065f46] print:hidden">
           <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
-          <span className="text-[10px] font-medium text-[#059669]">Data loaded — {Object.keys(mergedTagValues).length} tags</span>
+          <span className="text-[11px] font-medium text-[#059669]">Data loaded — {Object.keys(mergedTagValues).length} tags</span>
         </div>
       )}
 

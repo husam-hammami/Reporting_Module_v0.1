@@ -102,7 +102,7 @@ function drawAnnotations(u, annotations) {
       const textW = ctx.measureText(ann.label).width;
       const pad = 3 * dpr;
       // Background pill
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillStyle = document.documentElement.classList.contains('dark') ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.85)';
       ctx.fillRect(l + w - textW - pad * 3, yPos - fontSize - pad, textW + pad * 2, fontSize + pad * 2);
       // Text
       ctx.fillStyle = ann.color || '#ef4444';

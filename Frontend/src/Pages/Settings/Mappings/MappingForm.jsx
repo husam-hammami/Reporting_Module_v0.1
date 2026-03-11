@@ -174,7 +174,7 @@ export default function MappingForm({ mapping, onSave, onCancel }) {
             </div>
             <div className="border border-[#e3e9f0] dark:border-[#1e2d40] rounded-lg overflow-hidden">
               {/* Header */}
-              <div className="grid grid-cols-[1fr_10px_1fr_32px] gap-2 px-3 py-2 bg-[#f5f8fb] dark:bg-[#0d1825] text-[10px] font-semibold text-[#6b7f94] uppercase tracking-wide">
+              <div className="grid grid-cols-[1fr_10px_1fr_32px] gap-2 px-3 py-2.5 bg-[#f5f8fb] dark:bg-[#0d1825] text-[10px] font-semibold text-[#6b7f94] uppercase tracking-wide">
                 <span>When value =</span>
                 <span></span>
                 <span>Output</span>
@@ -183,7 +183,7 @@ export default function MappingForm({ mapping, onSave, onCancel }) {
               {/* Rows */}
               <div className="divide-y divide-[#e3e9f0] dark:divide-[#1e2d40] max-h-48 overflow-y-auto">
                 {entries.map((entry, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_10px_1fr_32px] gap-2 px-3 py-1.5 items-center">
+                  <div key={i} className="grid grid-cols-[1fr_10px_1fr_32px] gap-2 px-3 py-2 items-center">
                     <input
                       value={entry.input}
                       onChange={e => updateEntry(i, 'input', e.target.value)}

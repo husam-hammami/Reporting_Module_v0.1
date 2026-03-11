@@ -56,7 +56,7 @@ const SettingsHome = () => {
               <Link
                 key={item.link}
                 to={item.link}
-                className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium whitespace-nowrap border-b-2 transition-all duration-200 ${
+                className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium whitespace-nowrap border-b-2 transition-all duration-200 ${
                   active
                     ? 'border-[var(--brand)] text-[var(--brand)] bg-[var(--brand-subtle)]'
                     : 'border-transparent text-[#64748b] dark:text-[#556677] hover:text-[#334155] dark:hover:text-[#8899ab] hover:border-[#cbd5e1] dark:hover:border-[#22d3ee]/20'
@@ -70,7 +70,7 @@ const SettingsHome = () => {
         </nav>
       </div>
 
-      <div className="px-3 sm:px-4 py-3">
+      <div className="px-4 sm:px-5 py-4">
         {showDefault ? (
           <div className="text-center py-16 px-6">
             <div className="w-12 h-12 rounded-xl bg-[#f0f5fa] dark:bg-[#0a1525] dark:border dark:border-[#22d3ee]/10 flex items-center justify-center mx-auto mb-4">

@@ -597,8 +597,8 @@
 /* ─────────────── App Shell: Scrollbar ─────────────── */
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -611,7 +611,7 @@
   background: rgba(148, 163, 184, 0.4);
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(34, 211, 238, 0.12);
+  background: rgba(34, 211, 238, 0.18);
 }
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(34, 211, 238, 0.25);

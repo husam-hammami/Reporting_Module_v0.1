@@ -492,14 +492,14 @@ function SingleReportView({ reportId, onBack }) {
             <div className="flex rounded-lg border border-[#e3e9f0] dark:border-[#22d3ee]/10 overflow-hidden">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${viewMode === 'grid' ? 'bg-brand text-white' : 'text-[#6b7f94] hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                className={`px-3 py-2 text-[12px] font-semibold transition-colors ${viewMode === 'grid' ? 'bg-brand text-white' : 'text-[#6b7f94] hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                 title="Grid layout"
               >
                 Grid
               </button>
               <button
                 onClick={() => setViewMode('tabular')}
-                className={`px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${viewMode === 'tabular' ? 'bg-brand text-white' : 'text-[#6b7f94] hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                className={`px-3 py-2 text-[12px] font-semibold transition-colors ${viewMode === 'tabular' ? 'bg-brand text-white' : 'text-[#6b7f94] hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                 title="Tabular layout — tables expand full width with pagination"
               >
                 Tabular
@@ -530,11 +530,11 @@ function SingleReportView({ reportId, onBack }) {
 
       {/* ── Custom date range (only when custom selected) ── */}
       {timePreset === 'custom' && (
-        <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2 flex items-center gap-3 print:hidden">
-          <label className="text-[10px] font-medium text-[#6b7f94]">From</label>
+        <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2.5 flex items-center gap-3 print:hidden">
+          <label className="text-[11px] font-medium text-[#6b7f94]">From</label>
           <input type="datetime-local" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
             className="text-[11px] rounded-md border border-[#e3e9f0] bg-white/90 dark:bg-[#0a1525] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
-          <label className="text-[10px] font-medium text-[#6b7f94]">To</label>
+          <label className="text-[11px] font-medium text-[#6b7f94]">To</label>
           <input type="datetime-local" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
             className="text-[11px] rounded-md border border-[#e3e9f0] bg-white/90 dark:bg-[#0a1525] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
         </div>
@@ -542,10 +542,10 @@ function SingleReportView({ reportId, onBack }) {
 
       {/* ── Shift selector (when shift selected) ── */}
       {timePreset === 'shift' && (
-        <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2 flex items-center gap-3 print:hidden">
+        <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2.5 flex items-center gap-3 print:hidden">
           {shiftsConfig?.shifts?.length > 0 ? (
             <>
-              <label className="text-[10px] font-medium text-[#6b7f94]">Shift</label>
+              <label className="text-[11px] font-medium text-[#6b7f94]">Shift</label>
               <select
                 value={selectedShift}
                 onChange={(e) => setSelectedShift(e.target.value)}
@@ -560,7 +560,7 @@ function SingleReportView({ reportId, onBack }) {
           ) : (
             <>
               <FaClock size={9} className="text-[#d97706]" />
-              <span className="text-[10px] font-medium text-[#d97706]">No shifts configured — go to Engineering &gt; Shifts</span>
+              <span className="text-[11px] font-medium text-[#d97706]">No shifts configured — go to Engineering &gt; Shifts</span>
             </>
           )}
         </div>
@@ -568,7 +568,7 @@ function SingleReportView({ reportId, onBack }) {
 
       {/* ── Status indicator ── */}
       {timePreset === 'live' ? (
-        <div className={`border-b px-4 py-1 flex items-center gap-2 print:hidden ${
+        <div className={`border-b px-4 py-1.5 flex items-center gap-2 print:hidden ${
           liveError
             ? 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30'
             : (emulatorOn || Object.keys(liveTagValues).length > 0)
@@ -576,14 +576,14 @@ function SingleReportView({ reportId, onBack }) {
               : 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30'
         }`}>
           {liveError
-            ? <><span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" /><span className="text-[10px] font-medium text-[#ef4444]">{liveError}</span></>
+            ? <><span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" /><span className="text-[11px] font-medium text-[#ef4444]">{liveError}</span></>
             : (emulatorOn || Object.keys(liveTagValues).length > 0)
-              ? <><span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" /><span className="text-[10px] font-medium text-[#059669]">{emulatorOn ? 'Live (Emulator)' : 'Live'}</span></>
-              : <><FaClock size={9} className="text-[#d97706]" /><span className="text-[10px] font-medium text-[#d97706]">Waiting for live data…</span></>
+              ? <><span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" /><span className="text-[11px] font-medium text-[#059669]">{emulatorOn ? 'Live (Emulator)' : 'Live'}</span></>
+              : <><FaClock size={9} className="text-[#d97706]" /><span className="text-[11px] font-medium text-[#d97706]">Waiting for live data…</span></>
           }
         </div>
       ) : (
-        <div className={`border-b px-4 py-1 flex items-center gap-2 print:hidden ${
+        <div className={`border-b px-4 py-1.5 flex items-center gap-2 print:hidden ${
           historicalLoading
             ? 'bg-[#eff6ff] dark:bg-[#0c1a2e] border-[#93c5fd]/30'
             : historicalError
@@ -593,15 +593,15 @@ function SingleReportView({ reportId, onBack }) {
                 : 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30'
         }`}>
           {historicalLoading ? (
-            <><span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse" /><span className="text-[10px] font-medium text-[#3b82f6]">Loading historical data...</span></>
+            <><span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse" /><span className="text-[11px] font-medium text-[#3b82f6]">Loading historical data...</span></>
           ) : historicalError ? (
-            <><span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" /><span className="text-[10px] font-medium text-[#ef4444]">{historicalError}</span></>
+            <><span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" /><span className="text-[11px] font-medium text-[#ef4444]">{historicalError}</span></>
           ) : Object.keys(historicalTagValues).length > 0 ? (
-            <><FaClock size={9} className="text-[#0284c7]" /><span className="text-[10px] font-medium text-[#0284c7]">
+            <><FaClock size={9} className="text-[#0284c7]" /><span className="text-[11px] font-medium text-[#0284c7]">
               Historical — {dateRange?.from?.toLocaleDateString?.()} {dateRange?.from?.toLocaleTimeString?.(undefined, {hour:'2-digit',minute:'2-digit'})} to {dateRange?.to?.toLocaleDateString?.()} {dateRange?.to?.toLocaleTimeString?.(undefined, {hour:'2-digit',minute:'2-digit'})} ({Object.keys(historicalTagValues).length} tags)
             </span></>
           ) : (
-            <><FaClock size={9} className="text-[#d97706]" /><span className="text-[10px] font-medium text-[#d97706]">No historical data for this period</span></>
+            <><FaClock size={9} className="text-[#d97706]" /><span className="text-[11px] font-medium text-[#d97706]">No historical data for this period</span></>
           )}
         </div>
       )}
