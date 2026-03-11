@@ -70,7 +70,7 @@ const SettingsHome = () => {
         </nav>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-3 sm:px-5 py-4">
+      <div className="px-3 sm:px-4 py-3">
         {showDefault ? (
           <div className="text-center py-16 px-6">
             <div className="w-12 h-12 rounded-xl bg-[#f0f5fa] dark:bg-[#0a1525] dark:border dark:border-[#22d3ee]/10 flex items-center justify-center mx-auto mb-4">

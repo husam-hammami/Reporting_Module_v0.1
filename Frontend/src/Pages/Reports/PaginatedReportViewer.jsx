@@ -2,12 +2,13 @@
  * PaginatedReportViewer — View paginated reports with live/historical data.
  *
  * Renders the paginated sections from the template config with real tag data,
- * supports date range selection, PDF/print export, and professional A4 rendering.
+ * supports date range selection, live data polling, PDF/print export,
+ * fullscreen mode, and professional A4 rendering.
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  ArrowLeft, Download, Printer, Calendar, RefreshCw,
+  ArrowLeft, Download, Printer, Calendar, RefreshCw, Maximize, Minimize,
 } from 'lucide-react';
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
@@ -22,6 +23,7 @@ import html2canvas from 'html2canvas';
    ══════════════════════════════════════════════════════════════════ */
 
 const PRESETS = [
+  { key: 'live', label: 'Live' },
   { key: 'today', label: 'Today' },
   { key: 'yesterday', label: 'Yesterday' },
   { key: 'this-week', label: 'This Week' },
@@ -75,14 +77,19 @@ export default function PaginatedReportView({ reportId, onBack }) {
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
   const { socket } = useSocket();
 
-  const [preset, setPreset] = useState('today');
+  const [preset, setPreset] = useState('live');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [tagValues, setTagValues] = useState({});
+  const [liveTagValues, setLiveTagValues] = useState({});
   const [fetchLoading, setFetchLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [liveError, setLiveError] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const reportRef = useRef(null);
+
+  const isLive = preset === 'live';
 
   // Extract paginated sections from template
   const sections = useMemo(() => {
@@ -94,21 +101,60 @@ export default function PaginatedReportView({ reportId, onBack }) {
   // Collect all tag names needed
   const tagNames = useMemo(() => collectPaginatedTagNames(sections), [sections]);
 
-  // Date range
+  // Date range (only used for historical modes)
   const dateRange = useMemo(() => {
+    if (preset === 'live') return { from: new Date().toISOString(), to: new Date().toISOString() };
     if (preset === 'custom') {
       return { from: customFrom || new Date().toISOString(), to: customTo || new Date().toISOString() };
     }
     return getPresetRange(preset);
   }, [preset, customFrom, customTo]);
 
-  // Fetch historical tag values for the date range
+  // ── Live mode: poll REST + listen WebSocket ──
+  useEffect(() => {
+    if (!isLive || tagNames.length === 0) return;
+    let errorShown = false;
+    const fetchLive = async () => {
+      try {
+        const res = await axios.get('/api/live-monitor/tags', {
+          params: { tags: tagNames.join(',') },
+        });
+        const data = res.data?.tag_values ?? res.data?.data ?? res.data;
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          setLiveTagValues((prev) => ({ ...prev, ...data }));
+          setLiveError(null);
+        }
+      } catch (err) {
+        if (!errorShown) {
+          setLiveError(err.response?.data?.error || err.message || 'Failed to fetch live data');
+          errorShown = true;
+        }
+      }
+    };
+    setLiveError(null);
+    fetchLive();
+    const interval = setInterval(fetchLive, 5000);
+    return () => clearInterval(interval);
+  }, [isLive, tagNames]);
+
+  // Live mode: WebSocket updates
+  useEffect(() => {
+    if (!isLive || !socket) return;
+    const handler = (data) => {
+      if (data?.tag_values && typeof data.tag_values === 'object') {
+        setLiveTagValues((prev) => ({ ...prev, ...data.tag_values }));
+      }
+    };
+    socket.on('live_tag_data', handler);
+    return () => socket.off('live_tag_data', handler);
+  }, [isLive, socket]);
+
+  // ── Historical mode: fetch tag values for the date range ──
   const fetchData = useCallback(async () => {
-    if (tagNames.length === 0) return;
+    if (isLive || tagNames.length === 0) return;
     setFetchLoading(true);
     setFetchError(null);
     try {
-      // Try aggregated values endpoint
       const res = await axios.get('/api/historian/by-tags', {
         params: {
           tags: tagNames.join(','),
@@ -124,7 +170,6 @@ export default function PaginatedReportView({ reportId, onBack }) {
       }
     } catch (err) {
       console.warn('Failed to fetch historical data for paginated report:', err);
-      // Fallback: try live endpoint
       try {
         const res2 = await axios.get('/api/live-monitor/tags', {
           params: { tags: tagNames.join(',') },
@@ -137,16 +182,33 @@ export default function PaginatedReportView({ reportId, onBack }) {
       }
     }
     setFetchLoading(false);
-  }, [tagNames, dateRange]);
+  }, [isLive, tagNames, dateRange]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (!isLive) fetchData(); }, [fetchData, isLive]);
 
-  // Merge emulator values
+  // Merge values: live or historical + emulator
   const mergedTagValues = useMemo(() => {
-    const base = { ...tagValues };
+    const base = isLive ? { ...liveTagValues } : { ...tagValues };
     if (emulatorOn && emulatorValues) Object.assign(base, emulatorValues);
     return base;
-  }, [tagValues, emulatorOn, emulatorValues]);
+  }, [isLive, liveTagValues, tagValues, emulatorOn, emulatorValues]);
+
+  // ── Fullscreen toggle ──
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+      setFullscreen(true);
+    } else {
+      document.exitFullscreen?.();
+      setFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handler = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
 
   // PDF export
   const handleExportPDF = async () => {
@@ -158,9 +220,9 @@ export default function PaginatedReportView({ reportId, onBack }) {
 
       const imgWidth = 210; // A4 width mm
       const pageHeight = 297; // A4 height mm
-      const margin = 8;
+      const margin = 5;
       const usableWidth = imgWidth - 2 * margin;
-      const usableHeight = pageHeight - 2 * margin - 8;
+      const usableHeight = pageHeight - 2 * margin - 6;
 
       const imgHeight = (canvas.height * usableWidth) / canvas.width;
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -188,8 +250,8 @@ export default function PaginatedReportView({ reportId, onBack }) {
         // Footer
         pdf.setFontSize(7);
         pdf.setTextColor(150, 150, 150);
-        pdf.text(`Page ${pageNum} of ${totalPages}`, imgWidth / 2, pageHeight - 4, { align: 'center' });
-        pdf.text(new Date().toLocaleDateString('en-GB'), imgWidth - margin, pageHeight - 4, { align: 'right' });
+        pdf.text(`Page ${pageNum} of ${totalPages}`, imgWidth / 2, pageHeight - 3, { align: 'center' });
+        pdf.text(new Date().toLocaleDateString('en-GB'), imgWidth - margin, pageHeight - 3, { align: 'right' });
 
         yOffset += usableHeight;
         pageNum++;
@@ -218,22 +280,26 @@ export default function PaginatedReportView({ reportId, onBack }) {
     );
   }
 
+  const currentError = isLive ? liveError : fetchError;
+  const currentLoading = isLive ? false : fetchLoading;
+  const hasData = Object.keys(mergedTagValues).length > 0;
+
   return (
     <div className="report-builder min-h-screen" style={{ background: 'var(--rb-surface)' }}>
       {/* ── Toolbar ── */}
-      <div className="sticky top-0 z-20 px-4 py-2.5 flex items-center gap-3 print:hidden"
+      <div className="sticky top-0 z-20 px-3 py-2 flex items-center gap-2 print:hidden"
         style={{ background: 'var(--rb-panel)', borderBottom: '1px solid var(--rb-border)', boxShadow: 'var(--rb-elevation-1)' }}>
-        <button onClick={onBack} className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
-          <ArrowLeft size={16} style={{ color: 'var(--rb-text)' }} />
+        <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
+          <ArrowLeft size={15} style={{ color: 'var(--rb-text)' }} />
         </button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-[14px] font-bold truncate" style={{ color: 'var(--rb-text)' }}>{template?.name || 'Report'}</h2>
-          <div className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--rb-text-muted)' }}>Paginated Report</div>
+          <h2 className="text-[13px] font-bold truncate" style={{ color: 'var(--rb-text)' }}>{template?.name || 'Report'}</h2>
+          <div className="text-[8px] font-bold uppercase tracking-widest" style={{ color: 'var(--rb-text-muted)' }}>Paginated Report</div>
         </div>
 
         {/* Date range selector */}
         <div className="flex items-center gap-1.5">
-          <Calendar size={13} style={{ color: 'var(--rb-text-muted)' }} />
+          <Calendar size={12} style={{ color: 'var(--rb-text-muted)' }} />
           <select
             value={preset}
             onChange={(e) => setPreset(e.target.value)}
@@ -262,11 +328,17 @@ export default function PaginatedReportView({ reportId, onBack }) {
           )}
         </div>
 
-        <button onClick={fetchData} className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5" title="Refresh data">
-          <RefreshCw size={14} className={fetchLoading ? 'animate-spin' : ''} style={{ color: 'var(--rb-text-muted)' }} />
-        </button>
+        {!isLive && (
+          <button onClick={fetchData} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5" title="Refresh data">
+            <RefreshCw size={13} className={fetchLoading ? 'animate-spin' : ''} style={{ color: 'var(--rb-text-muted)' }} />
+          </button>
+        )}
 
-        <div className="w-px h-6" style={{ background: 'var(--rb-border)' }} />
+        <div className="w-px h-5" style={{ background: 'var(--rb-border)' }} />
+
+        <button onClick={toggleFullscreen} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5" title="Fullscreen">
+          {fullscreen ? <Minimize size={13} style={{ color: 'var(--rb-text-muted)' }} /> : <Maximize size={13} style={{ color: 'var(--rb-text-muted)' }} />}
+        </button>
 
         <button
           onClick={handleExportPDF}
@@ -274,36 +346,44 @@ export default function PaginatedReportView({ reportId, onBack }) {
           className="rb-btn-primary flex items-center gap-1.5 disabled:opacity-50"
           style={{ boxShadow: '0 0 12px var(--rb-accent-glow)' }}
         >
-          <Download size={13} />
+          <Download size={12} />
           <span className="text-[10px] font-bold uppercase tracking-wider">{exporting ? 'Exporting...' : 'PDF'}</span>
         </button>
         <button onClick={handlePrint} className="rb-btn-ghost flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
-          <Printer size={13} /> Print
+          <Printer size={12} /> Print
         </button>
       </div>
 
       {/* ── Status bar ── */}
-      {fetchError && (
-        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#fef2f2] dark:bg-[#1a0c0c] border-b border-[#fca5a5]/30 print:hidden">
+      {currentError && (
+        <div className="px-4 py-1 flex items-center gap-2 bg-[#fef2f2] dark:bg-[#1a0c0c] border-b border-[#fca5a5]/30 print:hidden">
           <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
-          <span className="text-[10px] font-medium text-[#ef4444]">{fetchError}</span>
+          <span className="text-[10px] font-medium text-[#ef4444]">{currentError}</span>
         </div>
       )}
-      {fetchLoading && !fetchError && (
-        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#eff6ff] dark:bg-[#0c1a2e] border-b border-[#93c5fd]/30 print:hidden">
+      {currentLoading && !currentError && (
+        <div className="px-4 py-1 flex items-center gap-2 bg-[#eff6ff] dark:bg-[#0c1a2e] border-b border-[#93c5fd]/30 print:hidden">
           <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse" />
           <span className="text-[10px] font-medium text-[#3b82f6]">Loading data...</span>
         </div>
       )}
-      {!fetchLoading && !fetchError && Object.keys(mergedTagValues).length > 0 && (
-        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#ecfdf5] dark:bg-[#0d2e1f] border-b border-[#a7f3d0] dark:border-[#065f46] print:hidden">
+      {isLive && !liveError && (
+        <div className="px-4 py-1 flex items-center gap-2 bg-[#ecfdf5] dark:bg-[#0d2e1f] border-b border-[#a7f3d0] dark:border-[#065f46] print:hidden">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
+          <span className="text-[10px] font-medium text-[#059669]">
+            {emulatorOn ? 'Live (Emulator)' : 'Live'} — {Object.keys(mergedTagValues).length} tags
+          </span>
+        </div>
+      )}
+      {!isLive && !currentLoading && !currentError && hasData && (
+        <div className="px-4 py-1 flex items-center gap-2 bg-[#ecfdf5] dark:bg-[#0d2e1f] border-b border-[#a7f3d0] dark:border-[#065f46] print:hidden">
           <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
           <span className="text-[10px] font-medium text-[#059669]">Data loaded — {Object.keys(mergedTagValues).length} tags</span>
         </div>
       )}
 
       {/* ── Report content ── */}
-      <div className="py-6 print:py-0" style={{ background: '#e5e7eb' }}>
+      <div id="paginated-report-print" className="py-2 print:py-0" style={{ background: '#e5e7eb' }}>
         <div ref={reportRef} className="print:shadow-none">
           <PaginatedReportPreview
             sections={sections}

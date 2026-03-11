@@ -1099,6 +1099,11 @@
    PRINT STYLES — Professional PDF/Print Layout
    ═══════════════════════════════════════════════════════════════ */
 @media print {
+  @page {
+    margin: 5mm;
+    size: A4 portrait;
+  }
+
   .report-builder .rb-production-table {
     padding: 0 !important;
   }
@@ -1113,7 +1118,7 @@
   .report-builder .rb-production-table th,
   .report-builder .rb-production-table td {
     border: 1px solid #999;
-    padding: 4px 8px;
+    padding: 3px 6px;
     color: #000 !important;
     background: #fff !important;
   }
@@ -1130,13 +1135,13 @@
     font-size: 11px;
     border-top: 2px solid #333;
     border-bottom: 1px solid #666;
-    padding: 6px 8px;
+    padding: 5px 6px;
   }
 
   .report-builder .rb-report-header {
     border-bottom: 2px solid #333 !important;
-    margin-bottom: 8px;
-    padding-bottom: 6px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
   }
 
   .report-builder .rb-report-header h3 {
@@ -1166,6 +1171,47 @@
 
   .report-builder .font-mono {
     font-family: 'Courier New', monospace;
+  }
+
+  /* Paginated report page breaks */
+  .paginated-page {
+    page-break-after: always;
+    break-after: page;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+  .paginated-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .paginated-page-break {
+    display: none !important;
+  }
+
+  /* Paginated report tables — clean print */
+  .paginated-page table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .paginated-page th,
+  .paginated-page td {
+    color: #000 !important;
+    border-color: #999 !important;
+    padding: 3px 6px !important;
+  }
+  .paginated-page thead th {
+    background: #f0f0f0 !important;
+  }
+
+  /* Remove all decorative elements in print */
+  .report-builder {
+    background: white !important;
+  }
+  .rb-widget-card {
+    box-shadow: none !important;
+    border-radius: 0 !important;
   }
 }
 
