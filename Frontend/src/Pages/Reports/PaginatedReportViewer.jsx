@@ -10,7 +10,8 @@ import {
   ArrowLeft, Download, Printer, Calendar, RefreshCw,
 } from 'lucide-react';
 import { useEmulator } from '../../Context/EmulatorContext';
-import { useReportCanvas } from '../../Hooks/useReportBuilder';
+import { useSocket } from '../../Context/SocketContext';
+import { useReportCanvas, useAvailableTags } from '../../Hooks/useReportBuilder';
 import { PaginatedReportPreview, collectPaginatedTagNames } from '../ReportBuilder/PaginatedReportBuilder';
 import axios from '../../API/axios';
 import jsPDF from 'jspdf';
