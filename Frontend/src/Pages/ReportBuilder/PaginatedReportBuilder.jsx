@@ -95,6 +95,14 @@ function defaultSection(type) {
 
 /* ── Resolve cell value ──────────────────────────────────────────── */
 
+function resolveLookup(mapping, inputValue) {
+  if (inputValue == null) return mapping?.fallback ?? '—';
+  const key = String(Math.round(Number(inputValue)));
+  const mapped = mapping?.lookup?.[key];
+  if (mapped !== undefined && mapped !== null) return mapped;
+  return inputValue;
+}
+
 function resolveCellValue(cell, tagValues) {
   if (!cell) return '—';
   if (cell.sourceType === 'static') return cell.value ?? '';
@@ -116,13 +124,26 @@ function resolveCellValue(cell, tagValues) {
     const formatted = n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
     return cell.unit ? `${formatted} ${cell.unit}` : formatted;
   }
+  if (cell.sourceType === 'group') {
+    const vals = (cell.groupTags || []).map((t) => Number(tagValues?.[t]) || 0);
+    if (vals.length === 0) return '—';
+    const agg = cell.aggregation || 'avg';
+    let n;
+    if (agg === 'sum') n = vals.reduce((a, b) => a + b, 0);
+    else if (agg === 'min') n = Math.min(...vals);
+    else if (agg === 'max') n = Math.max(...vals);
+    else if (agg === 'count') n = vals.length;
+    else n = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const d = cell.decimals ?? 1;
+    const formatted = Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+    return cell.unit ? `${formatted} ${cell.unit}` : formatted;
+  }
   if (cell.sourceType === 'mapping') {
     const mappings = getCachedMappings();
-    const mapping = mappings?.find((m) => m.mapping_name === cell.mappingName);
+    const mapping = mappings?.find((m) => (m.name || m.id) === cell.mappingName);
     if (!mapping) return '—';
-    const raw = tagValues?.[cell.tagName];
-    const key = String(Math.round(Number(raw)));
-    return mapping.lookup?.[key] ?? raw ?? '—';
+    const raw = tagValues?.[mapping.input_tag];
+    return resolveLookup(mapping, raw);
   }
   return '—';
 }
@@ -134,6 +155,9 @@ function resolveKpiValue(kpi, tagValues) {
     formula: kpi.formula,
     unit: kpi.unit,
     decimals: kpi.decimals,
+    groupTags: kpi.groupTags,
+    aggregation: kpi.aggregation,
+    mappingName: kpi.mappingName,
   }, tagValues);
 }
 
@@ -142,11 +166,17 @@ function resolveKpiValue(kpi, tagValues) {
 export function collectPaginatedTagNames(sections) {
   const names = new Set();
   if (!Array.isArray(sections)) return [];
+  const mappings = getCachedMappings();
   sections.forEach((s) => {
     if (s.type === 'kpi-row' && Array.isArray(s.kpis)) {
       s.kpis.forEach((k) => {
         if (k.tagName) names.add(k.tagName);
         if (k.formula) extractTagRefs(k.formula).forEach((t) => names.add(t));
+        if (k.sourceType === 'group' && Array.isArray(k.groupTags)) k.groupTags.forEach((t) => { if (t) names.add(t); });
+        if (k.sourceType === 'mapping' && k.mappingName) {
+          const m = mappings?.find((mx) => (mx.name || mx.id) === k.mappingName);
+          if (m?.input_tag) names.add(m.input_tag);
+        }
       });
     }
     if (s.type === 'table' && Array.isArray(s.rows)) {
@@ -155,6 +185,11 @@ export function collectPaginatedTagNames(sections) {
           row.cells.forEach((cell) => {
             if (cell.tagName) names.add(cell.tagName);
             if (cell.formula) extractTagRefs(cell.formula).forEach((t) => names.add(t));
+            if (cell.sourceType === 'group' && Array.isArray(cell.groupTags)) cell.groupTags.forEach((t) => { if (t) names.add(t); });
+            if (cell.sourceType === 'mapping' && cell.mappingName) {
+              const m = mappings?.find((mx) => (mx.name || mx.id) === cell.mappingName);
+              if (m?.input_tag) names.add(m.input_tag);
+            }
           });
         }
       });
@@ -213,16 +248,26 @@ function AddSectionPalette({ onAdd, onClose }) {
 
 function CellEditor({ cell, tags, onChange }) {
   const srcType = cell.sourceType || 'static';
+  const safeTags = Array.isArray(tags) ? tags : [];
+  const handleSourceTypeChange = (e) => {
+    const v = e.target.value;
+    if (v === 'group') onChange({ ...cell, sourceType: 'group', groupTags: cell.groupTags || [], aggregation: cell.aggregation || 'avg' });
+    else if (v === 'mapping') onChange({ ...cell, sourceType: 'mapping', mappingName: cell.mappingName || '' });
+    else onChange({ ...cell, sourceType: v });
+  };
+  const mappings = getCachedMappings();
   return (
     <div className="flex flex-col gap-1.5 min-w-0">
       <select
         value={srcType}
-        onChange={(e) => onChange({ ...cell, sourceType: e.target.value })}
+        onChange={handleSourceTypeChange}
         className="rb-input-base text-[10px] py-1 px-2"
       >
         <option value="static">Static Text</option>
-        <option value="tag">Tag</option>
-        <option value="formula">Formula</option>
+        <option value="tag">Single Tag</option>
+        <option value="formula">Custom Formula</option>
+        <option value="group">Tag Group Aggregate</option>
+        <option value="mapping">Mapping Tag</option>
       </select>
       {srcType === 'static' && (
         <input
@@ -234,14 +279,15 @@ function CellEditor({ cell, tags, onChange }) {
         />
       )}
       {srcType === 'tag' && (
-        <div className="flex gap-1">
+        <div className="flex gap-1 min-w-[140px]" style={{ minWidth: 'max(140px, 100%)' }}>
           <select
             value={cell.tagName || ''}
             onChange={(e) => onChange({ ...cell, tagName: e.target.value })}
             className="rb-input-base text-[10px] py-1 px-2 flex-1 min-w-0"
+            title="Select a tag"
           >
             <option value="">Select tag...</option>
-            {tags.map((t) => (
+            {safeTags.map((t) => (
               <option key={t.tag_name} value={t.tag_name}>{t.display_name || t.tag_name}</option>
             ))}
           </select>
@@ -250,7 +296,7 @@ function CellEditor({ cell, tags, onChange }) {
             value={cell.unit || ''}
             onChange={(e) => onChange({ ...cell, unit: e.target.value })}
             placeholder="Unit"
-            className="rb-input-base text-[10px] py-1 px-2 w-12"
+            className="rb-input-base text-[10px] py-1 px-2 w-12 flex-shrink-0"
           />
         </div>
       )}
@@ -271,6 +317,58 @@ function CellEditor({ cell, tags, onChange }) {
             className="rb-input-base text-[10px] py-1 px-2 w-12"
           />
         </div>
+      )}
+      {srcType === 'group' && (
+        <div className="flex flex-col gap-1.5 min-w-0">
+          <div className="space-y-1">
+            {(cell.groupTags || []).map((gt, gi) => (
+              <div key={gi} className="flex items-center gap-1">
+                <select
+                  value={gt || ''}
+                  onChange={(e) => {
+                    const next = [...(cell.groupTags || [])];
+                    next[gi] = e.target.value;
+                    onChange({ ...cell, groupTags: next });
+                  }}
+                  className="rb-input-base text-[10px] py-1 px-2 flex-1 min-w-0"
+                >
+                  <option value="">Select tag...</option>
+                  {safeTags.map((t) => (
+                    <option key={t.tag_name} value={t.tag_name}>{t.display_name || t.tag_name}</option>
+                  ))}
+                </select>
+                <button type="button" onClick={() => onChange({ ...cell, groupTags: (cell.groupTags || []).filter((_, k) => k !== gi) })} className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Remove tag">
+                  <X size={10} className="text-red-400" />
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={() => onChange({ ...cell, groupTags: [...(cell.groupTags || []), ''] })} className="text-[9px] font-semibold" style={{ color: 'var(--rb-accent)' }}>+ Add tag</button>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[8px] font-bold uppercase" style={{ color: 'var(--rb-text-muted)' }}>Aggregation</span>
+            <select value={cell.aggregation || 'avg'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1">
+              <option value="avg">Average</option>
+              <option value="sum">Sum</option>
+              <option value="min">Min</option>
+              <option value="max">Max</option>
+              <option value="count">Count</option>
+            </select>
+          </div>
+          <input type="text" value={cell.unit || ''} onChange={(e) => onChange({ ...cell, unit: e.target.value })} placeholder="Unit" className="rb-input-base text-[10px] py-1 px-2 w-12" />
+        </div>
+      )}
+      {srcType === 'mapping' && (
+        <select
+          value={cell.mappingName || ''}
+          onChange={(e) => onChange({ ...cell, mappingName: e.target.value })}
+          className="rb-input-base text-[10px] py-1 px-2 w-full min-w-0"
+          title="Select a mapping"
+        >
+          <option value="">— Select a mapping —</option>
+          {(mappings || []).filter((m) => m.is_active !== false).map((m) => (
+            <option key={m.id || m.name} value={m.name || m.id || ''}>{m.name || m.id || 'Unnamed'} → {m.output_tag_name || ''}</option>
+          ))}
+        </select>
       )}
     </div>
   );
