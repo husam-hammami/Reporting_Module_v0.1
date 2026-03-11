@@ -218,6 +218,20 @@ function resolveKpiValue(kpi, tagValues) {
   }, tagValues);
 }
 
+/* ── Check if a row should be hidden (bin inactive) ──────────────── */
+
+function isRowHidden(row, section, tagValues) {
+  if (!row.hideWhenInactive) return false;
+  const refCol = row.hideReferenceCol ?? 0;
+  const cell = row.cells?.[refCol];
+  if (!cell) return false;
+  const resolved = resolveCellValue(cell, tagValues);
+  // Hide when resolved value is 0, "0", "0.0", or dash (no data)
+  if (resolved === '—' || resolved === '') return true;
+  const num = Number(String(resolved).replace(/[^0-9.\-]/g, ''));
+  return !isNaN(num) && num === 0;
+}
+
 /* ── Collect all tag names from paginated config ─────────────────── */
 
 export function collectPaginatedTagNames(sections) {
@@ -529,6 +543,11 @@ function TableSectionEditor({ section, tags, onChange }) {
     rows[rowIdx] = { ...rows[rowIdx], cells };
     onChange({ ...section, rows });
   };
+  const updateRow = (idx, updates) => {
+    const rows = [...section.rows];
+    rows[idx] = { ...rows[idx], ...updates };
+    onChange({ ...section, rows });
+  };
   const addRow = () => {
     onChange({
       ...section,
@@ -606,15 +625,39 @@ function TableSectionEditor({ section, tags, onChange }) {
             <div key={row.id} className="p-2 rounded-lg" style={{ background: 'var(--rb-surface)', border: '1px solid var(--rb-border)' }}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[9px] font-semibold" style={{ color: 'var(--rb-text-muted)' }}>Row {ri + 1}</span>
-                <div className="flex gap-0.5">
-                  <button onClick={() => duplicateRow(ri)} className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5" title="Duplicate row">
-                    <Copy size={10} style={{ color: 'var(--rb-text-muted)' }} />
-                  </button>
-                  {section.rows.length > 1 && (
-                    <button onClick={() => removeRow(ri)} className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete row">
-                      <Trash2 size={10} className="text-red-400" />
-                    </button>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1 text-[8px]" style={{ color: 'var(--rb-text-muted)' }} title="Hide this row when the reference bin tag value is 0 (inactive)">
+                    <input
+                      type="checkbox"
+                      checked={row.hideWhenInactive || false}
+                      onChange={(e) => updateRow(ri, { hideWhenInactive: e.target.checked })}
+                      className="rounded"
+                      style={{ width: 12, height: 12 }}
+                    />
+                    Hide inactive
+                  </label>
+                  {row.hideWhenInactive && (
+                    <select
+                      value={row.hideReferenceCol ?? 0}
+                      onChange={(e) => updateRow(ri, { hideReferenceCol: Number(e.target.value) })}
+                      className="rb-input-base text-[8px] py-0 px-1"
+                      title="Column to check — row hides when this cell's resolved value is 0"
+                    >
+                      {section.columns.map((col, ci) => (
+                        <option key={ci} value={ci}>{col.header}</option>
+                      ))}
+                    </select>
                   )}
+                  <div className="flex gap-0.5">
+                    <button onClick={() => duplicateRow(ri)} className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5" title="Duplicate row">
+                      <Copy size={10} style={{ color: 'var(--rb-text-muted)' }} />
+                    </button>
+                    {section.rows.length > 1 && (
+                      <button onClick={() => removeRow(ri)} className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete row">
+                        <Trash2 size={10} className="text-red-400" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${section.columns.length}, 1fr)` }}>
@@ -915,7 +958,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                 </tr>
               </thead>
               <tbody>
-                {(section.rows || []).map((row, ri) => (
+                {(section.rows || []).filter((row) => !isRowHidden(row, section, tagValues)).map((row, ri) => (
                   <tr key={row.id} className={ri % 2 === 1 ? 'bg-[#f8fafc]' : ''}>
                     {(row.cells || []).map((cell, ci) => {
                       const col = section.columns[ci];

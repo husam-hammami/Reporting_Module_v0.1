@@ -84,11 +84,12 @@ def get_live_tag_values():
     """
     Get current values for all active tags (for live monitor).
     This replaces the hardcoded /plc-monitor endpoint.
+    Applies bin activation filtering: inactive bins return value 0.
     """
     try:
         logger.info("=== GET LIVE TAG VALUES REQUEST START ===")
         get_db_connection = _get_db_connection()
-        
+
         # Optional: get specific tags
         tag_names_param = request.args.get('tags')
         tag_names = None
@@ -97,18 +98,21 @@ def get_live_tag_values():
             logger.info(f"Requesting values for {len(tag_names)} tags: {tag_names}")
         else:
             logger.info("Requesting values for all active tags")
-        
+
         # Read tags from PLC
         logger.info("Reading tags from PLC...")
         values = read_all_tags(tag_names=tag_names, db_connection_func=get_db_connection)
         logger.info(f"Successfully read {len(values)} tag values")
-        
+
+        # Apply bin activation filtering
+        values = _apply_bin_activation_filtering(values, tag_names, get_db_connection)
+
         return jsonify({
             'status': 'success',
             'timestamp': datetime.now().isoformat(),
             'tag_values': values
         })
-    
+
     except Exception as e:
         logger.error(f"Error reading live tags: {e}", exc_info=True)
         return jsonify({
@@ -116,6 +120,95 @@ def get_live_tag_values():
             'message': str(e),
             'tag_values': {}
         }), 500
+
+
+def _evaluate_activation_condition(actual_value, condition, expected_value):
+    """Evaluate if a bin activation condition is met."""
+    if actual_value is None:
+        return False
+
+    actual_str = str(actual_value).lower()
+    expected_str = str(expected_value).lower() if expected_value else ''
+
+    if condition == "equals":
+        return actual_str == expected_str
+    elif condition == "not_equals":
+        return actual_str != expected_str
+    elif condition == "true":
+        return bool(actual_value) is True
+    elif condition == "false":
+        return bool(actual_value) is False
+    elif condition == "greater_than":
+        try:
+            return float(actual_value) > float(expected_value)
+        except (ValueError, TypeError):
+            return False
+    elif condition == "less_than":
+        try:
+            return float(actual_value) < float(expected_value)
+        except (ValueError, TypeError):
+            return False
+    return True  # Default: active if condition unknown
+
+
+def _apply_bin_activation_filtering(tag_values, tag_names, get_db_connection_func):
+    """
+    Check bin activation conditions and set inactive bin tag values to 0.
+    Reuses the same activation logic as /api/tags/get-values.
+    """
+    if not tag_values:
+        return tag_values
+
+    try:
+        lookup_names = tag_names or list(tag_values.keys())
+
+        with closing(get_db_connection_func()) as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("""
+                SELECT tag_name, is_bin_tag, activation_tag_name,
+                       activation_condition, activation_value
+                FROM tags
+                WHERE tag_name = ANY(%s)
+                  AND is_active = true
+                  AND is_bin_tag = true
+                  AND activation_tag_name IS NOT NULL
+            """, (lookup_names,))
+            bin_configs = {row['tag_name']: row for row in cursor.fetchall()}
+
+        if not bin_configs:
+            return tag_values
+
+        # Collect activation tags we need to read
+        activation_tags_needed = {
+            cfg['activation_tag_name'] for cfg in bin_configs.values()
+        }
+
+        # Read activation tag values from PLC
+        activation_values = read_all_tags(
+            tag_names=list(activation_tags_needed),
+            db_connection_func=get_db_connection_func
+        )
+
+        # Filter: set inactive bin values to 0
+        filtered = dict(tag_values)
+        for tag_name, cfg in bin_configs.items():
+            if tag_name not in filtered:
+                continue
+            act_val = activation_values.get(cfg['activation_tag_name'])
+            is_active = _evaluate_activation_condition(
+                act_val,
+                cfg.get('activation_condition', 'equals'),
+                cfg.get('activation_value')
+            )
+            if not is_active:
+                logger.debug(f"[Bin Activation] {tag_name} inactive — setting to 0")
+                filtered[tag_name] = 0
+
+        return filtered
+
+    except Exception as e:
+        logger.warning(f"Bin activation filtering failed, returning unfiltered: {e}")
+        return tag_values
 
 
 @live_monitor_bp.route('/live-monitor/layouts', methods=['GET'])
