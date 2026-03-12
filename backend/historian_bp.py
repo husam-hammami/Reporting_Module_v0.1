@@ -246,45 +246,13 @@ def get_by_tags():
             result = {}
 
             if aggregation == "auto":
-                # Smart aggregation: counter tags → delta (SUM of value_delta), others → last
+                # Smart aggregation using tag_history_archive (hourly):
+                #   counter tags → SUM(value_delta), others → last value
                 non_counter_ids = [tid for tid in tag_ids if tid not in counter_ids]
                 counter_id_list = [tid for tid in tag_ids if tid in counter_ids]
 
-                # Non-counters: last value from tag_history
+                # Non-counters: last value from tag_history_archive
                 if non_counter_ids:
-                    cur.execute("""
-                        SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
-                        FROM tag_history h
-                        WHERE h.tag_id = ANY(%s)
-                          AND h."timestamp" >= %s::timestamp
-                          AND h."timestamp" <= %s::timestamp
-                        ORDER BY h.tag_id, h."timestamp" DESC
-                    """, (non_counter_ids, from_ts, to_ts))
-                    for row in cur.fetchall():
-                        name = id_to_name.get(row["tag_id"])
-                        if name and row["value"] is not None:
-                            result[name] = row["value"]
-
-                # Counters: SUM(value_delta) from tag_history
-                if counter_id_list:
-                    cur.execute("""
-                        SELECT h.tag_id, SUM(COALESCE(h.value_delta, 0)) AS delta_sum
-                        FROM tag_history h
-                        WHERE h.tag_id = ANY(%s)
-                          AND h."timestamp" >= %s::timestamp
-                          AND h."timestamp" <= %s::timestamp
-                        GROUP BY h.tag_id
-                    """, (counter_id_list, from_ts, to_ts))
-                    for row in cur.fetchall():
-                        name = id_to_name.get(row["tag_id"])
-                        if name and row["delta_sum"] is not None:
-                            result[name] = float(row["delta_sum"])
-
-                # Fallback to tag_history_archive for tags still missing
-                missing_non_counter = [tid for tid in non_counter_ids if id_to_name.get(tid) not in result]
-                missing_counter = [tid for tid in counter_id_list if id_to_name.get(tid) not in result]
-
-                if missing_non_counter:
                     cur.execute("""
                         SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
                         FROM tag_history_archive a
@@ -292,13 +260,14 @@ def get_by_tags():
                           AND a.archive_hour >= %s::timestamp
                           AND a.archive_hour <= %s::timestamp
                         ORDER BY a.tag_id, a.archive_hour DESC
-                    """, (missing_non_counter, from_ts, to_ts))
+                    """, (non_counter_ids, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
                         if name and row["value"] is not None:
                             result[name] = row["value"]
 
-                if missing_counter:
+                # Counters: SUM(value_delta) from tag_history_archive
+                if counter_id_list:
                     cur.execute("""
                         SELECT a.tag_id, SUM(COALESCE(a.value_delta, 0)) AS delta_sum
                         FROM tag_history_archive a
@@ -306,7 +275,7 @@ def get_by_tags():
                           AND a.archive_hour >= %s::timestamp
                           AND a.archive_hour <= %s::timestamp
                         GROUP BY a.tag_id
-                    """, (missing_counter, from_ts, to_ts))
+                    """, (counter_id_list, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
                         if name and row["delta_sum"] is not None:
