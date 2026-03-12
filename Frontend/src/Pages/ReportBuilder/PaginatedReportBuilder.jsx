@@ -218,6 +218,14 @@ function resolveKpiValue(kpi, tagValues) {
   }, tagValues);
 }
 
+/** Never render the boolean object as a React child; use 'Yes'/'No' for checkbox cells. */
+function renderResolvedValue(resolved) {
+  if (resolved && typeof resolved === 'object' && resolved.type === 'boolean') {
+    return resolved.checked ? 'Yes' : 'No';
+  }
+  return resolved;
+}
+
 /* ── Check if a row should be hidden (bin inactive) ──────────────── */
 
 function isRowHidden(row, section, tagValues) {
@@ -226,6 +234,7 @@ function isRowHidden(row, section, tagValues) {
   const cell = row.cells?.[refCol];
   if (!cell) return false;
   const resolved = resolveCellValue(cell, tagValues);
+  if (resolved && typeof resolved === 'object' && resolved.type === 'boolean') return false;
   // Hide when resolved value is 0, "0", "0.0", or dash (no data)
   if (resolved === '—' || resolved === '') return true;
   const num = Number(String(resolved).replace(/[^0-9.\-]/g, ''));
@@ -929,7 +938,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
               {(section.kpis || []).map((kpi) => (
                 <div key={kpi.id} className="text-right">
                   <span className="text-[9px] font-medium text-[#64748b]">{kpi.label}: </span>
-                  <span className="text-[12px] font-bold text-[#0f172a] tabular-nums">{resolveKpiValue(kpi, tagValues)}</span>
+                  <span className="text-[12px] font-bold text-[#0f172a] tabular-nums">{renderResolvedValue(resolveKpiValue(kpi, tagValues))}</span>
                 </div>
               ))}
             </div>
@@ -968,7 +977,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                           className="px-2 py-0.5 border border-[#e2e8f0]"
                           style={{ textAlign: col?.align || 'left' }}
                         >
-                          {resolveCellValue(cell, tagValues)}
+                          {renderResolvedValue(resolveCellValue(cell, tagValues))}
                         </td>
                       );
                     })}
@@ -983,13 +992,13 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                       {section.summaryLabel || 'Total'}
                     </td>
                     <td className="px-2 py-1 border border-[#d1d5db] text-right tabular-nums">
-                      {resolveCellValue({
+                      {renderResolvedValue(resolveCellValue({
                         sourceType: section.summaryFormula ? 'formula' : 'static',
                         formula: section.summaryFormula,
                         value: '',
                         unit: section.summaryUnit,
                         decimals: 1,
-                      }, tagValues)}
+                      }, tagValues))}
                     </td>
                   </tr>
                 )}
