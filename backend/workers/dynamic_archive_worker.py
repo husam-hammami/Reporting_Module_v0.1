@@ -41,13 +41,13 @@ def dynamic_archive_worker():
             from app import get_db_connection
             from utils.dynamic_tables import get_active_monitors
 
-            # Use Dubai timezone for archive timestamp
-            dubai_tz = pytz.timezone('Asia/Dubai')
-            archive_time = datetime.datetime.now(pytz.utc).astimezone(dubai_tz).replace(tzinfo=None)
-            archive_hour = archive_time.replace(minute=0, second=0, microsecond=0)
+            # Use server local time — must match historian_worker which writes with datetime.now()
+            now = datetime.datetime.now()
+            archive_hour = now.replace(minute=0, second=0, microsecond=0)
+            hour_start = archive_hour - datetime.timedelta(hours=1)
+            archive_time = now
 
             use_central_historian = os.getenv('USE_CENTRAL_HISTORIAN', 'true').lower() == 'true'
-            hour_start = archive_hour - datetime.timedelta(hours=1)
 
             # Per-layout archiving (Live Monitor tables + per-layout historian)
             monitors = get_active_monitors(get_db_connection)
@@ -147,12 +147,12 @@ def dynamic_archive_worker():
                 except Exception as e:
                     logger.error(f"❌ Error archiving {monitor.get('layout_name')}: {e}", exc_info=True)
 
-            # Universal historian aggregation (layout_id IS NULL rows from historian_worker)
+            # Universal historian: ~3600 rows/tag/hour in tag_history → 1 row/tag/hour in tag_history_archive.
+            # Counters: SUM(value_delta). Non-counters: AVG(value). Then delete archived raw rows.
             if use_central_historian:
                 try:
                     with closing(get_db_connection()) as conn:
                         cursor = conn.cursor(cursor_factory=RealDictCursor)
-                        # Advisory lock: only one process archives universal historian per hour
                         cursor.execute("SELECT pg_try_advisory_xact_lock(%s)", (ARCHIVE_ADVISORY_LOCK_ID,))
                         row = cursor.fetchone()
                         got_lock = (row[0] if isinstance(row, (list, tuple)) else list(row.values())[0]) if row else False
@@ -167,7 +167,6 @@ def dynamic_archive_worker():
                             """, (hour_start, archive_hour))
                             agg_rows = cursor.fetchall()
                             if agg_rows:
-                                # INSERT with ON CONFLICT so duplicate runs do not insert twice (requires unique index on (tag_id, archive_hour) WHERE layout_id IS NULL)
                                 insert_sql = """
                                     INSERT INTO tag_history_archive (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, archive_hour, order_name)
                                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -180,11 +179,23 @@ def dynamic_archive_worker():
                                     agg_delta = float(r['agg_delta']) if r.get('agg_delta') is not None else None
                                     cursor.execute(insert_sql, (None, tag_id, agg_value, None, agg_delta, is_counter, 'GOOD', archive_hour, None))
                                 conn.commit()
-                                logger.info(f"[Historian] Archived {len(agg_rows)} universal tag aggregates | {archive_hour}")
+                                logger.info(f"[Historian] Archived {len(agg_rows)} universal tag aggregates → tag_history_archive | {archive_hour}")
+
+                                # Safe to delete: archive rows committed above. Remove raw data older than current hour.
+                                cursor.execute("""
+                                    DELETE FROM tag_history
+                                    WHERE layout_id IS NULL AND "timestamp" < %s
+                                """, (archive_hour,))
+                                deleted = cursor.rowcount
+                                conn.commit()
+                                logger.info(f"[Historian] Cleaned {deleted} raw rows from tag_history (keeping last hour)")
+                            else:
+                                logger.debug(f"[Historian] No raw rows found for {hour_start} – {archive_hour}, skipping archive")
+                                conn.rollback()
                         else:
                             conn.rollback()
                 except Exception as hist_err:
-                    logger.warning(f"[Historian] Universal archive aggregation failed: {hist_err}")
+                    logger.warning(f"[Historian] Universal archive aggregation failed: {hist_err}", exc_info=True)
 
             # Wait until next hour
             now = datetime.datetime.now()
