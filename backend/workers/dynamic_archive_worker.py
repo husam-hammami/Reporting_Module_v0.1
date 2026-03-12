@@ -59,7 +59,7 @@ def dynamic_archive_worker():
                         if got_lock:
                             cursor.execute("""
                                 SELECT tag_id, BOOL_OR(is_counter) AS is_counter,
-                                       CASE WHEN BOOL_OR(is_counter) THEN SUM(COALESCE(value_delta, 0))::double precision ELSE AVG(value)::double precision END AS agg_value,
+                                       (array_agg(value ORDER BY "timestamp" DESC))[1]::double precision AS last_value,
                                        CASE WHEN BOOL_OR(is_counter) THEN SUM(COALESCE(value_delta, 0))::double precision ELSE NULL END AS agg_delta
                                 FROM tag_history
                                 WHERE layout_id IS NULL AND "timestamp" >= %s AND "timestamp" < %s
@@ -76,9 +76,9 @@ def dynamic_archive_worker():
                                 for r in agg_rows:
                                     tag_id = r['tag_id']
                                     is_counter = bool(r.get('is_counter', False))
-                                    agg_value = float(r['agg_value']) if r.get('agg_value') is not None else 0.0
+                                    last_value = float(r['last_value']) if r.get('last_value') is not None else 0.0
                                     agg_delta = float(r['agg_delta']) if r.get('agg_delta') is not None else None
-                                    cursor.execute(insert_sql, (None, tag_id, agg_value, None, agg_delta, is_counter, 'GOOD', archive_hour, None))
+                                    cursor.execute(insert_sql, (None, tag_id, last_value, None, agg_delta, is_counter, 'GOOD', archive_hour, None))
                                 conn.commit()
                                 logger.info(f"[Historian] Archived {len(agg_rows)} rows → tag_history_archive | {archive_hour}")
 

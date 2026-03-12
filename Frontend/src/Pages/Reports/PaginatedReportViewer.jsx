@@ -107,6 +107,18 @@ export default function PaginatedReportView({ reportId, onBack }) {
   // Collect all tag names needed
   const tagNames = useMemo(() => collectPaginatedTagNames(sections), [sections]);
 
+  // ISO string → local YYYY-MM-DDTHH:mm for datetime-local input
+  const isoToLocalDatetime = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day}T${h}:${min}`;
+  };
+
   // Date range (only used for historical modes)
   const dateRange = useMemo(() => {
     if (preset === 'live') return { from: new Date().toISOString(), to: new Date().toISOString() };
@@ -319,14 +331,14 @@ export default function PaginatedReportView({ reportId, onBack }) {
             <>
               <input
                 type="datetime-local"
-                value={customFrom ? customFrom.slice(0, 16) : ''}
+                value={isoToLocalDatetime(customFrom)}
                 onChange={(e) => setCustomFrom(new Date(e.target.value).toISOString())}
                 className="rb-input-base text-[11px] py-1.5 px-2"
               />
               <span className="text-[10px]" style={{ color: 'var(--rb-text-muted)' }}>to</span>
               <input
                 type="datetime-local"
-                value={customTo ? customTo.slice(0, 16) : ''}
+                value={isoToLocalDatetime(customTo)}
                 onChange={(e) => setCustomTo(new Date(e.target.value).toISOString())}
                 className="rb-input-base text-[11px] py-1.5 px-2"
               />
