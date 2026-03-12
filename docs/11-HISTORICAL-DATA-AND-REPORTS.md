@@ -265,8 +265,8 @@ The switch is controlled by a single state variable: `timePreset`. When it equal
 |--------|----------|-------------|
 | GET | `/historian/history` | Raw per-sample data from `tag_history`. Requires: `layout_id`, `from`, `to`. Optional: `tag_ids`. Returns individual tag readings with timestamps. |
 | GET | `/historian/archive` | Hourly aggregated data from `tag_history_archive`. Requires: `layout_id`, `from`, `to`. Optional: `tag_ids`. Falls back to latest archive data if no rows match the range. |
-| GET | `/historian/by-tags` | Tag-name-based query (no layout_id required). Used by ReportViewer. Requires: `tag_names`, `from`, `to`. Optional: `aggregation` (last/avg/min/max/sum/delta/count, default: last). Tries `tag_history` first, falls back to `tag_history_archive`. |
-| GET | `/historian/time-series` | Time-series arrays for chart rendering. Requires: `tag_names`, `from`, `to`. Optional: `max_points` (default 500, clamped to 10-5000). Returns `{tagName: [{t, v}, ...]}`. Auto-downsamples by bucketing and averaging when data exceeds max_points. |
+| GET | `/historian/by-tags` | Tag-name-based query (no layout_id required). Used by ReportViewer and PaginatedReportViewer. Requires: `tag_names` or `tags` (alias), `from`, `to`. Optional: `aggregation` (last/avg/min/max/sum/delta/count/**auto**, default: last). The `auto` mode returns SUM(value_delta) for counter tags and last value for others. Tries `tag_history` first, falls back to `tag_history_archive`. |
+| GET | `/historian/time-series` | Time-series arrays for chart rendering. Requires: `tag_names` or `tags` (alias), `from`, `to`. Optional: `max_points` (default 500, clamped to 10-5000). Returns `{tagName: [{t, v}, ...]}`. Auto-downsamples by bucketing and averaging when data exceeds max_points. |
 
 **Feature flag:** `REPORT_USE_HISTORIAN` (env var, default: `true`). When false, the `/historian/history` and `/historian/archive` endpoints return HTTP 503 with `{"use_legacy": true}`, signaling callers to use per-layout tables instead.
 
@@ -396,6 +396,183 @@ This means callers never need to decide which table to query -- the backend hand
 Tag values and computed values are stored as JSONB in the per-layout tables. The historian endpoints (`/historian/by-tags` and `/historian/time-series`) query from the normalized `tag_history` and `tag_history_archive` tables instead, which store one row per tag per timestamp. This avoids complex JSONB extraction queries for historical reporting.
 
 The per-layout JSONB tables (`<layout>_monitor_logs` and `<layout>_monitor_logs_archive`) are primarily used by the legacy layout-specific endpoints (`/historian/history` and `/historian/archive`) which filter by `layout_id`.
+
+---
+
+## Paginated Reports — Historical Data Flow
+
+Paginated reports (`PaginatedReportViewer.jsx`) use a different data pipeline from the dashboard-style `ReportViewer.jsx`. This section explains exactly how historical data flows through the system when a user selects a time range in a paginated report.
+
+### Time Range Selection
+
+The paginated viewer toolbar shows seven presets: **Live**, **Today**, **Yesterday**, **This Week**, **Last Week**, **This Month**, and **Custom**.
+
+- **Live**: WebSocket + REST polling to `/api/live-monitor/tags` every 5 seconds. No historical query.
+- **Today/Yesterday/This Week/Last Week/This Month**: Computed by `getPresetRange(key)`. All ranges use a **05:00 shift start** (e.g., "Today" = 05:00 today → 05:00 tomorrow).
+- **Custom**: Two `datetime-local` inputs. Values are stored as UTC ISO strings internally but displayed in local time via `isoToLocalDatetime()`.
+
+### Frontend → Backend Request
+
+When historical mode is active (any preset other than "Live"), the viewer calls:
+
+```
+GET /api/historian/by-tags?tag_names=Tag1,Tag2,...&from=<ISO>&to=<ISO>&aggregation=auto
+```
+
+Key details:
+- **`tag_names`**: Comma-separated list of all tag names used in the paginated report sections (collected by `collectPaginatedTagNames(sections)`).
+- **`from` / `to`**: ISO timestamps in UTC (e.g., `2026-03-12T09:35:00.000Z` for 1:35 PM Dubai).
+- **`aggregation=auto`**: Smart aggregation mode that handles counter and non-counter tags differently.
+
+If the historian call fails (e.g., backend is down), the viewer falls back to `/api/live-monitor/tags` to at least show current values.
+
+### Backend Processing (`/api/historian/by-tags`)
+
+#### Step 1: Resolve Tag Names
+
+The endpoint resolves tag names to IDs from the `tags` table and reads each tag's `is_counter` flag:
+
+```sql
+SELECT id, tag_name, COALESCE(is_counter, false) AS is_counter
+FROM tags WHERE tag_name = ANY($1) AND is_active = true
+```
+
+Tags split into two groups:
+- **Counter tags** (`is_counter = true`): Weights, produced totals, totalizer values — cumulative quantities that increment over time.
+- **Non-counter tags** (`is_counter = false`): Rates (t/h), percentages (%), bin IDs, status flags — instantaneous readings.
+
+#### Step 2: Timestamp Conversion
+
+The `_parse_iso_to_naive_local()` helper converts the incoming UTC ISO timestamps to naive local timestamps (Asia/Dubai = UTC+4). This is critical because `tag_history.timestamp` and `tag_history_archive.archive_hour` are stored as naive local time.
+
+Example:
+- Frontend sends: `from=2026-03-12T09:35:00.000Z` (UTC)
+- Backend converts to: `2026-03-12T13:35:00` (Dubai local, naive)
+
+#### Step 3: Query — Auto Aggregation Mode
+
+The `auto` aggregation splits the query by tag type:
+
+**Non-counter tags → `LAST` value:**
+```sql
+SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
+FROM tag_history h
+WHERE h.tag_id = ANY($non_counter_ids)
+  AND h."timestamp" >= $from AND h."timestamp" <= $to
+ORDER BY h.tag_id, h."timestamp" DESC
+```
+Returns the most recent reading for each non-counter tag in the range.
+
+**Counter tags → `SUM(value_delta)`:**
+```sql
+SELECT h.tag_id, SUM(COALESCE(h.value_delta, 0)) AS delta_sum
+FROM tag_history h
+WHERE h.tag_id = ANY($counter_ids)
+  AND h."timestamp" >= $from AND h."timestamp" <= $to
+GROUP BY h.tag_id
+```
+Returns the total change (delta) for each counter tag across the period. This answers "how much was produced/consumed in this window?"
+
+#### Step 4: Archive Fallback
+
+If `tag_history` has no data for some tags (per-second data gets cleaned up after archiving), the endpoint falls back to `tag_history_archive` for any tags that are still missing:
+
+**Non-counter tags from archive → `LAST` value by archive_hour:**
+```sql
+SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+FROM tag_history_archive a
+WHERE a.tag_id = ANY($missing_non_counter_ids)
+  AND a.archive_hour >= $from AND a.archive_hour <= $to
+ORDER BY a.tag_id, a.archive_hour DESC
+```
+
+**Counter tags from archive → `SUM(value_delta)`:**
+```sql
+SELECT a.tag_id, SUM(COALESCE(a.value_delta, 0)) AS delta_sum
+FROM tag_history_archive a
+WHERE a.tag_id = ANY($missing_counter_ids)
+  AND a.archive_hour >= $from AND a.archive_hour <= $to
+GROUP BY a.tag_id
+```
+
+The archive stores pre-computed `value_delta` per hour for counter tags, so summing these gives the correct total for the period — even if the range covers only one archive hour.
+
+### What Each Tag Type Shows in the Report
+
+| Tag Type | Example Tags | aggregation=auto Result | Meaning |
+|----------|-------------|------------------------|---------|
+| Counter (`is_counter=true`) | B1 weight, F1 weight, Semolina weight, Bran coarse | SUM(value_delta) across hours | Total kg produced in the time window |
+| Non-counter | Yield %, Flow rate (t/h), Bin IDs, Status flags | Last value in range | Reading at the end of the time window |
+
+### Example: Custom Range 13:35–15:35
+
+Given archive data:
+```
+archive_hour = 2026-03-12 14:00:00  (43 rows, tags 15–57)
+```
+
+The range 13:35–15:35 includes the 14:00 archive hour.
+
+For a counter tag (e.g., B1 weight, `tag_id=50`, `value_delta=900`):
+- Result: `SUM(value_delta)` = **900** (kg produced in that hour)
+
+For a non-counter tag (e.g., Yield %, `tag_id=45`, `value=98.01`):
+- Result: last value = **98.01** (yield percentage at end of period)
+
+### Data Tables Summary
+
+```
+┌─────────────────────────────────┐
+│  tag_history (per-second)       │ ← Short-lived, cleaned up hourly
+│  Columns: tag_id, value,        │
+│    value_delta, is_counter,     │
+│    timestamp                    │
+└──────────────┬──────────────────┘
+               │ Archive worker runs at :00
+               ▼
+┌─────────────────────────────────┐
+│  tag_history_archive (hourly)   │ ← Long-term storage
+│  Columns: tag_id, value,        │
+│    value_delta, is_counter,     │
+│    archive_hour                 │
+│                                 │
+│  Counter tags:                  │
+│    value = last absolute value  │
+│    value_delta = SUM of hourly  │
+│                  per-second     │
+│                  deltas         │
+│                                 │
+│  Non-counter tags:              │
+│    value = AVG of per-second    │
+│            readings             │
+│    value_delta = NULL           │
+└─────────────────────────────────┘
+```
+
+### Aggregation Modes Reference
+
+| Mode | tag_history Query | tag_history_archive Fallback | Best For |
+|------|-------------------|------------------------------|----------|
+| `last` | Latest value per tag (by timestamp DESC) | Latest value per tag (by archive_hour DESC) | Current reading at end of period |
+| `delta` | last_value − first_value per tag | SUM(value_delta) per tag | Change over the period |
+| `auto` | Counter → SUM(value_delta); Others → last | Counter → SUM(value_delta); Others → last | Paginated reports (mixed tag types) |
+| `avg` | AVG(value) per tag | AVG(value) per tag | Average reading over period |
+| `sum` | SUM(value) per tag | SUM(value) per tag | Raw total (rarely used) |
+| `min` / `max` | MIN/MAX(value) per tag | MIN/MAX(value) per tag | Extremes in the period |
+| `count` | COUNT(value) per tag | COUNT(value) per tag | Number of readings |
+
+### Timezone Handling
+
+The full timezone chain:
+
+1. **User selects** 1:35 PM in Dubai (UTC+4) in the `datetime-local` input
+2. **Frontend stores** as UTC ISO: `2026-03-12T09:35:00.000Z` (via `new Date(e.target.value).toISOString()`)
+3. **Frontend displays** in local time: `2026-03-12T13:35` (via `isoToLocalDatetime()`)
+4. **API sends** the UTC ISO string as `from` parameter
+5. **Backend converts** to naive local: `2026-03-12T13:35:00` (via `_parse_iso_to_naive_local()`)
+6. **Database matches** `archive_hour >= '2026-03-12T13:35:00'` against naive local timestamps
+
+This ensures the selected time in the browser matches the stored archive times regardless of timezone.
 
 ---
 

@@ -175,10 +175,10 @@ export default function PaginatedReportView({ reportId, onBack }) {
     try {
       const res = await axios.get('/api/historian/by-tags', {
         params: {
-          tags: tagNames.join(','),
+          tag_names: tagNames.join(','),
           from: dateRange.from,
           to: dateRange.to,
-          aggregation: 'last',
+          aggregation: 'auto',
         },
         timeout: 15000,
       });

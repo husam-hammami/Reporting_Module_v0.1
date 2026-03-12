@@ -202,14 +202,15 @@ def get_by_tags():
     Used by Report Builder's ReportViewer for historical time presets.
 
     Query params:
-      tag_names (required): comma-separated tag names
+      tag_names or tags (required): comma-separated tag names
       from (required): ISO timestamp
       to (required): ISO timestamp
-      aggregation (optional): last|avg|min|max|sum (default: last)
+      aggregation (optional): last|avg|min|max|sum|delta|count|auto (default: last)
+        - auto: counter tags (is_counter=true) → SUM(value_delta), others → last value
 
     Returns: { data: { tagName: value, ... }, source: "historian" }
     """
-    tag_names_param = request.args.get("tag_names")
+    tag_names_param = request.args.get("tag_names") or request.args.get("tags")
     from_ts = _parse_iso_to_naive_local(request.args.get("from"))
     to_ts = _parse_iso_to_naive_local(request.args.get("to"))
     aggregation = request.args.get("aggregation", "last").lower()
@@ -218,8 +219,8 @@ def get_by_tags():
         return jsonify({"error": "tag_names is required (comma-separated)"}), 400
     if not from_ts or not to_ts:
         return jsonify({"error": "from and to (ISO timestamps) are required"}), 400
-    if aggregation not in ("last", "avg", "min", "max", "sum", "delta", "count"):
-        return jsonify({"error": "aggregation must be one of: last, avg, min, max, sum, delta, count"}), 400
+    if aggregation not in ("last", "avg", "min", "max", "sum", "delta", "count", "auto"):
+        return jsonify({"error": "aggregation must be one of: last, avg, min, max, sum, delta, count, auto"}), 400
 
     tag_names = [n.strip() for n in tag_names_param.split(",") if n.strip()]
     if not tag_names:
@@ -230,9 +231,11 @@ def get_by_tags():
         with closing(get_db()) as conn:
             cur = conn.cursor(cursor_factory=RealDictCursor)
 
-            # Resolve tag names to IDs
-            cur.execute("SELECT id, tag_name FROM tags WHERE tag_name = ANY(%s) AND is_active = true", (tag_names,))
-            tag_map = {row["tag_name"]: row["id"] for row in cur.fetchall()}
+            # Resolve tag names to IDs (+ is_counter for auto mode)
+            cur.execute("SELECT id, tag_name, COALESCE(is_counter, false) AS is_counter FROM tags WHERE tag_name = ANY(%s) AND is_active = true", (tag_names,))
+            tag_rows = cur.fetchall()
+            tag_map = {row["tag_name"]: row["id"] for row in tag_rows}
+            counter_ids = {row["id"] for row in tag_rows if row["is_counter"]}
 
             if not tag_map:
                 return jsonify({"data": {}, "source": "historian", "message": "No matching tags found"}), 200
@@ -242,8 +245,74 @@ def get_by_tags():
 
             result = {}
 
-            if aggregation == "last":
-                # Get most recent value per tag in range
+            if aggregation == "auto":
+                # Smart aggregation: counter tags → delta (SUM of value_delta), others → last
+                non_counter_ids = [tid for tid in tag_ids if tid not in counter_ids]
+                counter_id_list = [tid for tid in tag_ids if tid in counter_ids]
+
+                # Non-counters: last value from tag_history
+                if non_counter_ids:
+                    cur.execute("""
+                        SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
+                        FROM tag_history h
+                        WHERE h.tag_id = ANY(%s)
+                          AND h."timestamp" >= %s::timestamp
+                          AND h."timestamp" <= %s::timestamp
+                        ORDER BY h.tag_id, h."timestamp" DESC
+                    """, (non_counter_ids, from_ts, to_ts))
+                    for row in cur.fetchall():
+                        name = id_to_name.get(row["tag_id"])
+                        if name and row["value"] is not None:
+                            result[name] = row["value"]
+
+                # Counters: SUM(value_delta) from tag_history
+                if counter_id_list:
+                    cur.execute("""
+                        SELECT h.tag_id, SUM(COALESCE(h.value_delta, 0)) AS delta_sum
+                        FROM tag_history h
+                        WHERE h.tag_id = ANY(%s)
+                          AND h."timestamp" >= %s::timestamp
+                          AND h."timestamp" <= %s::timestamp
+                        GROUP BY h.tag_id
+                    """, (counter_id_list, from_ts, to_ts))
+                    for row in cur.fetchall():
+                        name = id_to_name.get(row["tag_id"])
+                        if name and row["delta_sum"] is not None:
+                            result[name] = float(row["delta_sum"])
+
+                # Fallback to tag_history_archive for tags still missing
+                missing_non_counter = [tid for tid in non_counter_ids if id_to_name.get(tid) not in result]
+                missing_counter = [tid for tid in counter_id_list if id_to_name.get(tid) not in result]
+
+                if missing_non_counter:
+                    cur.execute("""
+                        SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                        FROM tag_history_archive a
+                        WHERE a.tag_id = ANY(%s)
+                          AND a.archive_hour >= %s::timestamp
+                          AND a.archive_hour <= %s::timestamp
+                        ORDER BY a.tag_id, a.archive_hour DESC
+                    """, (missing_non_counter, from_ts, to_ts))
+                    for row in cur.fetchall():
+                        name = id_to_name.get(row["tag_id"])
+                        if name and row["value"] is not None:
+                            result[name] = row["value"]
+
+                if missing_counter:
+                    cur.execute("""
+                        SELECT a.tag_id, SUM(COALESCE(a.value_delta, 0)) AS delta_sum
+                        FROM tag_history_archive a
+                        WHERE a.tag_id = ANY(%s)
+                          AND a.archive_hour >= %s::timestamp
+                          AND a.archive_hour <= %s::timestamp
+                        GROUP BY a.tag_id
+                    """, (missing_counter, from_ts, to_ts))
+                    for row in cur.fetchall():
+                        name = id_to_name.get(row["tag_id"])
+                        if name and row["delta_sum"] is not None:
+                            result[name] = float(row["delta_sum"])
+
+            elif aggregation == "last":
                 cur.execute("""
                     SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
                     FROM tag_history h
@@ -257,8 +326,6 @@ def get_by_tags():
                     if name:
                         result[name] = row["value"]
             elif aggregation == "delta":
-                # Delta = last value − first value in period (for totalizer/counter tags)
-                # Get first value per tag (earliest timestamp)
                 cur.execute("""
                     SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
                     FROM tag_history h
@@ -268,7 +335,6 @@ def get_by_tags():
                     ORDER BY h.tag_id, h."timestamp" ASC
                 """, (tag_ids, from_ts, to_ts))
                 first_vals = {row["tag_id"]: row["value"] for row in cur.fetchall()}
-                # Get last value per tag (latest timestamp)
                 cur.execute("""
                     SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
                     FROM tag_history h
@@ -297,8 +363,8 @@ def get_by_tags():
                     if name:
                         result[name] = row["agg_value"]
 
-            # If no results from tag_history, try tag_history_archive (hourly data)
-            if not result:
+            # Fallback to tag_history_archive for non-auto modes
+            if not result and aggregation != "auto":
                 if aggregation == "last":
                     cur.execute("""
                         SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
@@ -313,29 +379,18 @@ def get_by_tags():
                         if name and row["value"] is not None:
                             result[name] = row["value"]
                 elif aggregation == "delta":
-                    # Delta from archive: last archive − first archive
                     cur.execute("""
-                        SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                        SELECT a.tag_id, SUM(COALESCE(a.value_delta, 0)) AS delta_sum
                         FROM tag_history_archive a
                         WHERE a.tag_id = ANY(%s)
                           AND a.archive_hour >= %s::timestamp
                           AND a.archive_hour <= %s::timestamp
-                        ORDER BY a.tag_id, a.archive_hour ASC
-                    """, (tag_ids, from_ts, to_ts))
-                    first_vals = {row["tag_id"]: row["value"] for row in cur.fetchall()}
-                    cur.execute("""
-                        SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
-                        FROM tag_history_archive a
-                        WHERE a.tag_id = ANY(%s)
-                          AND a.archive_hour >= %s::timestamp
-                          AND a.archive_hour <= %s::timestamp
-                        ORDER BY a.tag_id, a.archive_hour DESC
+                        GROUP BY a.tag_id
                     """, (tag_ids, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
-                        first = first_vals.get(row["tag_id"])
-                        if name and first is not None and row["value"] is not None:
-                            result[name] = float(row["value"]) - float(first)
+                        if name and row["delta_sum"] is not None:
+                            result[name] = float(row["delta_sum"])
                 else:
                     agg_fn = {"avg": "AVG", "min": "MIN", "max": "MAX", "sum": "SUM", "count": "COUNT"}[aggregation]
                     cur.execute(f"""
@@ -371,7 +426,7 @@ def get_time_series():
 
     Returns: { data: { tagName: [{t: epoch_ms, v: number}, ...], ... } }
     """
-    tag_names_param = request.args.get("tag_names")
+    tag_names_param = request.args.get("tag_names") or request.args.get("tags")
     from_ts = _parse_iso_to_naive_local(request.args.get("from"))
     to_ts = _parse_iso_to_naive_local(request.args.get("to"))
     max_points = request.args.get("max_points", 500, type=int)
