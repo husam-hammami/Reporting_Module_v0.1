@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS mappings (
     lookup JSONB NOT NULL DEFAULT '{}',     -- { "21": "Wheat", "22": "Barley", ... }
     fallback VARCHAR(255) DEFAULT 'Unknown',
     is_active BOOLEAN DEFAULT true,
+    output_type VARCHAR(20) DEFAULT 'text',      -- 'text' (display text) or 'tag_value' (resolve mapped tag's live value)
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
