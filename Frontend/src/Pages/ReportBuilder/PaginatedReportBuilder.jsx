@@ -157,7 +157,7 @@ function resolveLookup(mapping, inputValue) {
   return inputValue;
 }
 
-function resolveCellValue(cell, tagValues) {
+function resolveCellValue(cell, tagValues, rowContext = null) {
   if (!cell) return '—';
   if (cell.sourceType === 'static') return cell.value ?? '';
   if (cell.sourceType === 'tag') {
@@ -202,6 +202,30 @@ function resolveCellValue(cell, tagValues) {
     const mappings = getCachedMappings();
     const mapping = mappings?.find((m) => (m.name || m.id) === cell.mappingName);
     if (!mapping) return '—';
+
+    if (mapping.output_type === 'tag_value') {
+      // Determine bin_id: prefer row context (table), fall back to input_tag (KPI)
+      const rawId = rowContext?.resolvedRefValue ?? tagValues?.[mapping.input_tag];
+      if (rawId == null) return '—';
+      const key = String(Math.round(Number(rawId)));
+      const weightTagName = mapping.lookup?.[key];
+      if (!weightTagName) return mapping.fallback ?? '—';
+
+      // Read the mapped tag's live value
+      const weightRaw = tagValues?.[weightTagName];
+      if (weightRaw == null) return '—';
+      const n = Number(weightRaw);
+      if (isNaN(n)) return weightRaw;
+      const d = cell.decimals ?? 1;
+      const formatted = n.toLocaleString(undefined, {
+        minimumFractionDigits: d,
+        maximumFractionDigits: d,
+      });
+      const suffix = effectiveUnit(cell);
+      return suffix ? `${formatted} ${suffix}` : formatted;
+    }
+
+    // Default: text output (current behavior)
     const raw = tagValues?.[mapping.input_tag];
     return resolveLookup(mapping, raw);
   }
@@ -274,6 +298,9 @@ export function collectPaginatedTagNames(sections) {
       if (s.statusSourceType === 'mapping' && s.statusMappingName) {
         const m = mappings?.find((mx) => (mx.name || mx.id) === s.statusMappingName);
         if (m?.input_tag) names.add(m.input_tag);
+        if (m?.output_type === 'tag_value' && m?.lookup) {
+          Object.values(m.lookup).forEach((tagName) => { if (tagName && typeof tagName === 'string') names.add(tagName); });
+        }
       }
     }
     if (s.type === 'kpi-row' && Array.isArray(s.kpis)) {
@@ -284,6 +311,9 @@ export function collectPaginatedTagNames(sections) {
         if (k.sourceType === 'mapping' && k.mappingName) {
           const m = mappings?.find((mx) => (mx.name || mx.id) === k.mappingName);
           if (m?.input_tag) names.add(m.input_tag);
+          if (m?.output_type === 'tag_value' && m?.lookup) {
+            Object.values(m.lookup).forEach((tagName) => { if (tagName && typeof tagName === 'string') names.add(tagName); });
+          }
         }
       });
     }
@@ -297,6 +327,9 @@ export function collectPaginatedTagNames(sections) {
             if (cell.sourceType === 'mapping' && cell.mappingName) {
               const m = mappings?.find((mx) => (mx.name || mx.id) === cell.mappingName);
               if (m?.input_tag) names.add(m.input_tag);
+              if (m?.output_type === 'tag_value' && m?.lookup) {
+                Object.values(m.lookup).forEach((tagName) => { if (tagName && typeof tagName === 'string') names.add(tagName); });
+              }
             }
           });
         }
@@ -456,17 +489,26 @@ function CellEditor({ cell, tags, onChange }) {
         </div>
       )}
       {srcType === 'mapping' && (
-        <select
-          value={cell.mappingName || ''}
-          onChange={(e) => onChange({ ...cell, mappingName: e.target.value })}
-          className="rb-input-base text-[10px] py-1 px-2 w-full min-w-0"
-          title="Select a mapping"
-        >
-          <option value="">— Select a mapping —</option>
-          {(mappings || []).filter((m) => m.is_active !== false).map((m) => (
-            <option key={m.id || m.name} value={m.name || m.id || ''}>{m.name || m.id || 'Unnamed'} → {m.output_tag_name || ''}</option>
-          ))}
-        </select>
+        <>
+          <select
+            value={cell.mappingName || ''}
+            onChange={(e) => onChange({ ...cell, mappingName: e.target.value })}
+            className="rb-input-base text-[10px] py-1 px-2 w-full min-w-0"
+            title="Select a mapping"
+          >
+            <option value="">— Select a mapping —</option>
+            {(mappings || []).filter((m) => m.is_active !== false).map((m) => (
+              <option key={m.id || m.name} value={m.name || m.id || ''}>{m.name || m.id || 'Unnamed'} → {m.output_tag_name || ''}</option>
+            ))}
+          </select>
+          {(() => {
+            const selMapping = (mappings || []).find(m => (m.name || m.id) === cell.mappingName);
+            if (selMapping?.output_type === 'tag_value') {
+              return <UnitSelector cell={cell} onChange={onChange} />;
+            }
+            return null;
+          })()}
+        </>
       )}
     </div>
   );
@@ -1038,22 +1080,35 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                 </tr>
               </thead>
               <tbody>
-                {(section.rows || []).filter((row) => !isRowHidden(row, section, tagValues)).map((row, ri) => (
-                  <tr key={row.id} className={ri % 2 === 1 ? 'bg-[#f8fafc]' : ''}>
-                    {(row.cells || []).map((cell, ci) => {
-                      const col = section.columns[ci];
-                      return (
-                        <td
-                          key={ci}
-                          className="px-2 py-0.5 border border-[#e2e8f0]"
-                          style={{ textAlign: col?.align || 'left' }}
-                        >
-                          {renderResolvedValue(resolveCellValue(cell, tagValues))}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {(section.rows || []).filter((row) => !isRowHidden(row, section, tagValues)).map((row, ri) => {
+                  // Build row context from the reference column (same as hideReferenceCol)
+                  const refColIdx = row.hideReferenceCol ?? 0;
+                  const refCell = row.cells?.[refColIdx];
+                  const resolvedRef = refCell ? resolveCellValue(refCell, tagValues) : null;
+                  let resolvedRefValue = null;
+                  if (resolvedRef != null && resolvedRef !== '—') {
+                    const num = Number(String(resolvedRef).replace(/[^0-9.\-]/g, ''));
+                    if (!isNaN(num)) resolvedRefValue = num;
+                  }
+                  const rowContext = { resolvedRefValue, refCell };
+
+                  return (
+                    <tr key={row.id} className={ri % 2 === 1 ? 'bg-[#f8fafc]' : ''}>
+                      {(row.cells || []).map((cell, ci) => {
+                        const col = section.columns[ci];
+                        return (
+                          <td
+                            key={ci}
+                            className="px-2 py-0.5 border border-[#e2e8f0]"
+                            style={{ textAlign: col?.align || 'left' }}
+                          >
+                            {renderResolvedValue(resolveCellValue(cell, tagValues, rowContext))}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
                 {section.showSummaryRow && (
                   <tr className="font-bold bg-[#f1f5f9]">
                     <td

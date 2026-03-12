@@ -42,9 +42,14 @@ def _ensure_table_exists(cursor):
             lookup JSONB NOT NULL DEFAULT '{}',
             fallback VARCHAR(255) DEFAULT 'Unknown',
             is_active BOOLEAN DEFAULT true,
+            output_type VARCHAR(20) DEFAULT 'text',
             created_at TIMESTAMP DEFAULT NOW(),
             updated_at TIMESTAMP DEFAULT NOW()
         )
+    """)
+    # Add output_type column for existing installations
+    cursor.execute("""
+        ALTER TABLE mappings ADD COLUMN IF NOT EXISTS output_type VARCHAR(20) DEFAULT 'text'
     """)
     # Create indexes if they don't exist
     cursor.execute("""
@@ -68,7 +73,7 @@ def get_mappings():
 
             cursor.execute("""
                 SELECT id, name, description, input_tag, output_tag_name,
-                       lookup, fallback, is_active, created_at, updated_at
+                       lookup, fallback, is_active, output_type, created_at, updated_at
                 FROM mappings
                 ORDER BY name
             """)
@@ -101,7 +106,7 @@ def get_mapping(mapping_id):
 
             cursor.execute("""
                 SELECT id, name, description, input_tag, output_tag_name,
-                       lookup, fallback, is_active, created_at, updated_at
+                       lookup, fallback, is_active, output_type, created_at, updated_at
                 FROM mappings WHERE id = %s
             """, (mapping_id,))
             row = cursor.fetchone()
@@ -145,6 +150,9 @@ def create_mapping():
         description = (data.get('description') or '').strip() or None
         fallback = (data.get('fallback') or 'Unknown').strip()
         is_active = data.get('is_active', True)
+        output_type = (data.get('output_type') or 'text').strip()
+        if output_type not in ('text', 'tag_value'):
+            return jsonify({'status': 'error', 'message': 'output_type must be "text" or "tag_value"'}), 400
 
         conn = _get_db_connection()()
         with closing(conn) as conn:
@@ -158,11 +166,11 @@ def create_mapping():
                 return jsonify({'status': 'error', 'message': f'Mapping "{name}" already exists'}), 400
 
             cursor.execute("""
-                INSERT INTO mappings (name, description, input_tag, output_tag_name, lookup, fallback, is_active)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO mappings (name, description, input_tag, output_tag_name, lookup, fallback, is_active, output_type)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (name, description, input_tag, output_tag_name,
-                  json.dumps(lookup), fallback, bool(is_active)))
+                  json.dumps(lookup), fallback, bool(is_active), output_type))
 
             result = cursor.fetchone()
             mapping_id = result['id'] if isinstance(result, dict) else result[0]
@@ -210,6 +218,9 @@ def update_mapping(mapping_id):
         description = (data.get('description') or '').strip() or None
         fallback = (data.get('fallback') or 'Unknown').strip()
         is_active = data.get('is_active', True)
+        output_type = (data.get('output_type') or 'text').strip()
+        if output_type not in ('text', 'tag_value'):
+            return jsonify({'status': 'error', 'message': 'output_type must be "text" or "tag_value"'}), 400
 
         conn = _get_db_connection()()
         with closing(conn) as conn:
@@ -231,10 +242,10 @@ def update_mapping(mapping_id):
             cursor.execute("""
                 UPDATE mappings
                 SET name = %s, description = %s, input_tag = %s, output_tag_name = %s,
-                    lookup = %s, fallback = %s, is_active = %s
+                    lookup = %s, fallback = %s, is_active = %s, output_type = %s
                 WHERE id = %s
             """, (name, description, input_tag, output_tag_name,
-                  json.dumps(lookup), fallback, bool(is_active), mapping_id))
+                  json.dumps(lookup), fallback, bool(is_active), output_type, mapping_id))
 
             conn.commit()
             logger.info(f"Updated mapping: {name} (ID: {mapping_id})")

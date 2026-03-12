@@ -12,6 +12,7 @@ export default function MappingForm({ mapping, onSave, onCancel }) {
   const [outputTagName, setOutputTagName] = useState(mapping?.output_tag_name || '');
   const [description, setDescription] = useState(mapping?.description || '');
   const [fallback, setFallback] = useState(mapping?.fallback || 'Unknown');
+  const [outputType, setOutputType] = useState(mapping?.output_type || 'text');
   const [entries, setEntries] = useState(() => {
     if (mapping?.lookup) return Object.entries(mapping.lookup).map(([k, v]) => ({ input: k, output: v }));
     return [{ input: '', output: '' }];
@@ -92,7 +93,7 @@ export default function MappingForm({ mapping, onSave, onCancel }) {
       lookup[e.input.trim()] = e.output.trim();
     }
 
-    onSave({ name: name.trim(), input_tag: inputTag.trim(), output_tag_name: outputTagName.trim(), description: description.trim(), fallback: fallback.trim(), lookup, is_active: mapping?.is_active ?? true });
+    onSave({ name: name.trim(), input_tag: inputTag.trim(), output_tag_name: outputTagName.trim(), description: description.trim(), fallback: fallback.trim(), lookup, is_active: mapping?.is_active ?? true, output_type: outputType });
   };
 
   const inputCls = 'w-full text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#131b2d] text-[#3a4a5c] dark:text-[#c1ccd9] placeholder-[#8898aa] px-3 py-2 focus:outline-none focus:border-brand focus:ring-1 focus:ring-[#0e74904d] transition-colors';
@@ -158,6 +159,18 @@ export default function MappingForm({ mapping, onSave, onCancel }) {
             </div>
           </div>
 
+          {/* Output Type */}
+          <div>
+            <label className={labelCls}>Output Type</label>
+            <select value={outputType} onChange={e => setOutputType(e.target.value)} className={inputCls}>
+              <option value="text">Display Text</option>
+              <option value="tag_value">Tag Value (show mapped tag's live value)</option>
+            </select>
+            <p className="text-[10px] text-[#8898aa] mt-1">
+              {outputType === 'tag_value' ? 'Lookup outputs are tag names — their live values will be displayed' : 'Lookup outputs are displayed as-is (e.g. material names)'}
+            </p>
+          </div>
+
           {/* Fallback */}
           <div>
             <label className={labelCls}>Fallback Value</label>
@@ -177,7 +190,7 @@ export default function MappingForm({ mapping, onSave, onCancel }) {
               <div className="grid grid-cols-[1fr_10px_1fr_32px] gap-2 px-3 py-2.5 bg-[#f5f8fb] dark:bg-[#0d1825] text-[10px] font-semibold text-[#6b7f94] uppercase tracking-wide">
                 <span>When value =</span>
                 <span></span>
-                <span>Output</span>
+                <span>{outputType === 'tag_value' ? 'Output (Tag)' : 'Output'}</span>
                 <span></span>
               </div>
               {/* Rows */}
@@ -191,12 +204,30 @@ export default function MappingForm({ mapping, onSave, onCancel }) {
                       placeholder="21"
                     />
                     <span className="text-[#8898aa] text-center text-[10px]">→</span>
-                    <input
-                      value={entry.output}
-                      onChange={e => updateEntry(i, 'output', e.target.value)}
-                      className="text-[12px] rounded border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#131b2d] px-2 py-1.5 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand transition-colors"
-                      placeholder="Wheat (Hard Red)"
-                    />
+                    {outputType === 'tag_value' ? (
+                      <select
+                        value={entry.output}
+                        onChange={e => updateEntry(i, 'output', e.target.value)}
+                        className="text-[12px] font-mono rounded border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#131b2d] px-2 py-1.5 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand transition-colors"
+                      >
+                        <option value="">Select tag…</option>
+                        {tags.map(t => (
+                          <option key={t.id || t.tag_name} value={t.tag_name}>
+                            {t.display_name || t.tag_name}
+                          </option>
+                        ))}
+                        {entry.output && !tags.some(t => t.tag_name === entry.output) && (
+                          <option value={entry.output}>{entry.output}</option>
+                        )}
+                      </select>
+                    ) : (
+                      <input
+                        value={entry.output}
+                        onChange={e => updateEntry(i, 'output', e.target.value)}
+                        className="text-[12px] rounded border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#131b2d] px-2 py-1.5 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand transition-colors"
+                        placeholder="Wheat (Hard Red)"
+                      />
+                    )}
                     <button type="button" onClick={() => removeEntry(i)} className="p-1 rounded text-[#8898aa] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors">
                       <FaTrash size={10} />
                     </button>
