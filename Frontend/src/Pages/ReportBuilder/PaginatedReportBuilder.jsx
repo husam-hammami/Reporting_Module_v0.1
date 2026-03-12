@@ -97,6 +97,7 @@ function defaultSection(type) {
         id, type, title: 'Report Title', subtitle: '', showDateRange: true,
         showLogo: false, logoUrl: '', align: 'center',
         statusLabel: 'Status', statusSourceType: 'static', statusValue: '', statusTagName: '',
+        statusMappingName: '', statusFormula: '', statusGroupTags: [], statusAggregation: 'avg',
       };
     case 'kpi-row':
       return {
@@ -221,6 +222,21 @@ function resolveKpiValue(kpi, tagValues) {
   }, tagValues);
 }
 
+/** Build a cell-like object from header section status fields (for resolveCellValue). */
+function getHeaderStatusCell(section) {
+  if (!section || section.type !== 'header') return null;
+  const st = section.statusSourceType || 'static';
+  return {
+    sourceType: st,
+    value: section.statusValue,
+    tagName: section.statusTagName,
+    mappingName: section.statusMappingName,
+    formula: section.statusFormula,
+    groupTags: section.statusGroupTags || [],
+    aggregation: section.statusAggregation || 'avg',
+  };
+}
+
 /** Never render the boolean object as a React child; use 'Yes'/'No' for checkbox cells. */
 function renderResolvedValue(resolved) {
   if (resolved && typeof resolved === 'object' && resolved.type === 'boolean') {
@@ -251,8 +267,14 @@ export function collectPaginatedTagNames(sections) {
   if (!Array.isArray(sections)) return [];
   const mappings = getCachedMappings();
   sections.forEach((s) => {
-    if (s.type === 'header' && (s.statusSourceType === 'tag') && s.statusTagName) {
-      names.add(s.statusTagName);
+    if (s.type === 'header') {
+      if (s.statusTagName) names.add(s.statusTagName);
+      if (s.statusFormula) extractTagRefs(s.statusFormula).forEach((t) => names.add(t));
+      if (s.statusSourceType === 'group' && Array.isArray(s.statusGroupTags)) s.statusGroupTags.forEach((t) => { if (t) names.add(t); });
+      if (s.statusSourceType === 'mapping' && s.statusMappingName) {
+        const m = mappings?.find((mx) => (mx.name || mx.id) === s.statusMappingName);
+        if (m?.input_tag) names.add(m.input_tag);
+      }
     }
     if (s.type === 'kpi-row' && Array.isArray(s.kpis)) {
       s.kpis.forEach((k) => {
@@ -465,30 +487,34 @@ function HeaderSectionEditor({ section, tags, onChange }) {
       </div>
       <div style={{ borderTop: '1px solid var(--rb-border)', paddingTop: 10 }}>
         <label className="text-[9px] font-bold uppercase tracking-wider mb-1 block" style={{ color: 'var(--rb-accent)' }}>Status tag</label>
-        <p className="text-[9px] text-[var(--rb-text-muted)] mb-2">Show a status line in the header (e.g. order line running / stopped).</p>
+        <p className="text-[9px] text-[var(--rb-text-muted)] mb-2">Show a status line in the header (e.g. order line running / stopped). Same source types as table cells: static, tag, formula, group, mapping.</p>
         <div className="space-y-2">
           <div>
             <span className="text-[9px] font-bold uppercase tracking-wider mr-2" style={{ color: 'var(--rb-text-muted)' }}>Label</span>
             <input value={section.statusLabel ?? 'Status'} onChange={(e) => onChange({ ...section, statusLabel: e.target.value || 'Status' })} className="rb-input-base text-[11px] py-1 px-2 inline-block w-24" placeholder="Status" />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--rb-text-muted)' }}>Source</span>
-            <select value={statusSource} onChange={(e) => onChange({ ...section, statusSourceType: e.target.value })} className="rb-input-base text-[10px] py-1 px-2">
-              <option value="static">Static text</option>
-              <option value="tag">Tag (live)</option>
-            </select>
-          </div>
-          {statusSource === 'static' && (
-            <input value={section.statusValue ?? ''} onChange={(e) => onChange({ ...section, statusValue: e.target.value })} className="rb-input-base w-full text-[11px]" placeholder="e.g. Running, Stopped" />
-          )}
-          {statusSource === 'tag' && (
-            <select value={section.statusTagName ?? ''} onChange={(e) => onChange({ ...section, statusTagName: e.target.value })} className="rb-input-base text-[10px] py-1 px-2 w-full min-w-0" title="Select a tag">
-              <option value="">— Select tag —</option>
-              {safeTags.map((t) => (
-                <option key={t.tag_name} value={t.tag_name}>{t.display_name || t.tag_name}</option>
-              ))}
-            </select>
-          )}
+          <CellEditor
+            cell={{
+              sourceType: statusSource,
+              value: section.statusValue,
+              tagName: section.statusTagName,
+              mappingName: section.statusMappingName,
+              formula: section.statusFormula,
+              groupTags: section.statusGroupTags || [],
+              aggregation: section.statusAggregation || 'avg',
+            }}
+            tags={safeTags}
+            onChange={(c) => onChange({
+              ...section,
+              statusSourceType: c.sourceType || 'static',
+              statusValue: c.value,
+              statusTagName: c.tagName,
+              statusMappingName: c.mappingName,
+              statusFormula: c.formula,
+              statusGroupTags: c.groupTags || [],
+              statusAggregation: c.aggregation || 'avg',
+            })}
+          />
         </div>
       </div>
       <div className="flex items-center gap-4">
@@ -947,11 +973,10 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
       /* ── Header ─── */
       case 'header': {
         const statusLabel = section.statusLabel || 'Status';
-        const statusSource = section.statusSourceType || 'static';
-        const resolvedStatus = statusSource === 'tag' && section.statusTagName
-          ? renderResolvedValue(resolveCellValue({ sourceType: 'tag', tagName: section.statusTagName }, tagValues))
-          : (section.statusValue ?? '');
-        const showStatus = statusSource === 'static' ? (resolvedStatus !== '' && resolvedStatus != null) : (section.statusTagName && (resolvedStatus !== '' && resolvedStatus !== '—'));
+        const statusCell = getHeaderStatusCell(section);
+        const resolvedStatus = statusCell ? renderResolvedValue(resolveCellValue(statusCell, tagValues)) : '';
+        const hasStatusConfig = section.statusSourceType === 'static' ? (section.statusValue != null && section.statusValue !== '') : (section.statusSourceType === 'tag' && section.statusTagName) || (section.statusSourceType === 'mapping' && section.statusMappingName) || (section.statusSourceType === 'formula' && section.statusFormula) || (section.statusSourceType === 'group' && Array.isArray(section.statusGroupTags) && section.statusGroupTags.some((t) => t));
+        const showStatus = hasStatusConfig && resolvedStatus !== '' && resolvedStatus !== '—';
         return (
           <div key={section.id} className="mb-3" style={{ textAlign: section.align || 'center' }}>
             <h1 className="text-[18px] font-bold tracking-tight text-[#0f172a] mb-0.5">
