@@ -98,6 +98,12 @@ export default function PaginatedReportView({ reportId, onBack }) {
     return lc.paginatedSections || [];
   }, [template]);
 
+  const pageMode = useMemo(() => {
+    if (!template) return 'a4';
+    const lc = typeof template.layout_config === 'string' ? JSON.parse(template.layout_config) : (template.layout_config || {});
+    return lc.grid?.pageMode || 'a4';
+  }, [template]);
+
   // Collect all tag names needed
   const tagNames = useMemo(() => collectPaginatedTagNames(sections), [sections]);
 
@@ -383,12 +389,13 @@ export default function PaginatedReportView({ reportId, onBack }) {
       )}
 
       {/* ── Report content ── */}
-      <div id="paginated-report-print" className="py-2 print:py-0" style={{ background: '#e5e7eb' }}>
+      <div id="paginated-report-print" className={`py-2 print:py-0 ${pageMode === 'a4' ? 'max-w-[1200px] mx-auto' : 'w-full'}`} style={{ background: '#e5e7eb' }}>
         <div ref={reportRef} className="print:shadow-none">
           <PaginatedReportPreview
             sections={sections}
             tagValues={mergedTagValues}
             dateRange={dateRange}
+            compact={pageMode === 'full'}
           />
         </div>
       </div>

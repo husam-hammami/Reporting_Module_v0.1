@@ -12,7 +12,9 @@ import {
   ArrowLeft, Save, Eye, Plus, Trash2, ChevronDown, ChevronUp,
   Table2, Hash, Type, Minus, Copy, X, Check,
   AlignLeft, AlignCenter, AlignRight, LayoutTemplate, PenLine,
+  Monitor, FileText,
 } from 'lucide-react';
+import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useReportCanvas, useAvailableTags } from '../../Hooks/useReportBuilder';
 import { evaluateFormula, extractTagRefs } from './formulas/formulaEngine';
@@ -1135,6 +1137,12 @@ export default function PaginatedReportBuilder() {
   const [liveTagValues, setLiveTagValues] = useState({});
   const saveTimerRef = useRef(null);
 
+  const pageMode = template?.layout_config?.grid?.pageMode || 'a4'; // 'a4' | 'full'
+  const togglePageMode = useCallback(() => {
+    const next = pageMode === 'a4' ? 'full' : 'a4';
+    updateMeta({ layout_config: { ...template?.layout_config, grid: { ...(template?.layout_config?.grid || {}), pageMode: next } } });
+  }, [pageMode, template, updateMeta]);
+
   // Collect tag names from all sections (tables, KPIs)
   const tagNames = useMemo(() => collectPaginatedTagNames(sections), [sections]);
 
@@ -1171,7 +1179,7 @@ export default function PaginatedReportBuilder() {
     saveTimerRef.current = setTimeout(() => {
       if (!template || !templateId) return;
       const lc = typeof template.layout_config === 'string' ? JSON.parse(template.layout_config) : (template.layout_config || {});
-      const payload = { layout_config: { ...lc, paginatedSections: updatedSections, reportType: 'paginated' } };
+      const payload = { layout_config: { ...lc, paginatedSections: updatedSections, reportType: 'paginated', grid: { ...(lc.grid || {}), pageMode: lc.grid?.pageMode || 'a4' } } };
       // Use the API directly
       import('../../API/reportBuilderApi').then(({ reportBuilderApi }) => {
         reportBuilderApi.update(templateId, payload).catch(() => {});
@@ -1216,7 +1224,7 @@ export default function PaginatedReportBuilder() {
   const handleManualSave = useCallback(() => {
     if (!template || !templateId) return;
     const lc = typeof template.layout_config === 'string' ? JSON.parse(template.layout_config) : (template.layout_config || {});
-    const payload = { layout_config: { ...lc, paginatedSections: sections, reportType: 'paginated' } };
+    const payload = { layout_config: { ...lc, paginatedSections: sections, reportType: 'paginated', grid: { ...(lc.grid || {}), pageMode: lc.grid?.pageMode || 'a4' } } };
     import('../../API/reportBuilderApi').then(({ reportBuilderApi }) => {
       reportBuilderApi.update(templateId, payload).catch(() => {});
     });
@@ -1263,11 +1271,12 @@ export default function PaginatedReportBuilder() {
           <span className="text-[11px] font-bold" style={{ color: 'var(--rb-text-muted)' }}>PREVIEW — {reportMeta.name || 'Untitled'}</span>
           <div />
         </div>
-        <div className="py-3" style={{ background: '#e5e7eb' }}>
+        <div className={`py-3 ${pageMode === 'a4' ? 'max-w-[1200px] mx-auto' : 'w-full'}`} style={{ background: '#e5e7eb' }}>
           <PaginatedReportPreview
             sections={sections}
             tagValues={liveTagValues}
             dateRange={{ from: new Date().toISOString(), to: new Date().toISOString() }}
+            compact={pageMode === 'full'}
           />
         </div>
       </div>
@@ -1355,19 +1364,29 @@ export default function PaginatedReportBuilder() {
           </div>
         </div>
 
-        {/* Right: Live A4 preview */}
-        <div className="flex-1 overflow-auto p-3" style={{ background: '#e5e7eb' }}>
+        {/* Right: Live preview (A4 or full) */}
+        <div className="flex-1 overflow-auto p-3 relative" style={{ background: '#e5e7eb' }}>
           <div className="sticky top-0 z-10 mb-4 flex items-center justify-center">
             <span className="text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full"
               style={{ background: 'rgba(0,0,0,0.6)', color: 'white', backdropFilter: 'blur(8px)' }}>
-              A4 Preview — Live
+              {pageMode === 'a4' ? 'A4 Preview — Live' : 'Full width — Live'}
             </span>
           </div>
-          <PaginatedReportPreview
-            sections={sections}
-            tagValues={liveTagValues}
-            dateRange={{ from: new Date().toISOString(), to: new Date().toISOString() }}
-          />
+          <div className={pageMode === 'a4' ? 'max-w-[1200px] mx-auto' : 'w-full'}>
+            <PaginatedReportPreview
+              sections={sections}
+              tagValues={liveTagValues}
+              dateRange={{ from: new Date().toISOString(), to: new Date().toISOString() }}
+              compact={pageMode === 'full'}
+            />
+          </div>
+          <div className="rb-floating-toolbar">
+            <Tooltip title={pageMode === 'a4' ? 'Switch to full dashboard' : 'Switch to A4 page'} placement="top" arrow disableInteractive>
+              <button onClick={togglePageMode} type="button">
+                {pageMode === 'a4' ? <Monitor size={14} /> : <FileText size={14} />}
+              </button>
+            </Tooltip>
+          </div>
         </div>
       </div>
     </div>
