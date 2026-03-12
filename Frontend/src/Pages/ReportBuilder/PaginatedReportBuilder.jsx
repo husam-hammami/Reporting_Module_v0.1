@@ -96,6 +96,7 @@ function defaultSection(type) {
       return {
         id, type, title: 'Report Title', subtitle: '', showDateRange: true,
         showLogo: false, logoUrl: '', align: 'center',
+        statusLabel: 'Status', statusSourceType: 'static', statusValue: '', statusTagName: '',
       };
     case 'kpi-row':
       return {
@@ -250,6 +251,9 @@ export function collectPaginatedTagNames(sections) {
   if (!Array.isArray(sections)) return [];
   const mappings = getCachedMappings();
   sections.forEach((s) => {
+    if (s.type === 'header' && (s.statusSourceType === 'tag') && s.statusTagName) {
+      names.add(s.statusTagName);
+    }
     if (s.type === 'kpi-row' && Array.isArray(s.kpis)) {
       s.kpis.forEach((k) => {
         if (k.tagName) names.add(k.tagName);
@@ -446,7 +450,9 @@ function CellEditor({ cell, tags, onChange }) {
   );
 }
 
-function HeaderSectionEditor({ section, onChange }) {
+function HeaderSectionEditor({ section, tags, onChange }) {
+  const safeTags = Array.isArray(tags) ? tags : [];
+  const statusSource = section.statusSourceType || 'static';
   return (
     <div className="space-y-3">
       <div>
@@ -456,6 +462,34 @@ function HeaderSectionEditor({ section, onChange }) {
       <div>
         <label className="text-[9px] font-bold uppercase tracking-wider mb-1 block" style={{ color: 'var(--rb-accent)' }}>Subtitle</label>
         <input value={section.subtitle || ''} onChange={(e) => onChange({ ...section, subtitle: e.target.value })} className="rb-input-base w-full text-[12px]" placeholder="Optional subtitle" />
+      </div>
+      <div style={{ borderTop: '1px solid var(--rb-border)', paddingTop: 10 }}>
+        <label className="text-[9px] font-bold uppercase tracking-wider mb-1 block" style={{ color: 'var(--rb-accent)' }}>Status tag</label>
+        <p className="text-[9px] text-[var(--rb-text-muted)] mb-2">Show a status line in the header (e.g. order line running / stopped).</p>
+        <div className="space-y-2">
+          <div>
+            <span className="text-[9px] font-bold uppercase tracking-wider mr-2" style={{ color: 'var(--rb-text-muted)' }}>Label</span>
+            <input value={section.statusLabel ?? 'Status'} onChange={(e) => onChange({ ...section, statusLabel: e.target.value || 'Status' })} className="rb-input-base text-[11px] py-1 px-2 inline-block w-24" placeholder="Status" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--rb-text-muted)' }}>Source</span>
+            <select value={statusSource} onChange={(e) => onChange({ ...section, statusSourceType: e.target.value })} className="rb-input-base text-[10px] py-1 px-2">
+              <option value="static">Static text</option>
+              <option value="tag">Tag (live)</option>
+            </select>
+          </div>
+          {statusSource === 'static' && (
+            <input value={section.statusValue ?? ''} onChange={(e) => onChange({ ...section, statusValue: e.target.value })} className="rb-input-base w-full text-[11px]" placeholder="e.g. Running, Stopped" />
+          )}
+          {statusSource === 'tag' && (
+            <select value={section.statusTagName ?? ''} onChange={(e) => onChange({ ...section, statusTagName: e.target.value })} className="rb-input-base text-[10px] py-1 px-2 w-full min-w-0" title="Select a tag">
+              <option value="">— Select tag —</option>
+              {safeTags.map((t) => (
+                <option key={t.tag_name} value={t.tag_name}>{t.display_name || t.tag_name}</option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-4">
         <label className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--rb-text)' }}>
@@ -788,7 +822,7 @@ function SectionCard({ section, tags, index, total, onUpdate, onRemove, onMove, 
 
   const renderEditor = () => {
     switch (section.type) {
-      case 'header': return <HeaderSectionEditor section={section} onChange={onUpdate} />;
+      case 'header': return <HeaderSectionEditor section={section} tags={tags} onChange={onUpdate} />;
       case 'kpi-row': return <KpiRowEditor section={section} tags={tags} onChange={onUpdate} />;
       case 'table': return <TableSectionEditor section={section} tags={tags} onChange={onUpdate} />;
       case 'text-block': return <TextBlockEditor section={section} onChange={onUpdate} />;
@@ -911,7 +945,13 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
   const renderedSections = (sections || []).map((section) => {
     switch (section.type) {
       /* ── Header ─── */
-      case 'header':
+      case 'header': {
+        const statusLabel = section.statusLabel || 'Status';
+        const statusSource = section.statusSourceType || 'static';
+        const resolvedStatus = statusSource === 'tag' && section.statusTagName
+          ? renderResolvedValue(resolveCellValue({ sourceType: 'tag', tagName: section.statusTagName }, tagValues))
+          : (section.statusValue ?? '');
+        const showStatus = statusSource === 'static' ? (resolvedStatus !== '' && resolvedStatus != null) : (section.statusTagName && (resolvedStatus !== '' && resolvedStatus !== '—'));
         return (
           <div key={section.id} className="mb-3" style={{ textAlign: section.align || 'center' }}>
             <h1 className="text-[18px] font-bold tracking-tight text-[#0f172a] mb-0.5">
@@ -919,6 +959,9 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
             </h1>
             {section.subtitle && (
               <p className="text-[11px] text-[#64748b] mb-0.5">{section.subtitle}</p>
+            )}
+            {showStatus && (
+              <p className="text-[11px] text-[#64748b] mb-0.5">{statusLabel}: {resolvedStatus}</p>
             )}
             {section.showDateRange && dateRange && (
               <p className="text-[10px] text-[#94a3b8] font-medium">
@@ -928,6 +971,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
             <div className="mt-2 h-[1.5px] w-full" style={{ background: 'linear-gradient(90deg, #0284c7, #22d3ee, #0284c7)' }} />
           </div>
         );
+      }
 
       /* ── KPI Row ─── */
       case 'kpi-row':
