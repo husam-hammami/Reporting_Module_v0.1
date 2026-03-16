@@ -82,7 +82,7 @@ function Navbar({ isBlueprint = false }) {
           <img
             src={AsmLogo}
             alt="ASM"
-            className="h-9 w-auto object-contain shrink-0 opacity-60 hover:opacity-100 transition-opacity duration-300 dark:[filter:brightness(0)_invert(1)_brightness(0.7)]"
+            className="h-9 w-auto object-contain shrink-0 opacity-60 hover:opacity-100 transition-opacity duration-300 dark:rounded dark:bg-white/90 dark:px-1.5 dark:py-0.5"
           />
           {auth && (
             <div className="relative">
