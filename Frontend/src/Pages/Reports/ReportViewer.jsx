@@ -779,3 +779,18 @@ export default function ReportViewer() {
     </div>
   );
 }
+
+/* ── Named exports for route-specific viewers ─────────────────── */
+export function DashboardViewer() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  if (!id) return <ReportViewer />;
+  return <SingleReportView reportId={id} onBack={() => navigate('/reporting')} />;
+}
+
+export function TableReportViewer() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  if (!id) return <ReportViewer />;
+  return <SingleReportView reportId={id} onBack={() => navigate('/reporting')} />;
+}

@@ -6,7 +6,7 @@ import {
   ArrowLeft, Save, Eye, PanelLeftClose, PanelRightClose,
   PanelLeft, PanelRight, Check, Pencil, Plus, X, AlertCircle, Send,
   Undo2, Redo2, Minus, Maximize, FileText, Monitor,
-  Copy, Trash2, Lock, Unlock,
+  Copy, Trash2, Lock, Unlock, RefreshCw,
 } from 'lucide-react';
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
@@ -37,6 +37,7 @@ export default function ReportBuilderCanvas() {
   const navigate = useNavigate();
   const {
     template, widgets: rawWidgets, loading, saving, dirty, migrated,
+    autoSave, toggleAutoSave,
     addWidget, addWidgetAt, updateWidget, removeWidget, updateLayout,
     addComputedSignal, saveLayout, updateMeta,
     undo, redo, canUndo, canRedo,
@@ -267,10 +268,11 @@ export default function ReportBuilderCanvas() {
     setTimeout(() => setSaveSuccess(false), 2000);
   }, [saveLayout]);
 
-  const handleRelease = useCallback(() => {
-    updateMeta({ status: 'released' });
-    saveLayout();
-  }, [updateMeta, saveLayout]);
+  const isReleased = template?.status === 'released';
+  const handleRelease = useCallback(async () => {
+    const newStatus = isReleased ? 'draft' : 'released';
+    await updateMeta({ status: newStatus });
+  }, [updateMeta, isReleased]);
 
   /* ── Inline name edit ──────────────────────────────────────── */
   const startEditName = () => { setNameInput(template?.name || ''); setEditingName(true); setTimeout(() => nameRef.current?.focus(), 50); };
@@ -439,6 +441,22 @@ export default function ReportBuilderCanvas() {
             </button>
           </Tooltip>
 
+          <div className="w-px h-5 bg-[#1e293b] mx-1" />
+
+          <Tooltip title={autoSave ? "Auto-save is ON — changes save automatically" : "Auto-save is OFF — use manual Save"} placement="bottom" arrow disableInteractive>
+            <button
+              onClick={toggleAutoSave}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all border ${
+                autoSave
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                  : 'bg-[#1a2233] text-[#556677] border-[#1e293b] hover:text-[#8899ab] hover:border-[#2a3a4e]'
+              }`}
+            >
+              <RefreshCw size={13} className={autoSave ? 'animate-none' : ''} />
+              <span className="hidden sm:inline">Auto-save {autoSave ? 'ON' : 'OFF'}</span>
+            </button>
+          </Tooltip>
+
           <Tooltip title="Save report" placement="bottom" arrow disableInteractive>
             <span>
               <button
@@ -451,14 +469,18 @@ export default function ReportBuilderCanvas() {
             </span>
           </Tooltip>
 
-          <Tooltip title="Release report" placement="bottom" arrow disableInteractive>
+          <Tooltip title={isReleased ? "Unrelease report (back to draft)" : "Release report"} placement="bottom" arrow disableInteractive>
             <span>
               <button
                 onClick={handleRelease}
                 disabled={saving}
-                className="flex items-center gap-2 px-3 py-1.5 bg-[#1a2233] hover:bg-[#0a0f1a] text-[#f0f4f8] rounded-md transition-colors font-medium border border-[#1e293b] disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors font-medium border disabled:opacity-40 disabled:cursor-not-allowed ${
+                  isReleased
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500'
+                    : 'bg-[#1a2233] hover:bg-[#0a0f1a] text-[#f0f4f8] border-[#1e293b]'
+                }`}
               >
-                <Send size={14} /> <span className="text-xs hidden sm:inline">Release</span>
+                <Send size={14} /> <span className="text-xs hidden sm:inline">{isReleased ? 'Released' : 'Release'}</span>
               </button>
             </span>
           </Tooltip>

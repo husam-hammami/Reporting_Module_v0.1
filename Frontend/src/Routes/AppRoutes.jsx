@@ -20,12 +20,13 @@ import ReportBuilderManager from '../Pages/ReportBuilder/ReportBuilderManager';
 import ReportBuilderCanvas from '../Pages/ReportBuilder/ReportBuilderCanvas';
 import ReportBuilderPreview from '../Pages/ReportBuilder/ReportBuilderPreview';
 import PaginatedReportBuilder from '../Pages/ReportBuilder/PaginatedReportBuilder';
-import ReportViewer from '../Pages/Reports/ReportViewer';
+import ReportViewer, { DashboardViewer, TableReportViewer } from '../Pages/Reports/ReportViewer';
 import FormulaManager from '../Pages/Settings/Formulas/FormulaManager';
 import EmailSettings from '../Pages/Settings/Email/EmailSettings';
 import ShiftsSettings from '../Pages/Settings/Shifts/ShiftsSettings';
 import UserManagement from '../Pages/Settings/Users/UserManagement';
 import LicenseActivations from '../Pages/Settings/LicenseActivations/LicenseActivations';
+import BrandingSettings from '../Pages/Settings/Branding/BrandingSettings';
 const AppRoutes = () => {
   const location = useLocation();
   return (
@@ -129,6 +130,42 @@ const AppRoutes = () => {
             }
           />
 
+          {/* Dashboards — released dashboard reports */}
+          <Route
+            path="dashboards"
+            element={
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+                <DashboardViewer />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="dashboards/:id"
+            element={
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+                <DashboardViewer />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Table Reports — released paginated reports */}
+          <Route
+            path="reports"
+            element={
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+                <TableReportViewer />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/:id"
+            element={
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+                <TableReportViewer />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Report Builder Routes */}
           <Route
             path="report-builder"
@@ -182,6 +219,7 @@ const AppRoutes = () => {
             <Route path="email" element={<EmailSettings />} />
             <Route path="shifts" element={<ShiftsSettings />} />
             <Route path="users" element={<UserManagement />} />
+            <Route path="branding" element={<BrandingSettings />} />
             <Route path="license-activations" element={<LicenseActivations />} />
           </Route>
         </Route>

@@ -1,6 +1,6 @@
 import { useState, useMemo, useContext, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, Trash2, Search, LayoutGrid, FileText, X, Layers, Table2, Clock, ArrowUpRight, MoreVertical, Filter } from 'lucide-react';
+import { Plus, Copy, Trash2, Search, LayoutGrid, FileText, X, Layers, Table2, Clock, ArrowUpRight, MoreVertical, Filter, List } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useReportTemplates } from '../../Hooks/useReportBuilder';
 import ReportThumbnail from './ReportThumbnail';
@@ -46,12 +46,12 @@ function useTheme() {
 const STATUS_CONFIG = {
   draft: {
     darkBg: 'rgba(100,116,139,0.15)', darkColor: '#94a3b8',
-    lightBg: 'rgba(100,116,139,0.10)', lightColor: '#64748b',
+    lightBg: '#f1f5f9', lightColor: '#475569',
     label: 'Draft',
   },
   released: {
-    darkBg: 'rgba(52,211,153,0.10)', darkColor: '#34d399',
-    lightBg: 'rgba(16,185,129,0.08)', lightColor: '#059669',
+    darkBg: 'rgba(16,185,129,0.12)', darkColor: '#34d399',
+    lightBg: '#ecfdf5', lightColor: '#047857',
     label: 'Released',
   },
 };
@@ -59,8 +59,8 @@ const STATUS_CONFIG = {
 const FILTER_TABS = ['all', 'draft', 'released'];
 
 const REPORT_TYPES = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, description: 'Drag-and-drop canvas with widgets (charts, KPIs, gauges, tables)', color: '#0284c7' },
-  { key: 'paginated', label: 'Table Report', icon: Table2, description: 'Professional A4 document with sections, tables, and KPI summaries', color: '#475569' },
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, description: 'Drag-and-drop canvas with widgets (charts, KPIs, gauges, tables)', color: '#0369a1', darkColor: '#38bdf8' },
+  { key: 'paginated', label: 'Table Report', icon: Table2, description: 'Professional A4 document with sections, tables, and KPI summaries', color: '#9f1239', darkColor: '#fb7185' },
 ];
 
 function CreateModal({ open, onClose, onCreate }) {
@@ -229,6 +229,11 @@ export default function ReportBuilderManager() {
     return { bg: t.dark ? cfg.darkBg : cfg.lightBg, color: t.dark ? cfg.darkColor : cfg.lightColor };
   };
 
+  const tc = (reportType) => {
+    const rt = REPORT_TYPES.find(r => r.key === reportType) || REPORT_TYPES[0];
+    return t.dark ? rt.darkColor : rt.color;
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.05, duration: 0.4 } }
@@ -255,7 +260,7 @@ export default function ReportBuilderManager() {
           <button onClick={() => setShowCreate(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
             style={{ background: t.accent, color: t.btnText, '--tw-ring-color': t.accent, '--tw-ring-offset-color': t.pageBg }}>
-            <Plus size={16} strokeWidth={2.5} /> New Report
+            <Plus size={14} strokeWidth={2} /> New Report
           </button>
         </div>
 
@@ -268,12 +273,12 @@ export default function ReportBuilderManager() {
           {[
             { label: 'Total', value: stats.total, color: t.accent },
             { label: 'Dashboards', value: stats.dashboards, color: t.dark ? '#38bdf8' : '#0284c7' },
-            { label: 'Table Reports', value: stats.tableReports, color: t.dark ? '#94a3b8' : '#475569' },
+            { label: 'Table Reports', value: stats.tableReports, color: t.dark ? '#fb7185' : '#9f1239' },
             { label: 'Drafts', value: stats.drafts, color: t.dark ? '#94a3b8' : '#64748b' },
             { label: 'Released', value: stats.released, color: t.dark ? '#34d399' : '#059669' },
           ].map((s, i, arr) => (
             <div key={s.label} className="flex items-center gap-1.5" style={i < arr.length - 1 ? { paddingRight: '1.5rem', borderRight: `1px solid ${t.border}` } : undefined}>
-              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
               <span className="text-xs font-medium" style={{ color: t.textMuted }}>{s.label}</span>
               <span className="text-sm font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
             </div>
@@ -310,110 +315,100 @@ export default function ReportBuilderManager() {
               <button onClick={handleClearAll}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg transition-colors hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 shadow-sm"
                 style={{ color: t.textSecondary, border: `1px solid ${t.border}`, background: t.surface }}>
-                <Trash2 size={14} /> Clear all
+                <Trash2 size={12} /> Clear all
               </button>
             )}
-            <div className="flex items-center rounded-lg p-1 shadow-sm" style={{ background: t.inputBg, border: `1px solid ${t.border}` }}>
-              <button onClick={() => setViewMode('table')} className="p-2 rounded transition-colors"
-                style={{ background: viewMode === 'table' ? t.accentBg : 'transparent', color: viewMode === 'table' ? t.accent : t.textSecondary }}
-                onMouseEnter={(e) => { if (viewMode !== 'table') e.currentTarget.style.color = t.text; }}
-                onMouseLeave={(e) => { if (viewMode !== 'table') e.currentTarget.style.color = t.textSecondary; }}
-              >
-                <FileText size={16} />
+            <div className="flex items-center rounded-md p-0.5" style={{ background: t.inputBg, border: `1px solid ${t.border}` }}>
+              <button onClick={() => setViewMode('table')} className="p-1.5 rounded transition-colors"
+                style={{ background: viewMode === 'table' ? t.accentBg : 'transparent', color: viewMode === 'table' ? t.accent : t.textMuted }}
+                title="List view">
+                <List size={14} />
               </button>
-              <button onClick={() => setViewMode('grid')} className="p-2 rounded transition-colors"
-                style={{ background: viewMode === 'grid' ? t.accentBg : 'transparent', color: viewMode === 'grid' ? t.accent : t.textSecondary }}
-                onMouseEnter={(e) => { if (viewMode !== 'grid') e.currentTarget.style.color = t.text; }}
-                onMouseLeave={(e) => { if (viewMode !== 'grid') e.currentTarget.style.color = t.textSecondary; }}
-              >
-                <LayoutGrid size={16} />
+              <button onClick={() => setViewMode('grid')} className="p-1.5 rounded transition-colors"
+                style={{ background: viewMode === 'grid' ? t.accentBg : 'transparent', color: viewMode === 'grid' ? t.accent : t.textMuted }}
+                title="Grid view">
+                <LayoutGrid size={14} />
               </button>
             </div>
           </div>
         </div>
 
         {loading ? (
-          <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="flex items-center gap-5 px-6 py-5" style={{ borderBottom: `1px solid ${t.border}` }}>
-                <div className="w-16 h-12 rounded-lg animate-pulse" style={{ background: t.surfaceAlt }} />
-                <div className="flex-1 space-y-3">
-                  <div className="h-4 rounded w-48 animate-pulse" style={{ background: t.border }} />
-                  <div className="h-3 rounded w-32 animate-pulse" style={{ background: t.surfaceAlt }} />
+          <div className="rounded-lg overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-3" style={{ borderBottom: `1px solid ${t.border}` }}>
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 rounded w-44 animate-pulse" style={{ background: t.border }} />
+                  <div className="h-2.5 rounded w-28 animate-pulse" style={{ background: t.surfaceAlt }} />
                 </div>
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center py-32 text-center rounded-xl shadow-sm relative overflow-hidden"
+          <div className="flex flex-col items-center justify-center py-24 text-center rounded-lg"
             style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '24px 24px', color: t.text }}></div>
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 relative z-10"
-              style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, boxShadow: `0 8px 30px rgba(0,0,0,0.12)` }}>
-              <FileText size={36} style={{ color: t.accent }} />
-            </div>
-            <h3 className="text-lg font-bold mb-2 relative z-10" style={{ color: t.text }}>
+            <FileText size={24} style={{ color: t.textMuted, marginBottom: 12 }} />
+            <h3 className="text-sm font-semibold mb-1" style={{ color: t.text }}>
               {search || statusFilter !== 'all' ? 'No matching reports' : 'No reports yet'}
             </h3>
-            <p className="text-sm mb-8 max-w-sm relative z-10" style={{ color: t.textSecondary }}>
-              {search ? 'Try adjusting your search or filters to find what you are looking for.' : 'Get started by creating your first report template to monitor your data.'}
+            <p className="text-xs mb-5 max-w-xs" style={{ color: t.textSecondary }}>
+              {search ? 'Try adjusting your search or filters.' : 'Create your first report template to get started.'}
             </p>
             {!search && statusFilter === 'all' && (
               <button onClick={() => setShowCreate(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg relative z-10"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-semibold text-xs transition-colors"
                 style={{ background: t.accent, color: t.btnText }}>
-                <Plus size={16} /> Create First Report
+                <Plus size={14} /> New Report
               </button>
             )}
-          </motion.div>
+          </div>
         ) : viewMode === 'table' ? (
-          <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-            <div className="grid grid-cols-[1.5fr_140px_140px_100px_120px_80px] items-center px-6 py-4 text-[11px] uppercase tracking-wider font-bold"
-              style={{ color: t.textMuted, borderBottom: `1px solid ${t.border}`, background: t.dark ? 'rgba(10,15,26,0.5)' : 'rgba(0,0,0,0.02)' }}>
-              <span>Report Name</span><span>Type</span><span>Status</span><span>Widgets</span><span>Modified</span><span className="text-right">Actions</span>
+          /* ── LIST VIEW ── */
+          <div className="rounded-lg overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+            <div className="grid grid-cols-[1.5fr_130px_100px_70px_100px_70px] items-center px-5 py-2.5 text-[10px] uppercase tracking-wider font-semibold"
+              style={{ color: t.textMuted, borderBottom: `1px solid ${t.border}`, background: t.dark ? 'rgba(10,15,26,0.5)' : '#f8fafc' }}>
+              <span>Name</span><span>Type</span><span>Status</span><span>Items</span><span>Modified</span><span className="text-right">Actions</span>
             </div>
             <motion.div variants={containerVariants} initial="hidden" animate="visible">
-            {filtered.map((tp) => {
+            {filtered.map((tp, idx) => {
               const { status, reportType, widgetCount } = getReportMeta(tp);
               const s = sc(status);
               const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
+              const typeColor = tc(reportType);
               return (
                 <motion.div variants={itemVariants} key={tp.id} onClick={() => handleOpen(tp.id)}
-                  className="grid grid-cols-[1.5fr_140px_140px_100px_120px_80px] items-center px-6 py-4 cursor-pointer transition-all duration-200 group"
-                  style={{ borderBottom: `1px solid ${t.border}` }}
+                  className="grid grid-cols-[1.5fr_130px_100px_70px_100px_70px] items-center px-5 py-3 cursor-pointer transition-colors duration-150 group relative"
+                  style={{ borderBottom: idx < filtered.length - 1 ? `1px solid ${t.border}` : 'none' }}
                   onMouseEnter={(e) => e.currentTarget.style.background = t.hoverBg}
                   onMouseLeave={(e) => e.currentTarget.style.background = ''}>
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 shadow-sm" style={{ border: `1px solid ${t.border}`, background: t.surfaceAlt }}>
-                      <ReportThumbnail template={tp} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[15px] font-semibold truncate transition-colors group-hover:text-[var(--brand)]" style={{ color: t.text }}>{tp.name || 'Untitled'}</p>
-                      {tp.description && <p className="text-xs truncate mt-1" style={{ color: t.textSecondary }}>{tp.description}</p>}
-                    </div>
+                  {/* Colored left accent */}
+                  <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ background: typeColor }} />
+                  <div className="min-w-0 pl-2">
+                    <p className="text-[13px] font-semibold truncate" style={{ color: t.text }}>{tp.name || 'Untitled'}</p>
+                    {tp.description && <p className="text-[11px] truncate mt-0.5" style={{ color: t.textMuted }}>{tp.description}</p>}
                   </div>
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold w-fit px-2.5 py-1 rounded-md"
-                    style={reportType === 'paginated'
-                      ? { background: t.dark ? 'rgba(71,85,105,0.15)' : 'rgba(71,85,105,0.08)', color: t.dark ? '#94a3b8' : '#475569' }
-                      : { background: t.accentBg, color: t.dark ? t.accent : '#0891b2' }}>
-                    {reportType === 'paginated' ? <Table2 size={12} /> : <LayoutGrid size={12} />}
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded"
+                    style={{ color: typeColor, background: `${typeColor}10` }}>
+                    {reportType === 'paginated' ? <Table2 size={11} /> : <LayoutGrid size={11} />}
                     {reportType === 'paginated' ? 'Table Report' : 'Dashboard'}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider w-fit px-2.5 py-1 rounded-md"
-                    style={{ background: s.bg, color: s.color }}>{cfg.label}</span>
-                  <span className="text-sm font-mono font-medium" style={{ color: t.textSecondary }}>{widgetCount}</span>
-                  <span className="text-xs font-medium" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at)}</span>
-                  <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded"
+                    style={{ background: s.bg, color: s.color }}>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
+                    {cfg.label}
+                  </span>
+                  <span className="text-[12px] font-medium tabular-nums" style={{ color: t.textSecondary }}>{widgetCount}</span>
+                  <span className="text-[11px]" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at)}</span>
+                  <div className="flex gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => { e.stopPropagation(); duplicateTemplate(tp.id); }}
-                      className="p-2 rounded-lg transition-colors hover:bg-white/10 hover:text-white" style={{ color: t.textSecondary }} title="Duplicate">
-                      <Copy size={16} />
+                      className="p-1.5 rounded transition-colors" style={{ color: t.textMuted }} title="Duplicate"
+                      onMouseEnter={(e) => e.currentTarget.style.color = t.text}
+                      onMouseLeave={(e) => e.currentTarget.style.color = t.textMuted}>
+                      <Copy size={13} />
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); handleDelete(tp.id); }}
-                      className="p-2 rounded-lg transition-colors hover:bg-red-500/10 hover:text-red-400" style={{ color: t.textSecondary }} title="Delete">
-                      <Trash2 size={16} />
+                      className="p-1.5 rounded transition-colors hover:text-red-500" style={{ color: t.textMuted }} title="Delete">
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </motion.div>
@@ -422,42 +417,45 @@ export default function ReportBuilderManager() {
             </motion.div>
           </div>
         ) : (
-          <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          /* ── GRID VIEW ── cards with colored top bar */
+          <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((tp) => {
               const { status, reportType, widgetCount } = getReportMeta(tp);
               const s = sc(status);
               const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
+              const typeColor = tc(reportType);
               return (
                 <motion.div variants={itemVariants} key={tp.id} onClick={() => handleOpen(tp.id)}
-                  className="group rounded-xl overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1"
-                  style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-                  <div className="relative h-40 overflow-hidden" style={{ borderBottom: `2px solid ${s.color}` }}>
-                    <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
-                      <ReportThumbnail template={tp} />
+                  className="group rounded-lg overflow-hidden cursor-pointer transition-all duration-150"
+                  style={{ background: t.surface, border: `1px solid ${t.border}` }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = t.dark ? '#334155' : '#c7d2de'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = t.border; e.currentTarget.style.boxShadow = 'none'; }}>
+                  {/* Colored top bar */}
+                  <div className="h-1" style={{ background: typeColor }} />
+                  <div className="px-4 py-3.5">
+                    {/* Title row with status badge */}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <p className="text-[13px] font-semibold truncate leading-tight" style={{ color: t.text }}>{tp.name || 'Untitled'}</p>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold flex-shrink-0 px-2 py-0.5 rounded"
+                        style={{ background: s.bg, color: s.color }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
+                        {cfg.label}
+                      </span>
                     </div>
-                    <div className="absolute top-3 right-3 shadow-md">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md backdrop-blur-md"
-                        style={{ background: s.bg, color: s.color }}>{cfg.label}</span>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <p className="text-base font-bold truncate transition-colors group-hover:text-[var(--brand)]" style={{ color: t.text }}>{tp.name || 'Untitled'}</p>
-                    {tp.description && <p className="text-xs mt-1.5 line-clamp-2" style={{ color: t.textSecondary }}>{tp.description}</p>}
-                    <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: `1px solid ${t.border}` }}>
-                      <span className="text-xs font-medium" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at)}</span>
-                      <div className="flex items-center gap-2">
+                    {tp.description && <p className="text-[11px] line-clamp-2 mb-3 leading-relaxed" style={{ color: t.textMuted }}>{tp.description}</p>}
+                    {!tp.description && <div className="mb-3" />}
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-2.5" style={{ borderTop: `1px solid ${t.border}` }}>
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded"
+                        style={{ color: typeColor, background: `${typeColor}10` }}>
+                        {reportType === 'paginated' ? <Table2 size={10} /> : <LayoutGrid size={10} />}
+                        {reportType === 'paginated' ? 'Table Report' : 'Dashboard'}
+                      </span>
+                      <div className="flex items-center gap-2.5">
                         {widgetCount > 0 && (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-1 rounded-md"
-                            style={{ background: t.surfaceAlt, color: t.textSecondary, border: `1px solid ${t.border}` }}>
-                            <Layers size={10} />{widgetCount}
-                          </span>
+                          <span className="text-[10px] font-medium" style={{ color: t.textSecondary }}>{widgetCount} items</span>
                         )}
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-1 rounded-md"
-                          style={reportType === 'paginated'
-                            ? { background: t.dark ? 'rgba(71,85,105,0.15)' : 'rgba(71,85,105,0.08)', color: t.dark ? '#94a3b8' : '#475569' }
-                            : { background: t.accentBg, color: t.dark ? t.accent : '#0891b2' }}>
-                          {reportType === 'paginated' ? <Table2 size={10} /> : <LayoutGrid size={10} />}
-                        </span>
+                        <span className="text-[10px]" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at)}</span>
                       </div>
                     </div>
                   </div>

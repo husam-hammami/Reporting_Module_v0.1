@@ -409,8 +409,8 @@ function DataSourceSection({ config, onUpdate, tags, tagValues, groups = [], sav
 
 function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
   return (
-    <Section icon={Palette} title={widgetType === 'image' ? 'Image' : widgetType === 'text' ? 'Text' : 'Display'} defaultOpen={true}>
-      {widgetType !== 'image' && widgetType !== 'text' && (
+    <Section icon={Palette} title={widgetType === 'image' ? 'Image' : widgetType === 'logo' ? 'Logo' : widgetType === 'text' ? 'Text' : 'Display'} defaultOpen={true}>
+      {widgetType !== 'image' && widgetType !== 'text' && widgetType !== 'logo' && (
         <Field label="Title">
           <TextInput value={config.title} onChange={(v) => onUpdate({ title: v })} placeholder="Widget title" />
         </Field>
@@ -768,6 +768,37 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
               Remove image
             </button>
           )}
+        </>
+      )}
+
+      {widgetType === 'logo' && (
+        <>
+          <div className="text-[9px] text-[var(--rb-text-muted)] mb-2">
+            Auto-loads client logo from Engineering &gt; Branding settings.
+          </div>
+          <Field label="Fit mode">
+            <SelectInput
+              value={config.objectFit || 'contain'}
+              onChange={(v) => onUpdate({ objectFit: v })}
+              options={[
+                { value: 'contain', label: 'Contain' },
+                { value: 'cover', label: 'Cover' },
+                { value: 'fill', label: 'Stretch' },
+              ]}
+            />
+          </Field>
+          <Field label="Border radius">
+            <SelectInput
+              value={String(config.borderRadius || '0')}
+              onChange={(v) => onUpdate({ borderRadius: v })}
+              options={[
+                { value: '0', label: 'None' },
+                { value: '4', label: 'Small' },
+                { value: '8', label: 'Medium' },
+                { value: '12', label: 'Large' },
+              ]}
+            />
+          </Field>
         </>
       )}
     </Section>
@@ -1356,7 +1387,7 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
               )}
               {!HAS_DATA_SOURCE.has(widget.type) && !HAS_SERIES.has(widget.type) && !HAS_TABLE_COLUMNS.has(widget.type) && (
                 <div className="px-5 py-6 text-[9px] text-[var(--rb-text-muted)]">
-                  {widget.type === 'text'
+                  {widget.type === 'text' || widget.type === 'logo'
                     ? 'Use the Format tab to configure this element.'
                     : 'No data options for this widget.'}
                 </div>

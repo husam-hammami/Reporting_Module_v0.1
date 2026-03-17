@@ -7,6 +7,7 @@ import LoadingScreen from '../Components/Common/LoadingScreen';
 import { SocketProvider } from '../Context/SocketContext';
 import { EmulatorProvider } from '../Context/EmulatorContext';
 import { SystemStatusProvider } from '../Context/SystemStatusContext';
+import { BrandingProvider } from '../Context/BrandingContext';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -29,6 +30,7 @@ const AppProviders = ({ children }) => {
     <QueryClientProvider client={queryClient}>
       <SocketProvider>
         <SystemStatusProvider>
+        <BrandingProvider>
         <EmulatorProvider>
         <NavbarProvider>
           <DarkModeProvider>
@@ -36,6 +38,7 @@ const AppProviders = ({ children }) => {
           </DarkModeProvider>
         </NavbarProvider>
         </EmulatorProvider>
+        </BrandingProvider>
         </SystemStatusProvider>
       </SocketProvider>
     </QueryClientProvider>

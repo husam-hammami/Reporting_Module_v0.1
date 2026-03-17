@@ -300,7 +300,17 @@ export function useReportTemplates() {
     setTemplates([]);
   }, []);
 
-  return { templates, loading, error, fetchTemplates, createTemplate, deleteTemplate, duplicateTemplate, clearAllTemplates };
+  const updateTemplateStatus = useCallback(async (id, status) => {
+    // Optimistic update
+    setTemplates((prev) => prev.map((t) => String(t.id) === String(id) ? { ...t, status } : t));
+    try {
+      await reportBuilderApi.update(id, { status });
+    } catch (e) {
+      console.warn('[Report Builder] API status update failed:', e?.message || e);
+    }
+  }, []);
+
+  return { templates, loading, error, fetchTemplates, createTemplate, deleteTemplate, duplicateTemplate, clearAllTemplates, updateTemplateStatus };
 }
 
 /* ── useReportCanvas (Canvas page) ─────────────────────────────── */
@@ -315,14 +325,29 @@ export function useReportCanvas(templateId) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [autoSave, setAutoSave] = useState(() => {
+    try { return localStorage.getItem('rb_autosave') !== 'false'; } catch { return true; }
+  });
   const [migrated, setMigrated] = useState(false);
   const [historyState, setHistoryState] = useState({ pastCount: 0, futureCount: 0 });
   const autosaveTimer = useRef(null);
+  const templateRef = useRef(null);
   const pastRef = useRef([]);
   const futureRef = useRef([]);
   const layoutDebounceRef = useRef({ timer: null, pendingPrev: null });
   const lastUndoRedoAt = useRef(0);
 
+
+  // Keep templateRef always up-to-date so performSave never uses stale closures
+  useEffect(() => { templateRef.current = template; }, [template]);
+
+  const toggleAutoSave = useCallback(() => {
+    setAutoSave((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('rb_autosave', String(next)); } catch {}
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -407,28 +432,34 @@ export function useReportCanvas(templateId) {
     return () => { cancelled = true; };
   }, [templateId]);
 
-  // Debounced autosave (2s after last change)
+  // Debounced autosave (2s after last change) — only when autoSave is enabled
   useEffect(() => {
-    if (!dirty || !templateId) return;
+    if (!autoSave || !dirty || !templateId) return;
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
       performSave(widgets, parameters, computedSignals);
     }, 2000);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
-  }, [dirty, widgets, parameters, computedSignals, templateId]);
+  }, [autoSave, dirty, widgets, parameters, computedSignals, templateId]);
 
   const performSave = useCallback(async (w, p, cs) => {
     if (!templateId) return;
+    // Use ref to always get the latest template (avoids stale closure issues)
+    const currentTemplate = templateRef.current;
+    // Preserve all existing layout_config keys (reportType, paginatedSections, pageMode, etc.)
+    // and merge in the updated widgets/parameters/signals/grid
+    const existingLC = currentTemplate?.layout_config || {};
     const layout_config = {
+      ...existingLC,
       schemaVersion: CURRENT_SCHEMA_VERSION,
       widgets: w,
       parameters: p,
       computedSignals: cs,
-      grid: template?.layout_config?.grid || { cols: 12, rowHeight: 40 },
+      grid: existingLC.grid || { cols: 12, rowHeight: 40 },
     };
 
     const payload = { layout_config };
-    const updated = { ...template, layout_config, updated_at: new Date().toISOString() };
+    const updated = { ...currentTemplate, layout_config, updated_at: new Date().toISOString() };
     try {
       await reportBuilderApi.update(templateId, payload);
       setTemplate(updated);
@@ -443,7 +474,7 @@ export function useReportCanvas(templateId) {
     lsWrite(all);
     setTemplate(updated);
     setDirty(false);
-  }, [templateId, template]);
+  }, [templateId]);
 
   // Manual save
   const saveLayout = useCallback(() => {
@@ -452,17 +483,22 @@ export function useReportCanvas(templateId) {
     setSaving(false);
   }, [widgets, parameters, computedSignals, performSave]);
 
-  // Update template name/description/status
-  const updateMeta = useCallback((updates) => {
+  // Update template name/description/status/layout_config — persists to API
+  const updateMeta = useCallback(async (updates) => {
     if (!templateId) return;
+    // Use ref to always get the latest template (avoids stale closure)
+    const currentTemplate = templateRef.current;
+    // Optimistic local update
+    const updated = { ...currentTemplate, ...updates, updated_at: new Date().toISOString() };
+    setTemplate(updated);
     const all = lsRead();
     const idx = all.findIndex((t) => String(t.id) === String(templateId));
-    if (idx >= 0) {
-      all[idx] = { ...all[idx], ...updates, updated_at: new Date().toISOString() };
-      lsWrite(all);
-      setTemplate(all[idx]);
-    } else {
-      setTemplate((prev) => ({ ...prev, ...updates }));
+    if (idx >= 0) { all[idx] = updated; lsWrite(all); }
+    // Persist to API
+    try {
+      await reportBuilderApi.update(templateId, updates);
+    } catch (e) {
+      console.warn('[Report Builder] API meta update failed:', e?.message || e);
     }
   }, [templateId]);
 
@@ -641,6 +677,7 @@ export function useReportCanvas(templateId) {
   return {
     template, widgets, parameters, computedSignals,
     loading, saving, dirty, migrated,
+    autoSave, toggleAutoSave,
     setWidgets, addWidget, addWidgetAt, updateWidget, removeWidget, updateLayout,
     addParameter, updateParameter, removeParameter,
     addComputedSignal,

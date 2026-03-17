@@ -28,6 +28,7 @@ function VizIcon({ type, isActive }) {
     case 'silo': return <svg viewBox="0 0 32 32" className={s} fill="none"><ellipse cx="16" cy="8" rx="8" ry="3" stroke={m} strokeWidth="1.8" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" stroke={m} strokeWidth="1.8" fill="none" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" fill={isActive ? 'rgba(56,189,248,0.15)' : 'rgba(107,127,148,0.15)'} stroke="none" /><defs><linearGradient id="silo-toolbox-fill" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stopColor={p} /><stop offset="70%" stopColor={p} stopOpacity="0.5" /></linearGradient></defs></svg>;
     case 'piechart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M16 4a12 12 0 0 1 0 24A12 12 0 0 1 16 4z" stroke={m} strokeWidth="2" /><path d="M16 4a12 12 0 0 1 10.4 6L16 16V4z" fill={p} /><path d="M26.4 10A12 12 0 0 1 16 28V16l10.4-6z" fill={l} /></svg>;
     case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="6" y="22" fill={p} fontSize="16" fontWeight="bold" fontFamily="serif">T</text><path d="M18 10h8M18 16h6M18 22h4" stroke={m} strokeWidth="1.6" strokeLinecap="round" /></svg>;
+    case 'logo': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="7" width="24" height="18" rx="3" stroke={m} strokeWidth="1.8" /><path d="M10 16h12" stroke={p} strokeWidth="2" strokeLinecap="round" /><path d="M14 12h4v8h-4z" fill={l} rx="1" /><circle cx="16" cy="16" r="4" stroke={p} strokeWidth="1.5" fill="none" /></svg>;
     default: return null;
   }
 }
@@ -49,6 +50,7 @@ function SmallVizIcon({ type }) {
     case 'silo': return <svg viewBox="0 0 32 32" className={s} fill="none"><ellipse cx="16" cy="8" rx="8" ry="3" stroke={m} strokeWidth="2" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" stroke={m} strokeWidth="2" fill="none" /></svg>;
     case 'piechart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M16 4a12 12 0 0 1 0 24A12 12 0 0 1 16 4z" stroke={m} strokeWidth="2" /><path d="M16 4a12 12 0 0 1 10.4 6L16 16V4z" fill={p} /><path d="M26.4 10A12 12 0 0 1 16 28V16l10.4-6z" fill={l} /></svg>;
     case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="8" y="22" fill={p} fontSize="18" fontWeight="bold" fontFamily="serif">T</text></svg>;
+    case 'logo': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="7" width="24" height="18" rx="3" stroke={m} strokeWidth="2" /><circle cx="16" cy="16" r="4" stroke={p} strokeWidth="2" fill="none" /></svg>;
     default: return null;
   }
 }
@@ -63,10 +65,11 @@ const COMPONENTS = [
   { section: 'Tables', type: 'table', label: 'Data Table' },
   { section: 'Layout', type: 'text', label: 'Text Block' },
   { section: 'Layout', type: 'image', label: 'Image' },
+  { section: 'Layout', type: 'logo', label: 'Client Logo' },
   { section: 'Layout', type: 'repeat', label: 'Repeat Panel' },
 ];
 
-const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', repeat: 'Repeat' };
+const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', repeat: 'Repeat' };
 
 const SECTIONS = ['Data', 'Charts', 'Tables', 'Layout', 'Tag Groups', 'Widgets'];
 

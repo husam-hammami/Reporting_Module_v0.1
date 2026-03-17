@@ -407,6 +407,7 @@ export default function PaginatedReportView({ reportId, onBack }) {
             tagValues={mergedTagValues}
             dateRange={dateRange}
             compact={pageMode === 'full'}
+            isPreviewMode={true}
           />
         </div>
       </div>

@@ -31,11 +31,11 @@
   --rb-pad-lg: 14px;
 
   /* ── Light mode surfaces ── */
-  --rb-accent: #0098cc;
-  --rb-accent-bright: #00aadf;
-  --rb-accent-subtle: rgba(0, 152, 204, 0.06);
+  --rb-accent: #0f3460;
+  --rb-accent-bright: #1a4a7a;
+  --rb-accent-subtle: rgba(15, 52, 96, 0.06);
   --rb-accent-glow: transparent;
-  --rb-accent-hover: #007aa3;
+  --rb-accent-hover: #0a2540;
   --rb-bg-deep: transparent;
   --rb-surface: #f9fafb;
   --rb-panel: #ffffff;
@@ -112,11 +112,11 @@
   --rb-text-muted: #64748b;
   --rb-text-inverse: #0f172a;
 
-  --rb-accent: #22d3ee;
-  --rb-accent-hover: #67e8f9;
-  --rb-accent-subtle: rgba(34, 211, 238, 0.08);
+  --rb-accent: #5b9bd5;
+  --rb-accent-hover: #7ab3e8;
+  --rb-accent-subtle: rgba(91, 155, 213, 0.10);
   --rb-accent-glow: transparent;
-  --rb-accent-bright: #67e8f9;
+  --rb-accent-bright: #7ab3e8;
 
   --rb-success: #34d399;
   --rb-success-subtle: rgba(52, 211, 153, 0.10);
@@ -334,7 +334,7 @@
 }
 .dark .report-builder .rb-widget-card {
   background: linear-gradient(160deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 20, 32, 0.98) 100%);
-  border-color: rgba(34, 211, 238, 0.12);
+  border-color: rgba(91, 155, 213, 0.12);
   box-shadow: 0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
@@ -343,8 +343,8 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .dark .report-builder .rb-widget-card:hover {
-  border-color: rgba(34, 211, 238, 0.25);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(34, 211, 238, 0.06), inset 0 1px 0 rgba(255,255,255,0.04);
+  border-color: rgba(91, 155, 213, 0.25);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(91, 155, 213, 0.06), inset 0 1px 0 rgba(255,255,255,0.04);
   transform: translateY(-1px);
 }
 
@@ -356,7 +356,7 @@
 .dark .report-builder .rb-widget-card.rb-widget-selected,
 .dark .report-builder .rb-widget-selected {
   border-color: var(--rb-accent);
-  box-shadow: 0 0 0 1px var(--rb-accent), 0 0 20px rgba(34, 211, 238, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+  box-shadow: 0 0 0 1px var(--rb-accent), 0 0 20px rgba(91, 155, 213, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .report-builder .rb-widget-card.rb-widget-dragging {
@@ -365,7 +365,7 @@
   opacity: 0.95;
 }
 .dark .report-builder .rb-widget-card.rb-widget-dragging {
-  box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px rgba(34, 211, 238, 0.1);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px rgba(91, 155, 213, 0.1);
 }
 
 .report-builder .rb-widget-card-transparent {
@@ -395,12 +395,12 @@
 /* ── Header row ── */
 .report-builder .rb-table-header-row {
   box-shadow: none;
-  background-color: rgba(17, 24, 39, 0.6);
+  background-color: #1e3a5f;
   color: #ffffff;
 }
 .dark .report-builder .rb-table-header-row {
   box-shadow: none;
-  background-color: rgba(17, 24, 39, 0.6);
+  background-color: #0d1320;
   color: #f1f5f9;
 }
 .report-builder .rb-table-header-row th {
@@ -408,14 +408,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--rb-text-secondary);
+  color: #ffffff;
   padding: 12px 14px;
-  border-bottom: 2px solid var(--rb-accent);
+  border-bottom: 1px solid rgba(30, 58, 95, 0.3);
   white-space: nowrap;
 }
 .dark .report-builder .rb-table-header-row th {
-  color: #94a3b8;
-  border-bottom-color: var(--rb-accent);
+  color: #5b9bd5;
+  border-bottom-color: rgba(91, 155, 213, 0.2);
 }
 
 /* ── Body rows ── */
@@ -469,7 +469,7 @@
 }
 .dark .report-builder .rb-section-header-row td {
   background-color: rgba(30, 41, 59, 0.3);
-  color: #22d3ee;
+  color: #5b9bd5;
   border-color: #1e293b;
   border-top-color: #1e293b;
 }
@@ -769,7 +769,7 @@
   background: var(--rb-accent-subtle);
 }
 .dark .rb-widget-minitoolbar button:hover {
-  background: rgba(34, 211, 238, 0.15);
+  background: rgba(91, 155, 213, 0.15);
   color: var(--rb-accent-bright);
 }
 .rb-widget-minitoolbar button:active {
@@ -1042,7 +1042,7 @@
   background: #1e293b;
 }
 .dark .rb-holo-card:hover {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.5), rgba(0, 214, 143, 0.2), rgba(34, 211, 238, 0.5));
+  background: linear-gradient(135deg, rgba(91, 155, 213, 0.5), rgba(0, 214, 143, 0.2), rgba(91, 155, 213, 0.5));
   box-shadow: none;
 }
 
@@ -1298,13 +1298,13 @@
 .dark .rb-chart-empty-grid {
   opacity: 0.05;
   background-image:
-    repeating-linear-gradient(0deg, transparent, transparent 39px, #22d3ee 39px, #22d3ee 40px),
-    repeating-linear-gradient(90deg, transparent, transparent 39px, #22d3ee 39px, #22d3ee 40px);
+    repeating-linear-gradient(0deg, transparent, transparent 39px, #5b9bd5 39px, #5b9bd5 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, #5b9bd5 39px, #5b9bd5 40px);
 }
 .dark .rb-chart-empty-icon {
   background: rgba(34,211,238,0.1);
   border-color: rgba(34,211,238,0.2);
-  color: #22d3ee;
+  color: #5b9bd5;
   opacity: 0.7;
 }
 .dark .rb-chart-empty-text {

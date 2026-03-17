@@ -267,6 +267,21 @@ export const WIDGET_CATALOG = [
     },
   },
 
+  {
+    type: 'logo',
+    category: 'layout',
+    label: 'Client Logo',
+    lucideIcon: 'Stamp',
+    description: 'Auto-loads the uploaded client logo',
+    defaultW: 2,
+    defaultH: 1,
+    defaultConfig: {
+      objectFit: 'contain',
+      borderRadius: '0',
+      showCard: false,
+    },
+  },
+
   // ── Advanced ──
   {
     type: 'repeat',

@@ -7,6 +7,7 @@ import AsmLogo from '../../Assets/Asm_Logo.png';
 import { NavbarContext } from '../../Context/NavbarContext';
 import { AuthContext } from '../../Context/AuthProvider';
 import { useSystemStatus } from '../../Context/SystemStatusContext';
+import { useBranding } from '../../Context/BrandingContext';
 import { useLocation } from 'react-router-dom';
 import { DarkModeContext } from '../../Context/DarkModeProvider';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,6 +25,7 @@ function Navbar({ isBlueprint = false }) {
   const { auth, logout } = useContext(AuthContext);
   const [menuOpen, setMenuOpen] = useState(false);
   const { demoMode, loading: statusLoading } = useSystemStatus();
+  const { clientLogo } = useBranding();
   const { mode, setMode } = useContext(DarkModeContext);
   const isDark = mode === 'dark';
   const location = useLocation();
@@ -81,6 +83,13 @@ function Navbar({ isBlueprint = false }) {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {clientLogo && (
+            <img
+              src={clientLogo}
+              alt="Client"
+              className="h-12 w-auto max-w-[140px] object-contain shrink-0 rounded-lg bg-white/95 px-2.5 py-1 shadow-sm"
+            />
+          )}
           <img
             src={AsmLogo}
             alt="ASM"

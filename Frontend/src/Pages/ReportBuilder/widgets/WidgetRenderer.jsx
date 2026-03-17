@@ -8,6 +8,7 @@ import StatWidget from './StatWidget';
 import PieChartWidget from './PieChartWidget';
 import ImageWidget from './ImageWidget';
 import TextWidget from './TextWidget';
+import LogoWidget from './LogoWidget';
 
 /* ── Error Boundary — catches widget render crashes ── */
 class WidgetErrorBoundary extends React.Component {
@@ -53,9 +54,10 @@ const RENDERERS = {
   piechart: PieChartWidget,
   image: ImageWidget,
   text: TextWidget,
+  logo: LogoWidget,
 };
 
-export const CARDLESS_WIDGET_TYPES = new Set(['image', 'text']);
+export const CARDLESS_WIDGET_TYPES = new Set(['image', 'text', 'logo']);
 
 export const INVISIBLE_WRAPPER_TYPES = new Set(['text']);
 

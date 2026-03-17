@@ -45,10 +45,18 @@ def _ensure_table():
                     thumbnail TEXT DEFAULT '',
                     is_active BOOLEAN DEFAULT true,
                     is_default BOOLEAN DEFAULT false,
+                    status VARCHAR(20) DEFAULT 'draft',
                     layout_config JSONB DEFAULT '{"widgets":[],"grid":{"cols":12,"rowHeight":60}}'::jsonb,
                     created_at TIMESTAMP DEFAULT NOW(),
                     updated_at TIMESTAMP DEFAULT NOW()
                 );
+            """)
+            # Add status column if missing (for existing tables)
+            cursor.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE report_builder_templates ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'draft';
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$;
             """)
             actual_conn.commit()
     except Exception as e:
@@ -67,7 +75,7 @@ def list_templates():
             actual_conn = conn._conn if hasattr(conn, '_conn') else conn
             cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
-                SELECT id, name, description, thumbnail, is_active, is_default,
+                SELECT id, name, description, thumbnail, is_active, is_default, status,
                        layout_config, created_at, updated_at
                 FROM report_builder_templates
                 ORDER BY updated_at DESC
@@ -111,7 +119,7 @@ def create_template():
             cursor.execute("""
                 INSERT INTO report_builder_templates (name, description, layout_config)
                 VALUES (%s, %s, %s::jsonb)
-                RETURNING id, name, description, thumbnail, is_active, is_default,
+                RETURNING id, name, description, thumbnail, is_active, is_default, status,
                           layout_config, created_at, updated_at
             """, (name, description, json.dumps(layout_config)))
             row = dict(cursor.fetchone())
@@ -140,7 +148,7 @@ def get_template(template_id):
             actual_conn = conn._conn if hasattr(conn, '_conn') else conn
             cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
-                SELECT id, name, description, thumbnail, is_active, is_default,
+                SELECT id, name, description, thumbnail, is_active, is_default, status,
                        layout_config, created_at, updated_at
                 FROM report_builder_templates
                 WHERE id = %s
@@ -178,7 +186,7 @@ def update_template(template_id):
             # Build dynamic SET clause
             fields = []
             values = []
-            for key in ['name', 'description', 'thumbnail', 'is_active', 'is_default']:
+            for key in ['name', 'description', 'thumbnail', 'is_active', 'is_default', 'status']:
                 if key in data:
                     fields.append(f"{key} = %s")
                     values.append(data[key])
@@ -196,7 +204,7 @@ def update_template(template_id):
                 UPDATE report_builder_templates
                 SET {', '.join(fields)}
                 WHERE id = %s
-                RETURNING id, name, description, thumbnail, is_active, is_default,
+                RETURNING id, name, description, thumbnail, is_active, is_default, status,
                           layout_config, created_at, updated_at
             """
             cursor.execute(query, values)
@@ -273,7 +281,7 @@ def duplicate_template(template_id):
             cursor.execute("""
                 INSERT INTO report_builder_templates (name, description, layout_config)
                 VALUES (%s, %s, %s::jsonb)
-                RETURNING id, name, description, thumbnail, is_active, is_default,
+                RETURNING id, name, description, thumbnail, is_active, is_default, status,
                           layout_config, created_at, updated_at
             """, (new_name, original['description'], json.dumps(layout_config)))
             row = dict(cursor.fetchone())

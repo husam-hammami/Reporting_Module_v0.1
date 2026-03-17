@@ -1,23 +1,23 @@
 import { useMemo, useState, useEffect } from 'react';
-import { BarChart3, Activity, Table2, Gauge, Container, Hash, Copy, Image, Type, LayoutGrid, Layers } from 'lucide-react';
+import { BarChart3, Activity, Table2, Gauge, Container, Hash, Copy, Image, Type, LayoutGrid, Layers, Stamp } from 'lucide-react';
 import { loadAndMigrateConfig } from './state/templateSchema';
 
 const TYPE_COLOR = {
   kpi: '#0d9488', stat: '#7c3aed', chart: '#059669', barchart: '#059669',
   table: '#2563eb', gauge: '#d97706', silo: '#22d3ee', image: '#4f46e5',
-  text: '#64748b', repeat: '#ea580c',
+  text: '#64748b', repeat: '#ea580c', logo: '#0369a1',
 };
 
 const TYPE_ICON = {
   kpi: Hash, stat: Activity, chart: BarChart3, barchart: BarChart3,
   table: Table2, gauge: Gauge, silo: Container, image: Image,
-  text: Type, repeat: Copy,
+  text: Type, repeat: Copy, logo: Stamp,
 };
 
 const TYPE_LABEL = {
   kpi: 'KPI', stat: 'Statistics', chart: 'Chart', barchart: 'Bar Chart',
   table: 'Table', gauge: 'Gauge', silo: 'Silo', image: 'Image',
-  text: 'Text', repeat: 'Repeat',
+  text: 'Text', repeat: 'Repeat', logo: 'Logo',
 };
 
 const CATEGORY_LABEL = {

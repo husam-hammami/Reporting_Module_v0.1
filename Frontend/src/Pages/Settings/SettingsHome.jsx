@@ -1,7 +1,7 @@
 import React, { useEffect, useContext } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useLenisScroll } from '../../Hooks/useLenisScroll';
-import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaServer, FaSuperscript, FaEnvelope, FaClock, FaUsers, FaKey } from 'react-icons/fa';
+import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaServer, FaSuperscript, FaEnvelope, FaClock, FaUsers, FaKey, FaImage } from 'react-icons/fa';
 import { AuthContext } from '../../Context/AuthProvider';
 import '../ReportBuilder/reportBuilderTheme.css';
 
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { name: 'Email / SMTP', icon: FaEnvelope, link: '/settings/email', description: 'Email delivery config' },
   { name: 'Shifts', icon: FaClock, link: '/settings/shifts', description: 'Shift schedule config' },
   { name: 'Export / Import', icon: FaDownload, link: '/settings/export-import', description: 'System configurations' },
+  { name: 'Branding', icon: FaImage, link: '/settings/branding', description: 'Client logo & branding' },
   { name: 'System', icon: FaServer, link: '/settings/system', description: 'PLC, mode & emulator' },
   { name: 'Licenses', icon: FaKey, link: '/settings/license-activations', description: 'Machine license activations', superadminOnly: true },
 ];
