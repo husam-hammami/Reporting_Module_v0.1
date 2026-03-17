@@ -51,12 +51,24 @@ def _ensure_table():
                     updated_at TIMESTAMP DEFAULT NOW()
                 );
             """)
-            # Add status column if missing (for existing tables)
+            # Add status column if missing (for existing tables that predate the redesign)
             cursor.execute("""
                 DO $$ BEGIN
                     ALTER TABLE report_builder_templates ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'draft';
                 EXCEPTION WHEN duplicate_column THEN NULL;
                 END $$;
+            """)
+            # Legacy status migration (idempotent, safe to run on every startup):
+            # The original reporting module used a 3-step workflow:
+            #   draft → validated → published
+            # The redesigned UI simplifies this to a 2-step workflow:
+            #   draft → released
+            # This maps any existing legacy statuses so templates retain their
+            # "approved" state under the new terminology.
+            cursor.execute("""
+                UPDATE report_builder_templates
+                SET status = 'released'
+                WHERE status IN ('published', 'validated');
             """)
             actual_conn.commit()
     except Exception as e:

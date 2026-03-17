@@ -7,6 +7,7 @@ Stores branding data in a generic system_settings table.
 
 import logging
 from flask import Blueprint, jsonify, request
+from flask_login import login_required
 from contextlib import closing
 
 logger = logging.getLogger(__name__)
@@ -73,6 +74,7 @@ def get_client_logo():
 
 # ── POST (upload/update) client logo ────────────────────────────
 @branding_bp.route('/settings/client-logo', methods=['POST'])
+@login_required
 def set_client_logo():
     _ensure_table()
     data = request.get_json(silent=True) or {}
@@ -104,6 +106,7 @@ def set_client_logo():
 
 # ── DELETE client logo ───────────────────────────────────────────
 @branding_bp.route('/settings/client-logo', methods=['DELETE'])
+@login_required
 def delete_client_logo():
     _ensure_table()
     try:
