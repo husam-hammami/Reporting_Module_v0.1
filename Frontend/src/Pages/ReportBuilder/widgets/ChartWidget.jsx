@@ -89,19 +89,13 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
   const chartRef = useRef(null);
   const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
-  const createGradient = useCallback((ctx, color) => {
-    if (!ctx?.chart?.chartArea) return color;
-    const { top, bottom } = ctx.chart.chartArea;
-    const gradient = ctx.chart.ctx.createLinearGradient(0, top, 0, bottom);
-    gradient.addColorStop(0, color);
-    gradient.addColorStop(1, color + 'cc');
-    return gradient;
-  }, []);
-
   const chartData = useMemo(() => {
     const labels = series.length > 0
       ? series.map((s) => s.label || s.dataSource?.tagName || 'Series')
       : ['Sample'];
+    const barColors = series.length > 0
+      ? series.map((s, i) => s.color || colors[i % colors.length])
+      : [colors[0]];
     const datasets = [{
       label: config.title || 'Values',
       data: series.length > 0
@@ -111,23 +105,14 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
             return v != null ? Number(v) : 0;
           })
         : [30, 45, 60],
-      backgroundColor: (ctx) => {
-        const baseColors = series.length > 0
-          ? series.map((s, i) => s.color || colors[i % colors.length])
-          : [colors[0]];
-        const idx = ctx.dataIndex;
-        const c = baseColors[idx % baseColors.length];
-        return createGradient(ctx, c);
-      },
-      borderColor: series.length > 0
-        ? series.map((s, i) => s.color || colors[i % colors.length])
-        : [colors[0]],
-      borderWidth: 1,
+      backgroundColor: barColors,
+      borderColor: barColors,
+      borderWidth: 0,
       borderRadius: 6,
       borderSkipped: false,
     }];
     return { labels, datasets };
-  }, [series, tagValues, config.title, colors, createGradient]);
+  }, [series, tagValues, config.title, colors]);
 
   const annotationObjs = useMemo(() => {
     if (!config.annotations?.length) return {};
@@ -210,8 +195,7 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
       x: {
         display: config.showGrid !== false,
         grid: {
-          color: config.gridColor || (isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.04)'),
-          lineWidth: 0.5,
+          display: false,
         },
         ticks: {
           color: isDark ? '#64748b' : '#6b7280',
@@ -225,9 +209,7 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
       y: {
         display: config.showGrid !== false,
         grid: {
-          color: config.gridColor || (isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.04)'),
-          lineWidth: 0.5,
-          drawBorder: false,
+          display: false,
         },
         ticks: {
           color: isDark ? '#64748b' : '#6b7280',
