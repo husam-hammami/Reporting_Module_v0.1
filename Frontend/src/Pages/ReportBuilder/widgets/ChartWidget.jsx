@@ -87,13 +87,14 @@ export default function ChartWidget({ config, tagValues, tagHistory, isPreview =
 
 function BarChartView({ config, series, colors, tagValues, isPreview, isCapturing }) {
   const chartRef = useRef(null);
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
   const createGradient = useCallback((ctx, color) => {
-    if (!ctx?.chart?.chartArea) return color + 'cc';
+    if (!ctx?.chart?.chartArea) return color;
     const { top, bottom } = ctx.chart.chartArea;
     const gradient = ctx.chart.ctx.createLinearGradient(0, top, 0, bottom);
-    gradient.addColorStop(0, color + 'ee');
-    gradient.addColorStop(1, color + '33');
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(1, color + 'cc');
     return gradient;
   }, []);
 
@@ -158,7 +159,7 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
   const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
-    animation: isCapturing ? false : { duration: 0 },
+    animation: isCapturing ? false : { duration: 800, easing: 'easeOutQuart' },
     layout: {
       padding: { top: config.title ? 22 : 4, right: 4, bottom: 4, left: 4 },
     },
@@ -169,11 +170,11 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
         align: 'start',
         maxHeight: 60,
         labels: {
-          color: 'var(--rb-text-muted, #64748b)',
+          color: isDark ? '#64748b' : '#6b7280',
           boxWidth: 8,
           boxHeight: 3,
           padding: 6,
-          font: { size: 9, family: 'monospace', weight: '600' },
+          font: { size: 10, weight: '500' },
           usePointStyle: true,
           pointStyle: 'rectRounded',
         },
@@ -182,20 +183,21 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
         enabled: true,
         mode: 'index',
         intersect: false,
-        backgroundColor: 'var(--rb-panel, #ffffff)',
-        titleFont: { size: 10, weight: '700', family: 'monospace' },
-        titleColor: 'var(--rb-text, #111827)',
-        bodyFont: { size: 10, family: 'monospace' },
-        bodyColor: 'var(--rb-text-secondary, #374151)',
-        bodySpacing: 4,
-        padding: 10,
+        backgroundColor: isDark ? '#111827' : '#ffffff',
+        titleFont: { size: 13, weight: '600' },
+        titleColor: isDark ? '#f1f5f9' : '#111827',
+        bodyFont: { size: 12, weight: '500' },
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        bodySpacing: 6,
+        padding: { top: 10, bottom: 10, left: 14, right: 14 },
         cornerRadius: 8,
-        borderColor: 'var(--rb-border, #e5e7eb)',
+        borderColor: isDark ? '#1e293b' : '#e5e7eb',
         borderWidth: 1,
         displayColors: true,
         boxWidth: 8,
         boxHeight: 8,
         boxPadding: 4,
+        usePointStyle: true,
         callbacks: {
           label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y}`,
         },
@@ -208,36 +210,37 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
       x: {
         display: config.showGrid !== false,
         grid: {
-          color: config.gridColor || 'var(--border-faint, #f3f4f6)',
+          color: config.gridColor || (isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.04)'),
           lineWidth: 0.5,
         },
         ticks: {
-          color: '#64748b',
-          font: { size: 9, family: 'monospace', weight: '600' },
+          color: isDark ? '#64748b' : '#6b7280',
+          font: { size: 11 },
           padding: 4,
         },
         border: {
-          color: 'var(--border-faint, #f3f4f6)',
+          display: false,
         },
       },
       y: {
         display: config.showGrid !== false,
         grid: {
-          color: config.gridColor || 'var(--border-faint, #f3f4f6)',
+          color: config.gridColor || (isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.04)'),
           lineWidth: 0.5,
+          drawBorder: false,
         },
         ticks: {
-          color: '#64748b',
-          font: { size: 9, family: 'monospace', weight: '600' },
+          color: isDark ? '#64748b' : '#6b7280',
+          font: { size: 11 },
           padding: 4,
         },
         border: {
-          color: 'var(--border-faint, #f3f4f6)',
+          display: false,
         },
         beginAtZero: true,
       },
     },
-  }), [config, isCapturing, annotationObjs]);
+  }), [config, isCapturing, annotationObjs, isDark]);
 
   return (
     <div className="relative flex flex-col h-full w-full" style={{ padding: 0 }}>
