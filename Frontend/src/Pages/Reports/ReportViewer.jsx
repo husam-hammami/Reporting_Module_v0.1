@@ -64,25 +64,45 @@ function getDateRange(preset) {
    REPORT LIST
    ══════════════════════════════════════════════════════════════════ */
 
-function ReportList({ onSelect }) {
+function getReportType(t) {
+  try {
+    const lc = typeof t?.layout_config === 'string' ? JSON.parse(t.layout_config) : (t?.layout_config || {});
+    return lc.reportType || 'dashboard';
+  } catch { return 'dashboard'; }
+}
+
+function ReportList({ onSelect, filterType }) {
   const { templates, loading } = useReportTemplates();
 
   if (loading) return <div className="text-center py-16 text-[12px] text-[#8898aa]">Loading...</div>;
 
-  if (templates.length === 0) {
+  // When filterType is set (Dashboards / Table Reports pages), only show released reports of that type
+  const filtered = filterType
+    ? templates.filter((t) => {
+        const rt = getReportType(t);
+        const matchesType = filterType === 'dashboard' ? rt !== 'paginated' : rt === 'paginated';
+        return matchesType && t.status === 'released';
+      })
+    : templates;
+
+  if (filtered.length === 0) {
     return (
       <div className="text-center py-20">
-        <h3 className="text-[14px] font-semibold text-[#3a4a5c] dark:text-[#c1ccd9] mb-1">No reports yet</h3>
-        <p className="text-[12px] text-[#8898aa] max-w-sm mx-auto">Build a report in Report Builder first.</p>
+        <h3 className="text-[14px] font-semibold text-[#3a4a5c] dark:text-[#c1ccd9] mb-1">
+          {filterType ? 'No released reports' : 'No reports yet'}
+        </h3>
+        <p className="text-[12px] text-[#8898aa] max-w-sm mx-auto">
+          {filterType ? 'Release a report from the Builder to see it here.' : 'Build a report in Report Builder first.'}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
-      {templates.map((t) => {
+      {filtered.map((t) => {
         const status = t.status || 'draft';
-        const reportType = (() => { try { const lc = typeof t?.layout_config === 'string' ? JSON.parse(t.layout_config) : (t?.layout_config || {}); return lc.reportType || 'dashboard'; } catch { return 'dashboard'; } })();
+        const reportType = getReportType(t);
         return (
           <button
             key={t.id}
@@ -784,13 +804,29 @@ export default function ReportViewer() {
 export function DashboardViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
-  if (!id) return <ReportViewer />;
-  return <SingleReportView reportId={id} onBack={() => navigate('/reporting')} />;
+  if (id) return <SingleReportView reportId={id} onBack={() => navigate('/dashboards')} />;
+  return (
+    <div className="min-h-[calc(100vh-80px)] bg-transparent">
+      <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-gray-700 bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm">
+        <h1 className="text-[15px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Dashboards</h1>
+        <p className="text-[11px] text-[#8898aa] mt-0.5">Released dashboard reports</p>
+      </div>
+      <ReportList onSelect={(rid) => navigate(`/dashboards/${rid}`)} filterType="dashboard" />
+    </div>
+  );
 }
 
 export function TableReportViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
-  if (!id) return <ReportViewer />;
-  return <SingleReportView reportId={id} onBack={() => navigate('/reporting')} />;
+  if (id) return <SingleReportView reportId={id} onBack={() => navigate('/reports')} />;
+  return (
+    <div className="min-h-[calc(100vh-80px)] bg-transparent">
+      <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-gray-700 bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm">
+        <h1 className="text-[15px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Table Reports</h1>
+        <p className="text-[11px] text-[#8898aa] mt-0.5">Released table reports</p>
+      </div>
+      <ReportList onSelect={(rid) => navigate(`/reports/${rid}`)} filterType="paginated" />
+    </div>
+  );
 }
