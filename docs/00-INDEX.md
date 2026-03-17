@@ -45,19 +45,19 @@ Welcome to the Reporting Module documentation. This system connects to industria
 | [DATABASE-SCHEMA](reference/DATABASE-SCHEMA.md) | All tables, columns, and relationships |
 | [TROUBLESHOOTING](reference/TROUBLESHOOTING.md) | Common issues, error messages, and fixes |
 
----
-
-## Quick Links
-
-These standalone docs live outside the numbered series:
+### Plans
 
 | Document | Description |
 |----------|-------------|
-| [QUICKSTART.md](../QUICKSTART.md) | Get the system running locally in 5 minutes |
-| [LOCAL_DB_SETUP.md](LOCAL_DB_SETUP.md) | PostgreSQL database creation and migration steps |
-| [LOCAL_DEV_SETUP.md](LOCAL_DEV_SETUP.md) | Full local development environment setup |
-| [TIA_TAGS_IMPORT.md](TIA_TAGS_IMPORT.md) | Importing tags from TIA Portal exports |
+| [Desktop_App_Plan_2026-03-18](Desktop_App_Plan_2026-03-18.md) | Electron + PyInstaller desktop app with license enforcement |
+
+### Templates & Seed Data
+
+| Document | Description |
+|----------|-------------|
+| [Templates/README](Templates/README.md) | Report template seed scripts |
+| [report-templates/](report-templates/) | JSON report template files |
 
 ---
 
-*Reporting Module v0.1 -- Salalah Project*
+*Reporting Module v0.1 -- Hercules Project*
