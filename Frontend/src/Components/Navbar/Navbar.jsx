@@ -1,133 +1,149 @@
 import { useContext, useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
-import IconButton from '@mui/material/IconButton';
-import { Menu, X } from 'lucide-react';
-import DarkModeButton from '../Common/DarkModeButton';
+import { Menu, LogOut, Moon, Sun, User, Activity } from 'lucide-react';
 import HerculesNewLogo from '../../Assets/Hercules_New.png';
 import AsmLogo from '../../Assets/Asm_Logo.png';
 import { NavbarContext } from '../../Context/NavbarContext';
 import { AuthContext } from '../../Context/AuthProvider';
-import { Tooltip } from '@mui/material';
 import { useSystemStatus } from '../../Context/SystemStatusContext';
-import { LogOut, ChevronDown } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { DarkModeContext } from '../../Context/DarkModeProvider';
+import { motion, AnimatePresence } from 'framer-motion';
 import '../../Pages/ReportBuilder/reportBuilderTheme.css';
 
+const PAGE_LABELS = {
+  'report-builder': 'Builder',
+  'dashboards': 'Dashboards',
+  'reports': 'Table Reports',
+  'settings': 'Engineering',
+};
+
 function Navbar({ isBlueprint = false }) {
-  const contextValue = useContext(NavbarContext);
-  const { open, setOpen } = contextValue || {};
+  const { open, setOpen } = useContext(NavbarContext);
   const { auth, logout } = useContext(AuthContext);
   const [menuOpen, setMenuOpen] = useState(false);
   const { demoMode, loading: statusLoading } = useSystemStatus();
+  const { mode, setMode } = useContext(DarkModeContext);
+  const isDark = mode === 'dark';
+  const location = useLocation();
+
+  const pathSegments = location.pathname.split('/').filter(Boolean);
+  const currentPage = PAGE_LABELS[pathSegments[0]] || 'Hercules SFMS';
 
   return (
     <AppBar
       position="fixed"
       elevation={0}
       sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
-      className="!bg-white dark:!bg-[#111827] !shadow-none"
-      style={{
-        borderBottom: undefined,
-      }}
+      className="!bg-[#111827] !shadow-none border-b border-[#1e293b]"
     >
       <Toolbar
         variant="dense"
-        className="!min-h-[80px] !px-4 flex justify-between items-center"
+        className="!min-h-[72px] !px-5 flex items-center justify-between"
       >
         <div className="flex items-center gap-3 shrink-0">
-          {!isBlueprint && auth && (
-            <Tooltip title="Toggle menu" placement="bottom" arrow disableInteractive>
-              <IconButton
-                size="small"
-                edge="start"
-                onClick={() => setOpen?.((prev) => !prev)}
-                className="!text-[#64748b] dark:!text-[#8899ab] hover:!bg-black/[0.04] dark:hover:!bg-[#0d1320] !p-1.5 !rounded-lg !transition-all !duration-200"
-              >
-                {open ? <X size={18} strokeWidth={2} /> : <Menu size={18} strokeWidth={2} />}
-              </IconButton>
-            </Tooltip>
-          )}
+          <button
+            onClick={() => setOpen(!open)}
+            className="p-2 hover:bg-[#1a2233] rounded-lg transition-colors text-[#f0f4f8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22d3ee]"
+          >
+            <Menu size={22} />
+          </button>
 
           <img
             src={HerculesNewLogo}
             alt="HERCULES"
-            className="h-14 w-auto object-contain shrink-0 dark:[filter:brightness(0)_invert(1)_brightness(0.85)]"
+            className="h-14 w-auto object-contain shrink-0"
+            style={{ filter: 'brightness(0) invert(1) brightness(0.95)' }}
           />
-
-          <div className="flex items-center gap-1.5 ml-1">
-            <DarkModeButton />
-
-            {!statusLoading && demoMode !== null && (
-              <Tooltip title={demoMode ? "Demo mode — simulated data" : "Live mode — real PLC data"} placement="bottom" arrow disableInteractive>
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider select-none cursor-default transition-all duration-300 ${
-                  demoMode
-                    ? 'bg-amber-500/10 text-amber-500 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-500/20'
-                    : 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-500/20'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    demoMode
-                      ? 'bg-amber-500 animate-live-pulse'
-                      : 'bg-emerald-500 animate-live-pulse'
-                  }`} />
-                  {demoMode ? 'DEMO' : 'LIVE'}
-                </div>
-              </Tooltip>
-            )}
-          </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3 absolute left-1/2 -translate-x-1/2">
+          {!statusLoading && demoMode !== null && (
+            <div className={`flex items-center gap-2.5 px-4 py-1.5 rounded-full border ${
+              demoMode
+                ? 'bg-amber-500/5 text-amber-400 border-amber-500/20'
+                : 'bg-emerald-500/5 text-[#34d399] border-emerald-500/20'
+            }`}>
+              <span className={`w-2 h-2 rounded-full animate-pulse shadow-[0_0_6px_currentColor] ${
+                demoMode ? 'bg-amber-500' : 'bg-[#34d399]'
+              }`} />
+              <span className="text-[11px] font-bold tracking-widest">{demoMode ? 'DEMO' : 'LIVE'}</span>
+              <span className="text-[10px] text-[#556677] font-medium tracking-wide">{currentPage}</span>
+            </div>
+          )}
+          {(statusLoading || demoMode === null) && (
+            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#1e293b] bg-[#0a0f1a]">
+              <Activity size={13} className="text-[#556677]" />
+              <span className="text-[10px] text-[#556677] font-medium tracking-wide">{currentPage}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
           <img
             src={AsmLogo}
             alt="ASM"
-            className="h-9 w-auto object-contain shrink-0 opacity-60 hover:opacity-100 transition-opacity duration-300 dark:rounded dark:bg-white/90 dark:px-1.5 dark:py-0.5"
+            className="h-12 w-auto object-contain shrink-0 rounded-lg bg-white/95 px-2.5 py-1 shadow-sm"
           />
+
+          <div className="h-7 w-px bg-[#1e293b]" />
+
+          <button
+            onClick={() => setMode(isDark ? 'light' : 'dark')}
+            className="p-2 hover:bg-[#1a2233] rounded-lg transition-colors text-[#8899ab] hover:text-[#f0f4f8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22d3ee]"
+            title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+          >
+            <motion.div 
+              initial={false}
+              animate={{ rotate: isDark ? 0 : 180, scale: isDark ? 1 : 0.8 }}
+              transition={{ duration: 0.3 }}
+            >
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </motion.div>
+          </button>
+
           {auth && (
             <div className="relative">
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-black/[0.04] dark:hover:bg-[#0d1320] transition-all duration-200 group"
+                className="w-9 h-9 rounded-lg bg-[#1a2233] hover:bg-[#222d42] flex items-center justify-center border border-[#2a3347] text-[#8899ab] hover:text-[#f0f4f8] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22d3ee] shadow-sm"
               >
-                <div className="w-8 h-8 rounded bg-gradient-to-br from-[#475569] to-[#334155] dark:from-[#121e2e] dark:to-[#162232] dark:border dark:border-[#1e293b] text-white dark:text-[var(--brand)] text-[12px] font-bold flex items-center justify-center">
-                  {auth.username?.charAt(0)?.toUpperCase()}
-                </div>
-                <div className="hidden sm:flex flex-col items-start">
-                  <span className="text-[13px] font-medium text-[#334155] dark:text-[#e8edf5] leading-tight">
-                    {auth.username}
-                  </span>
-                  <span className="text-[10px] text-[#94a3b8] dark:text-[#556677] capitalize leading-tight">
-                    {auth.role}
-                  </span>
-                </div>
-                <ChevronDown size={13} className="text-[#94a3b8] dark:text-[#556677] group-hover:text-[#64748b] dark:group-hover:text-[#8899ab] transition-colors" />
+                <User size={18} />
               </button>
 
-              {menuOpen && (
-                <>
-                  <div className="fixed inset-0 z-50" onClick={() => setMenuOpen(false)} />
-                  <div
-                    className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-[#111827] border border-black/[0.08] dark:border-[#1e293b] rounded-lg shadow-xl min-w-[160px] py-1 animate-scale-in"
-                  >
-                    <div className="px-3 py-2 border-b border-black/[0.06] dark:border-[#1e293b]">
-                      <p className="text-[12px] font-semibold text-[#334155] dark:text-[#e8edf5]">{auth.username}</p>
-                      <p className="text-[10px] text-[#94a3b8] dark:text-[#556677] capitalize">{auth.role}</p>
-                    </div>
-                    <button
-                      onClick={() => { setMenuOpen(false); logout(); }}
-                      className="w-full text-left px-3 py-2 text-[12px] text-[#64748b] dark:text-[#8899ab] hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2"
+              <AnimatePresence>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 z-50 bg-[#111827] border border-[#1e293b] rounded-xl shadow-2xl min-w-[180px] py-1.5 overflow-hidden"
                     >
-                      <LogOut size={14} />
-                      Sign out
-                    </button>
-                  </div>
-                </>
-              )}
+                      <div className="px-4 py-3 border-b border-[#1e293b] bg-[#0a0f1a]/50">
+                        <p className="text-sm font-bold text-[#f0f4f8]">{auth.username}</p>
+                        <p className="text-[11px] text-[#8899ab] font-medium tracking-wide uppercase mt-0.5">{auth.role}</p>
+                      </div>
+                      <div className="p-1.5">
+                        <button
+                          onClick={() => { setMenuOpen(false); logout(); }}
+                          className="w-full text-left px-3 py-2 text-xs font-semibold text-[#8899ab] hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-colors flex items-center gap-2.5"
+                        >
+                          <LogOut size={16} />
+                          Sign out
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
       </Toolbar>
-
-      <div className="h-px w-full bg-[#e5e7eb] dark:bg-[#1e293b]" />
     </AppBar>
   );
 }

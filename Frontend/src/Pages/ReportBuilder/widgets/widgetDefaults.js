@@ -51,7 +51,7 @@ export const WIDGET_CATALOG = [
       decimals: 1,
       showSparkline: false,
       thresholds: [],
-      color: '#2563eb',
+      color: '#0098cc',
       showCard: true,
       valueFontSize: 'auto',
       titleFontSize: 'md',
@@ -66,7 +66,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Gauge',
     description: 'Radial progress indicator',
     defaultW: 2,
-    defaultH: 2,
+    defaultH: 1,
     defaultConfig: {
       title: 'Gauge',
       dataSource: { type: 'tag', tagName: '', formula: '', groupTags: [], aggregation: 'last' },
@@ -92,7 +92,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Cylinder',
     description: '2.5D cylinder fill level (grain silo)',
     defaultW: 2,
-    defaultH: 3,
+    defaultH: 1,
     defaultConfig: {
       title: 'Silo',
       dataSource: { type: 'tag', tagName: '', formula: '', groupTags: [], aggregation: 'last' },
@@ -127,7 +127,7 @@ export const WIDGET_CATALOG = [
       unit: '',
       decimals: 1,
       thresholds: [],
-      color: '#2563eb',
+      color: '#0098cc',
       showCard: true,
       valueFontSize: 'auto',
       titleFontSize: 'md',
@@ -144,7 +144,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'TrendingUp',
     description: 'Time-series line or area chart',
     defaultW: 4,
-    defaultH: 3,
+    defaultH: 2,
     defaultConfig: {
       title: 'Line Chart',
       chartType: 'line',
@@ -166,7 +166,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'BarChart3',
     description: 'Categorical or time-based bars',
     defaultW: 4,
-    defaultH: 3,
+    defaultH: 2,
     defaultConfig: {
       title: 'Bar Chart',
       chartType: 'bar',
@@ -182,6 +182,25 @@ export const WIDGET_CATALOG = [
     },
   },
 
+  {
+    type: 'piechart',
+    category: 'trends',
+    label: 'Pie Chart',
+    lucideIcon: 'PieChart',
+    description: 'Proportional doughnut / pie chart',
+    defaultW: 3,
+    defaultH: 2,
+    defaultConfig: {
+      title: 'Pie Chart',
+      series: [],
+      doughnut: true,
+      showLegend: true,
+      showCard: true,
+      showTitle: true,
+      titleFontSize: 'md',
+    },
+  },
+
   // ── Data ──
   {
     type: 'table',
@@ -190,7 +209,7 @@ export const WIDGET_CATALOG = [
     lucideIcon: 'Table2',
     description: 'Data table with computed columns',
     defaultW: 4,
-    defaultH: 3,
+    defaultH: 2,
     defaultConfig: {
       title: 'Data Table',
       tableColumns: [],

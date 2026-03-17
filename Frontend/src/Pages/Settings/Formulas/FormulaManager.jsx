@@ -1,11 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { FaPlus, FaEdit, FaTrash, FaFlask } from 'react-icons/fa';
+import { Plus, Edit3, Trash2, FlaskConical, X, Beaker } from 'lucide-react';
 import FormulaEditor from '../../ReportBuilder/formulas/FormulaEditor';
 import { useEmulator } from '../../../Context/EmulatorContext';
 import { useAvailableTags } from '../../../Hooks/useReportBuilder';
 import { evaluateFormula } from '../../ReportBuilder/formulas/formulaEngine';
+import { DarkModeContext } from '../../../Context/DarkModeProvider';
 import '../../ReportBuilder/reportBuilderTheme.css';
+
+function useTheme() {
+  const { mode } = useContext(DarkModeContext);
+  const dark = mode === 'dark';
+  return {
+    dark,
+    pageBg: dark ? '#0a0f1a' : '#f3f4f6',
+    surface: dark ? '#111827' : '#ffffff',
+    surfaceAlt: dark ? '#0a0f1a' : '#f9fafb',
+    border: dark ? '#1e293b' : '#e5e7eb',
+    text: dark ? '#f0f4f8' : '#111827',
+    textSecondary: dark ? '#8899ab' : '#6b7280',
+    textMuted: dark ? '#556677' : '#9ca3af',
+    accent: dark ? '#22d3ee' : '#0369a1',
+    accentBg: dark ? 'rgba(34,211,238,0.10)' : 'rgba(3,105,161,0.08)',
+    hoverBg: dark ? 'rgba(10,15,26,0.4)' : 'rgba(0,0,0,0.03)',
+    modalBg: dark ? '#111827' : '#ffffff',
+    modalInputBg: dark ? '#0a0f1a' : '#f9fafb',
+    btnText: dark ? '#0a0f1a' : '#ffffff',
+    cardHoverBorder: dark ? 'rgba(34,211,238,0.3)' : 'rgba(3,105,161,0.25)',
+    unitBg: dark ? 'rgba(71,85,105,0.15)' : 'rgba(71,85,105,0.08)',
+    unitColor: dark ? '#94a3b8' : '#475569',
+  };
+}
 
 const SEED = [
   { id: 'f1', name: 'Milling Loss', formula: '100 - {Flour_Extraction} - {Bran_Extraction}', unit: '%', description: 'Total milling loss percentage' },
@@ -28,7 +53,6 @@ function save(arr) {
   window.dispatchEvent(new Event('formulasUpdated'));
 }
 
-/* Render formula with {TagName} as accent-colored chips */
 function FormulaWithChips({ formula }) {
   if (!formula) return null;
   const parts = [];
@@ -46,13 +70,11 @@ function FormulaWithChips({ formula }) {
 
 export default function FormulaManager() {
   const [formulas, setFormulas] = useState(load);
-  const [editing, setEditing] = useState(undefined); // undefined = closed, null = new, object = edit
+  const [editing, setEditing] = useState(undefined);
   const [draft, setDraft] = useState({ name: '', formula: '', unit: '', description: '' });
   const { tags } = useAvailableTags();
   const { tagValues, enabled: emulatorOn } = useEmulator();
-
-  const inputCls = 'w-full text-[12px] rounded-lg border border-[#e3e9f0] bg-white dark:bg-[#131b2d] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] placeholder-[#8898aa] px-3 py-2 focus:outline-none focus:border-brand focus:ring-1 focus:ring-[#0e74904d] transition-colors';
-  const labelCls = 'text-[11px] font-medium text-[#6b7f94] mb-1.5 block';
+  const t = useTheme();
 
   const openNew = () => { setEditing(null); setDraft({ name: '', formula: '', unit: '', description: '' }); };
   const openEdit = (f) => { setEditing(f); setDraft({ name: f.name, formula: f.formula, unit: f.unit || '', description: f.description || '' }); };
@@ -81,83 +103,195 @@ export default function FormulaManager() {
   const isFormOpen = editing !== undefined;
 
   return (
-    <div className="p-5">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Saved Formulas</h2>
-          <p className="text-[11px] text-[#8898aa] mt-0.5">Reusable formulas available in Report Builder</p>
+    <div className="min-h-[calc(100vh-72px)]" style={{ background: t.pageBg }}>
+      <div className="max-w-[1400px] mx-auto px-6 md:px-8 lg:px-12 py-6 md:py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-xl font-bold" style={{ color: t.text }}>Saved Formulas</h1>
+            <p className="text-sm mt-1" style={{ color: t.textSecondary }}>Reusable formulas available in Report Builder</p>
+          </div>
+          <button
+            onClick={openNew}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{ background: t.accent, color: t.btnText, '--tw-ring-color': t.accent, '--tw-ring-offset-color': t.pageBg }}
+          >
+            <Plus size={16} strokeWidth={2.5} /> New Formula
+          </button>
         </div>
-        <button onClick={openNew} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg bg-brand hover:bg-brand-hover text-white transition-colors">
-          <FaPlus size={10} /> New Formula
-        </button>
-      </div>
 
-      {/* Cards */}
-      <div className="space-y-3">
-        {formulas.length === 0 && (
-          <div className="text-center py-12 text-[12px] text-[#8898aa]">No saved formulas. Create one to reuse across reports.</div>
-        )}
-        {formulas.map((f) => {
-          const liveResult = emulatorOn ? evaluateFormula(f.formula, tagValues) : null;
-          return (
-            <div key={f.id} className="bg-white dark:bg-[#131b2d] border border-[#e3e9f0] dark:border-[#1e2d40] rounded-lg p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <FaFlask size={12} className="text-[#7c3aed] flex-shrink-0" />
-                    <h3 className="text-[13px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{f.name}</h3>
-                    {f.unit && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f5f3ff] text-[#7c3aed] font-medium">{f.unit}</span>}
+        {formulas.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center py-32 text-center rounded-xl shadow-sm relative overflow-hidden"
+            style={{ background: t.surface, border: `1px solid ${t.border}` }}
+          >
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
+              style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}>
+              <FlaskConical size={36} style={{ color: t.accent }} />
+            </div>
+            <h3 className="text-lg font-bold mb-2" style={{ color: t.text }}>No saved formulas</h3>
+            <p className="text-sm mb-8 max-w-sm" style={{ color: t.textSecondary }}>Create reusable formulas to use across your reports.</p>
+            <button
+              onClick={openNew}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg"
+              style={{ background: t.accent, color: t.btnText }}
+            >
+              <Plus size={16} /> Create First Formula
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+            <div
+              className="grid grid-cols-[1.5fr_2fr_100px_80px] items-center px-6 py-4 text-[11px] uppercase tracking-wider font-bold"
+              style={{ color: t.textMuted, borderBottom: `1px solid ${t.border}`, background: t.dark ? 'rgba(10,15,26,0.5)' : 'rgba(0,0,0,0.02)' }}
+            >
+              <span>Name</span>
+              <span>Expression</span>
+              <span>Live Value</span>
+              <span className="text-right">Actions</span>
+            </div>
+            {formulas.map((f) => {
+              const liveResult = emulatorOn ? evaluateFormula(f.formula, tagValues) : null;
+              return (
+                <div
+                  key={f.id}
+                  className="grid grid-cols-[1.5fr_2fr_100px_80px] items-center px-6 py-4 transition-all duration-200 group cursor-default"
+                  style={{ borderBottom: `1px solid ${t.border}` }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = t.hoverBg}
+                  onMouseLeave={(e) => e.currentTarget.style.background = ''}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <FlaskConical size={14} className="flex-shrink-0" style={{ color: t.accent }} />
+                      <span className="text-[15px] font-semibold truncate" style={{ color: t.text }}>{f.name}</span>
+                      {f.unit && (
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0"
+                          style={{ background: t.unitBg, color: t.unitColor }}
+                        >
+                          {f.unit}
+                        </span>
+                      )}
+                    </div>
+                    {f.description && <p className="text-xs truncate" style={{ color: t.textSecondary }}>{f.description}</p>}
                   </div>
-                  {f.description && <p className="text-[11px] text-[#8898aa] mb-2">{f.description}</p>}
-                  <div className="flex items-center gap-2">
-                    <code className="text-[11px] font-mono text-[#6b7f94] bg-[#f5f8fb] dark:bg-[#0d1825] px-2 py-1 rounded border border-[#e3e9f0] dark:border-[#1e2d40] truncate max-w-[400px] inline-flex items-center gap-0.5 flex-wrap"><FormulaWithChips formula={f.formula} /></code>
-                    {emulatorOn && liveResult != null && (
-                      <span className="text-[12px] font-semibold text-[#059669] dark:text-[#34d399] flex-shrink-0">
-                        = {typeof liveResult === 'number' ? liveResult.toFixed(2) : String(liveResult)}{f.unit ? ` ${f.unit}` : ''}
-                      </span>
-                    )}
+
+                  <code
+                    className="text-[11px] font-mono px-2.5 py-1.5 rounded-lg truncate inline-flex items-center gap-0.5 flex-wrap"
+                    style={{ color: t.textSecondary, background: t.surfaceAlt, border: `1px solid ${t.border}` }}
+                  >
+                    <FormulaWithChips formula={f.formula} />
+                  </code>
+
+                  <span className="text-sm font-mono font-medium" style={{ color: emulatorOn && liveResult != null ? (t.dark ? '#34d399' : '#059669') : t.textMuted }}>
+                    {emulatorOn && liveResult != null
+                      ? `${typeof liveResult === 'number' ? liveResult.toFixed(2) : String(liveResult)}${f.unit ? ` ${f.unit}` : ''}`
+                      : '—'}
+                  </span>
+
+                  <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button
+                      onClick={() => openEdit(f)}
+                      className="p-2 rounded-lg transition-colors"
+                      style={{ color: t.textSecondary }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = t.accent; e.currentTarget.style.background = t.accentBg; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = t.textSecondary; e.currentTarget.style.background = ''; }}
+                      title="Edit"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(f.id)}
+                      className="p-2 rounded-lg transition-colors hover:bg-red-500/10 hover:text-red-400"
+                      style={{ color: t.textSecondary }}
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-1 flex-shrink-0 ml-3">
-                  <button onClick={() => openEdit(f)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors"><FaEdit size={12} /></button>
-                  <button onClick={() => handleDelete(f.id)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors"><FaTrash size={12} /></button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {isFormOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center"
+          style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)' }}
+          onClick={() => setEditing(undefined)}
+        >
+          <div
+            className="report-builder w-full max-w-lg rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col mx-4"
+            style={{ background: t.modalBg, border: `1px solid ${t.border}` }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-6 pt-5 pb-4 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${t.border}` }}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: t.accentBg }}>
+                  <FlaskConical size={16} style={{ color: t.accent }} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold" style={{ color: t.text }}>{editing ? 'Edit Formula' : 'New Formula'}</h2>
+                  <p className="text-[10px] uppercase tracking-wider" style={{ color: t.textMuted }}>Formula Definition</p>
                 </div>
               </div>
+              <button onClick={() => setEditing(undefined)} className="p-1.5 rounded-lg transition-colors" style={{ color: t.textSecondary }}>
+                <X size={16} />
+              </button>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Edit/Create modal — portal to body so dropdowns don't clip */}
-      {isFormOpen && createPortal(
-        <div className="fixed inset-0 bg-black/40 z-[99999] flex items-center justify-center" onClick={() => setEditing(undefined)}>
-          <div className="report-builder bg-white dark:bg-[#131b2d] rounded-xl border border-[#e3e9f0] dark:border-[#1e2d40] shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col mx-4" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3 border-b border-[#e3e9f0] dark:border-[#1e2d40] flex-shrink-0">
-              <h2 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">{editing ? 'Edit Formula' : 'New Formula'}</h2>
-            </div>
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-4 space-y-4 min-h-0">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 space-y-5 min-h-0">
               <div>
-                <label className={labelCls}>Name *</label>
-                <input value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} className={inputCls} placeholder="e.g. Milling Loss" />
+                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Name *</label>
+                <input
+                  value={draft.name}
+                  onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
+                  style={{ background: t.modalInputBg, border: `1px solid ${t.border}`, color: t.text }}
+                  placeholder="e.g. Milling Loss"
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelCls}>Unit</label>
-                  <input value={draft.unit} onChange={e => setDraft(d => ({ ...d, unit: e.target.value }))} className={inputCls} placeholder="e.g. %" />
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Unit</label>
+                  <input
+                    value={draft.unit}
+                    onChange={e => setDraft(d => ({ ...d, unit: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
+                    style={{ background: t.modalInputBg, border: `1px solid ${t.border}`, color: t.text }}
+                    placeholder="e.g. %"
+                  />
                 </div>
                 <div>
-                  <label className={labelCls}>Description</label>
-                  <input value={draft.description} onChange={e => setDraft(d => ({ ...d, description: e.target.value }))} className={inputCls} placeholder="What this calculates" />
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Description</label>
+                  <input
+                    value={draft.description}
+                    onChange={e => setDraft(d => ({ ...d, description: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
+                    style={{ background: t.modalInputBg, border: `1px solid ${t.border}`, color: t.text }}
+                    placeholder="What this calculates"
+                  />
                 </div>
               </div>
               <div className="relative">
-                <label className={labelCls}>Formula Expression *</label>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Formula Expression *</label>
                 <FormulaEditor value={draft.formula} onChange={v => setDraft(d => ({ ...d, formula: v }))} tags={tags} tagValues={tagValues} />
               </div>
             </div>
-            <div className="px-5 py-3 border-t border-[#e3e9f0] dark:border-[#1e2d40] flex justify-end gap-2 flex-shrink-0">
-              <button onClick={() => setEditing(undefined)} className="px-4 py-2 text-[11px] font-medium rounded-lg border border-[#e3e9f0] text-[#6b7f94] hover:bg-[#f5f8fb] transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={!draft.name.trim() || !draft.formula.trim()} className="px-4 py-2 text-[11px] font-medium rounded-lg bg-brand hover:bg-brand-hover text-white disabled:opacity-40 transition-colors">
+            <div className="px-6 py-4 flex justify-end gap-2 flex-shrink-0" style={{ borderTop: `1px solid ${t.border}` }}>
+              <button
+                onClick={() => setEditing(undefined)}
+                className="px-4 py-2 text-xs font-medium rounded-lg transition-colors"
+                style={{ color: t.textSecondary }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!draft.name.trim() || !draft.formula.trim()}
+                className="px-4 py-2 text-xs font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: t.accent, color: t.btnText }}
+              >
                 {editing ? 'Save' : 'Create Formula'}
               </button>
             </div>

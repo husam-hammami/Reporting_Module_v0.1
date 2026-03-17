@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { Tooltip } from '@mui/material';
-import { ChevronDown, Search, Tag, LayoutGrid } from 'lucide-react';
+import { ChevronDown, Search, Tag, LayoutGrid, GripVertical, PanelLeftClose } from 'lucide-react';
 import { WIDGET_CATALOG, createWidget } from '../widgets/widgetDefaults';
 
 const IC = {
@@ -26,6 +26,7 @@ function VizIcon({ type, isActive }) {
     case 'image': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="1.8" /><circle cx="12" cy="13" r="2.5" stroke={p} strokeWidth="1.5" /><path d="M4 22l6-5 4 3 5-6 9 8" stroke={p} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
     case 'repeat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="1.8" /><rect x="18" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="1.8" /><path d="M14 16h4" stroke={p} strokeWidth="1.5" strokeLinecap="round" /><path d="M16 14v4" stroke={p} strokeWidth="1.5" strokeLinecap="round" /></svg>;
     case 'silo': return <svg viewBox="0 0 32 32" className={s} fill="none"><ellipse cx="16" cy="8" rx="8" ry="3" stroke={m} strokeWidth="1.8" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" stroke={m} strokeWidth="1.8" fill="none" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" fill={isActive ? 'rgba(56,189,248,0.15)' : 'rgba(107,127,148,0.15)'} stroke="none" /><defs><linearGradient id="silo-toolbox-fill" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stopColor={p} /><stop offset="70%" stopColor={p} stopOpacity="0.5" /></linearGradient></defs></svg>;
+    case 'piechart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M16 4a12 12 0 0 1 0 24A12 12 0 0 1 16 4z" stroke={m} strokeWidth="2" /><path d="M16 4a12 12 0 0 1 10.4 6L16 16V4z" fill={p} /><path d="M26.4 10A12 12 0 0 1 16 28V16l10.4-6z" fill={l} /></svg>;
     case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="6" y="22" fill={p} fontSize="16" fontWeight="bold" fontFamily="serif">T</text><path d="M18 10h8M18 16h6M18 22h4" stroke={m} strokeWidth="1.6" strokeLinecap="round" /></svg>;
     default: return null;
   }
@@ -46,27 +47,28 @@ function SmallVizIcon({ type }) {
     case 'image': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="2" /><path d="M4 22l6-5 4 3 5-6 9 8" stroke={p} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
     case 'repeat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="2" /><rect x="18" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="2" /></svg>;
     case 'silo': return <svg viewBox="0 0 32 32" className={s} fill="none"><ellipse cx="16" cy="8" rx="8" ry="3" stroke={m} strokeWidth="2" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" stroke={m} strokeWidth="2" fill="none" /></svg>;
+    case 'piechart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M16 4a12 12 0 0 1 0 24A12 12 0 0 1 16 4z" stroke={m} strokeWidth="2" /><path d="M16 4a12 12 0 0 1 10.4 6L16 16V4z" fill={p} /><path d="M26.4 10A12 12 0 0 1 16 28V16l10.4-6z" fill={l} /></svg>;
     case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="8" y="22" fill={p} fontSize="18" fontWeight="bold" fontFamily="serif">T</text></svg>;
     default: return null;
   }
 }
 
 const COMPONENTS = [
-  { section: 'Visualizations', type: 'kpi', label: 'KPI Card' },
-  { section: 'Visualizations', type: 'table', label: 'Table' },
-  { section: 'Visualizations', type: 'chart', label: 'Line Chart' },
-  { section: 'Visualizations', type: 'barchart', label: 'Bar Chart' },
-  { section: 'Visualizations', type: 'gauge', label: 'Gauge' },
-  { section: 'Visualizations', type: 'silo', label: 'Silo' },
-  { section: 'Visualizations', type: 'stat', label: 'Stat Panel' },
-  { section: 'Structure', type: 'text', label: 'Text' },
-  { section: 'Structure', type: 'image', label: 'Image' },
-  { section: 'Structure', type: 'repeat', label: 'Repeat Panel' },
+  { section: 'Data', type: 'kpi', label: 'KPI Card' },
+  { section: 'Data', type: 'gauge', label: 'Gauge' },
+  { section: 'Data', type: 'silo', label: 'Silo Visual' },
+  { section: 'Charts', type: 'chart', label: 'Line Chart' },
+  { section: 'Charts', type: 'barchart', label: 'Bar Chart' },
+  { section: 'Charts', type: 'piechart', label: 'Pie Chart' },
+  { section: 'Tables', type: 'table', label: 'Data Table' },
+  { section: 'Layout', type: 'text', label: 'Text Block' },
+  { section: 'Layout', type: 'image', label: 'Image' },
+  { section: 'Layout', type: 'repeat', label: 'Repeat Panel' },
 ];
 
-const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', text: 'Text', image: 'Image', repeat: 'Repeat' };
+const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', repeat: 'Repeat' };
 
-const SECTIONS = ['Visualizations', 'Structure', 'Tag Groups', 'Widgets'];
+const SECTIONS = ['Data', 'Charts', 'Tables', 'Layout', 'Tag Groups', 'Widgets'];
 
 function CollapsibleSection({ isOpen, children }) {
   const contentRef = useRef(null);
@@ -191,11 +193,11 @@ function buildTagGroupSections(tags, groups, tagSearch) {
   return { groupedSections, totalFiltered: filtered.length };
 }
 
-export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], widgets = [], selectedId, onSelectWidget }) {
+export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], widgets = [], selectedId, onSelectWidget, onHidePanel }) {
   const [activeType, setActiveType] = useState(null);
   const [search, setSearch] = useState('');
   const [tagSearch, setTagSearch] = useState('');
-  const [openSections, setOpenSections] = useState({ Visualizations: true, Structure: true, 'Tag Groups': false, Widgets: false });
+  const [openSections, setOpenSections] = useState({ Data: true, Charts: true, Tables: true, Layout: true, 'Tag Groups': false, Widgets: false });
   const [openTagGroups, setOpenTagGroups] = useState({});
   const [openWidgetIds, setOpenWidgetIds] = useState({});
 
@@ -263,6 +265,7 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
             style={{ background: 'var(--rb-accent)' }}
           />
           <p
+            className="flex-1"
             style={{
               fontSize: '10px',
               fontWeight: 700,
@@ -271,8 +274,21 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
               color: 'var(--rb-accent)',
             }}
           >
-            Components
+            Widgets
           </p>
+          {onHidePanel && (
+            <Tooltip title="Hide widgets panel" placement="right" arrow disableInteractive>
+              <button
+                onClick={onHidePanel}
+                className="p-1.5 rounded-md transition-colors"
+                style={{ color: 'var(--rb-text-muted)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--rb-accent)'; e.currentTarget.style.background = 'var(--rb-accent-subtle)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--rb-text-muted)'; e.currentTarget.style.background = ''; }}
+              >
+                <PanelLeftClose size={14} />
+              </button>
+            </Tooltip>
+          )}
         </div>
         <div className="relative">
           <Search
@@ -284,8 +300,9 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter components..."
-            className="rb-input-base w-full pl-7 py-1.5 text-[11px]"
+            placeholder="Search widgets..."
+            className="rb-input-base w-full py-1.5 text-[11px]"
+            style={{ paddingLeft: '2.25rem' }}
           />
         </div>
       </div>
@@ -294,7 +311,7 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
         {SECTIONS.map((sectionName) => {
           const isTagGroups = sectionName === 'Tag Groups';
           const isWidgets = sectionName === 'Widgets';
-          const isViz = sectionName === 'Visualizations';
+          const isViz = false;
           const isOpen = openSections[sectionName];
 
           const items = (isTagGroups || isWidgets) ? [] : filteredComponents.filter((c) => c.section === sectionName);
@@ -385,7 +402,6 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                 {!isTagGroups && !isWidgets && !isViz && (
                   <div className="px-3 pb-3 space-y-0.5">
                     {items.map(({ type, label }) => {
-                      const cat = WIDGET_CATALOG.find((c) => c.type === type);
                       const isItemActive = activeType === type;
                       return (
                         <button
@@ -393,7 +409,7 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                           onClick={() => handleAdd(type)}
                           draggable
                           onDragStart={(e) => onDragStart(e, type)}
-                          className="rb-toolbox-item w-full flex items-center gap-3 px-3 py-2 rounded-lg group text-left cursor-grab active:cursor-grabbing"
+                          className="rb-toolbox-item w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg group text-left cursor-grab active:cursor-grabbing"
                           style={{
                             border: isItemActive
                               ? '1px solid var(--rb-accent)'
@@ -402,38 +418,29 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                             transition: 'all 150ms ease',
                           }}
                         >
+                          <GripVertical size={12} className="flex-shrink-0 opacity-30 group-hover:opacity-60" style={{ color: 'var(--rb-text-muted)' }} />
                           <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                            className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
                             style={{
                               background: isItemActive ? 'var(--rb-accent-subtle)' : 'var(--rb-surface)',
                               border: isItemActive
                                 ? '1px solid var(--rb-accent)'
-                                : '1px solid transparent',
+                                : '1px solid var(--rb-border)',
                               transition: 'all 150ms ease',
                             }}
                           >
                             <VizIcon type={type} isActive={isItemActive} />
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p
-                              style={{
-                                fontSize: '11px',
-                                fontWeight: 500,
-                                color: isItemActive ? 'var(--rb-accent)' : 'var(--rb-text)',
-                                transition: 'color 150ms ease',
-                              }}
-                            >
-                              {label}
-                            </p>
-                            {cat?.description && (
-                              <p
-                                className="mt-0.5 truncate"
-                                style={{ fontSize: '9px', color: 'var(--rb-text-muted)' }}
-                              >
-                                {cat.description}
-                              </p>
-                            )}
-                          </div>
+                          <p
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              color: isItemActive ? 'var(--rb-accent)' : 'var(--rb-text)',
+                              transition: 'color 150ms ease',
+                            }}
+                          >
+                            {label}
+                          </p>
                         </button>
                       );
                     })}

@@ -1,24 +1,31 @@
-import { MdDashboardCustomize, MdInsertChart, MdEngineering } from 'react-icons/md';
+import { LayoutGrid, BarChart2, Settings, Table2 } from 'lucide-react';
 import { Roles } from './Roles';
 
 export const menuItems = [
   {
-    name: 'Report Builder',
-    icon: MdDashboardCustomize,
+    name: 'Builder',
+    icon: LayoutGrid,
     tooltip: 'Design and build reports',
     link: '/report-builder',
     roles: [Roles.Admin, Roles.Manager, Roles.Operator],
   },
   {
-    name: 'Reporting',
-    icon: MdInsertChart,
-    tooltip: 'View reports with live & historical data',
-    link: '/reporting',
+    name: 'Dashboards',
+    icon: BarChart2,
+    tooltip: 'View released dashboards',
+    link: '/dashboards',
+    roles: [Roles.Admin, Roles.Manager, Roles.Operator],
+  },
+  {
+    name: 'Table Reports',
+    icon: Table2,
+    tooltip: 'View released table reports',
+    link: '/reports',
     roles: [Roles.Admin, Roles.Manager, Roles.Operator],
   },
   {
     name: 'Engineering',
-    icon: MdEngineering,
+    icon: Settings,
     tooltip: 'Tags, groups, formulas, mappings',
     link: '/settings',
     roles: [Roles.Admin, Roles.Manager],

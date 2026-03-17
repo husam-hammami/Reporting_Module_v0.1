@@ -1,6 +1,6 @@
 /**
- * Report Builder — "Mission Control" Design System
- * SpaceX/Bloomberg/SCADA-inspired. Deep space palette, electric accents, premium density.
+ * Report Builder — Professional Industrial Design System
+ * Clean dashboard palette, professional accents, production-grade density.
  */
 
 /* ═══════════════════════════════════════════════════════════════
@@ -31,11 +31,11 @@
   --rb-pad-lg: 14px;
 
   /* ── Light mode surfaces ── */
-  --rb-accent: #2563eb;
-  --rb-accent-bright: #3b82f6;
-  --rb-accent-subtle: rgba(37, 99, 235, 0.06);
+  --rb-accent: #0098cc;
+  --rb-accent-bright: #00aadf;
+  --rb-accent-subtle: rgba(0, 152, 204, 0.06);
   --rb-accent-glow: transparent;
-  --rb-accent-hover: #1d4ed8;
+  --rb-accent-hover: #007aa3;
   --rb-bg-deep: transparent;
   --rb-surface: #f9fafb;
   --rb-panel: #ffffff;
@@ -91,7 +91,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   DARK MODE — "MISSION CONTROL"
+   DARK MODE
    ═══════════════════════════════════════════════════════════════ */
 .dark .report-builder {
   --rb-bg-deep: transparent;
@@ -319,7 +319,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════
-   WIDGET CARD SYSTEM — Gradient-Border Glass
+   WIDGET CARD SYSTEM
    ═══════════════════════════════════════════════════════════════ */
 .report-builder .rb-widget-card {
   position: relative;
@@ -328,14 +328,14 @@
   border-radius: var(--rb-radius-lg);
   padding: var(--rb-pad-md);
   transition: border-color var(--rb-transition-normal) ease,
-              box-shadow var(--rb-transition-normal) ease;
-}
-.report-builder .rb-widget-card {
+              box-shadow var(--rb-transition-normal) ease,
+              transform var(--rb-transition-normal) ease;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 .dark .report-builder .rb-widget-card {
-  box-shadow: none;
-  border-color: #1e293b;
+  background: linear-gradient(160deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 20, 32, 0.98) 100%);
+  border-color: rgba(34, 211, 238, 0.12);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
 .report-builder .rb-widget-card:hover {
@@ -343,8 +343,9 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .dark .report-builder .rb-widget-card:hover {
-  border-color: #2a3347;
-  box-shadow: none;
+  border-color: rgba(34, 211, 238, 0.25);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(34, 211, 238, 0.06), inset 0 1px 0 rgba(255,255,255,0.04);
+  transform: translateY(-1px);
 }
 
 .report-builder .rb-widget-card.rb-widget-selected,
@@ -354,7 +355,8 @@
 }
 .dark .report-builder .rb-widget-card.rb-widget-selected,
 .dark .report-builder .rb-widget-selected {
-  box-shadow: 0 0 0 2px var(--rb-accent);
+  border-color: var(--rb-accent);
+  box-shadow: 0 0 0 1px var(--rb-accent), 0 0 20px rgba(34, 211, 238, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .report-builder .rb-widget-card.rb-widget-dragging {
@@ -363,7 +365,7 @@
   opacity: 0.95;
 }
 .dark .report-builder .rb-widget-card.rb-widget-dragging {
-  box-shadow: none;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px rgba(34, 211, 238, 0.1);
 }
 
 .report-builder .rb-widget-card-transparent {
@@ -376,7 +378,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════
-   TABLE STYLING — Grafana / Power BI inspired
+   TABLE STYLING
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Base table ── */
@@ -393,27 +395,27 @@
 /* ── Header row ── */
 .report-builder .rb-table-header-row {
   box-shadow: none;
-  background-color: #0f172a;
+  background-color: rgba(17, 24, 39, 0.6);
   color: #ffffff;
 }
 .dark .report-builder .rb-table-header-row {
   box-shadow: none;
-  background-color: #0f172a;
+  background-color: rgba(17, 24, 39, 0.6);
   color: #f1f5f9;
 }
 .report-builder .rb-table-header-row th {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: #ffffff;
-  padding: 10px 14px;
-  border-bottom: 2px solid var(--rb-border);
+  letter-spacing: 0.08em;
+  color: var(--rb-text-secondary);
+  padding: 12px 14px;
+  border-bottom: 2px solid var(--rb-accent);
   white-space: nowrap;
 }
 .dark .report-builder .rb-table-header-row th {
-  color: #f1f5f9;
-  border-bottom-color: #1e293b;
+  color: #94a3b8;
+  border-bottom-color: var(--rb-accent);
 }
 
 /* ── Body rows ── */
@@ -424,22 +426,22 @@
   background-color: var(--rb-accent-subtle) !important;
 }
 .report-builder .rb-table-body-row td {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--rb-border-subtle);
   font-size: 13px;
   color: var(--rb-text);
 }
 .dark .report-builder .rb-table-body-row td {
-  border-bottom-color: #1e293b;
-  color: #d0d8e4;
+  border-bottom-color: rgba(255,255,255,0.05);
+  color: #e2e8f0;
 }
 
 /* ── Striped rows ── */
 .report-builder .rb-table-body-row.rb-row-striped {
-  background-color: var(--rb-panel-raised);
+  background-color: rgba(0, 0, 0, 0.02);
 }
 .dark .report-builder .rb-table-body-row.rb-row-striped {
-  background-color: rgba(30, 41, 59, 0.3);
+  background-color: rgba(255, 255, 255, 0.02);
 }
 
 /* ── Numeric cells ── */
@@ -447,9 +449,10 @@
   font-variant-numeric: tabular-nums;
   font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
   letter-spacing: -0.01em;
+  font-weight: 500;
 }
 .dark .report-builder .rb-table-body-row td.rb-cell-numeric {
-  color: #e8edf5;
+  color: #f8fafc;
 }
 
 /* ── Section header rows ── */
@@ -570,14 +573,9 @@
   letter-spacing: 0.04em;
 }
 
-/* Canvas dot grid — subtle pattern for depth */
+/* Canvas dot grid — hidden by default, shown when snap is active */
 .report-builder .rb-canvas-dots {
-  background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.04) 0.5px, transparent 0);
-  background-size: 20px 20px;
-}
-.dark .report-builder .rb-canvas-dots {
-  background-image: radial-gradient(circle at 1px 1px, rgba(148,163,184,0.04) 0.5px, transparent 0);
-  background-size: 20px 20px;
+  background-image: none;
 }
 
 .report-builder .rb-canvas-perspective {
@@ -646,7 +644,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════
-   FLOATING CANVAS TOOLBAR — Frosted Glass Pill
+   FLOATING CANVAS TOOLBAR
    ═══════════════════════════════════════════════════════════════ */
 .rb-floating-toolbar {
   position: absolute;
@@ -718,7 +716,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════
-   SELECTION HANDLES + MINI TOOLBAR — Glowing Accents
+   SELECTION HANDLES + MINI TOOLBAR
    ═══════════════════════════════════════════════════════════════ */
 .rb-selection-handle {
   position: absolute;
@@ -1022,7 +1020,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════
-   HOLOGRAPHIC CARD SYSTEM — Manager Template Cards
+   TEMPLATE CARD SYSTEM — Manager Cards
    ═══════════════════════════════════════════════════════════════ */
 .rb-holo-card {
   position: relative;
@@ -1216,7 +1214,7 @@
   flex-wrap: wrap;
   font-size: 12px;
   font-weight: 500;
-  color: #374151;
+  color: #3d4f66;
   padding: 4px 0;
 }
 
@@ -1231,7 +1229,7 @@
 
 .uplot-container .u-legend .u-value {
   font-weight: 700;
-  color: #111827;
+  color: #1a2744;
 }
 
 .dark .uplot-container .u-legend .u-value {
@@ -1260,11 +1258,55 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Grid snap visual — dot pattern overlay when snap is enabled
+   Grid snap visual — visible dot grid when snap is enabled
    ═══════════════════════════════════════════════════════════════ */
 .rb-canvas-dots.rb-grid-snap-active {
   background-image:
-    radial-gradient(circle, var(--rb-border) 0.5px, transparent 0.5px) !important;
-  background-size: 40px 40px !important;
-  background-position: 0 0 !important;
+    radial-gradient(circle, rgba(34,211,238,0.15) 1px, transparent 1px) !important;
+  background-size: 52px 52px !important;
+  background-position: 6px 6px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Chart empty state — light / dark adaptive
+   ═══════════════════════════════════════════════════════════════ */
+.rb-chart-empty {
+  background: rgba(248,250,252,0.95);
+}
+.rb-chart-empty-grid {
+  position: absolute; inset: 0; opacity: 0.07;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, #94a3b8 39px, #94a3b8 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, #94a3b8 39px, #94a3b8 40px);
+}
+.rb-chart-empty-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(14,116,144,0.08);
+  border: 1px solid rgba(14,116,144,0.15);
+  display: flex; align-items: center; justify-content: center;
+  color: #0e7490;
+  opacity: 0.6;
+}
+.rb-chart-empty-text {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.03em;
+  color: #94a3b8;
+}
+
+.dark .rb-chart-empty {
+  background: rgba(10,15,26,0.92);
+}
+.dark .rb-chart-empty-grid {
+  opacity: 0.05;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, #22d3ee 39px, #22d3ee 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, #22d3ee 39px, #22d3ee 40px);
+}
+.dark .rb-chart-empty-icon {
+  background: rgba(34,211,238,0.1);
+  border-color: rgba(34,211,238,0.2);
+  color: #22d3ee;
+  opacity: 0.7;
+}
+.dark .rb-chart-empty-text {
+  color: #8899ab;
 }

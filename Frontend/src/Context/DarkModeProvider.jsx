@@ -2,7 +2,7 @@ import { createContext, useEffect, useState } from 'react';
 
 export const DarkModeContext = createContext();
 export const DarkModeProvider = ({ children }) => {
-  const [mode, setMode] = useState(localStorage.getItem('theme') || "dark");  
+  const [mode, setMode] = useState(localStorage.getItem('theme') || "light");  
 
   useEffect(() => {
     if (mode === 'light') {
