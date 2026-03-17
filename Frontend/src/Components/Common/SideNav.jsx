@@ -96,7 +96,7 @@ export default function SideNav() {
       >
         <List sx={{ px: open ? 1.5 : 1, pt: 2 }}>
           {uniqueMenuItems.map((item) => {
-            if (!auth || !item.roles.includes(auth.role)) return null;
+            if (!auth || (auth.role !== 'superadmin' && !item.roles.includes(auth.role))) return null;
             const category = CATEGORY_MAP[item.link];
             const showCategory = category && category !== lastCategory;
             if (category) lastCategory = category;
