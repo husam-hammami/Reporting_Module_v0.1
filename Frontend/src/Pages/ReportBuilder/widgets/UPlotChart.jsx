@@ -157,7 +157,7 @@ function buildOpts(width, height, seriesDefs, config, tagValues, isDark, dataSpa
     },
     legend: {
       show: config.showLegend !== false,
-      live: false,
+      live: true,
     },
     scales: {
       x: { time: true, auto: true },

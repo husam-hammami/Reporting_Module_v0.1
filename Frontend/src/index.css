@@ -316,7 +316,7 @@
     }
 
     .dark canvas {
-      background-color: #0a1218 !important;
+      background-color: transparent !important;
     }
 
     .dark .min-h-screen.bg-gradient-to-br {

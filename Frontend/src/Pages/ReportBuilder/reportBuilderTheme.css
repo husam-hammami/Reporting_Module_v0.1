@@ -1215,10 +1215,39 @@
   overflow-x: hidden;
   flex-wrap: wrap;
   font-size: 10px;
+  color: var(--rb-text-secondary, #374151);
+}
+
+.dark .uplot-container .u-legend {
+  color: #94a3b8;
 }
 
 .uplot-container .u-legend .u-series {
   white-space: nowrap;
+}
+
+.uplot-container .u-legend .u-value {
+  font-weight: 600;
+  color: var(--rb-text, #111827);
+}
+
+.dark .uplot-container .u-legend .u-value {
+  color: #f1f5f9;
+}
+
+/* uPlot cursor tooltip — ensure visible in dark mode */
+.uplot-container .u-over {
+  cursor: crosshair;
+}
+
+.uplot-container .u-cursor-x,
+.uplot-container .u-cursor-y {
+  border-color: var(--rb-border, #e5e7eb) !important;
+}
+
+.dark .uplot-container .u-cursor-x,
+.dark .uplot-container .u-cursor-y {
+  border-color: #475569 !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
