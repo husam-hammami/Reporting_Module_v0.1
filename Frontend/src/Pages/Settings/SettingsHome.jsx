@@ -1,7 +1,7 @@
 import React, { useEffect, useContext } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useLenisScroll } from '../../Hooks/useLenisScroll';
-import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaServer, FaSuperscript, FaEnvelope, FaClock, FaUsers } from 'react-icons/fa';
+import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaServer, FaSuperscript, FaEnvelope, FaClock, FaUsers, FaKey } from 'react-icons/fa';
 import { AuthContext } from '../../Context/AuthProvider';
 import '../ReportBuilder/reportBuilderTheme.css';
 
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { name: 'Shifts', icon: FaClock, link: '/settings/shifts', description: 'Shift schedule config' },
   { name: 'Export / Import', icon: FaDownload, link: '/settings/export-import', description: 'System configurations' },
   { name: 'System', icon: FaServer, link: '/settings/system', description: 'PLC, mode & emulator' },
+  { name: 'Licenses', icon: FaKey, link: '/settings/license-activations', description: 'Machine license activations', superadminOnly: true },
 ];
 
 const SettingsHome = () => {
@@ -24,8 +25,11 @@ const SettingsHome = () => {
   const { auth } = useContext(AuthContext);
 
   const filteredNavItems = NAV_ITEMS.filter(item => {
+    if (item.superadminOnly) {
+      return auth?.role === 'superadmin';
+    }
     if (item.link === '/settings/users') {
-      return auth?.role === 'admin' || auth?.role === 'manager';
+      return auth?.role === 'superadmin' || auth?.role === 'admin' || auth?.role === 'manager';
     }
     return true;
   });

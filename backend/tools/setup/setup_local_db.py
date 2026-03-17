@@ -73,6 +73,8 @@ MIGRATION_ORDER = [
     'add_dynamic_monitoring_tables.sql',
     # Phase 5: Universal historian (layout_id nullable)
     'alter_tag_history_nullable_layout.sql',
+    # Phase 6: License activation
+    'create_licenses_table.sql',
 ]
 
 DIVIDER = '=' * 60

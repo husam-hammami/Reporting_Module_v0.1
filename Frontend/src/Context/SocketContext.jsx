@@ -26,7 +26,7 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    const socketUrl = getApiBaseUrl() || (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
+    const socketUrl = getApiBaseUrl() || (import.meta.env.DEV ? 'http://localhost:5001' : window.location.origin);
 
     let newSocket;
     try {
@@ -45,7 +45,7 @@ export const SocketProvider = ({ children }) => {
       newSocket.on('disconnect', () => { setIsConnected(false); });
       newSocket.on('connect_error', () => {
         setIsConnected(false);
-        if (import.meta.env.DEV && !triedFallback.current && socketUrl !== 'http://localhost:5000') {
+        if (import.meta.env.DEV && !triedFallback.current && socketUrl !== 'http://localhost:5001') {
           triedFallback.current = true;
           setApiFallback();
           newSocket.close();

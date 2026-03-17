@@ -8,7 +8,7 @@ export function ProtectedRoute({
   roles = [Roles.Admin, Roles.Manager, Roles.Operator],
 }) {
   const { auth } = useContext(AuthContext);
-  if (auth && roles.includes(auth.role)) {
+  if (auth && (auth.role === Roles.SuperAdmin || roles.includes(auth.role))) {
     return children ? children : <Outlet />;
   } else {
     return <Navigate to="/login" />;

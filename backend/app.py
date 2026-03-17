@@ -22,6 +22,7 @@ from historian_bp import historian_bp
 from kpi_config_bp import kpi_config_bp
 from report_builder_bp import report_builder_bp
 from mappings_bp import mappings_bp
+from license_bp import license_bp
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -66,49 +67,77 @@ app.config.update(
     SESSION_COOKIE_SECURE=_session_secure
 )
 
-ALLOWED_ORIGINS = "*"
+# Explicit allowed origins (required when using credentials; cannot use "*")
+ALLOWED_ORIGINS = {
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://herculesv2.app",
+    "https://www.herculesv2.app",
+}
 
-# Initialize SocketIO with wildcard CORS for Replit proxy compatibility
+# Initialize SocketIO with credentials support for cookie/session auth
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*",
+    cors_allowed_origins=list(ALLOWED_ORIGINS),
     async_mode="eventlet",
-    supports_credentials=False
+    supports_credentials=True,
 )
 
 # CORS preflight: respond to OPTIONS with 200 + full CORS headers (before any route)
 CORS_ALLOW_HEADERS = "Content-Type, Authorization, ngrok-skip-browser-warning"
 
+
+def _normalize_origin(origin):
+    """Strip trailing slash so https://example.com/ matches https://example.com."""
+    if not origin:
+        return origin
+    return origin.rstrip("/")
+
+
 @app.before_request
 def handle_options_preflight():
     if request.method == "OPTIONS":
-        from flask import Response
-        origin = request.headers.get("Origin", "*")
-        r = Response("", status=200)
-        r.headers["Access-Control-Allow-Origin"] = origin
-        r.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
-        r.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        return r
+        origin = request.headers.get("Origin")
+        if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
+            from flask import Response
+            r = Response("", status=200)
+            r.headers["Access-Control-Allow-Origin"] = origin
+            r.headers["Access-Control-Allow-Credentials"] = "true"
+            r.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
+            r.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            return r
+        return "", 200
+
 
 @app.before_request
 def log_request_info():
     logger.debug("Incoming request: %s %s", request.method, request.path)
 
+
 @app.after_request
 def add_cors_headers(response):
-    origin = request.headers.get("Origin", "*")
-    response.headers["Access-Control-Allow-Origin"] = origin
-    response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    origin = request.headers.get("Origin")
+    if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     return response
+
 
 @app.route("/<path:path>", methods=["OPTIONS"])
 def options_handler(path):
     response = jsonify({})
-    origin = request.headers.get("Origin", "*")
-    response.headers["Access-Control-Allow-Origin"] = origin
-    response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    origin = request.headers.get("Origin")
+    if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     return response, 200
 
 # Debug routes - only registered in DEV_MODE
@@ -150,6 +179,7 @@ app.register_blueprint(historian_bp, url_prefix='/api')
 app.register_blueprint(kpi_config_bp, url_prefix='/api')
 app.register_blueprint(report_builder_bp, url_prefix='/api')
 app.register_blueprint(mappings_bp, url_prefix='/api')
+app.register_blueprint(license_bp, url_prefix='/api')
 
 # Demo mode: single source of truth for Production vs Demo (emulator)
 @app.route('/api/settings/demo-mode', methods=['GET'])
@@ -327,7 +357,7 @@ def require_role(*roles):
         def wrapper(*args, **kwargs):
             if not current_user.is_authenticated:
                 return jsonify({'error': 'Not authenticated'}), 401
-            if current_user.role not in roles:
+            if current_user.role != 'superadmin' and current_user.role not in roles:
                 return jsonify({'error': 'Insufficient permissions'}), 403
             return f(*args, **kwargs)
         return wrapper

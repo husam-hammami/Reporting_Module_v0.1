@@ -16,6 +16,7 @@ package-lock.json
 # Build files
 dist/
 build/
+installer_output/
 
 # OS files
 .DS_Store

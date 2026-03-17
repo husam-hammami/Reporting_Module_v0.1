@@ -12,6 +12,11 @@ const endpoints = {
     changePassword: id => `/change-password/${id}`,
     changeOwnPassword: '/change-own-password',
   },
+  licenses: {
+    list: '/api/admin/licenses',
+    update: id => `/api/admin/licenses/${id}`,
+    remove: id => `/api/admin/licenses/${id}`,
+  },
 };
 
 export default endpoints;

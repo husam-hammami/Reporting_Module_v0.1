@@ -25,6 +25,7 @@ import FormulaManager from '../Pages/Settings/Formulas/FormulaManager';
 import EmailSettings from '../Pages/Settings/Email/EmailSettings';
 import ShiftsSettings from '../Pages/Settings/Shifts/ShiftsSettings';
 import UserManagement from '../Pages/Settings/Users/UserManagement';
+import LicenseActivations from '../Pages/Settings/LicenseActivations/LicenseActivations';
 const AppRoutes = () => {
   const location = useLocation();
   return (
@@ -166,7 +167,7 @@ const AppRoutes = () => {
           <Route
             path="settings"
             element={
-              <ProtectedRoute roles={[Roles.Admin, Roles.Manager]}>
+              <ProtectedRoute roles={[Roles.SuperAdmin, Roles.Admin, Roles.Manager]}>
                 <SettingsHome />
               </ProtectedRoute>
             }
@@ -181,6 +182,7 @@ const AppRoutes = () => {
             <Route path="email" element={<EmailSettings />} />
             <Route path="shifts" element={<ShiftsSettings />} />
             <Route path="users" element={<UserManagement />} />
+            <Route path="license-activations" element={<LicenseActivations />} />
           </Route>
         </Route>
 
