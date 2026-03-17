@@ -5,6 +5,7 @@ import GaugeWidget from './GaugeWidget';
 import SiloWidget from './SiloWidget';
 import TableWidget from './TableWidget';
 import StatWidget from './StatWidget';
+import PieChartWidget from './PieChartWidget';
 import ImageWidget from './ImageWidget';
 import TextWidget from './TextWidget';
 
@@ -49,6 +50,7 @@ const RENDERERS = {
   silo: SiloWidget,
   table: TableWidget,
   stat: StatWidget,
+  piechart: PieChartWidget,
   image: ImageWidget,
   text: TextWidget,
 };

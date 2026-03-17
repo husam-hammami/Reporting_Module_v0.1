@@ -1,16 +1,27 @@
-import { useState, useMemo } from 'react';
-import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy, Move } from 'lucide-react';
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy, Move, PanelRightClose } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import FormulaEditor from '../formulas/FormulaEditor';
 
 function Section({ icon: Icon, title, children, defaultOpen = true, isFirst = false }) {
   const [open, setOpen] = useState(defaultOpen);
   const prefersReducedMotion = useReducedMotion();
+  const sectionRef = useRef(null);
+
+  const handleToggle = useCallback(() => {
+    const willOpen = !open;
+    setOpen(willOpen);
+    if (willOpen && sectionRef.current) {
+      setTimeout(() => {
+        sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 280);
+    }
+  }, [open]);
 
   return (
-    <div className={`border-b border-[var(--rb-border)] last:border-0${!isFirst ? ' border-t border-t-[var(--rb-border)]' : ''}`}>
+    <div ref={sectionRef} className={`border-b border-[var(--rb-border)] last:border-0${!isFirst ? ' border-t border-t-[var(--rb-border)]' : ''}`}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={handleToggle}
         className="w-full flex items-center gap-2.5 py-3 px-5 hover:bg-[var(--rb-surface)] transition-colors text-left group"
       >
         {Icon && (
@@ -130,17 +141,28 @@ function TagPicker({ tags, value, onChange, placeholder = 'Select tag...' }) {
   const safeTags = Array.isArray(tags) ? tags : [];
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const dropdownRef = useRef(null);
   const filtered = useMemo(() => {
     if (!search.trim()) return safeTags;
     const q = search.toLowerCase();
     return safeTags.filter((t) => t.tag_name?.toLowerCase().includes(q) || t.display_name?.toLowerCase().includes(q));
   }, [safeTags, search]);
 
+  const handleOpen = useCallback(() => {
+    const willOpen = !open;
+    setOpen(willOpen);
+    if (willOpen) {
+      setTimeout(() => {
+        dropdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    }
+  }, [open]);
+
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={handleOpen}
         className="rb-input-base w-full text-left truncate"
       >
         {value || <span className="text-[var(--rb-text-muted)]">{placeholder}</span>}
@@ -148,7 +170,7 @@ function TagPicker({ tags, value, onChange, placeholder = 'Select tag...' }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(''); }} />
-          <div className="absolute z-50 mt-2 w-full rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] shadow-xl max-h-56 overflow-hidden backdrop-blur-sm" data-wheel-scroll>
+          <div ref={dropdownRef} className="absolute z-50 mt-2 w-full rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] shadow-xl max-h-56 overflow-hidden backdrop-blur-sm" data-wheel-scroll>
             <div className="p-2 border-b border-[var(--rb-border)]">
               <input
                 type="text"
@@ -555,6 +577,13 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
         </>
       )}
 
+      {widgetType === 'piechart' && (
+        <>
+          <Toggle label="Show legend" value={config.showLegend !== false} onChange={(v) => onUpdate({ showLegend: v })} />
+          <Toggle label="Doughnut style" value={config.doughnut !== false} onChange={(v) => onUpdate({ doughnut: v })} />
+        </>
+      )}
+
       {(widgetType === 'chart' || widgetType === 'barchart') && (
         <>
           <Toggle label="Show legend" value={config.showLegend} onChange={(v) => onUpdate({ showLegend: v })} />
@@ -694,7 +723,7 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
               <input type="color" value={config.rowBg || '#ffffff'} onChange={(e) => onUpdate({ rowBg: e.target.value })} className="rb-color-swatch" />
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">alt</span>
-              <input type="color" value={config.stripedRowBg || '#f8fafc'} onChange={(e) => onUpdate({ stripedRowBg: e.target.value })} className="rb-color-swatch" />
+              <input type="color" value={config.stripedRowBg || '#f4f7fa'} onChange={(e) => onUpdate({ stripedRowBg: e.target.value })} className="rb-color-swatch" />
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">border</span>
               <input type="color" value={config.borderColor || '#e2e8f0'} onChange={(e) => onUpdate({ borderColor: e.target.value })} className="rb-color-swatch" />
             </div>
@@ -825,6 +854,7 @@ function ThresholdsSection({ config, onUpdate }) {
 function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas = [] }) {
   const series = config.series || [];
   const updateSeries = (newSeries) => onUpdate({ series: newSeries });
+  const addBtnRef = useRef(null);
 
   const addSeries = () => {
     updateSeries([...series, {
@@ -832,6 +862,9 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
       label: `Series ${series.length + 1}`,
       color: '',
     }]);
+    setTimeout(() => {
+      addBtnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
   };
 
   const removeSeries = (i) => updateSeries(series.filter((_, j) => j !== i));
@@ -900,7 +933,7 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
           ))}
         </div>
       )}
-      <button onClick={addSeries} className="inline-flex items-center gap-1.5 text-[9px] font-medium text-[var(--rb-accent)] hover:underline mt-2">
+      <button ref={addBtnRef} onClick={addSeries} className="inline-flex items-center gap-1.5 text-[9px] font-medium text-[var(--rb-accent)] hover:underline mt-2">
         <Plus size={12} />
         Add data series
       </button>
@@ -916,6 +949,7 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
   const columns = Array.isArray(safeConfig.tableColumns) ? safeConfig.tableColumns : [];
   const updateColumns = (newCols) => onUpdate({ tableColumns: newCols });
   const mappings = getCachedMappings();
+  const addColRef = useRef(null);
 
   const getSourcePreview = (col) => {
     const src = col.sourceType || 'tag';
@@ -944,6 +978,9 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
       format: 'number',
       thresholds: [],
     }]);
+    setTimeout(() => {
+      addColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
   };
 
   const removeColumn = (i) => updateColumns(columns.filter((_, j) => j !== i));
@@ -1172,7 +1209,7 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mt-3">
+      <div ref={addColRef} className="flex flex-wrap gap-2 mt-3">
         <button onClick={() => addColumn('tag')} className="rb-badge text-[12px] px-3 py-1.5 rounded-lg bg-[var(--rb-accent-subtle)] text-[var(--rb-accent)] hover:bg-[var(--rb-accent)]/20 hover:shadow-[0_0_8px_var(--rb-accent-glow)] transition-all">
           <Plus size={12} className="inline mr-1" /> Tag
         </button>
@@ -1195,13 +1232,13 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
 
 const HAS_DATA_SOURCE = new Set(['kpi', 'gauge', 'stat', 'silo']);
 const HAS_THRESHOLDS = new Set(['kpi', 'gauge', 'stat', 'table', 'silo']);
-const HAS_SERIES = new Set(['chart', 'barchart']);
+const HAS_SERIES = new Set(['chart', 'barchart', 'piechart']);
 const HAS_TABLE_COLUMNS = new Set(['table']);
 
 const TAB_DATA = 'data';
 const TAB_FORMAT = 'format';
 
-export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, tags, tagValues, groups = [], savedFormulas = [] }) {
+export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, onHidePanel, tags, tagValues, groups = [], savedFormulas = [] }) {
   const [activeTab, setActiveTab] = useState(TAB_DATA);
   const prefersReducedMotion = useReducedMotion();
 
@@ -1233,9 +1270,16 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
             </span>
             <p className="text-[13px] font-bold text-[var(--rb-text)] truncate">{widgetTitle}</p>
           </div>
-          <button onClick={onClose} className="rb-btn-ghost p-2 -mr-2 hover:bg-[var(--rb-surface)] rounded-md transition-colors">
-            <X size={16} className="text-[var(--rb-text-muted)]" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={onClose} className="rb-btn-ghost p-2 hover:bg-[var(--rb-surface)] rounded-md transition-colors" title="Deselect widget">
+              <X size={16} className="text-[var(--rb-text-muted)]" />
+            </button>
+            {onHidePanel && (
+              <button onClick={onHidePanel} className="rb-btn-ghost p-2 -mr-2 hover:bg-[var(--rb-surface)] rounded-md transition-colors" title="Hide properties panel">
+                <PanelRightClose size={16} className="text-[var(--rb-text-muted)]" />
+              </button>
+            )}
+          </div>
         </div>
         <div className="px-5 pb-3">
           <div className="rb-segmented-control w-full">
@@ -1327,7 +1371,7 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, t
               exit={prefersReducedMotion ? undefined : { opacity: 0, x: -8 }}
               transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
             >
-              {['kpi', 'gauge', 'silo', 'stat', 'chart', 'barchart', 'table', 'image'].includes(widget.type) && (
+              {['kpi', 'gauge', 'silo', 'stat', 'chart', 'barchart', 'piechart', 'table', 'image'].includes(widget.type) && (
                 <Section icon={Palette} title="Card Appearance" defaultOpen={true} isFirst>
                   <Toggle
                     label="Show card (border & background)"

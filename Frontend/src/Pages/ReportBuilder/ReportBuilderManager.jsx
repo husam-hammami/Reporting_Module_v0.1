@@ -1,9 +1,11 @@
-import { useState, useMemo, useRef, forwardRef } from 'react';
+import { useState, useMemo, useContext, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, Trash2, Search, LayoutGrid, BarChart3, FileText, X, Zap, Layers, Table2 } from 'lucide-react';
+import { Plus, Copy, Trash2, Search, LayoutGrid, FileText, X, Layers, Table2, Clock, ArrowUpRight, MoreVertical, Filter } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useReportTemplates } from '../../Hooks/useReportBuilder';
 import ReportThumbnail from './ReportThumbnail';
+import { DarkModeContext } from '../../Context/DarkModeProvider';
+import '../ReportBuilder/reportBuilderTheme.css';
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -16,47 +18,49 @@ function timeAgo(iso) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function useTheme() {
+  const { mode } = useContext(DarkModeContext);
+  const dark = mode === 'dark';
+  return {
+    dark,
+    pageBg: dark ? '#0a0f1a' : '#f3f4f6',
+    surface: dark ? '#111827' : '#ffffff',
+    surfaceAlt: dark ? '#0a0f1a' : '#f9fafb',
+    border: dark ? '#1e293b' : '#e5e7eb',
+    text: dark ? '#f0f4f8' : '#111827',
+    textSecondary: dark ? '#8899ab' : '#6b7280',
+    textMuted: dark ? '#556677' : '#9ca3af',
+    accent: dark ? '#22d3ee' : '#0369a1',
+    accentHover: dark ? '#06b6d4' : '#075985',
+    accentBg: dark ? 'rgba(34,211,238,0.10)' : 'rgba(3,105,161,0.08)',
+    hoverBg: dark ? 'rgba(10,15,26,0.4)' : 'rgba(0,0,0,0.03)',
+    cardHoverBorder: dark ? 'rgba(34,211,238,0.3)' : 'rgba(3,105,161,0.25)',
+    inputBg: dark ? '#111827' : '#ffffff',
+    modalBg: dark ? '#111827' : '#ffffff',
+    modalInputBg: dark ? '#0a0f1a' : '#f9fafb',
+    btnGhostHover: dark ? '#1a2233' : '#f3f4f6',
+    btnText: dark ? '#0a0f1a' : '#ffffff',
+  };
+}
+
 const STATUS_CONFIG = {
   draft: {
-    color: '#6b7280',
-    bg: '#f3f4f6',
-    darkBg: 'rgba(100,116,139,0.15)',
-    darkColor: '#94a3b8',
+    darkBg: 'rgba(100,116,139,0.15)', darkColor: '#94a3b8',
+    lightBg: 'rgba(100,116,139,0.10)', lightColor: '#64748b',
     label: 'Draft',
   },
-  validated: {
-    color: '#2563eb',
-    bg: 'rgba(37,99,235,0.06)',
-    darkBg: 'rgba(34,211,238,0.08)',
-    darkColor: '#22d3ee',
-    label: 'Validated',
-  },
-  published: {
-    color: '#059669',
-    bg: 'rgba(5,150,105,0.08)',
-    darkBg: 'rgba(52,211,153,0.10)',
-    darkColor: '#34d399',
-    label: 'Published',
+  released: {
+    darkBg: 'rgba(52,211,153,0.10)', darkColor: '#34d399',
+    lightBg: 'rgba(16,185,129,0.08)', lightColor: '#059669',
+    label: 'Released',
   },
 };
 
-const FILTER_TABS = ['all', 'draft', 'validated', 'published'];
+const FILTER_TABS = ['all', 'draft', 'released'];
 
 const REPORT_TYPES = [
-  {
-    key: 'dashboard',
-    label: 'Dashboard',
-    icon: LayoutGrid,
-    description: 'Drag-and-drop canvas with widgets (charts, KPIs, gauges, tables)',
-    color: '#0284c7',
-  },
-  {
-    key: 'paginated',
-    label: 'Paginated Report',
-    icon: Table2,
-    description: 'Professional A4 document with sections, tables, and KPI summaries',
-    color: '#7c3aed',
-  },
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, description: 'Drag-and-drop canvas with widgets (charts, KPIs, gauges, tables)', color: '#0284c7' },
+  { key: 'paginated', label: 'Table Report', icon: Table2, description: 'Professional A4 document with sections, tables, and KPI summaries', color: '#475569' },
 ];
 
 function CreateModal({ open, onClose, onCreate }) {
@@ -64,7 +68,7 @@ function CreateModal({ open, onClose, onCreate }) {
   const [desc, setDesc] = useState('');
   const [reportType, setReportType] = useState('dashboard');
   const [submitting, setSubmitting] = useState(false);
-  const shouldReduce = useReducedMotion();
+  const t = useTheme();
 
   if (!open) return null;
 
@@ -78,260 +82,91 @@ function CreateModal({ open, onClose, onCreate }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)' }}
+      style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <motion.div
-        initial={shouldReduce ? false : { opacity: 0, scale: 0.94, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={shouldReduce ? undefined : { opacity: 0, scale: 0.94, y: 12 }}
-        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-lg rounded-xl overflow-hidden"
-        style={{
-          background: 'var(--rb-panel)',
-          border: '1px solid var(--rb-border)',
-          boxShadow: 'var(--rb-elevation-4)',
-        }}
-      >
-        <div className="px-6 pt-5 pb-4 flex items-center justify-between"
-          style={{ borderBottom: '1px solid var(--rb-border)' }}
-        >
+      <div className="w-full max-w-lg rounded-xl overflow-hidden shadow-2xl"
+        style={{ background: t.modalBg, border: `1px solid ${t.border}` }}>
+        <div className="px-6 pt-5 pb-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${t.border}` }}>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: 'var(--rb-accent-subtle)' }}
-            >
-              <Plus size={16} style={{ color: 'var(--rb-accent)' }} />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: t.accentBg }}>
+              <Plus size={16} style={{ color: t.accent }} />
             </div>
             <div>
-              <h2 className="text-[13px] font-bold" style={{ color: 'var(--rb-text)' }}>Create New Report</h2>
-              <p className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: 'var(--rb-text-muted)' }}>New Template</p>
+              <h2 className="text-sm font-bold" style={{ color: t.text }}>Create New Report</h2>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: t.textMuted }}>New Template</p>
             </div>
           </div>
-          <button onClick={onClose}
-            className="p-1.5 rounded-lg transition-all duration-150"
-            style={{ color: 'var(--rb-text-muted)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-subtle)'; e.currentTarget.style.color = 'var(--rb-accent)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--rb-text-muted)'; }}
-          >
+          <button onClick={onClose} className="p-1.5 rounded-lg transition-colors" style={{ color: t.textSecondary }}>
             <X size={16} />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Report Type Selection */}
           <div>
-            <label className="block text-[9px] font-bold uppercase tracking-widest mb-2.5" style={{ color: 'var(--rb-accent)' }}>Report Type</label>
+            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2.5" style={{ color: t.accent }}>Report Type</label>
             <div className="grid grid-cols-2 gap-3">
               {REPORT_TYPES.map((rt) => {
                 const selected = reportType === rt.key;
                 return (
-                  <button
-                    key={rt.key}
-                    type="button"
-                    onClick={() => setReportType(rt.key)}
+                  <button key={rt.key} type="button" onClick={() => setReportType(rt.key)}
                     className="relative flex flex-col items-center gap-2 p-4 rounded-xl text-center transition-all duration-200"
-                    style={{
-                      border: `2px solid ${selected ? rt.color : 'var(--rb-border)'}`,
-                      background: selected ? `${rt.color}08` : 'var(--rb-surface)',
-                      boxShadow: selected ? `0 0 16px ${rt.color}20` : 'none',
-                    }}
-                  >
+                    style={{ border: `2px solid ${selected ? rt.color : t.border}`, background: selected ? `${rt.color}08` : t.modalInputBg }}>
                     {selected && (
-                      <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center"
-                        style={{ background: rt.color }}>
+                      <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: rt.color }}>
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       </div>
                     )}
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                      style={{ background: `${rt.color}15`, border: `1px solid ${rt.color}25` }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${rt.color}15`, border: `1px solid ${rt.color}25` }}>
                       <rt.icon size={20} style={{ color: rt.color }} />
                     </div>
                     <div>
-                      <div className="text-[11px] font-bold" style={{ color: selected ? rt.color : 'var(--rb-text)' }}>{rt.label}</div>
-                      <div className="text-[9px] mt-0.5 leading-snug" style={{ color: 'var(--rb-text-muted)' }}>{rt.description}</div>
+                      <div className="text-xs font-bold" style={{ color: selected ? rt.color : t.text }}>{rt.label}</div>
+                      <div className="text-[10px] mt-0.5 leading-snug" style={{ color: t.textSecondary }}>{rt.description}</div>
                     </div>
                   </button>
                 );
               })}
             </div>
           </div>
-
           <div>
-            <label className="block text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--rb-accent)' }}>Report Name</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Daily Production Summary" autoFocus className="rb-input-base w-full" />
+            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Report Name</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Daily Production Summary" autoFocus
+              className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
+              style={{ background: t.modalInputBg, border: `1px solid ${t.border}`, color: t.text }} />
           </div>
           <div>
-            <label className="block text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--rb-accent)' }}>Description (optional)</label>
-            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Brief description..." rows={2} className="rb-input-base w-full resize-none" />
+            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Description (optional)</label>
+            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Brief description..." rows={2}
+              className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none resize-none transition-colors"
+              style={{ background: t.modalInputBg, border: `1px solid ${t.border}`, color: t.text }} />
           </div>
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="rb-btn-ghost">Cancel</button>
-            <button type="submit" disabled={!name.trim() || submitting} className="rb-btn-primary disabled:opacity-40 disabled:cursor-not-allowed">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-medium rounded-lg transition-colors" style={{ color: t.textSecondary }}>Cancel</button>
+            <button type="submit" disabled={!name.trim() || submitting}
+              className="px-4 py-2 text-xs font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: t.accent, color: t.btnText }}>
               {submitting ? 'Creating...' : 'Create Report'}
             </button>
           </div>
         </form>
-      </motion.div>
+      </div>
     </div>
   );
 }
 
-function StatusBadge({ status }) {
-  const config = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider"
-      style={{
-        background: config.bg,
-        color: config.color,
-      }}
-    >
-      {config.label}
-    </span>
-  );
-}
-
-const TemplateCard = forwardRef(function TemplateCard({ template, onOpen, onDuplicate, onDelete, index, shouldReduce }, ref) {
+function getReportMeta(template) {
   const status = template.status || 'draft';
-  const reportType = (() => {
-    try {
-      const lc = template?.layout_config;
-      if (!lc) return 'dashboard';
+  let reportType = 'dashboard';
+  let widgetCount = 0;
+  try {
+    const lc = template?.layout_config;
+    if (lc) {
       const parsed = typeof lc === 'string' ? JSON.parse(lc) : lc;
-      return parsed?.reportType || 'dashboard';
-    } catch { return 'dashboard'; }
-  })();
-  const widgetCount = (() => {
-    try {
-      const lc = template?.layout_config;
-      if (!lc) return 0;
-      const parsed = typeof lc === 'string' ? JSON.parse(lc) : lc;
-      if (parsed?.reportType === 'paginated') return parsed?.paginatedSections?.length || 0;
-      return parsed?.widgets?.length || 0;
-    } catch { return 0; }
-  })();
-
-  return (
-    <motion.div
-      ref={ref}
-      layout
-      initial={shouldReduce ? false : { opacity: 0, y: 20, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={shouldReduce ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.97 }}
-      transition={shouldReduce ? { duration: 0 } : {
-        duration: 0.4,
-        delay: index * 0.06,
-        ease: [0.16, 1, 0.3, 1],
-      }}
-      className="group relative rounded-lg overflow-hidden cursor-pointer max-w-sm"
-      style={{
-        background: 'var(--rb-panel)',
-        border: '1px solid var(--rb-border)',
-        borderTop: `3px solid ${STATUS_CONFIG[status]?.color || '#6b7280'}`,
-        borderRadius: 'var(--rb-radius-lg)',
-        boxShadow: 'var(--rb-elevation-2)',
-        transition: 'var(--transition-normal)',
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--rb-elevation-3)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--rb-elevation-2)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-      onClick={() => onOpen(template.id)}
-    >
-        <div className="relative h-36 w-full overflow-hidden">
-          <ReportThumbnail template={template} />
-          <div className="absolute top-3 right-3 z-10">
-            <StatusBadge status={status} />
-          </div>
-        </div>
-
-        <div className="p-4 pt-3 relative" style={{ borderTop: '1px solid var(--rb-border)' }}>
-          <h3 className="text-sm font-bold truncate" style={{ color: 'var(--rb-text)' }}>{template.name}</h3>
-          {template.description && (
-            <p className="text-[10px] mt-1 line-clamp-2 leading-relaxed" style={{ color: 'var(--rb-text-muted)' }}>{template.description}</p>
-          )}
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-[9px] font-semibold tabular-nums uppercase tracking-wider" style={{ color: 'var(--rb-text-muted)' }}>{timeAgo(template.updated_at)}</span>
-              {widgetCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold"
-                  style={{
-                    background: 'var(--rb-accent-subtle)',
-                    color: 'var(--rb-accent)',
-                    borderRadius: '4px',
-                  }}
-                >
-                  <Layers size={8} />
-                  {widgetCount}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold"
-                style={{
-                  background: reportType === 'paginated' ? 'rgba(124, 58, 237, 0.08)' : 'var(--rb-accent-subtle)',
-                  color: reportType === 'paginated' ? '#7c3aed' : 'var(--rb-accent)',
-                  borderRadius: '4px',
-                }}
-              >
-                {reportType === 'paginated' ? <Table2 size={8} /> : <LayoutGrid size={8} />}
-                {reportType === 'paginated' ? 'Paginated' : 'Dashboard'}
-              </span>
-            </div>
-            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <button
-                onClick={(e) => { e.stopPropagation(); onDuplicate(template.id); }}
-                className="p-1.5 rounded-lg transition-all duration-150"
-                style={{ color: 'var(--rb-text-muted)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-subtle)'; e.currentTarget.style.color = 'var(--rb-accent)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--rb-text-muted)'; }}
-                title="Duplicate"
-              >
-                <Copy size={12} />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onDelete(template.id); }}
-                className="p-1.5 rounded-lg transition-all duration-150"
-                style={{ color: 'var(--rb-text-muted)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-danger-subtle)'; e.currentTarget.style.color = 'var(--rb-danger)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--rb-text-muted)'; }}
-                title="Delete"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-          </div>
-        </div>
-    </motion.div>
-  );
-});
-
-function FilterTabs({ value, onChange }) {
-  const tabsRef = useRef(null);
-  const shouldReduce = useReducedMotion();
-
-  return (
-    <div ref={tabsRef} className="relative flex gap-1 p-1 rounded-xl"
-      style={{
-        background: 'var(--rb-surface)',
-        border: '1px solid var(--rb-border)',
-      }}
-    >
-      {FILTER_TABS.map((s) => {
-        const isActive = value === s;
-        return (
-          <button
-            key={s}
-            onClick={() => onChange(s)}
-            className="relative px-3.5 py-1.5 text-[10px] font-bold rounded-lg capitalize z-10 uppercase tracking-wider"
-            style={{
-              color: isActive ? 'var(--rb-accent)' : 'var(--rb-text-muted)',
-              background: isActive ? 'var(--rb-accent-subtle)' : 'transparent',
-              border: isActive ? '1.5px solid var(--rb-accent)' : '1.5px solid var(--rb-border)',
-              transition: shouldReduce ? 'none' : 'all 200ms cubic-bezier(0.16,1,0.3,1)',
-            }}
-          >
-            {s}
-          </button>
-        );
-      })}
-    </div>
-  );
+      reportType = parsed?.reportType || 'dashboard';
+      widgetCount = parsed?.reportType === 'paginated' ? (parsed?.paginatedSections?.length || 0) : (parsed?.widgets?.length || 0);
+    }
+  } catch {}
+  return { status, reportType, widgetCount };
 }
 
 export default function ReportBuilderManager() {
@@ -340,29 +175,37 @@ export default function ReportBuilderManager() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showCreate, setShowCreate] = useState(false);
-  const shouldReduce = useReducedMotion();
+  const [viewMode, setViewMode] = useState('table');
+  const t = useTheme();
 
   const filtered = useMemo(() => {
     let list = templates;
-    if (statusFilter !== 'all') list = list.filter((t) => (t.status || 'draft') === statusFilter);
+    if (statusFilter !== 'all') list = list.filter((tp) => (tp.status || 'draft') === statusFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter((t) => t.name?.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q));
+      list = list.filter((tp) => tp.name?.toLowerCase().includes(q) || tp.description?.toLowerCase().includes(q));
     }
     return list;
   }, [templates, search, statusFilter]);
 
-  const getReportType = (t) => {
-    try {
-      const lc = typeof t?.layout_config === 'string' ? JSON.parse(t.layout_config) : (t?.layout_config || {});
-      return lc.reportType || 'dashboard';
-    } catch { return 'dashboard'; }
-  };
+  const stats = useMemo(() => {
+    const total = templates.length;
+    const drafts = templates.filter(tp => (tp.status || 'draft') === 'draft').length;
+    const released = templates.filter(tp => tp.status === 'released').length;
+    let dashboards = 0;
+    let tableReports = 0;
+    templates.forEach(tp => {
+      const { reportType } = getReportMeta(tp);
+      if (reportType === 'paginated') tableReports++;
+      else dashboards++;
+    });
+    return { total, drafts, released, dashboards, tableReports };
+  }, [templates]);
 
   const handleOpen = (id) => {
-    const t = templates.find((t) => t.id === id);
-    const rt = getReportType(t);
-    if (rt === 'paginated') navigate(`/report-builder/${id}/paginated`);
+    const tp = templates.find((x) => x.id === id);
+    const { reportType } = getReportMeta(tp);
+    if (reportType === 'paginated') navigate(`/report-builder/${id}/paginated`);
     else navigate(`/report-builder/${id}`);
   };
   const handleCreate = async (data) => {
@@ -381,159 +224,253 @@ export default function ReportBuilderManager() {
     if (window.confirm('Remove all report templates? This cannot be undone.')) clearAllTemplates();
   };
 
+  const sc = (status) => {
+    const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
+    return { bg: t.dark ? cfg.darkBg : cfg.lightBg, color: t.dark ? cfg.darkColor : cfg.lightColor };
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.05, duration: 0.4 } }
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+  };
+
   return (
-    <div className="report-builder min-h-[calc(100vh-80px)] p-6" style={{ background: 'var(--rb-canvas)' }}>
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={shouldReduce ? false : { opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={shouldReduce ? { duration: 0 } : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8"
-        >
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      transition={{ duration: 0.4 }}
+      className="report-builder min-h-[calc(100vh-72px)]" 
+      style={{ background: t.pageBg }}>
+      <div className="max-w-[1400px] mx-auto px-6 md:px-8 lg:px-12 py-6 md:py-8">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{
-                  background: 'var(--rb-accent-subtle)',
-                  border: '1px solid rgba(56, 189, 248, 0.15)',
-                }}
-              >
-                <BarChart3 size={20} style={{ color: 'var(--rb-accent)' }} />
-              </div>
-              <div>
-                <h1 className="text-xl font-extrabold tracking-tight" style={{ color: 'var(--rb-text)' }}>
-                  Report Builder
-                </h1>
-                <p className="text-[9px] uppercase tracking-widest font-semibold mt-0.5" style={{ color: 'var(--rb-text-muted)' }}>Template Manager</p>
-              </div>
+            <h1 className="text-xl font-bold" style={{ color: t.text }}>Report Builder</h1>
+            <p className="text-sm mt-1" style={{ color: t.textSecondary }}>Create and manage report templates</p>
+          </div>
+          <button onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{ background: t.accent, color: t.btnText, '--tw-ring-color': t.accent, '--tw-ring-offset-color': t.pageBg }}>
+            <Plus size={16} strokeWidth={2.5} /> New Report
+          </button>
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center gap-6 mb-6 px-4 py-2.5 rounded-lg"
+          style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+          {[
+            { label: 'Total', value: stats.total, color: t.accent },
+            { label: 'Dashboards', value: stats.dashboards, color: t.dark ? '#38bdf8' : '#0284c7' },
+            { label: 'Table Reports', value: stats.tableReports, color: t.dark ? '#94a3b8' : '#475569' },
+            { label: 'Drafts', value: stats.drafts, color: t.dark ? '#94a3b8' : '#64748b' },
+            { label: 'Released', value: stats.released, color: t.dark ? '#34d399' : '#059669' },
+          ].map((s, i, arr) => (
+            <div key={s.label} className="flex items-center gap-1.5" style={i < arr.length - 1 ? { paddingRight: '1.5rem', borderRight: `1px solid ${t.border}` } : undefined}>
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
+              <span className="text-xs font-medium" style={{ color: t.textMuted }}>{s.label}</span>
+              <span className="text-sm font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
+            </div>
+          ))}
+        </motion.div>
+
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: t.textMuted }} />
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search reports..."
+                className="w-80 pl-10 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-all shadow-sm focus:ring-2 focus:border-transparent"
+                style={{ background: t.inputBg, border: `1px solid ${t.border}`, color: t.text, '--tw-ring-color': t.accentBg }} />
+            </div>
+            <div className="flex items-center rounded-lg p-1 shadow-sm" style={{ background: t.inputBg, border: `1px solid ${t.border}` }}>
+              {FILTER_TABS.map(s => {
+                const isActive = statusFilter === s;
+                return (
+                  <button key={s} onClick={() => setStatusFilter(s)}
+                    className="px-4 py-1.5 text-xs font-semibold rounded-md capitalize transition-all"
+                    style={{
+                      background: isActive ? t.accentBg : 'transparent',
+                      color: isActive ? t.accent : t.textSecondary,
+                    }}
+                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = t.text; }}
+                    onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = t.textSecondary; }}
+                  >{s}</button>
+                );
+              })}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {templates.length > 0 && (
-              <button
-                onClick={handleClearAll}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all duration-200"
-                style={{
-                  color: 'var(--rb-text-muted)',
-                  border: '1px solid var(--rb-border)',
-                  background: 'var(--rb-panel)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--rb-danger)';
-                  e.currentTarget.style.color = 'var(--rb-danger)';
-                  e.currentTarget.style.background = 'var(--rb-danger-subtle)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--rb-border)';
-                  e.currentTarget.style.color = 'var(--rb-text-muted)';
-                  e.currentTarget.style.background = 'var(--rb-panel)';
-                }}
-              >
-                <Trash2 size={12} />
-                Clear all
+              <button onClick={handleClearAll}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg transition-colors hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 shadow-sm"
+                style={{ color: t.textSecondary, border: `1px solid ${t.border}`, background: t.surface }}>
+                <Trash2 size={14} /> Clear all
               </button>
             )}
-            <button
-              onClick={() => setShowCreate(true)}
-              className="rb-btn-primary inline-flex items-center gap-2"
-            >
-              <Plus size={14} strokeWidth={2.5} />
-              <span className="text-[11px] font-bold uppercase tracking-wider">Create Report</span>
-            </button>
+            <div className="flex items-center rounded-lg p-1 shadow-sm" style={{ background: t.inputBg, border: `1px solid ${t.border}` }}>
+              <button onClick={() => setViewMode('table')} className="p-2 rounded transition-colors"
+                style={{ background: viewMode === 'table' ? t.accentBg : 'transparent', color: viewMode === 'table' ? t.accent : t.textSecondary }}
+                onMouseEnter={(e) => { if (viewMode !== 'table') e.currentTarget.style.color = t.text; }}
+                onMouseLeave={(e) => { if (viewMode !== 'table') e.currentTarget.style.color = t.textSecondary; }}
+              >
+                <FileText size={16} />
+              </button>
+              <button onClick={() => setViewMode('grid')} className="p-2 rounded transition-colors"
+                style={{ background: viewMode === 'grid' ? t.accentBg : 'transparent', color: viewMode === 'grid' ? t.accent : t.textSecondary }}
+                onMouseEnter={(e) => { if (viewMode !== 'grid') e.currentTarget.style.color = t.text; }}
+                onMouseLeave={(e) => { if (viewMode !== 'grid') e.currentTarget.style.color = t.textSecondary; }}
+              >
+                <LayoutGrid size={16} />
+              </button>
+            </div>
           </div>
-        </motion.div>
-
-        <motion.div
-          initial={shouldReduce ? false : { opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={shouldReduce ? { duration: 0 } : { duration: 0.35, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col sm:flex-row gap-3 mb-8 items-start sm:items-center"
-        >
-          <div className="relative flex-1 max-w-sm">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--rb-text-muted)' }} />
-            <input
-              type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search reports..."
-              className="rb-input-base w-full pl-9 pr-3 py-2.5"
-            />
-          </div>
-          <FilterTabs value={statusFilter} onChange={setStatusFilter} />
-        </motion.div>
+        </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="rounded-xl overflow-hidden" style={{ background: 'var(--rb-panel)', border: '1px solid var(--rb-border)' }}>
-                <div className="h-48 relative overflow-hidden">
-                  <div className="absolute inset-0 animate-pulse" style={{ background: 'var(--rb-surface)' }} />
-                  <div className="absolute inset-0"
-                    style={{
-                      background: 'linear-gradient(90deg, transparent 0%, var(--rb-accent-subtle) 50%, transparent 100%)',
-                      animation: 'shimmer 2s infinite',
-                    }}
-                  />
-                </div>
-                <div className="p-4 space-y-3" style={{ borderTop: '1px solid var(--rb-border)' }}>
-                  <div className="h-3.5 rounded-full w-3/4 animate-pulse" style={{ background: 'var(--rb-border)' }} />
-                  <div className="h-2.5 rounded-full w-1/2 animate-pulse" style={{ background: 'var(--rb-surface)' }} />
+              <div key={i} className="flex items-center gap-5 px-6 py-5" style={{ borderBottom: `1px solid ${t.border}` }}>
+                <div className="w-16 h-12 rounded-lg animate-pulse" style={{ background: t.surfaceAlt }} />
+                <div className="flex-1 space-y-3">
+                  <div className="h-4 rounded w-48 animate-pulse" style={{ background: t.border }} />
+                  <div className="h-3 rounded w-32 animate-pulse" style={{ background: t.surfaceAlt }} />
                 </div>
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <motion.div
-            initial={shouldReduce ? false : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={shouldReduce ? { duration: 0 } : { duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col items-center justify-center py-28 text-center"
-          >
-            <div className="relative mb-6">
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center"
-                style={{
-                  background: 'var(--rb-surface)',
-                  border: '1px solid var(--rb-border)',
-                }}
-              >
-                <FileText size={32} style={{ color: 'var(--rb-accent)', opacity: 0.6 }} />
-              </div>
-              <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center"
-                style={{
-                  background: 'var(--rb-accent)',
-                }}
-              >
-                <Zap size={12} style={{ color: 'white' }} />
-              </div>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center justify-center py-32 text-center rounded-xl shadow-sm relative overflow-hidden"
+            style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '24px 24px', color: t.text }}></div>
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 relative z-10"
+              style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, boxShadow: `0 8px 30px rgba(0,0,0,0.12)` }}>
+              <FileText size={36} style={{ color: t.accent }} />
             </div>
-            <h3 className="text-base font-extrabold mb-2" style={{ color: 'var(--rb-text)' }}>
+            <h3 className="text-lg font-bold mb-2 relative z-10" style={{ color: t.text }}>
               {search || statusFilter !== 'all' ? 'No matching reports' : 'No reports yet'}
             </h3>
-            <p className="text-[11px] mb-8 max-w-sm leading-relaxed" style={{ color: 'var(--rb-text-muted)' }}>
-              {search
-                ? 'Try adjusting your search term or clearing filters'
-                : 'Launch your first report to start building visual dashboards with drag-and-drop widgets'}
+            <p className="text-sm mb-8 max-w-sm relative z-10" style={{ color: t.textSecondary }}>
+              {search ? 'Try adjusting your search or filters to find what you are looking for.' : 'Get started by creating your first report template to monitor your data.'}
             </p>
             {!search && statusFilter === 'all' && (
               <button onClick={() => setShowCreate(true)}
-                className="rb-btn-primary inline-flex items-center gap-2"
-              >
-                <Plus size={14} strokeWidth={2.5} />
-                <span className="text-[11px] font-bold uppercase tracking-wider">Create Report</span>
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg relative z-10"
+                style={{ background: t.accent, color: t.btnText }}>
+                <Plus size={16} /> Create First Report
               </button>
             )}
           </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            <AnimatePresence mode="popLayout">
-              {filtered.map((t, i) => (
-                <TemplateCard key={t.id} template={t} index={i} onOpen={handleOpen} onDuplicate={duplicateTemplate} onDelete={handleDelete} shouldReduce={shouldReduce} />
-              ))}
-            </AnimatePresence>
+        ) : viewMode === 'table' ? (
+          <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+            <div className="grid grid-cols-[1.5fr_140px_140px_100px_120px_80px] items-center px-6 py-4 text-[11px] uppercase tracking-wider font-bold"
+              style={{ color: t.textMuted, borderBottom: `1px solid ${t.border}`, background: t.dark ? 'rgba(10,15,26,0.5)' : 'rgba(0,0,0,0.02)' }}>
+              <span>Report Name</span><span>Type</span><span>Status</span><span>Widgets</span><span>Modified</span><span className="text-right">Actions</span>
+            </div>
+            <motion.div variants={containerVariants} initial="hidden" animate="visible">
+            {filtered.map((tp) => {
+              const { status, reportType, widgetCount } = getReportMeta(tp);
+              const s = sc(status);
+              const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
+              return (
+                <motion.div variants={itemVariants} key={tp.id} onClick={() => handleOpen(tp.id)}
+                  className="grid grid-cols-[1.5fr_140px_140px_100px_120px_80px] items-center px-6 py-4 cursor-pointer transition-all duration-200 group"
+                  style={{ borderBottom: `1px solid ${t.border}` }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = t.hoverBg}
+                  onMouseLeave={(e) => e.currentTarget.style.background = ''}>
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 shadow-sm" style={{ border: `1px solid ${t.border}`, background: t.surfaceAlt }}>
+                      <ReportThumbnail template={tp} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-semibold truncate transition-colors group-hover:text-[var(--brand)]" style={{ color: t.text }}>{tp.name || 'Untitled'}</p>
+                      {tp.description && <p className="text-xs truncate mt-1" style={{ color: t.textSecondary }}>{tp.description}</p>}
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold w-fit px-2.5 py-1 rounded-md"
+                    style={reportType === 'paginated'
+                      ? { background: t.dark ? 'rgba(71,85,105,0.15)' : 'rgba(71,85,105,0.08)', color: t.dark ? '#94a3b8' : '#475569' }
+                      : { background: t.accentBg, color: t.dark ? t.accent : '#0891b2' }}>
+                    {reportType === 'paginated' ? <Table2 size={12} /> : <LayoutGrid size={12} />}
+                    {reportType === 'paginated' ? 'Table Report' : 'Dashboard'}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider w-fit px-2.5 py-1 rounded-md"
+                    style={{ background: s.bg, color: s.color }}>{cfg.label}</span>
+                  <span className="text-sm font-mono font-medium" style={{ color: t.textSecondary }}>{widgetCount}</span>
+                  <span className="text-xs font-medium" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at)}</span>
+                  <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button onClick={(e) => { e.stopPropagation(); duplicateTemplate(tp.id); }}
+                      className="p-2 rounded-lg transition-colors hover:bg-white/10 hover:text-white" style={{ color: t.textSecondary }} title="Duplicate">
+                      <Copy size={16} />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(tp.id); }}
+                      className="p-2 rounded-lg transition-colors hover:bg-red-500/10 hover:text-red-400" style={{ color: t.textSecondary }} title="Delete">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+            </motion.div>
           </div>
+        ) : (
+          <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filtered.map((tp) => {
+              const { status, reportType, widgetCount } = getReportMeta(tp);
+              const s = sc(status);
+              const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
+              return (
+                <motion.div variants={itemVariants} key={tp.id} onClick={() => handleOpen(tp.id)}
+                  className="group rounded-xl overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1"
+                  style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+                  <div className="relative h-40 overflow-hidden" style={{ borderBottom: `2px solid ${s.color}` }}>
+                    <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
+                      <ReportThumbnail template={tp} />
+                    </div>
+                    <div className="absolute top-3 right-3 shadow-md">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md backdrop-blur-md"
+                        style={{ background: s.bg, color: s.color }}>{cfg.label}</span>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-base font-bold truncate transition-colors group-hover:text-[var(--brand)]" style={{ color: t.text }}>{tp.name || 'Untitled'}</p>
+                    {tp.description && <p className="text-xs mt-1.5 line-clamp-2" style={{ color: t.textSecondary }}>{tp.description}</p>}
+                    <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: `1px solid ${t.border}` }}>
+                      <span className="text-xs font-medium" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at)}</span>
+                      <div className="flex items-center gap-2">
+                        {widgetCount > 0 && (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-1 rounded-md"
+                            style={{ background: t.surfaceAlt, color: t.textSecondary, border: `1px solid ${t.border}` }}>
+                            <Layers size={10} />{widgetCount}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-1 rounded-md"
+                          style={reportType === 'paginated'
+                            ? { background: t.dark ? 'rgba(71,85,105,0.15)' : 'rgba(71,85,105,0.08)', color: t.dark ? '#94a3b8' : '#475569' }
+                            : { background: t.accentBg, color: t.dark ? t.accent : '#0891b2' }}>
+                          {reportType === 'paginated' ? <Table2 size={10} /> : <LayoutGrid size={10} />}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
         )}
 
         <AnimatePresence>
           {showCreate && <CreateModal open={showCreate} onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

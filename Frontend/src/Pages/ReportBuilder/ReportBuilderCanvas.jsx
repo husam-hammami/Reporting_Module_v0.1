@@ -5,7 +5,7 @@ import axios from '../../API/axios';
 import {
   ArrowLeft, Save, Eye, PanelLeftClose, PanelRightClose,
   PanelLeft, PanelRight, Check, Pencil, Plus, X, AlertCircle, Send,
-  Undo2, Redo2, Minus, Maximize, Grid3x3, FileText, Monitor,
+  Undo2, Redo2, Minus, Maximize, FileText, Monitor,
   Copy, Trash2, Lock, Unlock,
 } from 'lucide-react';
 import { Tooltip } from '@mui/material';
@@ -29,88 +29,6 @@ const GRID_ROW_H_DEFAULT  = 40;   // row height (px) — compact layout
 const GRID_MARGIN         = [12, 12];
 const GRID_PADDING        = [16, 16];
 
-/* ── Parameter Bar ─────────────────────────────────────────────── */
-
-function ParameterBar({ parameters, onAdd, onRemove, onUpdate }) {
-  const [adding, setAdding] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState('text');
-
-  const handleAdd = () => {
-    if (!newName.trim()) return;
-    onAdd({ name: newName.trim(), type: newType, defaultValue: '', options: [] });
-    setNewName('');
-    setNewType('text');
-    setAdding(false);
-  };
-
-  if (parameters.length === 0 && !adding) {
-    return (
-      <div className="flex items-center px-5 py-2.5 border-b border-[var(--rb-border)] bg-[var(--rb-surface)]">
-        <button
-          onClick={() => setAdding(true)}
-          className="rb-caption inline-flex items-center gap-2 text-[var(--rb-text-muted)] hover:text-[var(--rb-accent)] transition-colors"
-        >
-          <Plus size={14} />
-          Add report parameter
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-3 px-5 py-2.5 border-b border-[var(--rb-border)] bg-[var(--rb-surface)] overflow-x-auto">
-      {parameters.map((p, i) => (
-        <div key={i} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--rb-panel)] border border-[var(--rb-border)] rb-body">
-          <span className="font-medium text-[var(--rb-text)]">{p.name}</span>
-          <span className="text-[var(--rb-text-muted)]">:</span>
-          <input
-            type="text"
-            value={p.defaultValue || ''}
-            onChange={(e) => onUpdate(i, { defaultValue: e.target.value })}
-            placeholder="value"
-            className="w-20 rb-body bg-transparent border-0 outline-none text-[var(--rb-text)] placeholder:text-[var(--rb-text-muted)]"
-          />
-          <button onClick={() => onRemove(i)} className="text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] transition-colors p-0.5">
-            <X size={12} />
-          </button>
-        </div>
-      ))}
-      {adding ? (
-        <div className="inline-flex items-center gap-2">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Name"
-            autoFocus
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            className="rb-input-base w-24"
-          />
-          <select
-            value={newType}
-            onChange={(e) => setNewType(e.target.value)}
-            className="rb-input-base w-28"
-          >
-            <option value="text">Text</option>
-            <option value="dateRange">Date Range</option>
-            <option value="select">Select</option>
-          </select>
-          <button onClick={handleAdd} className="p-2 text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] rounded-md transition-colors"><Check size={14} /></button>
-          <button onClick={() => setAdding(false)} className="p-2 text-[var(--rb-text-muted)] hover:bg-[var(--rb-surface)] rounded-md transition-colors"><X size={14} /></button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setAdding(true)}
-          className="rb-caption inline-flex items-center gap-2 text-[var(--rb-text-muted)] hover:text-[var(--rb-accent)] transition-colors flex-shrink-0"
-        >
-          <Plus size={14} />
-          Add
-        </button>
-      )}
-    </div>
-  );
-}
 
 /* ── Canvas Page ───────────────────────────────────────────────── */
 
@@ -118,9 +36,8 @@ export default function ReportBuilderCanvas() {
   const { id } = useParams();
   const navigate = useNavigate();
   const {
-    template, widgets: rawWidgets, parameters, loading, saving, dirty, migrated,
+    template, widgets: rawWidgets, loading, saving, dirty, migrated,
     addWidget, addWidgetAt, updateWidget, removeWidget, updateLayout,
-    addParameter, updateParameter, removeParameter,
     addComputedSignal, saveLayout, updateMeta,
     undo, redo, canUndo, canRedo,
   } = useReportCanvas(id);
@@ -170,7 +87,6 @@ export default function ReportBuilderCanvas() {
   const [showToolbox, setShowToolbox] = useState(true);
   const [showProperties, setShowProperties] = useState(true);
   const [zoom, setZoom] = useState(1);
-  const [gridSnap, setGridSnap] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -228,10 +144,20 @@ export default function ReportBuilderCanvas() {
 
   /* ── Callbacks ─────────────────────────────────────────────── */
 
+  const interactingRef = useRef(false);
+
   const handleLayoutChange = useCallback(
-    (newLayout) => updateLayout(newLayout),
+    (newLayout) => {
+      if (interactingRef.current) {
+        interactingRef.current = false;
+        updateLayout(newLayout);
+      }
+    },
     [updateLayout],
   );
+
+  const handleDragStart = useCallback(() => { interactingRef.current = true; }, []);
+  const handleResizeStart = useCallback(() => { interactingRef.current = true; }, []);
 
   const handleSelect = useCallback((wid, e) => {
     e?.stopPropagation();
@@ -341,8 +267,8 @@ export default function ReportBuilderCanvas() {
     setTimeout(() => setSaveSuccess(false), 2000);
   }, [saveLayout]);
 
-  const handlePublish = useCallback(() => {
-    updateMeta({ status: 'published' });
+  const handleRelease = useCallback(() => {
+    updateMeta({ status: 'released' });
     saveLayout();
   }, [updateMeta, saveLayout]);
 
@@ -394,7 +320,7 @@ export default function ReportBuilderCanvas() {
   /* ── Loading state ─────────────────────────────────────────── */
   if (loading) {
     return (
-      <div className="report-builder flex flex-col h-[calc(100vh-80px)] overflow-hidden">
+      <div className="report-builder flex flex-col h-[calc(100vh-72px)] overflow-hidden">
         <div className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-8 h-8 border-2 border-[var(--rb-accent)] border-t-transparent rounded-full animate-spin" />
@@ -406,119 +332,139 @@ export default function ReportBuilderCanvas() {
   }
 
   const statusClass =
-    template?.status === 'published'
+    template?.status === 'released'
       ? 'bg-[var(--rb-success)]/12 text-[var(--rb-success)]'
-      : template?.status === 'validated'
-        ? 'bg-[var(--rb-accent)]/12 text-[var(--rb-accent)]'
-        : 'bg-[var(--rb-text-muted)]/15 text-[var(--rb-text-muted)]';
+      : 'bg-[var(--rb-text-muted)]/15 text-[var(--rb-text-muted)]';
 
   /* ═══════════════════════  RENDER  ═══════════════════════════ */
   return (
-    <div className="report-builder flex flex-col h-[calc(100vh-80px)] overflow-hidden bg-[var(--rb-surface)]">
+    <div className="report-builder flex flex-col h-[calc(100vh-72px)] overflow-hidden bg-[var(--rb-surface)]">
       {/* ── Top Toolbar ── */}
-      <div className="flex items-center justify-between px-4 py-2.5 rb-panel-surface border-b border-[var(--rb-border)] flex-shrink-0">
+      <div className="h-12 flex items-center justify-between px-4 bg-[#111827] border-b border-[#1e293b] flex-shrink-0">
         <div className="flex items-center gap-4 min-w-0">
           <Tooltip title="Back to reports" placement="bottom" arrow disableInteractive>
-            <button onClick={() => navigate('/report-builder')} className="rb-btn-ghost p-2 -ml-2">
+            <button onClick={() => navigate('/report-builder')} className="p-1.5 hover:bg-[#1a2233] rounded-md text-[#8899ab] hover:text-[#f0f4f8] transition-colors -ml-1">
               <ArrowLeft size={18} />
             </button>
           </Tooltip>
           <div className="min-w-0">
-            <p className="rb-heading leading-tight">Report Builder Workspace</p>
             {editingName ? (
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2">
                 <input
                   ref={nameRef}
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
                   onBlur={finishEditName}
                   onKeyDown={(e) => e.key === 'Enter' && finishEditName()}
-                  className="rb-body font-semibold bg-transparent border-b border-[var(--rb-accent)] outline-none py-0.5 min-w-[120px]"
+                  className="bg-transparent border-none font-medium text-base focus:outline-none focus:ring-1 focus:ring-[#22d3ee] rounded px-1 text-[#f0f4f8] min-w-[120px]"
                 />
-                <button onClick={finishEditName} className="p-1.5 text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] rounded-md transition-colors">
+                <button onClick={finishEditName} className="p-1.5 text-[#22d3ee] hover:bg-[#22d3ee]/10 rounded-md transition-colors">
                   <Check size={14} />
                 </button>
               </div>
             ) : (
-              <button onClick={startEditName} className="flex items-center gap-2 group min-w-0 mt-1">
-                <h1 className="rb-body font-semibold truncate">{template?.name || 'Untitled Report Layout'}</h1>
-                <Pencil size={12} className="text-[var(--rb-text-muted)] group-hover:text-[var(--rb-accent)] transition-colors flex-shrink-0" />
+              <button onClick={startEditName} className="flex items-center gap-2 group min-w-0">
+                <h1 className="font-medium text-base text-[#f0f4f8] truncate">{template?.name || 'Untitled Report'}</h1>
+                <Pencil size={12} className="text-[#556677] group-hover:text-[#22d3ee] transition-colors flex-shrink-0" />
               </button>
             )}
           </div>
-          <span className={`rb-badge ${statusClass}`}>{template?.status || 'Draft'}</span>
+          <span className="text-xs px-2 py-0.5 border border-[#1e293b] rounded bg-[#0a0f1a] text-[#556677] capitalize">{template?.status === 'released' ? 'Released' : 'Draft'}</span>
           {dirty && (
-            <span className="rb-badge bg-[var(--rb-warning)]/12 text-[var(--rb-warning)] inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--rb-warning)] animate-pulse" />
+            <span className="text-xs text-[#fbbf24] inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#fbbf24] animate-pulse" />
               Unsaved changes
             </span>
           )}
           {migrated && (
-            <span className="rb-badge bg-[var(--rb-warning)]/12 text-[var(--rb-warning)] inline-flex items-center gap-1">
+            <span className="text-xs text-[#fbbf24] inline-flex items-center gap-1">
               <AlertCircle size={12} /> Migrated
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-1">
-          <Tooltip title="Components panel" placement="bottom" arrow disableInteractive>
-            <button
-              onClick={() => setShowToolbox(!showToolbox)}
-              className={`p-2.5 rounded-lg transition-colors ${showToolbox ? 'text-[var(--rb-accent)] bg-[var(--rb-accent-subtle)]' : 'rb-btn-ghost'}`}
-            >
-              {showToolbox ? <PanelLeftClose size={16} /> : <PanelLeft size={16} />}
-            </button>
-          </Tooltip>
-          <Tooltip title="Properties panel" placement="bottom" arrow disableInteractive>
-            <button
-              onClick={() => setShowProperties(!showProperties)}
-              className={`p-2.5 rounded-lg transition-colors ${showProperties ? 'text-[var(--rb-accent)] bg-[var(--rb-accent-subtle)]' : 'rb-btn-ghost'}`}
-            >
-              {showProperties ? <PanelRightClose size={16} /> : <PanelRight size={16} />}
-            </button>
-          </Tooltip>
-        </div>
-
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Full buttons on desktop, icon-only on mobile */}
-          <Tooltip title="Preview report" placement="bottom" arrow disableInteractive>
-            <button onClick={() => navigate(`/report-builder/${id}/preview`)} className="rb-btn-ghost inline-flex items-center gap-1.5">
-              <Eye size={14} /> <span className="hidden sm:inline">Preview</span>
+          <div className="flex items-center bg-[#1a2233] rounded-md p-0.5 border border-[#1e293b]">
+            <Tooltip title="Zoom out" placement="bottom" arrow disableInteractive>
+              <button onClick={handleZoomOut} className="p-1.5 hover:bg-[#1e293b] rounded text-[#8899ab] hover:text-[#f0f4f8]">
+                <Minus size={16} />
+              </button>
+            </Tooltip>
+            <button onClick={handleZoomReset} className="text-xs font-mono px-2 text-[#8899ab] hover:text-[#f0f4f8]">{Math.round(zoom * 100)}%</button>
+            <Tooltip title="Zoom in" placement="bottom" arrow disableInteractive>
+              <button onClick={handleZoomIn} className="p-1.5 hover:bg-[#1e293b] rounded text-[#8899ab] hover:text-[#f0f4f8]">
+                <Maximize size={16} />
+              </button>
+            </Tooltip>
+          </div>
+
+          <div className="w-px h-5 bg-[#1e293b] mx-1" />
+
+          <Tooltip title="Undo" placement="bottom" arrow disableInteractive>
+            <button onClick={undo} disabled={!canUndo} className="p-1.5 hover:bg-[#1a2233] rounded text-[#8899ab] hover:text-[#f0f4f8] disabled:opacity-30">
+              <Undo2 size={16} />
             </button>
           </Tooltip>
-          <Tooltip title="Save layout" placement="bottom" arrow disableInteractive>
+          <Tooltip title="Redo" placement="bottom" arrow disableInteractive>
+            <button onClick={redo} disabled={!canRedo} className="p-1.5 hover:bg-[#1a2233] rounded text-[#8899ab] hover:text-[#f0f4f8] disabled:opacity-30">
+              <Redo2 size={16} />
+            </button>
+          </Tooltip>
+
+          <div className="w-px h-5 bg-[#1e293b] mx-1" />
+
+          <div className="flex items-center bg-[#0a0f1a] rounded-md p-0.5 border border-[#1e293b]">
+            <button
+              onClick={() => { if (pageMode !== 'a4') togglePageMode(); }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${pageMode === 'a4' ? 'bg-[#1a2233] text-[#f0f4f8] shadow-sm' : 'text-[#556677] hover:text-[#8899ab]'}`}
+            >
+              <FileText size={13} />
+              A4
+            </button>
+            <button
+              onClick={() => { if (pageMode !== 'full') togglePageMode(); }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${pageMode === 'full' ? 'bg-[#1a2233] text-[#f0f4f8] shadow-sm' : 'text-[#556677] hover:text-[#8899ab]'}`}
+            >
+              <Monitor size={13} />
+              Dashboard
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-[#1e293b] mx-1" />
+
+          <Tooltip title="Preview report" placement="bottom" arrow disableInteractive>
+            <button onClick={() => navigate(`/report-builder/${id}/preview`)} className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#1a2233] rounded-md text-[#8899ab] hover:text-[#f0f4f8] border border-transparent hover:border-[#1e293b] transition-all">
+              <Eye size={14} />
+              <span className="text-xs font-medium hidden sm:inline">Preview</span>
+            </button>
+          </Tooltip>
+
+          <Tooltip title="Save report" placement="bottom" arrow disableInteractive>
             <span>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className={`rb-btn-success inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed ${saveSuccess ? '!bg-[var(--rb-success)]' : ''}`}
-                style={{ transition: skipAnimations ? 'none' : 'background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease' }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#22d3ee] hover:bg-[#06b6d4] text-[#0a0f1a] rounded-md transition-colors font-medium disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {saveSuccess ? <><Check size={14} /> <span className="hidden sm:inline">Saved</span></> : saving ? <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> <span className="hidden sm:inline">Saving...</span></> : <><Save size={14} /> <span className="hidden sm:inline">Save Template</span></>}
+                {saveSuccess ? <><Check size={14} /> <span className="text-xs hidden sm:inline">Saved</span></> : saving ? <><span className="w-3.5 h-3.5 border-2 border-[#0a0f1a]/40 border-t-[#0a0f1a] rounded-full animate-spin" /> <span className="text-xs hidden sm:inline">Saving...</span></> : <><Save size={14} /> <span className="text-xs hidden sm:inline">Save Report</span></>}
               </button>
             </span>
           </Tooltip>
-          <Tooltip title="Publish report" placement="bottom" arrow disableInteractive>
+
+          <Tooltip title="Release report" placement="bottom" arrow disableInteractive>
             <span>
               <button
-                onClick={handlePublish}
+                onClick={handleRelease}
                 disabled={saving}
-                className="rb-btn-primary inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#1a2233] hover:bg-[#0a0f1a] text-[#f0f4f8] rounded-md transition-colors font-medium border border-[#1e293b] disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Send size={14} /> <span className="hidden sm:inline">Publish</span>
+                <Send size={14} /> <span className="text-xs hidden sm:inline">Release</span>
               </button>
             </span>
           </Tooltip>
+
         </div>
       </div>
-
-      {/* ── Parameter Bar ── */}
-      <ParameterBar
-        parameters={parameters}
-        onAdd={addParameter}
-        onRemove={removeParameter}
-        onUpdate={updateParameter}
-      />
 
       {/* ── Three-zone body: toolbox | canvas | properties ── */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -540,6 +486,7 @@ export default function ReportBuilderCanvas() {
                 widgets={widgets}
                 selectedId={selectedId}
                 onSelectWidget={(wid) => { setSelectedId(wid); setShowProperties(true); }}
+                onHidePanel={() => setShowToolbox(false)}
               />
             </motion.div>
           )}
@@ -547,9 +494,29 @@ export default function ReportBuilderCanvas() {
 
         {/* ── Canvas (scrollable, fill remaining width) ── */}
         <div className="flex-1 min-w-0 min-h-0 basis-0 relative">
+          {!showToolbox && (
+            <Tooltip title="Show widgets panel" placement="right" arrow disableInteractive>
+              <button
+                onClick={() => setShowToolbox(true)}
+                className="absolute left-2 top-3 z-10 p-2 rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-border)] text-[var(--rb-text-muted)] hover:text-[var(--rb-accent)] hover:border-[var(--rb-accent)] shadow-md transition-all"
+              >
+                <PanelLeft size={16} />
+              </button>
+            </Tooltip>
+          )}
+          {!showProperties && (
+            <Tooltip title="Show properties panel" placement="left" arrow disableInteractive>
+              <button
+                onClick={() => setShowProperties(true)}
+                className="absolute right-2 top-3 z-10 p-2 rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-border)] text-[var(--rb-text-muted)] hover:text-[var(--rb-accent)] hover:border-[var(--rb-accent)] shadow-md transition-all"
+              >
+                <PanelRight size={16} />
+              </button>
+            </Tooltip>
+          )}
           <div
             ref={canvasScrollRef}
-            className={`absolute inset-0 overflow-y-auto overflow-x-auto rb-canvas-surface rb-canvas-dots ${gridSnap ? 'rb-grid-snap-active' : ''}`}
+            className="absolute inset-0 overflow-y-auto overflow-x-auto rb-canvas-surface rb-canvas-dots"
             style={{ background: 'var(--rb-canvas)' }}
             onClick={handleDeselect}
             onDragOver={handleCanvasDragOver}
@@ -593,6 +560,8 @@ export default function ReportBuilderCanvas() {
                     isResizable={true}
                     resizeHandles={['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne']}
                     onLayoutChange={handleLayoutChange}
+                    onDragStart={handleDragStart}
+                    onResizeStart={handleResizeStart}
                     draggableCancel=".no-drag"
                     draggableHandle=".widget-drag-handle"
                   >
@@ -721,44 +690,7 @@ export default function ReportBuilderCanvas() {
             </div>
           </div>
 
-          {/* ── Floating Canvas Toolbar ── */}
-          <div className="rb-floating-toolbar">
-            <Tooltip title="Zoom out (Ctrl+-)" placement="top" arrow disableInteractive>
-              <span>
-                <button onClick={handleZoomOut} disabled={zoom <= 0.5}><Minus size={14} /></button>
-              </span>
-            </Tooltip>
-            <span className="rb-toolbar-zoom-label">{Math.round(zoom * 100)}%</span>
-            <Tooltip title="Zoom in (Ctrl+=)" placement="top" arrow disableInteractive>
-              <span>
-                <button onClick={handleZoomIn} disabled={zoom >= 1.5}><Plus size={14} /></button>
-              </span>
-            </Tooltip>
-            <div className="rb-toolbar-divider" />
-            <Tooltip title="Fit to page" placement="top" arrow disableInteractive>
-              <button onClick={handleFitToPage}><Maximize size={14} /></button>
-            </Tooltip>
-            <Tooltip title="Grid snap" placement="top" arrow disableInteractive>
-              <button onClick={() => setGridSnap(!gridSnap)} className={gridSnap ? 'active' : ''}><Grid3x3 size={14} /></button>
-            </Tooltip>
-            <div className="rb-toolbar-divider" />
-            <Tooltip title={pageMode === 'a4' ? 'Switch to full dashboard' : 'Switch to A4 page'} placement="top" arrow disableInteractive>
-              <button onClick={togglePageMode}>
-                {pageMode === 'a4' ? <Monitor size={14} /> : <FileText size={14} />}
-              </button>
-            </Tooltip>
-            <div className="rb-toolbar-divider" />
-            <Tooltip title="Undo (Ctrl+Z)" placement="top" arrow disableInteractive>
-              <span>
-                <button onClick={undo} disabled={!canUndo}><Undo2 size={14} /></button>
-              </span>
-            </Tooltip>
-            <Tooltip title="Redo (Ctrl+Shift+Z)" placement="top" arrow disableInteractive>
-              <span>
-                <button onClick={redo} disabled={!canRedo}><Redo2 size={14} /></button>
-              </span>
-            </Tooltip>
-          </div>
+          {/* Bottom floating toolbar removed — controls are now in the top toolbar */}
         </div>
 
         {/* Right properties panel */}
@@ -776,6 +708,7 @@ export default function ReportBuilderCanvas() {
                 onUpdate={updateWidget}
                 onDelete={handleDeleteWidget}
                 onClose={() => setSelectedId(null)}
+                onHidePanel={() => setShowProperties(false)}
                 tags={tags}
                 tagValues={liveTagValues}
                 groups={groups}

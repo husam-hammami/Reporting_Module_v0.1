@@ -247,7 +247,7 @@ const TagManager = () => {
   const sourceColors = {
     PLC: 'bg-brand-subtle text-brand dark:bg-[#0f2840] dark:text-brand',
     Formula: 'bg-[#ecfdf5] text-[#059669] dark:bg-[#0d2e1f] dark:text-[#34d399]',
-    Mapping: 'bg-[#f5f3ff] text-[#7c3aed] dark:bg-[#1e1640] dark:text-[#a78bfa]',
+    Mapping: 'bg-[#f1f5f9] text-[#475569] dark:bg-[#1e293b] dark:text-[#94a3b8]',
     Manual: 'bg-[#f5f5f4] text-[#57534e] dark:bg-[#1c1917] dark:text-[#a8a29e]',
   };
 

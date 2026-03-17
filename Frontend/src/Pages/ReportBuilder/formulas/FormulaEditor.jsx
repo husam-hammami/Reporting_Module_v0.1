@@ -95,6 +95,7 @@ function BlockChip({ block, onRemove, tagMeta }) {
 }
 
 export default function FormulaEditor({ value, onChange, tags, tagValues, onSaveAsSignal }) {
+  const editorRef = useRef(null);
   const [mode, setMode] = useState('visual');
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [showFuncPicker, setShowFuncPicker] = useState(false);
@@ -102,6 +103,13 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
   const [tagSearch, setTagSearch] = useState('');
   const [numberInput, setNumberInput] = useState('');
   const tagTriggerRef = useRef(null);
+
+  const portalThemeClass = useMemo(() => {
+    if (!editorRef.current) return 'report-builder';
+    const rb = editorRef.current.closest('.report-builder');
+    if (rb && rb.classList.contains('dark-mode')) return 'report-builder dark-mode';
+    return 'report-builder';
+  }, [showTagPicker, showFuncPicker]);
   const funcTriggerRef = useRef(null);
   const [tagPickerRect, setTagPickerRect] = useState(null);
   const [funcPickerRect, setFuncPickerRect] = useState(null);
@@ -109,13 +117,37 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
   useEffect(() => {
     if (!showTagPicker || !tagTriggerRef.current) return setTagPickerRect(null);
     const rect = tagTriggerRef.current.getBoundingClientRect();
-    setTagPickerRect({ top: rect.bottom + 6, left: rect.left, width: Math.max(280, rect.width) });
+    const vh = window.innerHeight;
+    const dropdownH = 300;
+    const spaceBelow = vh - rect.bottom - 16;
+    const spaceAbove = rect.top - 16;
+    const openAbove = spaceBelow < 150 || (spaceBelow < dropdownH && spaceAbove > spaceBelow);
+    const pickerWidth = Math.max(280, rect.width);
+    if (openAbove) {
+      const maxH = Math.min(dropdownH, spaceAbove);
+      setTagPickerRect({ bottom: vh - rect.top + 6, left: rect.left, width: pickerWidth, maxH, flipUp: true });
+    } else {
+      const maxH = Math.min(dropdownH, spaceBelow);
+      setTagPickerRect({ top: rect.bottom + 6, left: rect.left, width: pickerWidth, maxH, flipUp: false });
+    }
   }, [showTagPicker]);
 
   useEffect(() => {
     if (!showFuncPicker || !funcTriggerRef.current) return setFuncPickerRect(null);
     const rect = funcTriggerRef.current.getBoundingClientRect();
-    setFuncPickerRect({ top: rect.bottom + 6, left: rect.left, width: Math.max(240, rect.width) });
+    const vh = window.innerHeight;
+    const dropdownH = 280;
+    const spaceBelow = vh - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
+    const openAbove = spaceBelow < 140 || (spaceBelow < dropdownH && spaceAbove > spaceBelow);
+    const pickerWidth = Math.max(240, rect.width);
+    if (openAbove) {
+      const maxH = Math.min(dropdownH, spaceAbove);
+      setFuncPickerRect({ bottom: vh - rect.top + 6, left: rect.left, width: pickerWidth, maxH, flipUp: true });
+    } else {
+      const maxH = Math.min(dropdownH, spaceBelow);
+      setFuncPickerRect({ top: rect.bottom + 6, left: rect.left, width: pickerWidth, maxH, flipUp: false });
+    }
   }, [showFuncPicker]);
 
   const safeTags = Array.isArray(tags) ? tags : [];
@@ -176,7 +208,7 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
   const clearAll = useCallback(() => onChange(''), [onChange]);
 
   return (
-    <div className="space-y-3">
+    <div ref={editorRef} className="space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="rb-segmented-control">
           <button
@@ -251,11 +283,18 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
                 Tag
               </button>
               {showTagPicker && tagPickerRect && createPortal(
-                <>
-                  <div className="fixed inset-0 z-[99998]" onClick={() => { setShowTagPicker(false); setTagSearch(''); }} aria-hidden />
+                <div className={portalThemeClass}>
+                  <div className="fixed inset-0 z-[100000]" onClick={() => { setShowTagPicker(false); setTagSearch(''); }} aria-hidden />
                   <div
-                    className="fixed z-[99999] rb-formula-dropdown overflow-hidden"
-                    style={{ top: tagPickerRect.top, left: tagPickerRect.left, width: tagPickerRect.width, maxHeight: 'min(300px, 50vh)' }}
+                    className="fixed z-[100001] rb-formula-dropdown overflow-hidden"
+                    style={{
+                      ...(tagPickerRect.flipUp
+                        ? { bottom: tagPickerRect.bottom }
+                        : { top: tagPickerRect.top }),
+                      left: Math.max(8, Math.min(tagPickerRect.left, window.innerWidth - tagPickerRect.width - 8)),
+                      width: tagPickerRect.width,
+                      maxHeight: tagPickerRect.maxH,
+                    }}
                   >
                     <div className="p-2.5 border-b border-[var(--rb-border-subtle)] bg-[var(--rb-surface)]">
                       <div className="relative">
@@ -270,7 +309,7 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
                         />
                       </div>
                     </div>
-                    <div className="overflow-y-auto py-1" style={{ maxHeight: 240 }}>
+                    <div className="overflow-y-auto py-1" style={{ maxHeight: Math.max(100, (tagPickerRect.maxH || 300) - 52) }}>
                       {filteredTags.length === 0 ? (
                         <p className="text-[12px] text-[var(--rb-text-muted)] px-4 py-4 text-center">No tags found</p>
                       ) : (
@@ -293,7 +332,7 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
                       )}
                     </div>
                   </div>
-                </>,
+                </div>,
                 document.body
               )}
             </div>
@@ -360,11 +399,18 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
                 Fn
               </button>
               {showFuncPicker && funcPickerRect && createPortal(
-                <>
-                  <div className="fixed inset-0 z-[99998]" onClick={() => setShowFuncPicker(false)} aria-hidden />
+                <div className={portalThemeClass}>
+                  <div className="fixed inset-0 z-[100000]" onClick={() => setShowFuncPicker(false)} aria-hidden />
                   <div
-                    className="fixed z-[99999] rb-formula-dropdown overflow-y-auto py-1"
-                    style={{ top: funcPickerRect.top, left: funcPickerRect.left, width: funcPickerRect.width, maxHeight: 'min(280px, 45vh)' }}
+                    className="fixed z-[100001] rb-formula-dropdown overflow-y-auto py-1"
+                    style={{
+                      ...(funcPickerRect.flipUp
+                        ? { bottom: funcPickerRect.bottom }
+                        : { top: funcPickerRect.top }),
+                      left: Math.max(8, Math.min(funcPickerRect.left, window.innerWidth - funcPickerRect.width - 8)),
+                      width: funcPickerRect.width,
+                      maxHeight: funcPickerRect.maxH,
+                    }}
                   >
                     {AVAILABLE_FUNCTIONS.map((fn) => (
                       <button
@@ -378,7 +424,7 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
                       </button>
                     ))}
                   </div>
-                </>,
+                </div>,
                 document.body
               )}
             </div>

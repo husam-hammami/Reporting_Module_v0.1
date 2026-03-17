@@ -17,69 +17,69 @@
 
 @layer base {
     .dark-style {
-      @apply dark:bg-[#0a0f1a] dark:text-zinc-50 bg-[#f8fafc];
+      @apply dark:bg-[#0a0f1a] dark:text-zinc-50 bg-[#f4f7fa];
     }
   }
 
   :root {
-    --background: #f8fafc;
-    --foreground: #111827;
-    --muted: hsl(220, 14%, 96%);
-    --muted-foreground: hsl(220, 8%, 46%);
+    --background: #f4f7fa;
+    --foreground: #1a2744;
+    --muted: hsl(216, 18%, 96%);
+    --muted-foreground: hsl(215, 12%, 50%);
     --popover: hsl(0, 0%, 100%);
     --popover-foreground: hsl(220, 25%, 10%);
     --card: hsl(0, 0%, 100%);
     --card-foreground: hsl(220, 25%, 10%);
-    --border: #e5e7eb;
-    --input: #e5e7eb;
-    --primary: hsl(200, 80%, 40%);
+    --border: #dce3ed;
+    --input: #dce3ed;
+    --primary: hsl(195, 100%, 40%);
     --primary-foreground: hsl(0, 0%, 100%);
-    --secondary: hsl(220, 14%, 96%);
+    --secondary: hsl(216, 18%, 96%);
     --secondary-foreground: hsl(220, 13%, 15%);
-    --accent: hsl(220, 14%, 96%);
+    --accent: hsl(216, 18%, 96%);
     --accent-foreground: hsl(220, 13%, 15%);
     --destructive: hsl(0, 84%, 60%);
     --destructive-foreground: hsl(0, 0%, 100%);
-    --ring: hsl(200, 80%, 40%);
+    --ring: hsl(195, 100%, 40%);
     --radius: 0.5rem;
 
-    --brand: #2563eb;
-    --brand-hover: #1d4ed8;
-    --brand-subtle: rgba(37, 99, 235, 0.06);
-    --brand-ring: rgba(37, 99, 235, 0.25);
+    --brand: #0098cc;
+    --brand-hover: #007aa3;
+    --brand-subtle: rgba(0, 152, 204, 0.06);
+    --brand-ring: rgba(0, 152, 204, 0.25);
     --brand-glow: transparent;
 
-    --theme-primary: #2563eb;
-    --theme-secondary: #93c5fd;
-    --theme-accent: #1d4ed8;
-    --theme-light: #eff6ff;
-    --theme-dark: #1e40af;
+    --theme-primary: #0098cc;
+    --theme-secondary: #66c2e0;
+    --theme-accent: #007aa3;
+    --theme-light: #e6f4fa;
+    --theme-dark: #005f80;
 
-    --nav-height: 80px;
+    --nav-height: 56px;
     --sidebar-width: 220px;
     --sidebar-collapsed: 60px;
 
-    --glass-bg: rgba(255, 255, 255, 0.95);
-    --glass-border: #e5e7eb;
+    --glass-bg: rgba(255, 255, 255, 0.98);
+    --glass-border: #dce3ed;
     --glass-blur: 0px;
 
     --surface: #ffffff;
     --surface-elevated: #ffffff;
-    --surface-sunken: #f9fafb;
-    --text-primary: #111827;
-    --text-secondary: #374151;
-    --text-muted: #6b7280;
-    --text-faint: #9ca3af;
-    --border-strong: #d1d5db;
-    --border-subtle: #e5e7eb;
-    --border-faint: #f3f4f6;
+    --surface-sunken: #f0f3f7;
+    --text-primary: #1a2744;
+    --text-secondary: #3d4f66;
+    --text-muted: #5a6f88;
+    --text-faint: #8a9bb5;
+    --border-strong: #c5cdd8;
+    --border-subtle: #dce3ed;
+    --border-faint: #edf0f5;
     --header-bg: #0f172a;
     --header-text: #ffffff;
 
     --success: #059669;
     --warning: #d97706;
     --danger: #dc2626;
-    --info: #2563eb;
+    --info: #0098cc;
 
     --radius-sm: 4px;
     --radius-md: 6px;
@@ -105,10 +105,10 @@
     --space-2xl: 24px;
     --space-3xl: 32px;
 
-    --scada-cyan: #2563eb;
-    --scada-cyan-glow: transparent;
-    --scada-panel-bg: #f9fafb;
-    --scada-panel-border: #e5e7eb;
+    --panel-accent: #0098cc;
+    --panel-accent-glow: transparent;
+    --panel-bg: #f0f3f7;
+    --panel-border: #dce3ed;
   }
   
   .dark {
@@ -166,10 +166,10 @@
     --shadow-lg: none;
     --shadow-xl: none;
 
-    --scada-cyan: #22d3ee;
-    --scada-cyan-glow: transparent;
-    --scada-panel-bg: #111827;
-    --scada-panel-border: #1e293b;
+    --panel-accent: #22d3ee;
+    --panel-accent-glow: transparent;
+    --panel-bg: #111827;
+    --panel-border: #1e293b;
   }
   
   @layer base {
@@ -181,14 +181,18 @@
       @apply font-sans antialiased text-foreground;
       background: var(--background);
     }
+
+    input:focus-visible, textarea:focus-visible, button:focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: 2px;
+    }
   }
 
-  #bg-video {
-    display: none !important;
+  .focus-ring-teal:focus-within {
+    box-shadow: 0 0 0 2px var(--brand-ring);
+    border-color: var(--brand);
   }
-  #bg-video-overlay {
-    display: none !important;
-  }
+
 
   #root {
     position: relative;
@@ -249,34 +253,34 @@
       border: 1px solid var(--border-subtle);
     }
 
-    .scada-panel {
-      background: var(--scada-panel-bg);
-      border: 1px solid var(--scada-panel-border);
+    .data-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
       border-radius: 8px;
     }
 
-    .dark .scada-panel {
+    .dark .data-panel {
       box-shadow: none;
     }
 
-    .scada-panel-glow {
-      background: var(--scada-panel-bg);
-      border: 1px solid var(--scada-panel-border);
+    .data-panel-elevated {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
       border-radius: 8px;
     }
 
-    .dark .scada-panel-glow {
+    .dark .data-panel-elevated {
       box-shadow: none;
     }
 
-    .scada-header {
+    .section-header {
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.12em;
       text-transform: uppercase;
     }
 
-    .dark .scada-header {
+    .dark .section-header {
       color: var(--brand);
     }
   
@@ -328,7 +332,7 @@
       background: #0c1520 !important;
     }
 
-    input[type="checkbox"].checkbox-cyan {
+    input[type="checkbox"].checkbox-brand {
       accent-color: var(--brand) !important;
       -webkit-appearance: checkbox !important;
       appearance: checkbox !important;
@@ -337,34 +341,34 @@
       cursor: not-allowed !important;
     }
 
-    input[type="checkbox"].checkbox-cyan:checked {
+    input[type="checkbox"].checkbox-brand:checked {
       accent-color: var(--brand) !important;
       background-color: var(--brand) !important;
       border-color: var(--brand) !important;
     }
 
-    input[type="checkbox"].checkbox-cyan:checked {
+    input[type="checkbox"].checkbox-brand:checked {
       filter: none !important;
     }
 
-    input[type="checkbox"].checkbox-cyan::-webkit-appearance {
+    input[type="checkbox"].checkbox-brand::-webkit-appearance {
       accent-color: var(--brand) !important;
     }
 
-    input[type="checkbox"].checkbox-cyan:checked {
+    input[type="checkbox"].checkbox-brand:checked {
       -webkit-appearance: checkbox !important;
       accent-color: var(--brand) !important;
     }
 
-    input[type="checkbox"].checkbox-cyan:checked {
+    input[type="checkbox"].checkbox-brand:checked {
       accent-color: var(--brand) !important;
     }
 
-    input[type="checkbox"].checkbox-cyan {
+    input[type="checkbox"].checkbox-brand {
       position: relative;
     }
 
-    input[type="checkbox"].checkbox-cyan:checked::after {
+    input[type="checkbox"].checkbox-brand:checked::after {
       content: '';
       position: absolute;
       left: 50%;
@@ -392,30 +396,14 @@
       to { opacity: 1; transform: scale(1); }
     }
 
-    @keyframes mc-pulse {
+    @keyframes subtle-pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
     }
 
-    @keyframes mc-glow-pulse {
-      0%, 100% { box-shadow: none; }
-      50% { box-shadow: none; }
-    }
-
-    @keyframes mc-shimmer {
+    @keyframes subtle-shimmer {
       0% { background-position: -200% 0; }
       100% { background-position: 200% 0; }
-    }
-
-    @keyframes mc-border-glow {
-      0%, 100% { border-color: var(--border); }
-      50% { border-color: var(--border-strong); }
-    }
-
-    @keyframes scada-scan {
-      0% { opacity: 0; transform: translateY(-100%); }
-      50% { opacity: 0.06; }
-      100% { opacity: 0; transform: translateY(100%); }
     }
 
     .animate-fade-in {
@@ -430,28 +418,27 @@
       animation: rb-scale-in 250ms ease-out both;
     }
 
-    .animate-mc-pulse {
-      animation: mc-pulse 2s ease-in-out infinite;
+    .animate-live-pulse {
+      animation: subtle-pulse 2s ease-in-out infinite;
     }
 
-    .animate-mc-glow {
-      animation: mc-glow-pulse 3s ease-in-out infinite;
-    }
-
-    .mc-gradient-border {
+    .accent-gradient-border {
       position: relative;
     }
-    .mc-gradient-border::before {
+    .accent-gradient-border::before {
       content: '';
       position: absolute;
       inset: 0;
       border-radius: inherit;
       padding: 1px;
-      background: linear-gradient(135deg, rgba(34, 211, 238, 0.3), rgba(34, 211, 238, 0.05), rgba(34, 211, 238, 0.3));
+      background: linear-gradient(135deg, rgba(0, 152, 204, 0.2), rgba(0, 152, 204, 0.05), rgba(0, 152, 204, 0.2));
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
       pointer-events: none;
+    }
+    .dark .accent-gradient-border::before {
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(34, 211, 238, 0.05), rgba(34, 211, 238, 0.2));
     }
   }
 
@@ -459,8 +446,7 @@
   .animate-fade-in,
   .animate-slide-up,
   .animate-scale-in,
-  .animate-mc-pulse,
-  .animate-mc-glow,
+  .animate-live-pulse,
   .rb-fade-in,
   .rb-slide-up {
     animation: none !important;
