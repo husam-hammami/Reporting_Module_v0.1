@@ -171,7 +171,7 @@ function getReportMeta(template) {
 
 export default function ReportBuilderManager() {
   const navigate = useNavigate();
-  const { templates, loading, createTemplate, deleteTemplate, duplicateTemplate, clearAllTemplates } = useReportTemplates();
+  const { templates, loading, createTemplate, deleteTemplate, duplicateTemplate, clearAllTemplates, updateTemplateStatus } = useReportTemplates();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showCreate, setShowCreate] = useState(false);
