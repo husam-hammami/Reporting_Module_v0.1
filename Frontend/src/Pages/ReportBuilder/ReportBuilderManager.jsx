@@ -1,6 +1,6 @@
 import { useState, useMemo, useContext, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, Trash2, Search, LayoutGrid, FileText, X, Layers, Table2, Clock, ArrowUpRight, MoreVertical, Filter, List } from 'lucide-react';
+import { Plus, Copy, Trash2, Search, LayoutGrid, FileText, X, Layers, Table2, Clock, ArrowUpRight, MoreVertical, Filter, List, Send } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useReportTemplates } from '../../Hooks/useReportBuilder';
 import ReportThumbnail from './ReportThumbnail';
@@ -400,6 +400,13 @@ export default function ReportBuilderManager() {
                   <span className="text-[12px] font-medium tabular-nums" style={{ color: t.textSecondary }}>{widgetCount}</span>
                   <span className="text-[11px]" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at)}</span>
                   <div className="flex gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); updateTemplateStatus(tp.id, status === 'released' ? 'draft' : 'released'); }}
+                      className="p-1.5 rounded transition-colors" style={{ color: status === 'released' ? '#059669' : t.textMuted }}
+                      title={status === 'released' ? 'Unrelease' : 'Release'}
+                      onMouseEnter={(e) => e.currentTarget.style.color = status === 'released' ? '#dc2626' : '#059669'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = status === 'released' ? '#059669' : t.textMuted}>
+                      <Send size={13} />
+                    </button>
                     <button onClick={(e) => { e.stopPropagation(); duplicateTemplate(tp.id); }}
                       className="p-1.5 rounded transition-colors" style={{ color: t.textMuted }} title="Duplicate"
                       onMouseEnter={(e) => e.currentTarget.style.color = t.text}
@@ -456,6 +463,12 @@ export default function ReportBuilderManager() {
                           <span className="text-[10px] font-medium" style={{ color: t.textSecondary }}>{widgetCount} items</span>
                         )}
                         <span className="text-[10px]" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at)}</span>
+                        <button onClick={(e) => { e.stopPropagation(); updateTemplateStatus(tp.id, status === 'released' ? 'draft' : 'released'); }}
+                          className="p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+                          style={{ color: status === 'released' ? '#059669' : t.textMuted }}
+                          title={status === 'released' ? 'Unrelease' : 'Release'}>
+                          <Send size={12} />
+                        </button>
                       </div>
                     </div>
                   </div>
