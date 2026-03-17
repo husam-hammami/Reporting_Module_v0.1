@@ -1210,12 +1210,14 @@
    uPlot Legend — constrain height to prevent overflow
    ═══════════════════════════════════════════════════════════════ */
 .uplot-container .u-legend {
-  max-height: 56px;
+  max-height: 64px;
   overflow-y: auto;
   overflow-x: hidden;
   flex-wrap: wrap;
-  font-size: 10px;
-  color: var(--rb-text-secondary, #374151);
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  padding: 4px 0;
 }
 
 .dark .uplot-container .u-legend {
@@ -1224,30 +1226,37 @@
 
 .uplot-container .u-legend .u-series {
   white-space: nowrap;
+  padding: 2px 8px;
 }
 
 .uplot-container .u-legend .u-value {
-  font-weight: 600;
-  color: var(--rb-text, #111827);
+  font-weight: 700;
+  color: #111827;
 }
 
 .dark .uplot-container .u-legend .u-value {
   color: #f1f5f9;
 }
 
-/* uPlot cursor tooltip — ensure visible in dark mode */
+.uplot-container .u-legend .u-marker {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+}
+
+/* uPlot cursor — visible crosshair in both modes */
 .uplot-container .u-over {
   cursor: crosshair;
 }
 
 .uplot-container .u-cursor-x,
 .uplot-container .u-cursor-y {
-  border-color: var(--rb-border, #e5e7eb) !important;
+  border-color: rgba(0,0,0,0.15) !important;
 }
 
 .dark .uplot-container .u-cursor-x,
 .dark .uplot-container .u-cursor-y {
-  border-color: #475569 !important;
+  border-color: rgba(148,163,184,0.3) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════

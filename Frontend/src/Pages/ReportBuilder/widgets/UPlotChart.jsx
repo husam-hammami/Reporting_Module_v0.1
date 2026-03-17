@@ -116,15 +116,13 @@ function drawAnnotations(u, annotations) {
 
 function buildOpts(width, height, seriesDefs, config, tagValues, isDark, dataSpan) {
   const showGrid = config.showGrid !== false;
-  // Theme-aware colors for readability
-  const gridColor = config.gridColor || (isDark ? 'rgba(148,163,184,0.12)' : 'rgba(148,163,184,0.18)');
-  const axisStroke = isDark ? 'rgba(148,163,184,0.25)' : 'rgba(148,163,184,0.35)';
-  const tickLabelColor = isDark ? '#9ca3af' : '#4b5563';  // gray-400 dark / gray-600 light
+  const gridColor = config.gridColor || (isDark ? 'rgba(148,163,184,0.10)' : 'rgba(0,0,0,0.06)');
+  const axisStroke = isDark ? 'rgba(148,163,184,0.20)' : 'rgba(0,0,0,0.08)';
+  const tickLabelColor = isDark ? '#cbd5e1' : '#374151';
+  const axisFont = '500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
   const uSeries = [
-    // X-axis (time) — first entry is always x in uPlot
     {},
-    // Data series
     ...seriesDefs.map((s, i) => {
       const color = s.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length];
       const currentVal = tagValues?.[s.tagName];
@@ -134,11 +132,11 @@ function buildOpts(width, height, seriesDefs, config, tagValues, isDark, dataSpa
       return {
         label: liveLabel,
         stroke: color,
-        width: 1.5,
-        fill: color + '1A',       // ~10% opacity area fill
-        points: { show: false },   // No dots — clean signal line
+        width: 2,
+        fill: color + '1A',
+        points: { show: false },
         spanGaps: false,
-        paths: uPlot.paths.spline(),  // Smooth cubic bezier curves — like SCADA trend viewers
+        paths: uPlot.paths.spline(),
       };
     }),
   ];
@@ -146,14 +144,23 @@ function buildOpts(width, height, seriesDefs, config, tagValues, isDark, dataSpa
   return {
     width,
     height,
-    padding: [8, 8, 0, 0],  // top, right, bottom, left
+    padding: [8, 8, 0, 0],
     cursor: {
       show: true,
       x: true,
       y: true,
       drag: { x: false, y: false },
-      points: { show: true, size: 5, width: 1.5 },
-      focus: { prox: 30 },
+      points: {
+        show: true,
+        size: 8,
+        width: 2,
+        fill: isDark ? '#111827' : '#ffffff',
+        stroke: (self, seriesIdx) => {
+          const s = seriesDefs[seriesIdx - 1];
+          return s?.color || DEFAULT_COLORS[(seriesIdx - 1) % DEFAULT_COLORS.length];
+        },
+      },
+      focus: { prox: 50 },
     },
     legend: {
       show: config.showLegend !== false,
@@ -172,18 +179,16 @@ function buildOpts(width, height, seriesDefs, config, tagValues, isDark, dataSpa
       },
     },
     axes: [
-      // X-axis — adaptive formatting based on data time span
       {
         show: showGrid,
         stroke: tickLabelColor,
         grid: { show: showGrid, stroke: gridColor, width: 0.5, dash: [3, 3] },
-        ticks: { show: showGrid, stroke: axisStroke, width: 1, size: 4 },
-        font: '10px monospace',
-        gap: 5,
+        ticks: { show: showGrid, stroke: axisStroke, width: 1, size: 6 },
+        font: axisFont,
+        gap: 8,
         values: (self, ticks) =>
           ticks.map((t) => {
             const d = new Date(t * 1000);
-            // Adapt format to data span — short spans show time, long spans show date+time
             if (dataSpan === 'months' || dataSpan === 'weeks') {
               return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                 + '\n' + d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -195,22 +200,20 @@ function buildOpts(width, height, seriesDefs, config, tagValues, isDark, dataSpa
             if (dataSpan === 'hours') {
               return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
             }
-            // Default: full time for short spans (minutes / live)
             return d.toLocaleTimeString('en-US', {
               hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit',
             });
           }),
-        space: dataSpan === 'months' || dataSpan === 'weeks' ? 80 : dataSpan === 'days' ? 75 : 70,
+        space: dataSpan === 'months' || dataSpan === 'weeks' ? 90 : dataSpan === 'days' ? 80 : 75,
       },
-      // Y-axis
       {
         show: showGrid,
         stroke: tickLabelColor,
         grid: { show: showGrid, stroke: gridColor, width: 0.5, dash: [3, 3] },
-        ticks: { show: showGrid, stroke: axisStroke, width: 1, size: 4 },
-        font: '10px monospace',
-        gap: 5,
-        size: 55,
+        ticks: { show: showGrid, stroke: axisStroke, width: 1, size: 6 },
+        font: axisFont,
+        gap: 8,
+        size: 60,
         values: (self, ticks) => ticks.map((v) => v.toFixed(1)),
       },
     ],
