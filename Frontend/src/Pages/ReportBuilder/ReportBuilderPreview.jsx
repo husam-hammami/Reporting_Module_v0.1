@@ -20,8 +20,8 @@ import './reportBuilderTheme.css';
 
 const GRID_COLS_DEFAULT = 12;
 const GRID_ROW_H_DEFAULT = 40;
-const GRID_MARGIN = [4, 4];
-const GRID_PADDING = [0, 0];
+const GRID_MARGIN = [8, 8];
+const GRID_PADDING = [12, 12];
 
 export default function ReportBuilderPreview() {
   const { id } = useParams();

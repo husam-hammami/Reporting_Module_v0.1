@@ -25,10 +25,8 @@ function Navbar({ isBlueprint = false }) {
       position="fixed"
       elevation={0}
       sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
-      className="!bg-white/95 dark:!bg-[#070e1c]/95 !shadow-none"
+      className="!bg-white dark:!bg-[#111827] !shadow-none"
       style={{
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         borderBottom: undefined,
       }}
     >
@@ -43,7 +41,7 @@ function Navbar({ isBlueprint = false }) {
                 size="small"
                 edge="start"
                 onClick={() => setOpen?.((prev) => !prev)}
-                className="!text-[#64748b] dark:!text-[#8899ab] hover:!bg-black/[0.04] dark:hover:!bg-[#22d3ee]/[0.06] !p-1.5 !rounded-lg !transition-all !duration-200"
+                className="!text-[#64748b] dark:!text-[#8899ab] hover:!bg-black/[0.04] dark:hover:!bg-[#0d1320] !p-1.5 !rounded-lg !transition-all !duration-200"
               >
                 {open ? <X size={18} strokeWidth={2} /> : <Menu size={18} strokeWidth={2} />}
               </IconButton>
@@ -88,9 +86,9 @@ function Navbar({ isBlueprint = false }) {
             <div className="relative">
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-black/[0.04] dark:hover:bg-[#22d3ee]/[0.06] transition-all duration-200 group"
+                className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-black/[0.04] dark:hover:bg-[#0d1320] transition-all duration-200 group"
               >
-                <div className="w-8 h-8 rounded bg-gradient-to-br from-[#475569] to-[#334155] dark:from-[#121e2e] dark:to-[#162232] dark:border dark:border-[#22d3ee]/20 text-white dark:text-[#22d3ee] text-[12px] font-bold flex items-center justify-center">
+                <div className="w-8 h-8 rounded bg-gradient-to-br from-[#475569] to-[#334155] dark:from-[#121e2e] dark:to-[#162232] dark:border dark:border-[#1e293b] text-white dark:text-[var(--brand)] text-[12px] font-bold flex items-center justify-center">
                   {auth.username?.charAt(0)?.toUpperCase()}
                 </div>
                 <div className="hidden sm:flex flex-col items-start">
@@ -108,9 +106,9 @@ function Navbar({ isBlueprint = false }) {
                 <>
                   <div className="fixed inset-0 z-50" onClick={() => setMenuOpen(false)} />
                   <div
-                    className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-[#0a1525] border border-black/[0.08] dark:border-[#22d3ee]/20 rounded-lg shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(34,211,238,0.10)] min-w-[160px] py-1 animate-scale-in"
+                    className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-[#111827] border border-black/[0.08] dark:border-[#1e293b] rounded-lg shadow-xl min-w-[160px] py-1 animate-scale-in"
                   >
-                    <div className="px-3 py-2 border-b border-black/[0.06] dark:border-[#22d3ee]/10">
+                    <div className="px-3 py-2 border-b border-black/[0.06] dark:border-[#1e293b]">
                       <p className="text-[12px] font-semibold text-[#334155] dark:text-[#e8edf5]">{auth.username}</p>
                       <p className="text-[10px] text-[#94a3b8] dark:text-[#556677] capitalize">{auth.role}</p>
                     </div>
@@ -129,19 +127,7 @@ function Navbar({ isBlueprint = false }) {
         </div>
       </Toolbar>
 
-      <div
-        className="h-px w-full"
-        style={{
-          background: 'linear-gradient(90deg, transparent 0%, rgba(100,116,139,0.15) 20%, rgba(100,116,139,0.15) 80%, transparent 100%)',
-        }}
-      />
-      <div
-        className="h-px w-full hidden dark:block"
-        style={{
-          background: 'linear-gradient(90deg, transparent 0%, rgba(34,211,238,0.25) 20%, rgba(34,211,238,0.4) 50%, rgba(34,211,238,0.25) 80%, transparent 100%)',
-          boxShadow: '0 0 8px rgba(34,211,238,0.15), 0 1px 4px rgba(34,211,238,0.1)',
-        }}
-      />
+      <div className="h-px w-full bg-[#e5e7eb] dark:bg-[#1e293b]" />
     </AppBar>
   );
 }

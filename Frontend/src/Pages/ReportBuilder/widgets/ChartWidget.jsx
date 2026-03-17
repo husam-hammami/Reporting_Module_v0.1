@@ -14,7 +14,7 @@ import UPlotChart from './UPlotChart';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend, annotationPlugin);
 
-const DEFAULT_COLORS = ['#00d4ff', '#00e88f', '#ffaa33', '#f43f5e', '#a78bfa', '#38bdf8'];
+const DEFAULT_COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#ec4899', '#8b5cf6', '#06b6d4', '#10b981'];
 
 export default function ChartWidget({ config, tagValues, tagHistory, isPreview = true }) {
   const isCapturing = useThumbnailCapture();
@@ -61,7 +61,6 @@ export default function ChartWidget({ config, tagValues, tagHistory, isPreview =
             textTransform: 'uppercase',
             letterSpacing: '0.10em',
             color: 'var(--rb-text-muted)',
-            textShadow: '0 1px 3px rgba(0,0,0,0.5)',
             pointerEvents: 'none',
           }}
         >
@@ -123,7 +122,7 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
         ? series.map((s, i) => s.color || colors[i % colors.length])
         : [colors[0]],
       borderWidth: 1,
-      borderRadius: 4,
+      borderRadius: 6,
       borderSkipped: false,
     }];
     return { labels, datasets };
@@ -183,15 +182,15 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
         enabled: true,
         mode: 'index',
         intersect: false,
-        backgroundColor: 'rgba(5, 10, 18, 0.95)',
+        backgroundColor: 'var(--rb-panel, #ffffff)',
         titleFont: { size: 10, weight: '700', family: 'monospace' },
-        titleColor: '#e2e8f0',
+        titleColor: 'var(--rb-text, #111827)',
         bodyFont: { size: 10, family: 'monospace' },
-        bodyColor: '#94a3b8',
+        bodyColor: 'var(--rb-text-secondary, #374151)',
         bodySpacing: 4,
         padding: 10,
-        cornerRadius: 6,
-        borderColor: 'rgba(0, 212, 255, 0.2)',
+        cornerRadius: 8,
+        borderColor: 'var(--rb-border, #e5e7eb)',
         borderWidth: 1,
         displayColors: true,
         boxWidth: 8,
@@ -209,7 +208,7 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
       x: {
         display: config.showGrid !== false,
         grid: {
-          color: config.gridColor || 'rgba(56, 189, 248, 0.06)',
+          color: config.gridColor || 'var(--border-faint, #f3f4f6)',
           lineWidth: 0.5,
         },
         ticks: {
@@ -218,13 +217,13 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
           padding: 4,
         },
         border: {
-          color: 'rgba(56, 189, 248, 0.08)',
+          color: 'var(--border-faint, #f3f4f6)',
         },
       },
       y: {
         display: config.showGrid !== false,
         grid: {
-          color: config.gridColor || 'rgba(56, 189, 248, 0.06)',
+          color: config.gridColor || 'var(--border-faint, #f3f4f6)',
           lineWidth: 0.5,
         },
         ticks: {
@@ -233,7 +232,7 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
           padding: 4,
         },
         border: {
-          color: 'rgba(56, 189, 248, 0.08)',
+          color: 'var(--border-faint, #f3f4f6)',
         },
         beginAtZero: true,
       },

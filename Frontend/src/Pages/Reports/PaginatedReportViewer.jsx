@@ -362,7 +362,6 @@ export default function PaginatedReportView({ reportId, onBack }) {
           onClick={handleExportPDF}
           disabled={exporting}
           className="rb-btn-primary flex items-center gap-1.5 disabled:opacity-50"
-          style={{ boxShadow: '0 0 12px var(--rb-accent-glow)' }}
         >
           <Download size={12} />
           <span className="text-[10px] font-bold uppercase tracking-wider">{exporting ? 'Exporting...' : 'PDF'}</span>

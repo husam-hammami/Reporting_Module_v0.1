@@ -105,7 +105,7 @@ export default function KPIWidget({ config, tagValues, sparklineData, layout }) 
   const numericValue = rawValue != null ? Number(rawValue) : null;
   const decimals = config.decimals ?? 1;
   const displayValue = useAnimatedNumber(numericValue, decimals, skipAnimation);
-  const activeColor = getThresholdColor(rawValue, config.thresholds, config.color || '#00d4ff');
+  const activeColor = getThresholdColor(rawValue, config.thresholds, config.color || '#2563eb');
 
   const sparkValues = useMemo(
     () => Array.isArray(sparklineData) && sparklineData.length >= 2
@@ -228,7 +228,6 @@ export default function KPIWidget({ config, tagValues, sparklineData, layout }) 
             fontSize: valueFontSize || 'clamp(24px, 4vw, 42px)',
             fontWeight: 800,
             letterSpacing: '-0.03em',
-            textShadow: `0 0 20px ${activeColor}33`,
           }}
         >
           {displayValue}
@@ -245,7 +244,6 @@ export default function KPIWidget({ config, tagValues, sparklineData, layout }) 
           borderRadius: '2px',
           background: activeColor,
           marginTop: '6px',
-          boxShadow: `0 0 8px ${activeColor}66, 0 0 16px ${activeColor}22`,
           alignSelf: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
         }}
       />
@@ -282,7 +280,6 @@ export default function KPIWidget({ config, tagValues, sparklineData, layout }) 
               strokeLinecap="round"
               strokeLinejoin="round"
               points={sparklinePoints ?? '0,30 10,24 20,28 30,16 40,20 50,12 60,18 70,8 80,14 90,6 100,10'}
-              style={{ filter: `drop-shadow(0 0 3px ${activeColor}66)` }}
             />
           </svg>
         </div>

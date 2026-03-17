@@ -59,7 +59,7 @@ export default function GaugeWidget({ config, tagValues }) {
     { from: 70, to: 100, color: '#00e676', status: 'OPTIMAL' },
   ];
 
-  const fallbackColor = config.color || '#00d4ff';
+  const fallbackColor = config.color || '#2563eb';
   const { activeColor, statusLabel } = useMemo(() => {
     const percentVal = percent * 100;
     for (const z of zones) {
@@ -199,7 +199,6 @@ export default function GaugeWidget({ config, tagValues }) {
                 stroke={`url(#${gradientId})`}
                 strokeWidth="8"
                 strokeLinecap="round"
-                filter={`url(#${glowFilterId})`}
               />
 
               <circle
@@ -209,7 +208,6 @@ export default function GaugeWidget({ config, tagValues }) {
                 fill={activeColor}
                 stroke="var(--rb-panel, #111827)"
                 strokeWidth="2"
-                filter={`url(#${glowFilterId})`}
               />
               <circle
                 cx={endpoint.x}
@@ -246,7 +244,6 @@ export default function GaugeWidget({ config, tagValues }) {
               height: '6px',
               borderRadius: '50%',
               backgroundColor: activeColor,
-              boxShadow: `0 0 6px ${activeColor}`,
               display: 'inline-block',
               flexShrink: 0,
             }}

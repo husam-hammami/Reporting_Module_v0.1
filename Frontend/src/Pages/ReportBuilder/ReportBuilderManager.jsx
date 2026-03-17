@@ -18,21 +18,24 @@ function timeAgo(iso) {
 
 const STATUS_CONFIG = {
   draft: {
-    color: '#64748b',
-    glow: 'rgba(100, 116, 139, 0.3)',
-    bg: 'rgba(100, 116, 139, 0.10)',
+    color: '#6b7280',
+    bg: '#f3f4f6',
+    darkBg: 'rgba(100,116,139,0.15)',
+    darkColor: '#94a3b8',
     label: 'Draft',
   },
   validated: {
-    color: '#38bdf8',
-    glow: 'rgba(56, 189, 248, 0.3)',
-    bg: 'rgba(56, 189, 248, 0.10)',
+    color: '#2563eb',
+    bg: 'rgba(37,99,235,0.06)',
+    darkBg: 'rgba(34,211,238,0.08)',
+    darkColor: '#22d3ee',
     label: 'Validated',
   },
   published: {
-    color: '#00d68f',
-    glow: 'rgba(0, 214, 143, 0.3)',
-    bg: 'rgba(0, 214, 143, 0.10)',
+    color: '#059669',
+    bg: 'rgba(5,150,105,0.08)',
+    darkBg: 'rgba(52,211,153,0.10)',
+    darkColor: '#34d399',
     label: 'Published',
   },
 };
@@ -87,7 +90,7 @@ function CreateModal({ open, onClose, onCreate }) {
         style={{
           background: 'var(--rb-panel)',
           border: '1px solid var(--rb-border)',
-          boxShadow: 'var(--rb-elevation-4), 0 0 60px rgba(56, 189, 248, 0.06)',
+          boxShadow: 'var(--rb-elevation-4)',
         }}
       >
         <div className="px-6 pt-5 pb-4 flex items-center justify-between"
@@ -95,13 +98,13 @@ function CreateModal({ open, onClose, onCreate }) {
         >
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: 'var(--rb-accent-subtle)', boxShadow: '0 0 12px var(--rb-accent-glow)' }}
+              style={{ background: 'var(--rb-accent-subtle)' }}
             >
               <Plus size={16} style={{ color: 'var(--rb-accent)' }} />
             </div>
             <div>
               <h2 className="text-[13px] font-bold" style={{ color: 'var(--rb-text)' }}>Create New Report</h2>
-              <p className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: 'var(--rb-text-muted)' }}>Mission Control Template</p>
+              <p className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: 'var(--rb-text-muted)' }}>New Template</p>
             </div>
           </div>
           <button onClick={onClose}
@@ -176,22 +179,12 @@ function StatusBadge({ status }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
   return (
     <span
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider"
       style={{
         background: config.bg,
         color: config.color,
-        boxShadow: `0 0 8px ${config.glow}`,
-        backdropFilter: 'blur(4px)',
-        border: `1px solid ${config.color}22`,
       }}
     >
-      <span
-        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{
-          background: config.color,
-          boxShadow: `0 0 6px ${config.color}`,
-        }}
-      />
       {config.label}
     </span>
   );
@@ -229,15 +222,19 @@ const TemplateCard = forwardRef(function TemplateCard({ template, onOpen, onDupl
         delay: index * 0.06,
         ease: [0.16, 1, 0.3, 1],
       }}
-      className="rb-holo-card group relative rounded-xl overflow-hidden cursor-pointer max-w-sm"
+      className="group relative rounded-lg overflow-hidden cursor-pointer max-w-sm"
+      style={{
+        background: 'var(--rb-panel)',
+        border: '1px solid var(--rb-border)',
+        borderTop: `3px solid ${STATUS_CONFIG[status]?.color || '#6b7280'}`,
+        borderRadius: 'var(--rb-radius-lg)',
+        boxShadow: 'var(--rb-elevation-2)',
+        transition: 'var(--transition-normal)',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--rb-elevation-3)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--rb-elevation-2)'; e.currentTarget.style.transform = 'translateY(0)'; }}
       onClick={() => onOpen(template.id)}
     >
-      <div className="rb-holo-card-inner relative rounded-xl overflow-hidden"
-        style={{
-          background: 'var(--rb-panel)',
-          transition: 'box-shadow 300ms cubic-bezier(0.16,1,0.3,1), transform 300ms cubic-bezier(0.16,1,0.3,1)',
-        }}
-      >
         <div className="relative h-36 w-full overflow-hidden">
           <ReportThumbnail template={template} />
           <div className="absolute top-3 right-3 z-10">
@@ -254,22 +251,22 @@ const TemplateCard = forwardRef(function TemplateCard({ template, onOpen, onDupl
             <div className="flex items-center gap-2.5">
               <span className="text-[9px] font-semibold tabular-nums uppercase tracking-wider" style={{ color: 'var(--rb-text-muted)' }}>{timeAgo(template.updated_at)}</span>
               {widgetCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold"
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold"
                   style={{
                     background: 'var(--rb-accent-subtle)',
                     color: 'var(--rb-accent)',
-                    border: '1px solid rgba(56, 189, 248, 0.12)',
+                    borderRadius: '4px',
                   }}
                 >
                   <Layers size={8} />
                   {widgetCount}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold"
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold"
                 style={{
                   background: reportType === 'paginated' ? 'rgba(124, 58, 237, 0.08)' : 'var(--rb-accent-subtle)',
                   color: reportType === 'paginated' ? '#7c3aed' : 'var(--rb-accent)',
-                  border: `1px solid ${reportType === 'paginated' ? 'rgba(124, 58, 237, 0.15)' : 'rgba(56, 189, 248, 0.12)'}`,
+                  borderRadius: '4px',
                 }}
               >
                 {reportType === 'paginated' ? <Table2 size={8} /> : <LayoutGrid size={8} />}
@@ -281,8 +278,8 @@ const TemplateCard = forwardRef(function TemplateCard({ template, onOpen, onDupl
                 onClick={(e) => { e.stopPropagation(); onDuplicate(template.id); }}
                 className="p-1.5 rounded-lg transition-all duration-150"
                 style={{ color: 'var(--rb-text-muted)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-subtle)'; e.currentTarget.style.color = 'var(--rb-accent)'; e.currentTarget.style.boxShadow = '0 0 8px var(--rb-accent-glow)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--rb-text-muted)'; e.currentTarget.style.boxShadow = ''; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-subtle)'; e.currentTarget.style.color = 'var(--rb-accent)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--rb-text-muted)'; }}
                 title="Duplicate"
               >
                 <Copy size={12} />
@@ -291,8 +288,8 @@ const TemplateCard = forwardRef(function TemplateCard({ template, onOpen, onDupl
                 onClick={(e) => { e.stopPropagation(); onDelete(template.id); }}
                 className="p-1.5 rounded-lg transition-all duration-150"
                 style={{ color: 'var(--rb-text-muted)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-danger-subtle)'; e.currentTarget.style.color = 'var(--rb-danger)'; e.currentTarget.style.boxShadow = '0 0 8px rgba(244, 63, 94, 0.25)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--rb-text-muted)'; e.currentTarget.style.boxShadow = ''; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-danger-subtle)'; e.currentTarget.style.color = 'var(--rb-danger)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--rb-text-muted)'; }}
                 title="Delete"
               >
                 <Trash2 size={12} />
@@ -300,7 +297,6 @@ const TemplateCard = forwardRef(function TemplateCard({ template, onOpen, onDupl
             </div>
           </div>
         </div>
-      </div>
     </motion.div>
   );
 });
@@ -314,7 +310,6 @@ function FilterTabs({ value, onChange }) {
       style={{
         background: 'var(--rb-surface)',
         border: '1px solid var(--rb-border)',
-        boxShadow: 'var(--rb-elevation-1)',
       }}
     >
       {FILTER_TABS.map((s) => {
@@ -327,8 +322,7 @@ function FilterTabs({ value, onChange }) {
             style={{
               color: isActive ? 'var(--rb-accent)' : 'var(--rb-text-muted)',
               background: isActive ? 'var(--rb-accent-subtle)' : 'transparent',
-              boxShadow: isActive ? '0 0 10px var(--rb-accent-glow)' : 'none',
-              border: isActive ? '1px solid rgba(56, 189, 248, 0.15)' : '1px solid transparent',
+              border: isActive ? '1.5px solid var(--rb-accent)' : '1.5px solid var(--rb-border)',
               transition: shouldReduce ? 'none' : 'all 200ms cubic-bezier(0.16,1,0.3,1)',
             }}
           >
@@ -388,7 +382,7 @@ export default function ReportBuilderManager() {
   };
 
   return (
-    <div className="report-builder min-h-[calc(100vh-80px)] p-6" style={{ background: 'var(--rb-surface)' }}>
+    <div className="report-builder min-h-[calc(100vh-80px)] p-6" style={{ background: 'var(--rb-canvas)' }}>
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 16 }}
@@ -402,7 +396,6 @@ export default function ReportBuilderManager() {
                 style={{
                   background: 'var(--rb-accent-subtle)',
                   border: '1px solid rgba(56, 189, 248, 0.15)',
-                  boxShadow: '0 0 20px var(--rb-accent-glow)',
                 }}
               >
                 <BarChart3 size={20} style={{ color: 'var(--rb-accent)' }} />
@@ -411,7 +404,7 @@ export default function ReportBuilderManager() {
                 <h1 className="text-xl font-extrabold tracking-tight" style={{ color: 'var(--rb-text)' }}>
                   Report Builder
                 </h1>
-                <p className="text-[9px] uppercase tracking-widest font-semibold mt-0.5" style={{ color: 'var(--rb-text-muted)' }}>Mission Control • Template Manager</p>
+                <p className="text-[9px] uppercase tracking-widest font-semibold mt-0.5" style={{ color: 'var(--rb-text-muted)' }}>Template Manager</p>
               </div>
             </div>
           </div>
@@ -429,13 +422,11 @@ export default function ReportBuilderManager() {
                   e.currentTarget.style.borderColor = 'var(--rb-danger)';
                   e.currentTarget.style.color = 'var(--rb-danger)';
                   e.currentTarget.style.background = 'var(--rb-danger-subtle)';
-                  e.currentTarget.style.boxShadow = '0 0 12px rgba(244, 63, 94, 0.2)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'var(--rb-border)';
                   e.currentTarget.style.color = 'var(--rb-text-muted)';
                   e.currentTarget.style.background = 'var(--rb-panel)';
-                  e.currentTarget.style.boxShadow = '';
                 }}
               >
                 <Trash2 size={12} />
@@ -445,7 +436,6 @@ export default function ReportBuilderManager() {
             <button
               onClick={() => setShowCreate(true)}
               className="rb-btn-primary inline-flex items-center gap-2"
-              style={{ boxShadow: '0 0 20px var(--rb-accent-glow)' }}
             >
               <Plus size={14} strokeWidth={2.5} />
               <span className="text-[11px] font-bold uppercase tracking-wider">Create Report</span>
@@ -501,7 +491,6 @@ export default function ReportBuilderManager() {
                 style={{
                   background: 'var(--rb-surface)',
                   border: '1px solid var(--rb-border)',
-                  boxShadow: '0 0 40px var(--rb-accent-glow)',
                 }}
               >
                 <FileText size={32} style={{ color: 'var(--rb-accent)', opacity: 0.6 }} />
@@ -509,7 +498,6 @@ export default function ReportBuilderManager() {
               <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center"
                 style={{
                   background: 'var(--rb-accent)',
-                  boxShadow: '0 0 12px var(--rb-accent-glow)',
                 }}
               >
                 <Zap size={12} style={{ color: 'white' }} />
@@ -526,7 +514,6 @@ export default function ReportBuilderManager() {
             {!search && statusFilter === 'all' && (
               <button onClick={() => setShowCreate(true)}
                 className="rb-btn-primary inline-flex items-center gap-2"
-                style={{ boxShadow: '0 0 24px var(--rb-accent-glow)' }}
               >
                 <Plus size={14} strokeWidth={2.5} />
                 <span className="text-[11px] font-bold uppercase tracking-wider">Create Report</span>

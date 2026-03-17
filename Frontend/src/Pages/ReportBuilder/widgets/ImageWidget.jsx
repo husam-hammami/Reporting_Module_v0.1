@@ -42,23 +42,21 @@ export default function ImageWidget({ config, onUpdateConfig }) {
       <div
         className="flex flex-col items-center justify-center h-full w-full cursor-pointer no-drag"
         style={{
-          border: '2px dashed var(--rb-accent, #38bdf8)',
+          border: '2px dashed var(--rb-border)',
           borderRadius: 'var(--rb-radius-lg, 8px)',
           color: 'var(--rb-text-muted)',
-          background: 'var(--rb-accent-subtle, rgba(56,189,248,0.05))',
-          transition: 'border-color 150ms ease, color 150ms ease, background 150ms ease, box-shadow 150ms ease',
+          background: 'var(--rb-accent-subtle)',
+          transition: 'border-color 150ms ease, color 150ms ease, background 150ms ease',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'var(--rb-accent-bright, #7dd3fc)';
-          e.currentTarget.style.color = 'var(--rb-accent, #38bdf8)';
-          e.currentTarget.style.background = 'var(--rb-accent-subtle, rgba(56,189,248,0.08))';
-          e.currentTarget.style.boxShadow = '0 0 16px var(--rb-accent-glow, rgba(56,189,248,0.2))';
+          e.currentTarget.style.borderColor = 'var(--rb-accent)';
+          e.currentTarget.style.color = 'var(--rb-accent)';
+          e.currentTarget.style.background = 'var(--rb-accent-subtle)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'var(--rb-accent, #38bdf8)';
+          e.currentTarget.style.borderColor = 'var(--rb-border)';
           e.currentTarget.style.color = 'var(--rb-text-muted)';
-          e.currentTarget.style.background = 'var(--rb-accent-subtle, rgba(56,189,248,0.05))';
-          e.currentTarget.style.boxShadow = 'none';
+          e.currentTarget.style.background = 'var(--rb-accent-subtle)';
         }}
         onClick={handleClick}
         onDrop={handleDrop}

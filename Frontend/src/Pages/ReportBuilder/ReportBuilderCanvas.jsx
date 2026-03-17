@@ -26,8 +26,8 @@ import './reportBuilderTheme.css';
 /* ── Grid: match report viewer; compact row height for less clutter ─────── */
 const GRID_COLS_DEFAULT   = 12;
 const GRID_ROW_H_DEFAULT  = 40;   // row height (px) — compact layout
-const GRID_MARGIN         = [6, 6];
-const GRID_PADDING        = [0, 0]; // outer container provides 12px 24px 24px 24px to match viewer
+const GRID_MARGIN         = [12, 12];
+const GRID_PADDING        = [16, 16];
 
 /* ── Parameter Bar ─────────────────────────────────────────────── */
 
@@ -626,12 +626,12 @@ export default function ReportBuilderCanvas() {
                               : isInvisible
                                 ? 'hover:outline hover:outline-1 hover:outline-[var(--rb-accent)]/30 hover:outline-offset-1 rounded'
                                 : showCard
-                                  ? 'border-[var(--rb-border)] hover:border-dashed hover:border-[var(--rb-accent)]/40'
+                                  ? 'border-[var(--rb-border)] hover:border-[var(--rb-accent)]'
                                   : 'hover:border-[var(--rb-accent)]/50'
                           }`}
                           style={isSelected && !isInvisible ? {
                             borderColor: 'var(--rb-accent)',
-                            boxShadow: '0 0 20px var(--rb-accent-glow), 0 0 0 2px color-mix(in srgb, var(--rb-accent) 18%, transparent)',
+                            boxShadow: '0 0 0 2px var(--rb-accent)',
                           } : undefined}
                         >
                           {/* Selection handles (4 corners) */}

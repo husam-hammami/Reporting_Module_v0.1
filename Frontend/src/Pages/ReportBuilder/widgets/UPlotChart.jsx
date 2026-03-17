@@ -16,7 +16,7 @@ import { useRef, useEffect, useMemo, useState } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 
-const DEFAULT_COLORS = ['#2563ab', '#e67e22', '#27ae60', '#e74c3c', '#f39c12', '#7f8c8d'];
+const DEFAULT_COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#ec4899', '#8b5cf6', '#06b6d4', '#10b981'];
 
 /* ── Data transformation ─────────────────────────────────────────── */
 
@@ -176,7 +176,7 @@ function buildOpts(width, height, seriesDefs, config, tagValues, isDark, dataSpa
       {
         show: showGrid,
         stroke: tickLabelColor,
-        grid: { show: showGrid, stroke: gridColor, width: 1 },
+        grid: { show: showGrid, stroke: gridColor, width: 0.5, dash: [3, 3] },
         ticks: { show: showGrid, stroke: axisStroke, width: 1, size: 4 },
         font: '10px monospace',
         gap: 5,
@@ -206,7 +206,7 @@ function buildOpts(width, height, seriesDefs, config, tagValues, isDark, dataSpa
       {
         show: showGrid,
         stroke: tickLabelColor,
-        grid: { show: showGrid, stroke: gridColor, width: 1 },
+        grid: { show: showGrid, stroke: gridColor, width: 0.5, dash: [3, 3] },
         ticks: { show: showGrid, stroke: axisStroke, width: 1, size: 4 },
         font: '10px monospace',
         gap: 5,

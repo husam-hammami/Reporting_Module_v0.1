@@ -82,17 +82,14 @@ export default function SideNav() {
         open={open}
         PaperProps={{
           sx: {
-            background: 'rgba(248,249,250,0.92)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
+            background: '#ffffff',
             color: '#334155',
             paddingTop: '80px',
-            borderRight: '1px solid rgba(0,0,0,0.08)',
+            borderRight: '1px solid #e5e7eb',
             '.dark &': {
-              background: 'rgba(7,14,28,0.96)',
+              background: '#111827',
               color: '#e8edf5',
-              borderRight: '1px solid rgba(34, 211, 238, 0.18)',
-              boxShadow: '1px 0 8px rgba(0,0,0,0.3)',
+              borderRight: '1px solid #1e293b',
             },
           },
         }}
@@ -113,14 +110,14 @@ export default function SideNav() {
                   >
                     {open && (
                       <>
-                        <div className="w-0.5 h-3 rounded-full bg-[#94a3b8]/40 dark:bg-[#22d3ee]/30" />
-                        <span className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#94a3b8] dark:text-[#22d3ee]/60">
+                        <div className="w-0.5 h-3 rounded-full bg-[var(--brand)]" />
+                        <span className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#9ca3af] dark:text-[#475569]">
                           {category}
                         </span>
                       </>
                     )}
                     {!open && (
-                      <div className="w-7 h-0.5 rounded-full bg-[#94a3b8]/25 dark:bg-[#22d3ee]/20" />
+                      <div className="w-7 h-0.5 rounded-full bg-[#e5e7eb] dark:bg-[#1e293b]" />
                     )}
                   </div>
                 )}
@@ -130,7 +127,7 @@ export default function SideNav() {
                     `block w-full rounded-lg transition-all duration-200 ${
                       isActive
                         ? ''
-                        : 'hover:bg-black/[0.04] dark:hover:bg-[#22d3ee]/[0.04]'
+                        : 'hover:bg-[#f9fafb] dark:hover:bg-[#0d1320]'
                     }`
                   }
                 >
@@ -159,16 +156,15 @@ export default function SideNav() {
                               ? { justifyContent: 'initial' }
                               : { justifyContent: 'center' },
                             isActive && {
-                              background: 'rgba(100, 116, 139, 0.08)',
+                              background: 'rgba(37, 99, 235, 0.06)',
                               '.dark &': {
-                                background: 'rgba(34, 211, 238, 0.06)',
-                                border: '1px solid rgba(34, 211, 238, 0.12)',
-                                boxShadow: '0 0 8px rgba(34, 211, 238, 0.04)',
+                                background: 'rgba(34, 211, 238, 0.08)',
+                                border: '1px solid #1e293b',
                               },
                               '&:hover': {
-                                background: 'rgba(100, 116, 139, 0.12)',
+                                background: 'rgba(37, 99, 235, 0.08)',
                                 '.dark &': {
-                                  background: 'rgba(34, 211, 238, 0.08)',
+                                  background: 'rgba(34, 211, 238, 0.10)',
                                 },
                               },
                             },
@@ -176,10 +172,9 @@ export default function SideNav() {
                         >
                           {isActive && (
                             <div
-                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-[#475569] dark:bg-[#22d3ee]"
+                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-[var(--brand)]"
                               style={{
                                 height: '55%',
-                                boxShadow: 'var(--scada-cyan-glow, none)',
                               }}
                             />
                           )}
@@ -191,8 +186,8 @@ export default function SideNav() {
                             <item.icon
                               style={{ fontSize: 22 }}
                               className={isActive
-                                ? 'text-[#334155] dark:text-[#22d3ee]'
-                                : 'text-[#94a3b8] dark:text-[#556677]'
+                                ? 'text-[var(--brand)]'
+                                : 'text-[#6b7280] dark:text-[#64748b]'
                               }
                             />
                           </div>
@@ -200,8 +195,8 @@ export default function SideNav() {
                             <span
                               className={`text-[14px] font-medium leading-tight truncate transition-colors duration-200 ${
                                 isActive
-                                  ? 'text-[#1e293b] dark:text-[#e8edf5]'
-                                  : 'text-[#64748b] dark:text-[#8899ab]'
+                                  ? 'text-[var(--brand)]'
+                                  : 'text-[#374151] dark:text-[#94a3b8]'
                               }`}
                             >
                               {item.name}
@@ -219,9 +214,9 @@ export default function SideNav() {
 
         {open && (
           <div className="mt-auto px-3 pb-3">
-            <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-[#22d3ee]/[0.03] border border-black/[0.04] dark:border-[#22d3ee]/10">
-              <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-[#64748b] dark:text-[#22d3ee]/50 mb-0.5">Hercules v2</p>
-              <p className="text-[10px] text-[#94a3b8] dark:text-[#556677]">Industrial SCADA</p>
+            <div className="p-3 rounded-lg bg-[#f9fafb] dark:bg-[#0d1320] border border-[#e5e7eb] dark:border-[#1e293b]">
+              <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-[#9ca3af] dark:text-[#475569] mb-0.5">Hercules v2</p>
+              <p className="text-[10px] text-[#9ca3af] dark:text-[#475569]">Industrial SCADA</p>
             </div>
           </div>
         )}

@@ -35,7 +35,7 @@ function timeAgo(iso) {
 
 const GRID_COLS_DEFAULT = 12;
 const GRID_ROW_H_DEFAULT = 40;
-const GRID_MARGIN = [8, 8];
+const GRID_MARGIN = [12, 12];
 const GRID_PADDING = [0, 0];
 
 /* ── Time filter presets ─────────────────────────────────────── */
@@ -87,7 +87,7 @@ function ReportList({ onSelect }) {
           <button
             key={t.id}
             onClick={() => onSelect(t.id)}
-            className="text-left bg-white/90 dark:bg-[#091422] border border-gray-200 dark:border-[#22d3ee]/25 rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-900/5 dark:hover:shadow-[0_0_20px_rgba(34,211,238,0.08)] dark:shadow-[0_0_12px_rgba(34,211,238,0.06)] transition-all duration-150 group backdrop-blur-sm"
+            className="text-left bg-white/90 dark:bg-[#091422] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-150 group backdrop-blur-sm"
           >
             {/* Preview area — real report thumbnail */}
             <div className="relative h-56 w-full flex items-stretch overflow-hidden">
@@ -457,7 +457,7 @@ function SingleReportView({ reportId, onBack }) {
   return (
     <div className="flex flex-col h-[calc(100vh-80px)] bg-transparent">
       {/* ── Toolbar: back + title | date/time + time filters (left, centered) | actions ── */}
-      <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
+      <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
         {/* Left: back + report name */}
         <button onClick={onBack} className="p-2 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0">
           <FaChevronLeft size={14} />
@@ -476,8 +476,8 @@ function SingleReportView({ reportId, onBack }) {
                 onClick={() => setTimePreset(p.id)}
                 className={`px-3 py-2 text-[12px] font-semibold rounded-lg border-2 transition-colors ${
                   timePreset === p.id
-                    ? 'border-brand bg-brand-subtle text-brand dark:bg-[#0a1e38] dark:text-brand dark:border-brand'
-                    : 'border-[#e3e9f0] dark:border-[#22d3ee]/10 text-[#5a6d80] dark:text-[#8898aa] hover:border-[#0e749080] hover:bg-[#f0f7ff] dark:hover:bg-[#0a1525]'
+                    ? 'border-brand bg-brand-subtle text-brand dark:bg-brand-subtle dark:text-brand dark:border-brand'
+                    : 'border-[#e3e9f0] dark:border-gray-700 text-[#5a6d80] dark:text-[#8898aa] hover:border-brand/50 hover:bg-brand-subtle dark:hover:bg-brand-subtle'
                 }`}
               >
                 {p.label}
@@ -489,7 +489,7 @@ function SingleReportView({ reportId, onBack }) {
         {/* Right: view toggle + fullscreen + print */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {hasTableWidgets && (
-            <div className="flex rounded-lg border border-[#e3e9f0] dark:border-[#22d3ee]/10 overflow-hidden">
+            <div className="flex rounded-lg border border-[#e3e9f0] dark:border-gray-700 overflow-hidden">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`px-3 py-2 text-[12px] font-semibold transition-colors ${viewMode === 'grid' ? 'bg-brand text-white' : 'text-[#6b7f94] hover:bg-gray-100 dark:hover:bg-gray-800'}`}
@@ -530,7 +530,7 @@ function SingleReportView({ reportId, onBack }) {
 
       {/* ── Custom date range (only when custom selected) ── */}
       {timePreset === 'custom' && (
-        <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2.5 flex items-center gap-3 print:hidden">
+        <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-4 py-2.5 flex items-center gap-3 print:hidden">
           <label className="text-[11px] font-medium text-[#6b7f94]">From</label>
           <input type="datetime-local" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
             className="text-[11px] rounded-md border border-[#e3e9f0] bg-white/90 dark:bg-[#0a1525] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
@@ -542,14 +542,14 @@ function SingleReportView({ reportId, onBack }) {
 
       {/* ── Shift selector (when shift selected) ── */}
       {timePreset === 'shift' && (
-        <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 px-4 py-2.5 flex items-center gap-3 print:hidden">
+        <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-4 py-2.5 flex items-center gap-3 print:hidden">
           {shiftsConfig?.shifts?.length > 0 ? (
             <>
               <label className="text-[11px] font-medium text-[#6b7f94]">Shift</label>
               <select
                 value={selectedShift}
                 onChange={(e) => setSelectedShift(e.target.value)}
-                className="px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white dark:bg-[#080d19] text-[#2a3545] dark:text-[#e1e8f0] focus:outline-none focus:border-brand"
+                className="px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-gray-700 bg-white dark:bg-[#080d19] text-[#2a3545] dark:text-[#e1e8f0] focus:outline-none focus:border-brand"
               >
                 <option value="">Select shift...</option>
                 {shiftsConfig.shifts.map((s, i) => (
@@ -644,13 +644,13 @@ function SingleReportView({ reportId, onBack }) {
                         <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
                       </div>
                       {showPagination && (
-                        <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white/60 dark:bg-[#0a1525]/60">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#e3e9f0] dark:border-gray-700 bg-white/60 dark:bg-[#0a1525]/60">
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] text-[#6b7f94]">Rows per page:</span>
                             <select
                               value={rowsPerPage}
                               onChange={(e) => { setRowsPerPage(Number(e.target.value)); setTablePage({}); }}
-                              className="text-[11px] px-1.5 py-0.5 rounded border border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white dark:bg-[#0a1525] text-[#3a4a5c] dark:text-[#c1ccd9]"
+                              className="text-[11px] px-1.5 py-0.5 rounded border border-[#e3e9f0] dark:border-gray-700 bg-white dark:bg-[#0a1525] text-[#3a4a5c] dark:text-[#c1ccd9]"
                             >
                               <option value={10}>10</option>
                               <option value={25}>25</option>
@@ -666,14 +666,14 @@ function SingleReportView({ reportId, onBack }) {
                               <button
                                 onClick={() => setTablePage((p) => ({ ...p, [widget.id]: Math.max(0, currentPage - 1) }))}
                                 disabled={currentPage === 0}
-                                className="px-2 py-1 text-[11px] rounded border border-[#e3e9f0] dark:border-[#22d3ee]/10 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                className="px-2 py-1 text-[11px] rounded border border-[#e3e9f0] dark:border-gray-700 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                               >
                                 Prev
                               </button>
                               <button
                                 onClick={() => setTablePage((p) => ({ ...p, [widget.id]: Math.min(totalPages - 1, currentPage + 1) }))}
                                 disabled={currentPage >= totalPages - 1}
-                                className="px-2 py-1 text-[11px] rounded border border-[#e3e9f0] dark:border-[#22d3ee]/10 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                className="px-2 py-1 text-[11px] rounded border border-[#e3e9f0] dark:border-gray-700 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                               >
                                 Next
                               </button>
@@ -771,7 +771,7 @@ export default function ReportViewer() {
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-transparent">
-      <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-[#22d3ee]/10 bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm">
+      <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-gray-700 bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm">
         <h1 className="text-[15px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Reporting</h1>
         <p className="text-[11px] text-[#8898aa] mt-0.5">Select a report to view with live or historical data</p>
       </div>

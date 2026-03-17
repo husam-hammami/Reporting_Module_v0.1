@@ -17,21 +17,21 @@
 
 @layer base {
     .dark-style {
-      @apply dark:bg-[#060c1a] dark:text-zinc-50 bg-[#f4f6f9];
+      @apply dark:bg-[#0a0f1a] dark:text-zinc-50 bg-[#f8fafc];
     }
   }
 
   :root {
-    --background: hsl(0, 0%, 100%);
-    --foreground: hsl(220, 25%, 10%);
+    --background: #f8fafc;
+    --foreground: #111827;
     --muted: hsl(220, 14%, 96%);
     --muted-foreground: hsl(220, 8%, 46%);
     --popover: hsl(0, 0%, 100%);
     --popover-foreground: hsl(220, 25%, 10%);
     --card: hsl(0, 0%, 100%);
     --card-foreground: hsl(220, 25%, 10%);
-    --border: hsl(220, 13%, 91%);
-    --input: hsl(220, 13%, 91%);
+    --border: #e5e7eb;
+    --input: #e5e7eb;
     --primary: hsl(200, 80%, 40%);
     --primary-foreground: hsl(0, 0%, 100%);
     --secondary: hsl(220, 14%, 96%);
@@ -43,50 +43,85 @@
     --ring: hsl(200, 80%, 40%);
     --radius: 0.5rem;
 
-    --brand: #0c7bb3;
-    --brand-hover: #0a6999;
-    --brand-subtle: #e6f4fb;
-    --brand-ring: rgba(12, 123, 179, 0.25);
-    --brand-glow: rgba(14, 165, 233, 0);
+    --brand: #2563eb;
+    --brand-hover: #1d4ed8;
+    --brand-subtle: rgba(37, 99, 235, 0.06);
+    --brand-ring: rgba(37, 99, 235, 0.25);
+    --brand-glow: transparent;
 
-    --theme-primary: hsl(200, 85%, 55%);
-    --theme-secondary: hsl(200, 80%, 85%);
-    --theme-accent: hsl(200, 90%, 45%);
-    --theme-light: hsl(200, 100%, 97%);
-    --theme-dark: hsl(200, 75%, 30%);
+    --theme-primary: #2563eb;
+    --theme-secondary: #93c5fd;
+    --theme-accent: #1d4ed8;
+    --theme-light: #eff6ff;
+    --theme-dark: #1e40af;
 
     --nav-height: 80px;
     --sidebar-width: 220px;
     --sidebar-collapsed: 60px;
 
-    --glass-bg: rgba(255, 255, 255, 0.82);
-    --glass-border: rgba(255, 255, 255, 0.5);
-    --glass-blur: 16px;
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: #e5e7eb;
+    --glass-blur: 0px;
 
+    --surface: #ffffff;
     --surface-elevated: #ffffff;
-    --surface-sunken: #f4f6f9;
-    --text-primary: #0f1729;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
-    --border-subtle: #e2e8f0;
+    --surface-sunken: #f9fafb;
+    --text-primary: #111827;
+    --text-secondary: #374151;
+    --text-muted: #6b7280;
+    --text-faint: #9ca3af;
+    --border-strong: #d1d5db;
+    --border-subtle: #e5e7eb;
+    --border-faint: #f3f4f6;
+    --header-bg: #0f172a;
+    --header-text: #ffffff;
 
-    --scada-cyan: #0c7bb3;
-    --scada-cyan-glow: rgba(12, 123, 179, 0.25);
-    --scada-panel-bg: #f4f6f9;
-    --scada-panel-border: rgba(0, 0, 0, 0.08);
+    --success: #059669;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --info: #2563eb;
+
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-full: 9999px;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,0.07);
+    --shadow-xl: 0 8px 30px rgba(0,0,0,0.1);
+
+    --transition-fast: all 0.15s ease;
+    --transition-normal: all 0.25s ease;
+    --transition-slow: all 0.3s ease;
+    --transition-icon: transform 0.2s ease;
+
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 20px;
+    --space-2xl: 24px;
+    --space-3xl: 32px;
+
+    --scada-cyan: #2563eb;
+    --scada-cyan-glow: transparent;
+    --scada-panel-bg: #f9fafb;
+    --scada-panel-border: #e5e7eb;
   }
   
   .dark {
-    --background: 200 35% 8%;
-    --foreground: 210 30% 93%;
+    --background: #0a0f1a;
+    --foreground: #f1f5f9;
     --muted: 200 30% 12%;
     --muted-foreground: 200 15% 55%;
-    --popover: 200 35% 8%;
-    --popover-foreground: 210 30% 93%;
-    --card: 200 30% 12%;
-    --card-foreground: 210 30% 93%;
-    --border: 200 25% 18%;
-    --input: 200 30% 12%;
+    --popover: #111827;
+    --popover-foreground: #f1f5f9;
+    --card: #111827;
+    --card-foreground: #f1f5f9;
+    --border: #1e293b;
+    --input: #1e293b;
     --primary: 187 80% 53%;
     --primary-foreground: 200 35% 5%;
     --secondary: 200 30% 12%;
@@ -100,25 +135,41 @@
 
     --brand: #22d3ee;
     --brand-hover: #67e8f9;
-    --brand-subtle: rgba(34, 211, 238, 0.06);
+    --brand-subtle: rgba(34, 211, 238, 0.08);
     --brand-ring: rgba(34, 211, 238, 0.3);
-    --brand-glow: rgba(34, 211, 238, 0.15);
+    --brand-glow: transparent;
 
-    --glass-bg: rgba(6, 12, 26, 0.94);
-    --glass-border: rgba(34, 211, 238, 0.22);
-    --glass-blur: 20px;
+    --glass-bg: rgba(10, 15, 26, 0.95);
+    --glass-border: #1e293b;
+    --glass-blur: 0px;
 
-    --surface-elevated: #0e1a2c;
-    --surface-sunken: #060e1a;
-    --text-primary: #e8edf5;
-    --text-secondary: #8899ab;
-    --text-muted: #556677;
-    --border-subtle: rgba(34, 211, 238, 0.10);
+    --surface: #111827;
+    --surface-elevated: #111827;
+    --surface-sunken: #0d1320;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --text-faint: #475569;
+    --border-strong: #2a3347;
+    --border-subtle: #1e293b;
+    --border-faint: #1e293b;
+    --header-bg: #0f172a;
+    --header-text: #f1f5f9;
+
+    --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --info: #60a5fa;
+
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-xl: none;
 
     --scada-cyan: #22d3ee;
-    --scada-cyan-glow: rgba(34, 211, 238, 0.35);
-    --scada-panel-bg: #091422;
-    --scada-panel-border: rgba(34, 211, 238, 0.30);
+    --scada-cyan-glow: transparent;
+    --scada-panel-bg: #111827;
+    --scada-panel-border: #1e293b;
   }
   
   @layer base {
@@ -127,41 +178,16 @@
     }
   
     body {
-      @apply font-sans antialiased bg-[#f4f6f9] dark:bg-[#060c1a] text-foreground;
+      @apply font-sans antialiased text-foreground;
+      background: var(--background);
     }
   }
 
   #bg-video {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    object-fit: cover;
-    opacity: 0.18;
-    pointer-events: none;
-    z-index: 0;
-    filter: invert(1) hue-rotate(180deg) saturate(0.3) brightness(1.4);
+    display: none !important;
   }
-  .dark #bg-video {
-    opacity: 0.4;
-    filter: none;
-  }
-
   #bg-video-overlay {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 0;
-    background: linear-gradient(180deg, rgba(244,246,249,0.85) 0%, rgba(244,246,249,0.75) 40%, rgba(244,246,249,0.88) 100%);
-  }
-  .dark #bg-video-overlay {
-    background: linear-gradient(180deg, rgba(6,12,26,0.82) 0%, rgba(6,12,26,0.72) 40%, rgba(6,12,26,0.85) 100%);
+    display: none !important;
   }
 
   #root {
@@ -230,7 +256,7 @@
     }
 
     .dark .scada-panel {
-      box-shadow: 0 0 15px rgba(34, 211, 238, 0.08), 0 0 4px rgba(34, 211, 238, 0.06), inset 0 1px 0 rgba(34, 211, 238, 0.08);
+      box-shadow: none;
     }
 
     .scada-panel-glow {
@@ -240,7 +266,7 @@
     }
 
     .dark .scada-panel-glow {
-      box-shadow: 0 0 24px rgba(34, 211, 238, 0.10), 0 0 8px rgba(34, 211, 238, 0.12), 0 0 2px rgba(34, 211, 238, 0.15), inset 0 1px 0 rgba(34, 211, 238, 0.10);
+      box-shadow: none;
     }
 
     .scada-header {
@@ -251,8 +277,7 @@
     }
 
     .dark .scada-header {
-      color: #22d3ee;
-      text-shadow: 0 0 8px rgba(34, 211, 238, 0.3);
+      color: var(--brand);
     }
   
     .status-indicator {
@@ -373,8 +398,8 @@
     }
 
     @keyframes mc-glow-pulse {
-      0%, 100% { box-shadow: 0 0 4px rgba(34, 211, 238, 0.3); }
-      50% { box-shadow: 0 0 16px rgba(34, 211, 238, 0.5); }
+      0%, 100% { box-shadow: none; }
+      50% { box-shadow: none; }
     }
 
     @keyframes mc-shimmer {
@@ -383,8 +408,8 @@
     }
 
     @keyframes mc-border-glow {
-      0%, 100% { border-color: rgba(34, 211, 238, 0.15); }
-      50% { border-color: rgba(34, 211, 238, 0.4); }
+      0%, 100% { border-color: var(--border); }
+      50% { border-color: var(--border-strong); }
     }
 
     @keyframes scada-scan {
@@ -536,8 +561,8 @@
   z-index: 3;
   will-change: transform;
   opacity: 0.85;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(34, 211, 238, 0.4);
-  border-radius: 12px;
+  box-shadow: var(--shadow-lg, 0 4px 16px rgba(0, 0, 0, 0.07)), 0 0 0 2px var(--brand);
+  border-radius: var(--radius-lg, 8px);
 }
 
 /* ── Resize handles: all edges and corners ── */
@@ -568,29 +593,30 @@
   bottom: 2px;
   width: 6px;
   height: 6px;
-  border-right: 2px solid rgba(34, 211, 238, 0.3);
-  border-bottom: 2px solid rgba(34, 211, 238, 0.3);
+  border-right: 2px solid var(--brand);
+  border-bottom: 2px solid var(--brand);
   border-radius: 0 0 2px 0;
-  transition: border-color 200ms ease;
+  opacity: 0.4;
+  transition: opacity 200ms ease;
 }
 .react-grid-item:hover > .react-resizable-handle-se::after {
-  border-color: rgba(34, 211, 238, 0.6);
+  opacity: 0.7;
 }
 
 .react-grid-item > .react-resizable-handle-s:hover,
-.react-grid-item > .react-resizable-handle-n:hover { background: rgba(34, 211, 238, 0.12); border-radius: 3px; }
+.react-grid-item > .react-resizable-handle-n:hover { background: var(--brand-subtle); border-radius: 3px; }
 .react-grid-item > .react-resizable-handle-e:hover,
-.react-grid-item > .react-resizable-handle-w:hover { background: rgba(34, 211, 238, 0.12); border-radius: 3px; }
+.react-grid-item > .react-resizable-handle-w:hover { background: var(--brand-subtle); border-radius: 3px; }
 .react-grid-item > .react-resizable-handle-se:hover,
 .react-grid-item > .react-resizable-handle-sw:hover,
 .react-grid-item > .react-resizable-handle-ne:hover,
-.react-grid-item > .react-resizable-handle-nw:hover { background: rgba(34, 211, 238, 0.2); border-radius: 2px; }
+.react-grid-item > .react-resizable-handle-nw:hover { background: var(--brand-subtle); border-radius: 2px; }
 
 .react-grid-placeholder {
-  background: rgba(34, 211, 238, 0.06) !important;
-  border: 2px dashed rgba(34, 211, 238, 0.3) !important;
-  border-radius: 12px !important;
-  opacity: 1 !important;
+  background: var(--brand-subtle) !important;
+  border: 2px dashed var(--brand) !important;
+  border-radius: var(--radius-lg, 8px) !important;
+  opacity: 0.5 !important;
   transition: all 150ms ease;
 }
 
@@ -611,8 +637,8 @@
   background: rgba(148, 163, 184, 0.4);
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(34, 211, 238, 0.18);
+  background: rgba(148, 163, 184, 0.2);
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.25);
+  background: rgba(148, 163, 184, 0.3);
 }

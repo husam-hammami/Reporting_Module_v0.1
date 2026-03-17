@@ -72,7 +72,7 @@ export default function StatWidget({ config, tagValues }) {
   const numericValue = raw != null ? Number(raw) : null;
   const decimals = config.decimals ?? 1;
   const display = useAnimatedNumber(numericValue, decimals, skipAnimation);
-  const color = config.color || '#00d4ff';
+  const color = config.color || '#2563eb';
 
   const showTitle = config.showTitle !== false;
   const titleFontSize = TITLE_FONT_SIZES[config.titleFontSize] || TITLE_FONT_SIZES.md;
@@ -123,7 +123,6 @@ export default function StatWidget({ config, tagValues }) {
           fontWeight: 800,
           fontVariantNumeric: 'tabular-nums',
           letterSpacing: '-0.03em',
-          textShadow: `0 0 20px ${color}33`,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
