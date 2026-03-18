@@ -40,3 +40,16 @@ Runner/
 
 backend/venv/
 venv/
+# Ignore installer & build files
+Hercules_New.ico
+installer.iss
+launcher.py
+launcher.spec
+
+# Ignore folders
+psql/
+python_embed/
+installer/
+
+# Ignore dependencies file
+requirements.txt

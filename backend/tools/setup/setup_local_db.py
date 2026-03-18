@@ -170,30 +170,30 @@ def create_default_user():
     cur = conn.cursor()
 
     try:
-        cur.execute("SELECT 1 FROM users WHERE username = 'admin'")
+        cur.execute("SELECT 1 FROM users WHERE username = 'Yaser'")
         if cur.fetchone():
-            print('  User "admin" already exists — skipping.')
+            print('  User "Yaser" already exists — skipping.')
         else:
             # bcrypt hash for "admin"
             hashed = '$2b$12$LJ3m4ys3Lk0TSwMBQWJxaeflIOwnGGkahJCsOvn/F9JDOaFf1liGu'
             cur.execute(
                 "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
-                ('admin', hashed, 'admin'),
+                ('Yaser', hashed, 'admin'),
             )
-            print('  Created user "admin" (password: admin).')
+            print('  Created user "Yaser" (password: admin).')
     except psycopg2.errors.UndefinedColumn:
         conn.rollback()
         conn.autocommit = True
         # Table might have different columns — try minimal insert
         try:
-            cur.execute("SELECT 1 FROM users WHERE username = 'admin'")
+            cur.execute("SELECT 1 FROM users WHERE username = 'Yaser'")
             if not cur.fetchone():
                 hashed = '$2b$12$LJ3m4ys3Lk0TSwMBQWJxaeflIOwnGGkahJCsOvn/F9JDOaFf1liGu'
                 cur.execute(
                     "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
-                    ('admin', hashed, 'admin'),
+                    ('Yaser', hashed, 'admin'),
                 )
-                print('  Created user "admin" (password: admin).')
+                print('  Created user "Yaser" (password: admin).')
         except Exception as e2:
             print(f'  SKIP  Could not create user: {e2}')
 

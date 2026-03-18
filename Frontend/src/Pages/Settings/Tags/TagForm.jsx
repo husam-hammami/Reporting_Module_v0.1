@@ -30,6 +30,52 @@ function useTheme() {
 const TAB_GENERAL = 'general';
 const TAB_CONFIG = 'config';
 
+const TfLabel = ({ children, required, accent, danger }) => (
+  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: accent }}>
+    {children}{required && <span style={{ color: danger }}> *</span>}
+  </label>
+);
+
+const TfHelper = ({ children, textMuted }) => (
+  <p className="text-[10px] mt-1.5" style={{ color: textMuted }}>{children}</p>
+);
+
+const TfErrorMsg = ({ msg, danger }) => msg ? (
+  <p className="text-[10px] mt-1" style={{ color: danger }}>{msg}</p>
+) : null;
+
+const TfSectionCard = ({ children, title, icon: Icon, sectionBg, accentBorder, accent }) => (
+  <div className="rounded-lg p-3.5 space-y-3" style={{ background: sectionBg, border: `1px solid ${accentBorder}` }}>
+    {title && (
+      <div className="flex items-center gap-2 mb-1">
+        {Icon && <Icon size={12} style={{ color: accent }} />}
+        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accent }}>{title}</span>
+      </div>
+    )}
+    {children}
+  </div>
+);
+
+const TfCheckbox = ({ checked, onChange, label, accent, border, btnText, textSecondary }) => (
+  <label className="flex items-center gap-2.5 cursor-pointer group">
+    <div
+      className="w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all"
+      style={{
+        borderColor: checked ? accent : border,
+        background: checked ? accent : 'transparent',
+      }}
+    >
+      {checked && (
+        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+          <path d="M1 4L3.5 6.5L9 1" stroke={btnText} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </div>
+    <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+    <span className="text-[12px] font-medium" style={{ color: textSecondary }}>{label}</span>
+  </label>
+);
+
 const TagForm = ({ tag, onSave, onCancel }) => {
   const t = useTheme();
   const [activeTab, setActiveTab] = useState(TAB_GENERAL);
@@ -194,51 +240,11 @@ const TagForm = ({ tag, onSave, onCancel }) => {
   };
   const inputCls = 'w-full px-3 py-2.5 rounded-lg text-[13px] focus:outline-none focus:ring-1 transition-colors';
 
-  const Label = ({ children, required }) => (
-    <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>
-      {children}{required && <span style={{ color: t.danger }}> *</span>}
-    </label>
-  );
-
-  const Helper = ({ children }) => (
-    <p className="text-[10px] mt-1.5" style={{ color: t.textMuted }}>{children}</p>
-  );
-
-  const ErrorMsg = ({ msg }) => msg ? (
-    <p className="text-[10px] mt-1" style={{ color: t.danger }}>{msg}</p>
-  ) : null;
-
-  const SectionCard = ({ children, title, icon: Icon }) => (
-    <div className="rounded-lg p-3.5 space-y-3" style={{ background: t.sectionBg, border: `1px solid ${t.accentBorder}` }}>
-      {title && (
-        <div className="flex items-center gap-2 mb-1">
-          {Icon && <Icon size={12} style={{ color: t.accent }} />}
-          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.accent }}>{title}</span>
-        </div>
-      )}
-      {children}
-    </div>
-  );
-
-  const Checkbox = ({ checked, onChange, label }) => (
-    <label className="flex items-center gap-2.5 cursor-pointer group">
-      <div
-        className="w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all"
-        style={{
-          borderColor: checked ? t.accent : t.border,
-          background: checked ? t.accent : 'transparent',
-        }}
-      >
-        {checked && (
-          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-            <path d="M1 4L3.5 6.5L9 1" stroke={t.btnText} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </div>
-      <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
-      <span className="text-[12px] font-medium" style={{ color: t.textSecondary }}>{label}</span>
-    </label>
-  );
+  const sectionProps = { sectionBg: t.sectionBg, accentBorder: t.accentBorder, accent: t.accent };
+  const labelProps = { accent: t.accent, danger: t.danger };
+  const helperProps = { textMuted: t.textMuted };
+  const errorProps = { danger: t.danger };
+  const checkboxProps = { accent: t.accent, border: t.border, btnText: t.btnText, textSecondary: t.textSecondary };
 
   const generalHasErrors = !!(errors.tag_name || errors.plc_address || errors.formula || errors.mapping_name);
   const configHasErrors = !!(errors.bit_position || errors.string_length);
@@ -247,7 +253,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label required>Tag Name</Label>
+          <TfLabel required {...labelProps}>Tag Name</TfLabel>
           <input
             type="text"
             value={formData.tag_name}
@@ -256,10 +262,10 @@ const TagForm = ({ tag, onSave, onCancel }) => {
             style={errors.tag_name ? inputErrStyle : inputStyle}
             placeholder="e.g., FlowRate_Main"
           />
-          <ErrorMsg msg={errors.tag_name} />
+          <TfErrorMsg msg={errors.tag_name} {...errorProps} />
         </div>
         <div>
-          <Label>Display Name</Label>
+          <TfLabel {...labelProps}>Display Name</TfLabel>
           <input
             type="text"
             value={formData.display_name}
@@ -272,7 +278,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
       </div>
 
       <div>
-        <Label required>Source Type</Label>
+        <TfLabel required {...labelProps}>Source Type</TfLabel>
         <select
           value={formData.source_type}
           onChange={(e) => handleChange('source_type', e.target.value)}
@@ -287,9 +293,9 @@ const TagForm = ({ tag, onSave, onCancel }) => {
       </div>
 
       {formData.source_type === 'PLC' && (
-        <SectionCard title="PLC Configuration" icon={Cpu}>
+        <TfSectionCard title="PLC Configuration" icon={Cpu} {...sectionProps}>
           <div>
-            <Label required>PLC Address</Label>
+            <TfLabel required {...labelProps}>PLC Address</TfLabel>
             <input
               type="text"
               value={formData.plc_address}
@@ -298,16 +304,16 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               style={errors.plc_address ? inputErrStyle : inputStyle}
               placeholder="e.g., DB2099.0, DB499.100"
             />
-            <ErrorMsg msg={errors.plc_address} />
-            <Helper>Format: DB[number].[offset] or DB[number].[offset].[bit] for BOOL</Helper>
+            <TfErrorMsg msg={errors.plc_address} {...errorProps} />
+            <TfHelper {...helperProps}>Format: DB[number].[offset] or DB[number].[offset].[bit] for BOOL</TfHelper>
           </div>
-        </SectionCard>
+        </TfSectionCard>
       )}
 
       {formData.source_type === 'Formula' && (
-        <SectionCard title="Formula" icon={FlaskConical}>
+        <TfSectionCard title="Formula" icon={FlaskConical} {...sectionProps}>
           <div>
-            <Label required>Expression</Label>
+            <TfLabel required {...labelProps}>Expression</TfLabel>
             <textarea
               value={formData.formula}
               onChange={(e) => handleChange('formula', e.target.value)}
@@ -316,15 +322,15 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               rows="3"
               placeholder="e.g., Sender1_Weight + Sender2_Weight"
             />
-            <ErrorMsg msg={errors.formula} />
+            <TfErrorMsg msg={errors.formula} {...errorProps} />
           </div>
-        </SectionCard>
+        </TfSectionCard>
       )}
 
       {formData.source_type === 'Mapping' && (
-        <SectionCard title="Mapping" icon={ArrowRightLeft}>
+        <TfSectionCard title="Mapping" icon={ArrowRightLeft} {...sectionProps}>
           <div>
-            <Label required>Mapping Name</Label>
+            <TfLabel required {...labelProps}>Mapping Name</TfLabel>
             <input
               type="text"
               value={formData.mapping_name}
@@ -333,13 +339,13 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               style={errors.mapping_name ? inputErrStyle : inputStyle}
               placeholder="e.g., BinToMaterial"
             />
-            <ErrorMsg msg={errors.mapping_name} />
+            <TfErrorMsg msg={errors.mapping_name} {...errorProps} />
           </div>
-        </SectionCard>
+        </TfSectionCard>
       )}
 
       <div>
-        <Label>Description</Label>
+        <TfLabel {...labelProps}>Description</TfLabel>
         <textarea
           value={formData.description}
           onChange={(e) => handleChange('description', e.target.value)}
@@ -350,10 +356,11 @@ const TagForm = ({ tag, onSave, onCancel }) => {
         />
       </div>
 
-      <Checkbox
+      <TfCheckbox
         checked={formData.is_active}
         onChange={(e) => handleChange('is_active', e.target.checked)}
         label="Active (Tag is enabled)"
+        {...checkboxProps}
       />
     </div>
   );
@@ -362,7 +369,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label required>Data Type</Label>
+          <TfLabel required {...labelProps}>Data Type</TfLabel>
           <select
             value={formData.data_type}
             onChange={(e) => handleChange('data_type', e.target.value)}
@@ -377,7 +384,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
           </select>
         </div>
         <div>
-          <Label>Unit</Label>
+          <TfLabel {...labelProps}>Unit</TfLabel>
           <input
             type="text"
             value={formData.unit}
@@ -391,7 +398,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Scaling</Label>
+          <TfLabel {...labelProps}>Scaling</TfLabel>
           <input
             type="number"
             step="any"
@@ -401,10 +408,10 @@ const TagForm = ({ tag, onSave, onCancel }) => {
             style={inputStyle}
             placeholder="1.0"
           />
-          <Helper>Multiplier applied to raw PLC value</Helper>
+          <TfHelper {...helperProps}>Multiplier applied to raw PLC value</TfHelper>
         </div>
         <div>
-          <Label>Decimal Places</Label>
+          <TfLabel {...labelProps}>Decimal Places</TfLabel>
           <input
             type="number"
             min="0"
@@ -414,23 +421,24 @@ const TagForm = ({ tag, onSave, onCancel }) => {
             className={inputCls}
             style={inputStyle}
           />
-          <Helper>Display precision (0–6 digits)</Helper>
+          <TfHelper {...helperProps}>Display precision (0–6 digits)</TfHelper>
         </div>
       </div>
 
-      <Checkbox
+      <TfCheckbox
         checked={formData.is_counter}
         onChange={(e) => handleChange('is_counter', e.target.checked)}
         label="Cumulative Counter / Totalizer"
+        {...checkboxProps}
       />
       {formData.is_counter && (
-        <Helper>Counter tags accumulate over time. Reports use delta (last − first) to show change over a period.</Helper>
+        <TfHelper {...helperProps}>Counter tags accumulate over time. Reports use delta (last − first) to show change over a period.</TfHelper>
       )}
 
       {formData.data_type === 'BOOL' && formData.source_type === 'PLC' && (
-        <SectionCard title="BOOL Options" icon={ToggleLeft}>
+        <TfSectionCard title="BOOL Options" icon={ToggleLeft} {...sectionProps}>
           <div>
-            <Label>Bit Position (0-7)</Label>
+            <TfLabel {...labelProps}>Bit Position (0-7)</TfLabel>
             <input
               type="number"
               min="0"
@@ -448,15 +456,15 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               className={inputCls}
               style={errors.bit_position ? inputErrStyle : inputStyle}
             />
-            <ErrorMsg msg={errors.bit_position} />
+            <TfErrorMsg msg={errors.bit_position} {...errorProps} />
           </div>
-        </SectionCard>
+        </TfSectionCard>
       )}
 
       {formData.data_type === 'STRING' && formData.source_type === 'PLC' && (
-        <SectionCard title="STRING Options" icon={Database}>
+        <TfSectionCard title="STRING Options" icon={Database} {...sectionProps}>
           <div>
-            <Label required>String Length</Label>
+            <TfLabel required {...labelProps}>String Length</TfLabel>
             <input
               type="number"
               min="1"
@@ -465,22 +473,23 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               className={inputCls}
               style={errors.string_length ? inputErrStyle : inputStyle}
             />
-            <ErrorMsg msg={errors.string_length} />
+            <TfErrorMsg msg={errors.string_length} {...errorProps} />
           </div>
-        </SectionCard>
+        </TfSectionCard>
       )}
 
       {formData.data_type === 'REAL' && formData.source_type === 'PLC' && (
-        <Checkbox
+        <TfCheckbox
           checked={formData.byte_swap}
           onChange={(e) => handleChange('byte_swap', e.target.checked)}
           label="Byte Swap (Little-endian)"
+          {...checkboxProps}
         />
       )}
 
-      <SectionCard title="Value Transformation" icon={Beaker}>
+      <TfSectionCard title="Value Transformation" icon={Beaker} {...sectionProps}>
         <div>
-          <Label>Formula <span className="text-[10px] font-normal normal-case tracking-normal" style={{ color: t.textMuted }}>(optional)</span></Label>
+          <TfLabel {...labelProps}>Formula <span className="text-[10px] font-normal normal-case tracking-normal" style={{ color: t.textMuted }}>(optional)</span></TfLabel>
           <textarea
             value={formData.value_formula}
             onChange={(e) => handleChange('value_formula', e.target.value)}
@@ -489,33 +498,34 @@ const TagForm = ({ tag, onSave, onCancel }) => {
             rows="2"
             placeholder="e.g., value * 0.277778"
           />
-          <Helper>
+          <TfHelper {...helperProps}>
             Use <code className="px-1 rounded text-[10px] font-mono" style={{ background: t.codeBg }}>value</code> as
             the variable name. Examples:{' '}
             <code className="px-1 rounded text-[10px] font-mono" style={{ background: t.codeBg }}>value * 0.277778</code>{' '}
             <code className="px-1 rounded text-[10px] font-mono" style={{ background: t.codeBg }}>value / 1000</code>{' '}
             <code className="px-1 rounded text-[10px] font-mono" style={{ background: t.codeBg }}>value * 1.8 + 32</code>
-          </Helper>
+          </TfHelper>
           {formData.value_formula && (
             <div className="mt-2 rounded-lg p-2 text-[10px]" style={{ background: t.accentBg, border: `1px solid ${t.accentBorder}`, color: t.textSecondary }}>
               <strong>Note:</strong> If formula is provided, it will be used instead of scaling multiplier.
             </div>
           )}
         </div>
-      </SectionCard>
+      </TfSectionCard>
 
-      <SectionCard title="Bin Activation" icon={Settings2}>
-        <Checkbox
+      <TfSectionCard title="Bin Activation" icon={Settings2} {...sectionProps}>
+        <TfCheckbox
           checked={formData.is_bin_tag}
           onChange={(e) => handleChange('is_bin_tag', e.target.checked)}
           label="This is a bin tag (requires activation check)"
+          {...checkboxProps}
         />
-        <Helper>Enable if this tag represents a bin ID filtered by activation conditions</Helper>
+        <TfHelper {...helperProps}>Enable if this tag represents a bin ID filtered by activation conditions</TfHelper>
 
         {formData.is_bin_tag && (
           <div className="space-y-3 pt-2" style={{ borderTop: `1px solid ${t.borderSubtle}` }}>
             <div>
-              <Label>Activation Tag Name</Label>
+              <TfLabel {...labelProps}>Activation Tag Name</TfLabel>
               <input
                 type="text"
                 value={formData.activation_tag_name}
@@ -527,7 +537,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Condition</Label>
+                <TfLabel {...labelProps}>Condition</TfLabel>
                 <select
                   value={formData.activation_condition}
                   onChange={(e) => handleChange('activation_condition', e.target.value)}
@@ -544,7 +554,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               </div>
               {!['true', 'false'].includes(formData.activation_condition) && (
                 <div>
-                  <Label>Value</Label>
+                  <TfLabel {...labelProps}>Value</TfLabel>
                   <input
                     type="text"
                     value={formData.activation_value}
@@ -558,7 +568,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
             </div>
           </div>
         )}
-      </SectionCard>
+      </TfSectionCard>
     </div>
   );
 
@@ -566,12 +576,12 @@ const TagForm = ({ tag, onSave, onCancel }) => {
     <div
       className="fixed inset-0 z-[99999] flex items-center justify-center"
       style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)' }}
-      onClick={onCancel}
+      onMouseDown={onCancel}
     >
       <div
         className="w-full max-w-lg rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col mx-4"
         style={{ background: t.modalBg, border: `1px solid ${t.border}` }}
-        onClick={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
       >
         <div className="px-6 pt-5 pb-4 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${t.border}` }}>
           <div className="flex items-center gap-3">
