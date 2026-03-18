@@ -995,7 +995,7 @@ def seed_demo_tags():
                     tag_row = cursor.fetchone()
                     if tag_row:
                         cursor.execute("""
-                            INSERT INTO tag_group_tags (group_id, tag_id)
+                            INSERT INTO tag_group_members (group_id, tag_id)
                             VALUES (%s, %s) ON CONFLICT DO NOTHING
                         """, (group_id, tag_row['id']))
 

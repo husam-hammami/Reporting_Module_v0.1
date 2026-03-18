@@ -109,7 +109,7 @@ def handle_options_preflight():
             r.headers["Access-Control-Allow-Origin"] = origin
             r.headers["Access-Control-Allow-Credentials"] = "true"
             r.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
-            r.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            r.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
             return r
         return "", 200
 
@@ -126,7 +126,7 @@ def add_cors_headers(response):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
     return response
 
 
@@ -138,7 +138,7 @@ def options_handler(path):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
     return response, 200
 
 # Debug routes - only registered in DEV_MODE
@@ -618,11 +618,10 @@ def check_auth():
         "message": "User is not authenticated"
     }), 401
 
-# Main index route
+# Main index route — serve React app (no login required; React handles auth itself)
 @app.route('/')
-@login_required
 def index():
-    return render_template('index.html')
+    return send_from_directory(app.static_folder, 'index.html')
 
 # Users management routes
 @app.route('/users', methods=['GET'])
@@ -870,7 +869,7 @@ if __name__ == '__main__':
     logger.info("Starting Flask-SocketIO server...")
     start_scheduler()
 
-    logger.info("Server will listen on: http://0.0.0.0:5000")
-    logger.info("Test endpoint available at: http://localhost:5000/test")
-    # Eventlet handles HTTP and WebSocket requests properly
-    socketio.run(app, debug=False, host='0.0.0.0', port=5001, use_reloader=False)
+    port = int(os.environ.get('FLASK_PORT', 5001))
+    logger.info(f"Server will listen on: http://0.0.0.0:{port}")
+    logger.info(f"Test endpoint available at: http://localhost:{port}/test")
+    socketio.run(app, debug=False, host='0.0.0.0', port=port, use_reloader=False)
