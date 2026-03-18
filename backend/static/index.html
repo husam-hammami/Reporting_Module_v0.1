@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en" class="dark dark-style">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>HERCULES-V2</title>
+    <style>
+      #hercules-preloader {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        transition: opacity 0.4s ease;
+      }
+      #hercules-preloader.fade-out { opacity: 0; pointer-events: none; }
+      #hercules-preloader img { width: 200px; height: auto; }
+      #hercules-preloader .loader-bar {
+        margin-top: 28px;
+        width: 160px;
+        height: 3px;
+        border-radius: 3px;
+        background: #e2e8f0;
+        overflow: hidden;
+      }
+      #hercules-preloader .loader-bar-fill {
+        width: 40%;
+        height: 100%;
+        border-radius: 3px;
+        background: #0098cc;
+        animation: preloader-slide 1.2s ease-in-out infinite;
+      }
+      @keyframes preloader-slide {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(350%); }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-Bt_I9bea.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-HWd2Jo0E.css">
+  </head>
+  <body>
+    <div id="hercules-preloader">
+      <img src="/herculeslogo.png" alt="Hercules" />
+      <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+    </div>
+    <div id="root"></div>
+    <script>
+      (function() {
+        var el = document.getElementById('hercules-preloader');
+        if (!el) return;
+        var observer = new MutationObserver(function() {
+          var root = document.getElementById('root');
+          if (root && root.children.length > 0) {
+            el.classList.add('fade-out');
+            setTimeout(function() { el.remove(); }, 500);
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.getElementById('root'), { childList: true, subtree: true });
+      })();
+    </script>
+  </body>
+</html>

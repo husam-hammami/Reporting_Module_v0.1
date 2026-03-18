@@ -58,6 +58,9 @@ def _ensure_table_exists(cursor):
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_mappings_input_tag ON mappings(input_tag)
     """)
+    cursor.execute("""
+        DROP INDEX IF EXISTS idx_mappings_name_unique
+    """)
 
 
 # ── GET /mappings ──────────────────────────────────────────────────────────
@@ -160,11 +163,6 @@ def create_mapping():
             _ensure_table_exists(cursor)
             conn.commit()
 
-            # Check for duplicate name
-            cursor.execute("SELECT id FROM mappings WHERE LOWER(name) = LOWER(%s)", (name,))
-            if cursor.fetchone():
-                return jsonify({'status': 'error', 'message': f'Mapping "{name}" already exists'}), 400
-
             cursor.execute("""
                 INSERT INTO mappings (name, description, input_tag, output_tag_name, lookup, fallback, is_active, output_type)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -183,9 +181,6 @@ def create_mapping():
                 'message': f'Mapping "{name}" created successfully'
             }), 201
 
-    except psycopg2.IntegrityError as e:
-        logger.error(f"Integrity error creating mapping: {e}")
-        return jsonify({'status': 'error', 'message': 'Mapping name already exists'}), 400
     except Exception as e:
         logger.error(f"Error creating mapping: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -231,14 +226,6 @@ def update_mapping(mapping_id):
             if not cursor.fetchone():
                 return jsonify({'status': 'error', 'message': 'Mapping not found'}), 404
 
-            # Check for duplicate name (excluding self)
-            cursor.execute(
-                "SELECT id FROM mappings WHERE LOWER(name) = LOWER(%s) AND id != %s",
-                (name, mapping_id)
-            )
-            if cursor.fetchone():
-                return jsonify({'status': 'error', 'message': f'Mapping "{name}" already exists'}), 400
-
             cursor.execute("""
                 UPDATE mappings
                 SET name = %s, description = %s, input_tag = %s, output_tag_name = %s,
@@ -254,9 +241,6 @@ def update_mapping(mapping_id):
                 'message': f'Mapping "{name}" updated successfully'
             })
 
-    except psycopg2.IntegrityError as e:
-        logger.error(f"Integrity error updating mapping: {e}")
-        return jsonify({'status': 'error', 'message': 'Mapping name already exists'}), 400
     except Exception as e:
         logger.error(f"Error updating mapping {mapping_id}: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500

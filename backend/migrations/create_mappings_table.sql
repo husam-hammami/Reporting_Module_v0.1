@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS mappings (
 CREATE INDEX IF NOT EXISTS idx_mappings_active ON mappings(is_active) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_mappings_input_tag ON mappings(input_tag);
 CREATE INDEX IF NOT EXISTS idx_mappings_output_tag ON mappings(output_tag_name);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_mappings_name_unique ON mappings(LOWER(name));
+-- Unique name constraint removed: same tag can have multiple mappings with different names
+-- CREATE UNIQUE INDEX IF NOT EXISTS idx_mappings_name_unique ON mappings(LOWER(name));
 
 -- Update trigger
 CREATE TRIGGER update_mappings_updated_at BEFORE UPDATE ON mappings

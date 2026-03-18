@@ -1,0 +1,366 @@
+"""
+Hercules Reporting Module — Standalone launcher.
+Starts portable PostgreSQL, runs DB setup on first run, then starts the Flask backend.
+Designed to be compiled to launcher.exe (e.g. PyInstaller) for the installer bundle.
+"""
+import json
+import os
+import platform
+import ssl
+import subprocess
+import sys
+import time
+import traceback
+import urllib.request
+import urllib.error
+import webbrowser
+from datetime import datetime
+
+try:
+    import uuid
+except ImportError:
+    uuid = None
+
+LICENSE_SERVER_URL = "https://api.herculesv2.app"
+
+
+def pause_before_exit(msg="Press Enter to exit."):
+    """Keep console open so the user can read the message (works when double-clicking EXE)."""
+    try:
+        input(msg)
+    except EOFError:
+        if os.name == "nt":
+            os.system("pause")
+        else:
+            print("(Waiting 15 seconds...)")
+            time.sleep(15)
+
+
+def _machine_id_fallback():
+    """Machine ID without depending on backend utils (e.g. when backend folder is missing)."""
+    if uuid is None:
+        return "(unavailable)"
+    node = uuid.getnode()
+    return ":".join(("{:02x}".format((node >> i) & 0xFF) for i in range(40, -1, -8)))
+
+
+def _verify_license_inline(license_path):
+    """
+    Verify license.json without importing backend. Used so the EXE works even when
+    the backend folder is missing or incomplete. Returns True if valid.
+    """
+    if not license_path or not os.path.exists(license_path):
+        return False
+    try:
+        with open(license_path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return False
+    if data.get("machine_id") != _machine_id_fallback():
+        return False
+    expiry_str = data.get("expiry")
+    if not expiry_str:
+        return False
+    try:
+        expiry = datetime.strptime(expiry_str, "%Y-%m-%d")
+    except ValueError:
+        return False
+    if expiry.date() < datetime.now().date():
+        return False
+    return True
+
+
+def _ssl_context():
+    """Return an SSL context that works even when certifi/CA bundle is missing (embedded Python)."""
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        pass
+    ctx = ssl.create_default_context()
+    try:
+        ctx.load_default_certs()
+    except Exception:
+        pass
+    if not ctx.get_ca_certs():
+        ctx = ssl._create_unverified_context()
+    return ctx
+
+
+def _check_license_online(machine_id):
+    """POST machine_id to the license server. Returns parsed JSON or None on failure."""
+    try:
+        payload = json.dumps({
+            "machine_id": machine_id,
+            "user_id": os.environ.get("USERNAME", ""),
+            "hostname": platform.node(),
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            f"{LICENSE_SERVER_URL}/api/license/register",
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "HerculesLauncher/1.0",
+                "ngrok-skip-browser-warning": "true",
+            },
+            method="POST",
+        )
+        ctx = _ssl_context()
+        with urllib.request.urlopen(req, timeout=8, context=ctx) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"License server error: {e}")
+        return None
+
+
+# When packaged by PyInstaller, use EXE location so we find backend/, psql/, python_embed/, data/
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+PG_BIN = os.path.join(BASE_DIR, "psql", "bin")
+DATA_DIR = os.path.join(BASE_DIR, "data")
+BACKEND_DIR = os.path.join(BASE_DIR, "backend")
+SETUP_SCRIPT = os.path.join(BACKEND_DIR, "tools", "setup", "setup_local_db.py")
+APP_MAIN = os.path.join(BACKEND_DIR, "app.py")
+
+PG_CTL = os.path.join(PG_BIN, "pg_ctl.exe")
+INITDB = os.path.join(PG_BIN, "initdb.exe")
+PG_ISREADY = os.path.join(PG_BIN, "pg_isready.exe")
+
+PORT = "5434"
+BACKEND_PORT = "5004"
+
+# Bundled embedded Python (portable, no dependency on build machine). Prefer over venv.
+PYTHON_EMBED_DIR = os.path.join(BASE_DIR, "python_embed")
+PYTHON_EMBED_EXE = os.path.join(PYTHON_EMBED_DIR, "python.exe")
+
+VENV_DIR = os.path.join(BASE_DIR, "venv")
+VENV_SCRIPTS = os.path.join(VENV_DIR, "Scripts")
+
+
+def get_python():
+    """Use bundled embedded Python if present (portable); else fall back to venv for local dev."""
+    if os.path.exists(PYTHON_EMBED_EXE):
+        return PYTHON_EMBED_EXE
+    venv_python = os.path.join(VENV_SCRIPTS, "python.exe")
+    if os.path.exists(venv_python):
+        return venv_python
+    print("ERROR: No Python found.")
+    print("For installed app: expected bundled Python at:", PYTHON_EMBED_EXE)
+    print("For development: expected venv at:", venv_python)
+    sys.exit(1)
+
+
+def _using_embed():
+    """True if we are using the bundled embedded Python (not venv)."""
+    return os.path.exists(PYTHON_EMBED_EXE)
+
+
+def get_venv_env():
+    """Return env dict so subprocess finds the right Python and packages (embed or venv)."""
+    env = os.environ.copy()
+    python_exe = get_python()
+    if _using_embed():
+        # Embedded Python: prepend its directory so it finds its DLLs and site-packages
+        embed_dir = os.path.dirname(python_exe)
+        env["PATH"] = embed_dir + os.pathsep + env.get("PATH", "")
+        # Scripts may exist if pip was added to the embed
+        scripts = os.path.join(embed_dir, "Scripts")
+        if os.path.isdir(scripts):
+            env["PATH"] = scripts + os.pathsep + env["PATH"]
+    else:
+        env["VIRTUAL_ENV"] = VENV_DIR
+        env["PATH"] = VENV_SCRIPTS + os.pathsep + env.get("PATH", "")
+    return env
+
+
+def run(cmd, env=None, cwd=None):
+    """Run command, return CompletedProcess with stdout/stderr bytes."""
+    return subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=env or os.environ,
+        cwd=cwd or BASE_DIR,
+        shell=False,
+    )
+
+
+def init_db_if_needed():
+    """Initialize PostgreSQL cluster in data/ if not already present."""
+    pg_version = os.path.join(DATA_DIR, "PG_VERSION")
+    if os.path.exists(pg_version):
+        return
+    print("Initializing PostgreSQL cluster...")
+    os.makedirs(DATA_DIR, exist_ok=True)
+    subprocess.check_call([INITDB, "-D", DATA_DIR, "-U", "postgres"], cwd=BASE_DIR)
+
+
+def start_postgres():
+    """Start portable PostgreSQL on PORT."""
+    print("Starting PostgreSQL...")
+    subprocess.Popen(
+        [PG_CTL, "-D", DATA_DIR, "-o", f"-p {PORT}", "start"],
+        cwd=BASE_DIR,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def wait_for_db(timeout_sec=60):
+    """Wait until PostgreSQL is accepting connections."""
+    print("Waiting for PostgreSQL...")
+    deadline = time.time() + timeout_sec
+    while time.time() < deadline:
+        result = run([PG_ISREADY, "-h", "127.0.0.1", "-p", PORT, "-d", "postgres"])
+        if result.returncode == 0 and (result.stdout or b"").strip().endswith(b"accepting connections"):
+            return
+        time.sleep(0.5)
+    raise RuntimeError("PostgreSQL did not become ready in time.")
+
+
+def run_setup():
+    """Run setup_local_db.py (create DB, migrations, default user). Uses portable DB port."""
+    print("Running DB setup...")
+    env = get_venv_env()
+    env["DB_HOST"] = "127.0.0.1"
+    env["DB_PORT"] = PORT
+    env["POSTGRES_DB"] = "dynamic_db_hercules"
+    python = get_python()
+    subprocess.check_call(
+        [python, SETUP_SCRIPT, "--no-seed"],
+        cwd=BASE_DIR,
+        env=env,
+    )
+
+
+def ensure_pkg_resources():
+    """Ensure Python env has setuptools (pkg_resources) so python-snap7 can import it."""
+    python = get_python()
+    env = get_venv_env()
+    check = subprocess.run(
+        [python, "-c", "import pkg_resources"],
+        env=env,
+        cwd=BASE_DIR,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if check.returncode == 0:
+        return
+    print("Installing setuptools (required by python-snap7)...")
+    # Use python -m pip so it works for both embed and venv (embed may not have pip.exe in PATH yet)
+    subprocess.check_call(
+        [python, "-m", "pip", "install", "setuptools>=59.0,<66"],
+        env=env,
+        cwd=BASE_DIR,
+    )
+
+
+def start_backend():
+    """Start Flask backend (app.py). Backend uses backend/.env; we override DB_* for portable Postgres."""
+    ensure_pkg_resources()
+    print("Starting backend...")
+    env = get_venv_env()
+    env["DB_HOST"] = "127.0.0.1"
+    env["DB_PORT"] = PORT
+    env["POSTGRES_DB"] = "dynamic_db_hercules"
+    env["FLASK_PORT"] = BACKEND_PORT
+    python = get_python()
+    subprocess.Popen(
+        [python, APP_MAIN],
+        cwd=BACKEND_DIR,
+        env=env,
+    )
+
+
+def main():
+    machine_id = _machine_id_fallback()
+    license_path = os.path.join(BASE_DIR, "license.json")
+
+    # --- Hybrid license check: online first, then offline cache ---
+    print("Checking license...")
+    response = _check_license_online(machine_id)
+
+    if response is not None:
+        status = response.get("status")
+        expiry_str = response.get("expiry")
+
+        if status == "approved" and expiry_str:
+            try:
+                expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+            except ValueError:
+                expiry_date = None
+
+            if expiry_date and expiry_date >= datetime.now().date():
+                with open(license_path, "w", encoding="utf-8") as f:
+                    json.dump({"machine_id": machine_id, "expiry": expiry_str}, f, indent=4)
+                print(f"License valid until {expiry_str}")
+            else:
+                print(f"License expired on {expiry_str}. Contact administrator to extend.")
+                print("Machine ID:", machine_id)
+                pause_before_exit()
+                sys.exit(1)
+
+        elif status == "pending":
+            print("Registration received. Waiting for administrator approval.")
+            print("Machine ID:", machine_id)
+            pause_before_exit()
+            sys.exit(1)
+
+        elif status == "denied":
+            print("Access denied by administrator.")
+            print("Machine ID:", machine_id)
+            pause_before_exit()
+            sys.exit(1)
+
+        else:
+            print(f"Unexpected license status: {status}")
+            print("Machine ID:", machine_id)
+            pause_before_exit()
+            sys.exit(1)
+    else:
+        # Offline: fall back to cached license.json
+        if _verify_license_inline(license_path):
+            try:
+                with open(license_path, encoding="utf-8") as f:
+                    cached = json.load(f)
+                print(f"Offline mode — cached license valid until {cached.get('expiry', '?')}")
+            except Exception:
+                print("Offline mode — using cached license.")
+        else:
+            print("Cannot reach license server and no valid cached license.")
+            print("Machine ID:", machine_id)
+            print("Please check your internet connection and try again.")
+            pause_before_exit()
+            sys.exit(1)
+
+    if not os.path.exists(PG_CTL):
+        print(f"Error: PostgreSQL binaries not found at {PG_BIN}")
+        print("Expected folder: psql/bin/ with pg_ctl.exe, initdb.exe, pg_isready.exe")
+        pause_before_exit()
+        sys.exit(1)
+
+    init_db_if_needed()
+    start_postgres()
+    wait_for_db()
+    # Idempotent: creates DB/migrations/default user if missing; skips if already done
+    run_setup()
+    start_backend()
+
+    url = f"http://localhost:{BACKEND_PORT}"
+    print("System started.")
+    print(f"Open {url} in your browser.")
+    webbrowser.open(url)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception:
+        traceback.print_exc()
+        pause_before_exit()
+        sys.exit(1)
