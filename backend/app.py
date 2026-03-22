@@ -468,16 +468,19 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    with closing(get_db_connection()) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            'SELECT id, username, password_hash, role FROM users WHERE id = %s',
-            (user_id,)
-        )
-        user = cursor.fetchone()
-        if user:
-            return User(user['id'], user['username'], user['password_hash'], user['role'])
-        return None
+    try:
+        with closing(get_db_connection()) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'SELECT id, username, password_hash, role FROM users WHERE id = %s',
+                (user_id,)
+            )
+            user = cursor.fetchone()
+            if user:
+                return User(user['id'], user['username'], user['password_hash'], user['role'])
+    except Exception as e:
+        logger.warning("load_user: DB error for user_id=%s: %s", user_id, e)
+    return None
 
 
 def _auth_token_serializer():
