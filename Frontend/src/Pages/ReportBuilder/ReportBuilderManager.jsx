@@ -254,7 +254,7 @@ export default function ReportBuilderManager() {
       <div className="max-w-[1400px] mx-auto px-6 md:px-8 lg:px-12 py-6 md:py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-xl font-bold" style={{ color: t.text }}>hi nader</h1>
+            <h1 className="text-xl font-bold" style={{ color: t.text }}>Report Builder</h1>
             <p className="text-sm mt-1" style={{ color: t.textSecondary }}>Create and manage report templates</p>
           </div>
           <button onClick={() => setShowCreate(true)}

@@ -1783,7 +1783,7 @@ export default function PaginatedReportBuilder() {
             placeholder="Report Name"
           />
           <div className="text-[7px] font-bold uppercase tracking-widest" style={{ color: 'var(--rb-text-muted)' }}>
-            hi nader
+            Paginated Report Builder
           </div>
         </div>
         <div className="flex items-center gap-1">
