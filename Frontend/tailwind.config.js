@@ -15,6 +15,7 @@ export default {
         'fade-loop': 'fadeLoop 0.8s infinite',
         'live-pulse': 'livePulse 2s ease-in-out infinite',
         'glow': 'glowPulse 3s ease-in-out infinite',
+        'slide-up': 'slideUp 180ms cubic-bezier(0.4,0,0.2,1)',
       },
       keyframes: {
         fadeLoop: {
@@ -28,6 +29,10 @@ export default {
         glowPulse: {
           '0%, 100%': { boxShadow: '0 0 4px rgba(34, 211, 238, 0.2)' },
           '50%': { boxShadow: '0 0 16px rgba(34, 211, 238, 0.5)' },
+        },
+        slideUp: {
+          '0%':   { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
       colors: {

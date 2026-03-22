@@ -8,64 +8,17 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  ArrowLeft, Download, Printer, Calendar, RefreshCw, Maximize, Minimize,
+  ArrowLeft, Download, Printer, RefreshCw, Maximize, Minimize,
 } from 'lucide-react';
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
 import { useReportCanvas, useAvailableTags } from '../../Hooks/useReportBuilder';
 import { PaginatedReportPreview, collectPaginatedTagNames } from '../ReportBuilder/PaginatedReportBuilder';
+import TimePeriodTabs, { PAGINATED_TABS } from './TimePeriodTabs';
+import useTimePeriod from '../../Hooks/useTimePeriod';
 import axios from '../../API/axios';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-
-/* ══════════════════════════════════════════════════════════════════
-   DATE RANGE PRESETS
-   ══════════════════════════════════════════════════════════════════ */
-
-const PRESETS = [
-  { key: 'live', label: 'Live' },
-  { key: 'today', label: 'Today' },
-  { key: 'yesterday', label: 'Yesterday' },
-  { key: 'this-week', label: 'This Week' },
-  { key: 'last-week', label: 'Last Week' },
-  { key: 'this-month', label: 'This Month' },
-  { key: 'custom', label: 'Custom' },
-];
-
-function getPresetRange(key) {
-  const now = new Date();
-  const start = new Date(now);
-  start.setHours(5, 0, 0, 0); // shift start at 05:00
-
-  switch (key) {
-    case 'today':
-      if (now.getHours() < 5) start.setDate(start.getDate() - 1);
-      return { from: start.toISOString(), to: new Date(start.getTime() + 24 * 3600 * 1000).toISOString() };
-    case 'yesterday': {
-      const y = new Date(start);
-      y.setDate(y.getDate() - 1);
-      if (now.getHours() < 5) y.setDate(y.getDate() - 1);
-      return { from: y.toISOString(), to: new Date(y.getTime() + 24 * 3600 * 1000).toISOString() };
-    }
-    case 'this-week': {
-      const d = new Date(start);
-      d.setDate(d.getDate() - d.getDay());
-      return { from: d.toISOString(), to: now.toISOString() };
-    }
-    case 'last-week': {
-      const d = new Date(start);
-      d.setDate(d.getDate() - d.getDay() - 7);
-      return { from: d.toISOString(), to: new Date(d.getTime() + 7 * 24 * 3600 * 1000).toISOString() };
-    }
-    case 'this-month': {
-      const d = new Date(start);
-      d.setDate(1);
-      return { from: d.toISOString(), to: now.toISOString() };
-    }
-    default:
-      return { from: start.toISOString(), to: now.toISOString() };
-  }
-}
 
 /* ══════════════════════════════════════════════════════════════════
    MAIN COMPONENT
@@ -77,9 +30,8 @@ export default function PaginatedReportView({ reportId, onBack }) {
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
   const { socket } = useSocket();
 
-  const [preset, setPreset] = useState('live');
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
+  const { state: timePeriod, dateRange, actions: tpActions } = useTimePeriod('live');
+  const isLive = timePeriod.tab === 'live';
   const [tagValues, setTagValues] = useState({});
   const [liveTagValues, setLiveTagValues] = useState({});
   const [fetchLoading, setFetchLoading] = useState(false);
@@ -88,8 +40,6 @@ export default function PaginatedReportView({ reportId, onBack }) {
   const [exporting, setExporting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const reportRef = useRef(null);
-
-  const isLive = preset === 'live';
 
   // Extract paginated sections from template
   const sections = useMemo(() => {
@@ -107,26 +57,6 @@ export default function PaginatedReportView({ reportId, onBack }) {
   // Collect all tag names needed
   const tagNames = useMemo(() => collectPaginatedTagNames(sections), [sections]);
 
-  // ISO string → local YYYY-MM-DDTHH:mm for datetime-local input
-  const isoToLocalDatetime = (iso) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const h = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `${y}-${m}-${day}T${h}:${min}`;
-  };
-
-  // Date range (only used for historical modes)
-  const dateRange = useMemo(() => {
-    if (preset === 'live') return { from: new Date().toISOString(), to: new Date().toISOString() };
-    if (preset === 'custom') {
-      return { from: customFrom || new Date().toISOString(), to: customTo || new Date().toISOString() };
-    }
-    return getPresetRange(preset);
-  }, [preset, customFrom, customTo]);
 
   // ── Live mode: poll REST + listen WebSocket ──
   useEffect(() => {
@@ -169,15 +99,15 @@ export default function PaginatedReportView({ reportId, onBack }) {
 
   // ── Historical mode: fetch tag values for the date range ──
   const fetchData = useCallback(async () => {
-    if (isLive || tagNames.length === 0) return;
+    if (isLive || tagNames.length === 0 || !dateRange) return;
     setFetchLoading(true);
     setFetchError(null);
     try {
       const res = await axios.get('/api/historian/by-tags', {
         params: {
           tag_names: tagNames.join(','),
-          from: dateRange.from,
-          to: dateRange.to,
+          from: dateRange.from.toISOString(),
+          to: dateRange.to.toISOString(),
           aggregation: 'auto',
         },
         timeout: 15000,
@@ -304,46 +234,18 @@ export default function PaginatedReportView({ reportId, onBack }) {
 
   return (
     <div className="report-builder min-h-screen" style={{ background: 'var(--rb-surface)' }}>
+      {/* ── Sticky header: toolbar + time period tabs ── */}
+      <div className="sticky top-0 z-20 print:hidden" style={{ boxShadow: 'var(--rb-elevation-1)' }}>
+
       {/* ── Toolbar ── */}
-      <div className="sticky top-0 z-20 px-3 py-2.5 flex items-center gap-2 print:hidden"
-        style={{ background: 'var(--rb-panel)', borderBottom: '1px solid var(--rb-border)', boxShadow: 'var(--rb-elevation-1)' }}>
+      <div className="px-3 py-2.5 flex items-center gap-2"
+        style={{ background: 'var(--rb-panel)', borderBottom: '1px solid var(--rb-border)' }}>
         <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
           <ArrowLeft size={15} style={{ color: 'var(--rb-text)' }} />
         </button>
         <div className="flex-1 min-w-0">
           <h2 className="text-[13px] font-bold truncate" style={{ color: 'var(--rb-text)' }}>{template?.name || 'Report'}</h2>
           <div className="text-[8px] font-bold uppercase tracking-widest" style={{ color: 'var(--rb-text-muted)' }}>Paginated Report</div>
-        </div>
-
-        {/* Date range selector */}
-        <div className="flex items-center gap-1.5">
-          <Calendar size={12} style={{ color: 'var(--rb-text-muted)' }} />
-          <select
-            value={preset}
-            onChange={(e) => setPreset(e.target.value)}
-            className="rb-input-base text-[11px] py-1.5 px-2"
-          >
-            {PRESETS.map((p) => (
-              <option key={p.key} value={p.key}>{p.label}</option>
-            ))}
-          </select>
-          {preset === 'custom' && (
-            <>
-              <input
-                type="datetime-local"
-                value={isoToLocalDatetime(customFrom)}
-                onChange={(e) => setCustomFrom(new Date(e.target.value).toISOString())}
-                className="rb-input-base text-[11px] py-1.5 px-2"
-              />
-              <span className="text-[10px]" style={{ color: 'var(--rb-text-muted)' }}>to</span>
-              <input
-                type="datetime-local"
-                value={isoToLocalDatetime(customTo)}
-                onChange={(e) => setCustomTo(new Date(e.target.value).toISOString())}
-                className="rb-input-base text-[11px] py-1.5 px-2"
-              />
-            </>
-          )}
         </div>
 
         {!isLive && (
@@ -371,36 +273,59 @@ export default function PaginatedReportView({ reportId, onBack }) {
         </button>
       </div>
 
-      {/* ── Status bar ── */}
-      {currentError && (
-        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#fef2f2] dark:bg-[#1a0c0c] border-b border-[#fca5a5]/30 print:hidden">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
-          <span className="text-[11px] font-medium text-[#ef4444]">{currentError}</span>
-        </div>
-      )}
-      {currentLoading && !currentError && (
-        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#eff6ff] dark:bg-[#0c1a2e] border-b border-[#93c5fd]/30 print:hidden">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse" />
-          <span className="text-[11px] font-medium text-[#3b82f6]">Loading data...</span>
-        </div>
-      )}
-      {isLive && !liveError && (
-        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#ecfdf5] dark:bg-[#0d2e1f] border-b border-[#a7f3d0] dark:border-[#065f46] print:hidden">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
-          <span className="text-[11px] font-medium text-[#059669]">
-            {emulatorOn ? 'Live (Emulator)' : 'Live'} — {Object.keys(mergedTagValues).length} tags
-          </span>
-        </div>
-      )}
-      {!isLive && !currentLoading && !currentError && hasData && (
-        <div className="px-4 py-1.5 flex items-center gap-2 bg-[#ecfdf5] dark:bg-[#0d2e1f] border-b border-[#a7f3d0] dark:border-[#065f46] print:hidden">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
-          <span className="text-[11px] font-medium text-[#059669]">Data loaded — {Object.keys(mergedTagValues).length} tags</span>
-        </div>
-      )}
+      {/* ── Time period tabs ── */}
+      <TimePeriodTabs
+        tabs={PAGINATED_TABS}
+        activeTab={timePeriod.tab}
+        onTabChange={tpActions.setTab}
+        customFrom={timePeriod.customFrom}
+        customTo={timePeriod.customTo}
+        onCustomFrom={tpActions.setCustomFrom}
+        onCustomTo={tpActions.setCustomTo}
+      />
+
+      {/* ── Status bar — single persistent div, bg cross-fades via transition-colors ── */}
+      {(() => {
+        let bg, dot, msg;
+        if (currentError) {
+          bg  = 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30';
+          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0" />;
+          msg = <span className="text-[11px] font-medium text-[#ef4444]">{currentError}</span>;
+        } else if (currentLoading) {
+          bg  = 'bg-[#eff6ff] dark:bg-[#0c1a2e] border-[#93c5fd]/30';
+          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse flex-shrink-0" />;
+          msg = <span className="text-[11px] font-medium text-[#3b82f6]">Loading data…</span>;
+        } else if (isLive) {
+          bg  = 'bg-[#ecfdf5] dark:bg-[#0d2e1f] border-[#a7f3d0] dark:border-[#065f46]';
+          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse flex-shrink-0" />;
+          msg = <span className="text-[11px] font-medium text-[#059669]">{emulatorOn ? 'Live (Emulator)' : 'Live'} — {Object.keys(mergedTagValues).length} tags</span>;
+        } else if (hasData) {
+          bg  = 'bg-[#ecfdf5] dark:bg-[#0d2e1f] border-[#a7f3d0] dark:border-[#065f46]';
+          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#059669] flex-shrink-0" />;
+          msg = <span className="text-[11px] font-medium text-[#059669]">Data loaded — {Object.keys(mergedTagValues).length} tags</span>;
+        } else {
+          return null;
+        }
+        return (
+          <div className={`px-4 py-1.5 flex items-center gap-2 border-b print:hidden transition-colors duration-300 ${bg}`}>
+            {dot}{msg}
+          </div>
+        );
+      })()}
+
+      </div>{/* end sticky header */}
 
       {/* ── Report content ── */}
-      <div id="paginated-report-print" className={`py-2 print:py-0 ${pageMode === 'a4' ? 'max-w-[1200px] mx-auto' : 'w-full'}`} style={{ background: '#e5e7eb' }}>
+      <div
+        id="paginated-report-print"
+        className={`py-2 print:py-0 ${pageMode === 'a4' ? 'max-w-[1200px] mx-auto' : 'w-full'}`}
+        style={{
+          background: '#e5e7eb',
+          opacity: currentLoading ? 0.45 : 1,
+          transition: 'opacity 250ms ease',
+          pointerEvents: currentLoading ? 'none' : undefined,
+        }}
+      >
         <div ref={reportRef} className="print:shadow-none">
           <PaginatedReportPreview
             sections={sections}

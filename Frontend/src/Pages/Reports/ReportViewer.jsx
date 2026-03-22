@@ -10,6 +10,8 @@ import { useSocket } from '../../Context/SocketContext';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '../ReportBuilder/widgets/WidgetRenderer';
 import ReportThumbnail from '../ReportBuilder/ReportThumbnail';
 import PaginatedReportView from './PaginatedReportViewer';
+import TimePeriodTabs, { VIEWER_TABS } from './TimePeriodTabs';
+import useTimePeriod from '../../Hooks/useTimePeriod';
 import '../ReportBuilder/reportBuilderTheme.css';
 import axios from '../../API/axios';
 
@@ -38,27 +40,6 @@ const GRID_ROW_H_DEFAULT = 40;
 const GRID_MARGIN = [12, 12];
 const GRID_PADDING = [0, 0];
 
-/* ── Time filter presets ─────────────────────────────────────── */
-
-const TIME_PRESETS = [
-  { id: 'live', label: 'Live' },
-  { id: 'day', label: 'Today' },
-  { id: 'week', label: 'This Week' },
-  { id: 'month', label: 'This Month' },
-  { id: 'shift', label: 'Shift' },
-  { id: 'custom', label: 'Custom' },
-];
-
-function getDateRange(preset) {
-  const now = new Date();
-  const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  switch (preset) {
-    case 'day': return { from: sod, to: now };
-    case 'week': { const d = now.getDay(); const diff = d === 0 ? 6 : d - 1; const m = new Date(sod); m.setDate(m.getDate() - diff); return { from: m, to: now }; }
-    case 'month': return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
-    default: return null;
-  }
-}
 
 /* ══════════════════════════════════════════════════════════════════
    REPORT LIST
@@ -157,13 +138,10 @@ function SingleReportView({ reportId, onBack }) {
     return lc.reportType === 'paginated';
   }, [template]);
 
-  const [timePreset, setTimePreset] = useState('live');
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
+  const [shiftsConfig, setShiftsConfig] = useState(null);
+  const { state: timePeriod, dateRange, actions: tpActions } = useTimePeriod('live', shiftsConfig);
   const [fullscreen, setFullscreen] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [shiftsConfig, setShiftsConfig] = useState(null);
-  const [selectedShift, setSelectedShift] = useState('');
   const [now, setNow] = useState(() => new Date());
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'tabular'
   const [rowsPerPage, setRowsPerPage] = useState(25);
@@ -209,7 +187,7 @@ function SingleReportView({ reportId, onBack }) {
 
   // Live mode: fetch tag values from backend (REST + polling)
   React.useEffect(() => {
-    if (timePreset !== 'live' || usedTagNames.length === 0) return;
+    if (timePeriod.tab !== 'live' || usedTagNames.length === 0) return;
     let errorShown = false;
     const fetchValues = async () => {
       try {
@@ -233,11 +211,11 @@ function SingleReportView({ reportId, onBack }) {
     fetchValues();
     const interval = setInterval(fetchValues, 5000);
     return () => clearInterval(interval);
-  }, [timePreset, usedTagNames]);
+  }, [timePeriod.tab, usedTagNames]);
 
   // Live mode: WebSocket updates
   React.useEffect(() => {
-    if (timePreset !== 'live' || !socket) return;
+    if (timePeriod.tab !== 'live' || !socket) return;
     const handler = (data) => {
       if (data?.tag_values && typeof data.tag_values === 'object') {
         setLiveTagValues((prev) => ({ ...prev, ...data.tag_values }));
@@ -245,7 +223,7 @@ function SingleReportView({ reportId, onBack }) {
     };
     socket.on('live_tag_data', handler);
     return () => socket.off('live_tag_data', handler);
-  }, [timePreset, socket]);
+  }, [timePeriod.tab, socket]);
 
   // Fetch shift schedule for the Shift time preset
   useEffect(() => {
@@ -254,31 +232,12 @@ function SingleReportView({ reportId, onBack }) {
       .catch(() => {});
   }, []);
 
-  const dateRange = useMemo(() => {
-    if (timePreset === 'custom') {
-      return { from: customFrom ? new Date(customFrom) : new Date(), to: customTo ? new Date(customTo) : new Date() };
-    }
-    if (timePreset === 'shift' && selectedShift !== '' && shiftsConfig?.shifts) {
-      const idx = parseInt(selectedShift);
-      const shift = shiftsConfig.shifts[idx];
-      if (shift) {
-        const today = new Date();
-        const [startH, startM] = shift.start.split(':').map(Number);
-        const [endH, endM] = shift.end.split(':').map(Number);
-        const from = new Date(today.getFullYear(), today.getMonth(), today.getDate(), startH, startM, 0);
-        const to = new Date(today.getFullYear(), today.getMonth(), today.getDate(), endH, endM, 0);
-        if (to <= from) to.setDate(to.getDate() + 1);
-        return { from, to };
-      }
-    }
-    return getDateRange(timePreset);
-  }, [timePreset, customFrom, customTo, selectedShift, shiftsConfig]);
 
   // Historical mode: fetch tag values from historian, grouped by aggregation type.
   // Different widgets may need different aggregations (sum, avg, delta, last, etc.),
   // so we group tags by their widget's configured aggregation and fire parallel requests.
   React.useEffect(() => {
-    if (timePreset === 'live' || usedTagNames.length === 0) return;
+    if (timePeriod.tab === 'live' || usedTagNames.length === 0) return;
     if (!dateRange?.from || !dateRange?.to) return;
 
     let cancelled = false;
@@ -287,8 +246,8 @@ function SingleReportView({ reportId, onBack }) {
 
     const fetchHistorical = async () => {
       try {
-        const fromISO = dateRange.from instanceof Date ? dateRange.from.toISOString() : dateRange.from;
-        const toISO = dateRange.to instanceof Date ? dateRange.to.toISOString() : dateRange.to;
+        const fromISO = dateRange.from.toISOString();
+        const toISO   = dateRange.to.toISOString();
 
         // Group tags by aggregation type
         const aggGroups = {}; // { 'last': [tag1,tag2], 'sum': [tag3], ... }
@@ -327,7 +286,7 @@ function SingleReportView({ reportId, onBack }) {
 
     fetchHistorical();
     return () => { cancelled = true; };
-  }, [timePreset, usedTagNames, tagAggregations, dateRange]);
+  }, [timePeriod.tab, usedTagNames, tagAggregations, dateRange]);
 
   // Historical mode: fetch time-series data for chart widgets.
   // Charts need arrays of {t, v} per tag (not single aggregated values).
@@ -347,7 +306,7 @@ function SingleReportView({ reportId, onBack }) {
   }, [widgets]);
 
   React.useEffect(() => {
-    if (timePreset === 'live') {
+    if (timePeriod.tab === 'live') {
       setHistoricalTagHistory(null);
       return;
     }
@@ -360,8 +319,8 @@ function SingleReportView({ reportId, onBack }) {
 
     const fetchTimeSeries = async () => {
       try {
-        const fromISO = dateRange.from instanceof Date ? dateRange.from.toISOString() : dateRange.from;
-        const toISO = dateRange.to instanceof Date ? dateRange.to.toISOString() : dateRange.to;
+        const fromISO = dateRange.from.toISOString();
+        const toISO   = dateRange.to.toISOString();
 
         const res = await axios.get('/api/historian/time-series', {
           params: { tag_names: chartTagNames.join(','), from: fromISO, to: toISO, max_points: 500 },
@@ -387,20 +346,20 @@ function SingleReportView({ reportId, onBack }) {
 
     fetchTimeSeries();
     return () => { cancelled = true; };
-  }, [timePreset, chartTagNames, dateRange]);
+  }, [timePeriod.tab, chartTagNames, dateRange]);
 
   const tagValues = useMemo(() => {
-    if (timePreset !== 'live') return historicalTagValues;
+    if (timePeriod.tab !== 'live') return historicalTagValues;
     const base = { ...liveTagValues };
     if (emulatorOn && emulatorValues) Object.assign(base, emulatorValues);
     return base;
-  }, [timePreset, liveTagValues, emulatorOn, emulatorValues, historicalTagValues]);
+  }, [timePeriod.tab, liveTagValues, emulatorOn, emulatorValues, historicalTagValues]);
 
   const liveTagHistory = useTagHistory(usedTagNames, tagValues);
   // In historical mode, prefer backend time-series data for charts (full timeframe);
   // in live mode, use the accumulated live tag history from useTagHistory.
   const tagHistory = useMemo(() => {
-    if (timePreset !== 'live' && historicalTagHistory) {
+    if (timePeriod.tab !== 'live' && historicalTagHistory) {
       // Only use historical data for tags that actually have data points
       const merged = { ...liveTagHistory };
       for (const [tagName, points] of Object.entries(historicalTagHistory)) {
@@ -411,7 +370,7 @@ function SingleReportView({ reportId, onBack }) {
       return merged;
     }
     return liveTagHistory;
-  }, [timePreset, liveTagHistory, historicalTagHistory]);
+  }, [timePeriod.tab, liveTagHistory, historicalTagHistory]);
 
   const handleExportPDF = async () => {
     setExporting(true);
@@ -484,26 +443,11 @@ function SingleReportView({ reportId, onBack }) {
         </button>
         <span className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] truncate min-w-0">{template?.name || 'Report'}</span>
 
-        {/* Center/left: current date & time + time filter buttons (visible, middle-aligned) */}
+        {/* Center/left: current date & time */}
         <div className="flex items-center gap-4 flex-1 justify-center min-w-0">
           <span className="text-[13px] font-medium text-[#3a4a5c] dark:text-[#c1ccd9] whitespace-nowrap tabular-nums" title="Current date and time">
             {now.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })} · {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </span>
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-            {TIME_PRESETS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setTimePreset(p.id)}
-                className={`px-3 py-2 text-[12px] font-semibold rounded-lg border-2 transition-colors ${
-                  timePreset === p.id
-                    ? 'border-brand bg-brand-subtle text-brand dark:bg-brand-subtle dark:text-brand dark:border-brand'
-                    : 'border-[#e3e9f0] dark:border-gray-700 text-[#5a6d80] dark:text-[#8898aa] hover:border-brand/50 hover:bg-brand-subtle dark:hover:bg-brand-subtle'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Right: view toggle + fullscreen + print */}
@@ -548,89 +492,74 @@ function SingleReportView({ reportId, onBack }) {
         </div>
       </div>
 
-      {/* ── Custom date range (only when custom selected) ── */}
-      {timePreset === 'custom' && (
-        <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-4 py-2.5 flex items-center gap-3 print:hidden">
-          <label className="text-[11px] font-medium text-[#6b7f94]">From</label>
-          <input type="datetime-local" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
-            className="text-[11px] rounded-md border border-[#e3e9f0] bg-white/90 dark:bg-[#0a1525] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
-          <label className="text-[11px] font-medium text-[#6b7f94]">To</label>
-          <input type="datetime-local" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
-            className="text-[11px] rounded-md border border-[#e3e9f0] bg-white/90 dark:bg-[#0a1525] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand" />
-        </div>
-      )}
+      {/* ── Time period tabs ── */}
+      <TimePeriodTabs
+        tabs={VIEWER_TABS}
+        activeTab={timePeriod.tab}
+        onTabChange={tpActions.setTab}
+        customFrom={timePeriod.customFrom}
+        customTo={timePeriod.customTo}
+        onCustomFrom={tpActions.setCustomFrom}
+        onCustomTo={tpActions.setCustomTo}
+        shiftsConfig={shiftsConfig}
+        selectedShift={timePeriod.selectedShift}
+        onShiftChange={tpActions.setShift}
+      />
 
-      {/* ── Shift selector (when shift selected) ── */}
-      {timePreset === 'shift' && (
-        <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-4 py-2.5 flex items-center gap-3 print:hidden">
-          {shiftsConfig?.shifts?.length > 0 ? (
-            <>
-              <label className="text-[11px] font-medium text-[#6b7f94]">Shift</label>
-              <select
-                value={selectedShift}
-                onChange={(e) => setSelectedShift(e.target.value)}
-                className="px-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-gray-700 bg-white dark:bg-[#080d19] text-[#2a3545] dark:text-[#e1e8f0] focus:outline-none focus:border-brand"
-              >
-                <option value="">Select shift...</option>
-                {shiftsConfig.shifts.map((s, i) => (
-                  <option key={i} value={i}>{s.name} ({s.start} - {s.end})</option>
-                ))}
-              </select>
-            </>
-          ) : (
-            <>
-              <FaClock size={9} className="text-[#d97706]" />
-              <span className="text-[11px] font-medium text-[#d97706]">No shifts configured — go to Engineering &gt; Shifts</span>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── Status indicator ── */}
-      {timePreset === 'live' ? (
-        <div className={`border-b px-4 py-1.5 flex items-center gap-2 print:hidden ${
-          liveError
-            ? 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30'
-            : (emulatorOn || Object.keys(liveTagValues).length > 0)
-              ? 'bg-[#ecfdf5] dark:bg-[#0d2e1f] border-[#a7f3d0] dark:border-[#065f46]'
-              : 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30'
-        }`}>
-          {liveError
-            ? <><span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" /><span className="text-[11px] font-medium text-[#ef4444]">{liveError}</span></>
-            : (emulatorOn || Object.keys(liveTagValues).length > 0)
-              ? <><span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" /><span className="text-[11px] font-medium text-[#059669]">{emulatorOn ? 'Live (Emulator)' : 'Live'}</span></>
-              : <><FaClock size={9} className="text-[#d97706]" /><span className="text-[11px] font-medium text-[#d97706]">Waiting for live data…</span></>
+      {/* ── Status indicator — single persistent div, bg cross-fades via transition-colors ── */}
+      {(() => {
+        let bg, dot, msg;
+        if (timePeriod.tab === 'live') {
+          if (liveError) {
+            bg  = 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30';
+            dot = <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0" />;
+            msg = <span className="text-[11px] font-medium text-[#ef4444]">{liveError}</span>;
+          } else if (emulatorOn || Object.keys(liveTagValues).length > 0) {
+            bg  = 'bg-[#ecfdf5] dark:bg-[#0d2e1f] border-[#a7f3d0] dark:border-[#065f46]';
+            dot = <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse flex-shrink-0" />;
+            msg = <span className="text-[11px] font-medium text-[#059669]">{emulatorOn ? 'Live (Emulator)' : 'Live'}</span>;
+          } else {
+            bg  = 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30';
+            dot = <FaClock size={9} className="text-[#d97706] flex-shrink-0" />;
+            msg = <span className="text-[11px] font-medium text-[#d97706]">Waiting for live data…</span>;
           }
-        </div>
-      ) : (
-        <div className={`border-b px-4 py-1.5 flex items-center gap-2 print:hidden ${
-          historicalLoading
-            ? 'bg-[#eff6ff] dark:bg-[#0c1a2e] border-[#93c5fd]/30'
-            : historicalError
-              ? 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30'
-              : Object.keys(historicalTagValues).length > 0
-                ? 'bg-[#f0f9ff] dark:bg-[#0c1e2e] border-[#7dd3fc]/30'
-                : 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30'
-        }`}>
-          {historicalLoading ? (
-            <><span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse" /><span className="text-[11px] font-medium text-[#3b82f6]">Loading historical data...</span></>
-          ) : historicalError ? (
-            <><span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" /><span className="text-[11px] font-medium text-[#ef4444]">{historicalError}</span></>
-          ) : Object.keys(historicalTagValues).length > 0 ? (
-            <><FaClock size={9} className="text-[#0284c7]" /><span className="text-[11px] font-medium text-[#0284c7]">
-              Historical — {dateRange?.from?.toLocaleDateString?.()} {dateRange?.from?.toLocaleTimeString?.(undefined, {hour:'2-digit',minute:'2-digit'})} to {dateRange?.to?.toLocaleDateString?.()} {dateRange?.to?.toLocaleTimeString?.(undefined, {hour:'2-digit',minute:'2-digit'})} ({Object.keys(historicalTagValues).length} tags)
-            </span></>
-          ) : (
-            <><FaClock size={9} className="text-[#d97706]" /><span className="text-[11px] font-medium text-[#d97706]">No historical data for this period</span></>
-          )}
-        </div>
-      )}
+        } else if (historicalLoading) {
+          bg  = 'bg-[#eff6ff] dark:bg-[#0c1a2e] border-[#93c5fd]/30';
+          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse flex-shrink-0" />;
+          msg = <span className="text-[11px] font-medium text-[#3b82f6]">Loading historical data…</span>;
+        } else if (historicalError) {
+          bg  = 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30';
+          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0" />;
+          msg = <span className="text-[11px] font-medium text-[#ef4444]">{historicalError}</span>;
+        } else if (Object.keys(historicalTagValues).length > 0) {
+          bg  = 'bg-[#f0f9ff] dark:bg-[#0c1e2e] border-[#7dd3fc]/30';
+          dot = <FaClock size={9} className="text-[#0284c7] flex-shrink-0" />;
+          msg = <span className="text-[11px] font-medium text-[#0284c7]">
+            Historical — {dateRange?.from?.toLocaleDateString?.()} {dateRange?.from?.toLocaleTimeString?.(undefined, {hour:'2-digit',minute:'2-digit'})} to {dateRange?.to?.toLocaleDateString?.()} {dateRange?.to?.toLocaleTimeString?.(undefined, {hour:'2-digit',minute:'2-digit'})} ({Object.keys(historicalTagValues).length} tags)
+          </span>;
+        } else {
+          bg  = 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30';
+          dot = <FaClock size={9} className="text-[#d97706] flex-shrink-0" />;
+          msg = <span className="text-[11px] font-medium text-[#d97706]">No historical data for this period</span>;
+        }
+        return (
+          <div className={`border-b px-4 py-1.5 flex items-center gap-2 print:hidden transition-colors duration-300 ${bg}`}>
+            {dot}{msg}
+          </div>
+        );
+      })()}
 
       {/* ── Report content: full width; scrollable with mouse wheel ── */}
       <div
         ref={scrollContainerRef}
         className="report-builder flex-1 min-h-0 overflow-y-auto overflow-x-auto overscroll-behavior-auto"
-        style={{ WebkitOverflowScrolling: 'touch', background: 'var(--rb-canvas)' }}
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          background: 'var(--rb-canvas)',
+          opacity: historicalLoading ? 0.45 : 1,
+          transition: 'opacity 250ms ease',
+          pointerEvents: historicalLoading ? 'none' : undefined,
+        }}
         onWheelCapture={handleWheelCapture}
       >
         <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}>
