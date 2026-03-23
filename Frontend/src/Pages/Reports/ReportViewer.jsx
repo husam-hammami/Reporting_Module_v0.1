@@ -125,7 +125,7 @@ function ReportList({ onSelect, filterType }) {
    SINGLE REPORT VIEW
    ══════════════════════════════════════════════════════════════════ */
 
-function SingleReportView({ reportId, onBack }) {
+function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) {
   const { template, widgets, loading } = useReportCanvas(reportId);
   const { tags } = useAvailableTags();
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
@@ -428,7 +428,7 @@ function SingleReportView({ reportId, onBack }) {
   );
 
   if (!loading && isPaginated) {
-    return <PaginatedReportView reportId={reportId} onBack={onBack} />;
+    return <PaginatedReportView reportId={reportId} onBack={onBack} siblingReports={siblingReports} onSelectReport={onSelectReport} />;
   }
 
   if (loading) return <div className="flex items-center justify-center h-[calc(100vh-80px)] text-[12px] text-[#8898aa]">Loading report...</div>;
@@ -491,6 +491,26 @@ function SingleReportView({ reportId, onBack }) {
           </div>
         </div>
       </div>
+
+      {/* ── Report navigation tabs ── */}
+      {siblingReports?.length > 1 && (
+        <div className="flex items-center gap-1 px-4 py-1.5 bg-[#f8fafc] dark:bg-[#060d18] border-b border-[#e3e9f0] dark:border-gray-700 overflow-x-auto print:hidden"
+          style={{ scrollbarWidth: 'none' }}>
+          {siblingReports.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => onSelectReport?.(r.id)}
+              className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg whitespace-nowrap transition-colors flex-shrink-0 ${
+                String(r.id) === String(reportId)
+                  ? 'bg-brand text-white shadow-sm'
+                  : 'text-[#6b7f94] dark:text-[#8898aa] hover:bg-white dark:hover:bg-[#0a1525] hover:text-[#2a3545] dark:hover:text-[#e1e8f0]'
+              }`}
+            >
+              {r.name || 'Untitled'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Time period tabs ── */}
       <TimePeriodTabs
@@ -715,8 +735,11 @@ function SingleReportView({ reportId, onBack }) {
 export default function ReportViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { templates } = useReportTemplates();
 
-  if (id) return <SingleReportView reportId={id} onBack={() => navigate('/reporting')} />;
+  const siblingReports = useMemo(() => templates.map((t) => ({ id: t.id, name: t.name })), [templates]);
+
+  if (id) return <SingleReportView reportId={id} onBack={() => navigate('/reporting')} siblingReports={siblingReports} onSelectReport={(rid) => navigate(`/reporting/${rid}`)} />;
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-transparent">
@@ -733,7 +756,19 @@ export default function ReportViewer() {
 export function DashboardViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
-  if (id) return <SingleReportView reportId={id} onBack={() => navigate('/dashboards')} />;
+  const { templates } = useReportTemplates();
+
+  const siblingReports = useMemo(() =>
+    templates
+      .filter((t) => {
+        const rt = getReportType(t);
+        return rt !== 'paginated' && t.status === 'released';
+      })
+      .map((t) => ({ id: t.id, name: t.name })),
+    [templates]
+  );
+
+  if (id) return <SingleReportView reportId={id} onBack={() => navigate('/dashboards')} siblingReports={siblingReports} onSelectReport={(rid) => navigate(`/dashboards/${rid}`)} />;
   return (
     <div className="min-h-[calc(100vh-80px)] bg-transparent">
       <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-gray-700 bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm">
@@ -748,7 +783,19 @@ export function DashboardViewer() {
 export function TableReportViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
-  if (id) return <SingleReportView reportId={id} onBack={() => navigate('/reports')} />;
+  const { templates } = useReportTemplates();
+
+  const siblingReports = useMemo(() =>
+    templates
+      .filter((t) => {
+        const rt = getReportType(t);
+        return rt === 'paginated' && t.status === 'released';
+      })
+      .map((t) => ({ id: t.id, name: t.name })),
+    [templates]
+  );
+
+  if (id) return <SingleReportView reportId={id} onBack={() => navigate('/reports')} siblingReports={siblingReports} onSelectReport={(rid) => navigate(`/reports/${rid}`)} />;
   return (
     <div className="min-h-[calc(100vh-80px)] bg-transparent">
       <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-gray-700 bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm">

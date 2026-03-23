@@ -24,7 +24,7 @@ import html2canvas from 'html2canvas';
    MAIN COMPONENT
    ══════════════════════════════════════════════════════════════════ */
 
-export default function PaginatedReportView({ reportId, onBack }) {
+export default function PaginatedReportView({ reportId, onBack, siblingReports, onSelectReport }) {
   const { template, widgets, loading } = useReportCanvas(reportId);
   const { tags } = useAvailableTags();
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
@@ -280,6 +280,27 @@ export default function PaginatedReportView({ reportId, onBack }) {
           <Printer size={12} /> Print
         </button>
       </div>
+
+      {/* ── Report navigation tabs ── */}
+      {siblingReports?.length > 1 && (
+        <div className="flex items-center gap-1 px-3 py-1.5 overflow-x-auto"
+          style={{ background: 'var(--rb-surface)', borderBottom: '1px solid var(--rb-border)', scrollbarWidth: 'none' }}>
+          {siblingReports.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => onSelectReport?.(r.id)}
+              className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg whitespace-nowrap transition-colors flex-shrink-0 ${
+                String(r.id) === String(reportId)
+                  ? 'bg-brand text-white shadow-sm'
+                  : 'text-[#6b7f94] dark:text-[#8898aa] hover:bg-white dark:hover:bg-[#0a1525] hover:text-[#2a3545] dark:hover:text-[#e1e8f0]'
+              }`}
+              style={String(r.id) === String(reportId) ? { background: 'var(--rb-accent)' } : {}}
+            >
+              {r.name || 'Untitled'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Time period tabs ── */}
       <TimePeriodTabs
