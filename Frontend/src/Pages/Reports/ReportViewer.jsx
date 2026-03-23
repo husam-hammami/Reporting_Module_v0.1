@@ -434,7 +434,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   if (loading) return <div className="flex items-center justify-center h-[calc(100vh-80px)] text-[12px] text-[#8898aa]">Loading report...</div>;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] bg-transparent">
+    <div className="rb-report-viewer-outer flex flex-col h-[calc(100vh-80px)] bg-transparent">
       {/* ── Toolbar: back + report selector (centered) | actions ── */}
       <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
         {/* Left: back */}
@@ -570,7 +570,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
       {/* ── Report content: full width; scrollable with mouse wheel ── */}
       <div
         ref={scrollContainerRef}
-        className="report-builder flex-1 min-h-0 overflow-y-auto overflow-x-auto overscroll-behavior-auto"
+        className="report-builder rb-report-scroll-container flex-1 min-h-0 overflow-y-auto overflow-x-auto overscroll-behavior-auto"
         style={{
           WebkitOverflowScrolling: 'touch',
           background: 'var(--rb-canvas)',

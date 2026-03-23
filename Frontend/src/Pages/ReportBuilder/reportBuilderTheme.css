@@ -1202,6 +1202,40 @@
     box-shadow: none !important;
     border-radius: 0 !important;
   }
+
+  /* Paginated report: expand the 210mm container to fill the full printable width.
+     Horizontal padding is preserved (content was authored at 210mm - 20mm = 190mm
+     usable width; the @page 5mm margin provides outer gutter). */
+  .paginated-preview-root {
+    width: 100% !important;
+    margin: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Remove grey background from the paginated report wrapper */
+  #paginated-report-print {
+    background: white !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* Dashboard report: release the viewport-height flex constraint and overflow clip
+     so all grid content below the fold is included in the printed output. */
+  .rb-report-scroll-container {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: none !important;
+  }
+
+  /* Release the outer dashboard container's viewport height */
+  .rb-report-viewer-outer {
+    height: auto !important;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════

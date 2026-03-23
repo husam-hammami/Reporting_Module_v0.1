@@ -1566,7 +1566,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
   return (
     <div
       ref={containerRef}
-      className={`bg-white text-[#1a1a2e] font-[Inter,system-ui,sans-serif] ${compact ? '' : 'shadow-lg'}`}
+      className={`paginated-preview-root bg-white text-[#1a1a2e] font-[Inter,system-ui,sans-serif] ${compact ? '' : 'shadow-lg'}`}
       style={{
         width: compact ? '100%' : '210mm',
         padding: compact ? '12px' : '4mm 10mm 8mm 10mm',
