@@ -87,11 +87,6 @@ export const PAGINATED_TABS = [
   { id: 'custom',     label: 'Custom' },
 ];
 
-/* ── Sub-bar shared styles ────────────────────────────────────────── */
-
-const LABEL = 'text-[11px] font-medium text-[#6b7f94] dark:text-[#8898aa]';
-const INPUT = 'text-[11px] rounded-md border border-[#e3e9f0] dark:border-[#2a3347] bg-white dark:bg-[#0d1e30] px-2 py-1 text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand transition-colors';
-
 /* ── Component ────────────────────────────────────────────────────── */
 
 export default function TimePeriodTabs({
@@ -147,17 +142,28 @@ export default function TimePeriodTabs({
       <SubBar open={showShift}>
         {shiftsConfig?.shifts?.length > 0 ? (
           <>
-            <label className={LABEL}>Shift</label>
-            <select
-              value={selectedShift}
-              onChange={(e) => onShiftChange?.(e.target.value)}
-              className={INPUT}
-            >
-              <option value="">Select shift…</option>
-              {shiftsConfig.shifts.map((s, i) => (
-                <option key={i} value={i}>{s.name} ({s.start}–{s.end})</option>
-              ))}
-            </select>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-[#8898aa]">Shift:</span>
+            {shiftsConfig.shifts.map((s, i) => {
+              const active = String(selectedShift) === String(i);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => onShiftChange?.(String(i))}
+                  className="px-2.5 py-1 text-[10px] font-semibold rounded-md border transition-colors"
+                  style={active ? {
+                    background: 'var(--rb-accent, #0f3460)',
+                    borderColor: 'var(--rb-accent, #0f3460)',
+                    color: '#fff',
+                  } : {
+                    borderColor: '#e3e9f0',
+                    color: '#5a6d80',
+                  }}
+                >
+                  {s.name} ({s.start}–{s.end})
+                </button>
+              );
+            })}
           </>
         ) : (
           <>
