@@ -27,7 +27,7 @@ export async function exportAsPNG(element, filename = 'report') {
 
   const canvas = await withResetTransform(element, () =>
     html2canvas(element, {
-      scale: 2,
+      scale: 3,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
@@ -58,7 +58,7 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
 
   const canvas = await withResetTransform(element, () =>
     html2canvas(element, {
-      scale: 2,
+      scale: 3,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,

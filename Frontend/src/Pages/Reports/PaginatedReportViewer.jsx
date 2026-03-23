@@ -174,7 +174,7 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
       // Capture the inner paginated-preview-root element (width: 210mm), not the
       // outer wrapper div which inherits max-w-[1200px] and would include empty side margins.
       const el = reportRef.current.querySelector('.paginated-preview-root') || reportRef.current.firstElementChild || reportRef.current;
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+      const canvas = await html2canvas(el, { scale: 3, useCORS: true, backgroundColor: '#ffffff', logging: false });
 
       const imgWidth = 210; // A4 width mm
       const pageHeight = 297; // A4 height mm
