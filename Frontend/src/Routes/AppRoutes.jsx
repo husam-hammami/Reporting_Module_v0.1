@@ -22,7 +22,7 @@ import ReportBuilderPreview from '../Pages/ReportBuilder/ReportBuilderPreview';
 import PaginatedReportBuilder from '../Pages/ReportBuilder/PaginatedReportBuilder';
 import ReportViewer, { DashboardViewer, TableReportViewer } from '../Pages/Reports/ReportViewer';
 import FormulaManager from '../Pages/Settings/Formulas/FormulaManager';
-import EmailSettings from '../Pages/Settings/Email/EmailSettings';
+import ReportDistribution from '../Pages/Settings/ReportDistribution/ReportDistribution';
 import ShiftsSettings from '../Pages/Settings/Shifts/ShiftsSettings';
 import UserManagement from '../Pages/Settings/Users/UserManagement';
 import LicenseActivations from '../Pages/Settings/LicenseActivations/LicenseActivations';
@@ -216,7 +216,7 @@ const AppRoutes = () => {
             <Route path="mappings" element={<MappingManager />} />
             <Route path="export-import" element={<ExportImport />} />
             <Route path="system" element={<SystemSettings />} />
-            <Route path="email" element={<EmailSettings />} />
+            <Route path="distribution" element={<ReportDistribution />} />
             <Route path="shifts" element={<ShiftsSettings />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="branding" element={<BrandingSettings />} />

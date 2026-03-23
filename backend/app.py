@@ -24,6 +24,7 @@ from report_builder_bp import report_builder_bp
 from mappings_bp import mappings_bp
 from license_bp import license_bp
 from branding_bp import branding_bp
+from distribution_bp import distribution_bp
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -172,7 +173,7 @@ if DEV_MODE:
             'path': request.path
         })
 
-# Register ONLY the 6 active blueprints
+# Register active blueprints
 app.register_blueprint(tags_bp, url_prefix='/api')
 app.register_blueprint(tag_groups_bp, url_prefix='/api')
 app.register_blueprint(live_monitor_bp, url_prefix='/api')
@@ -182,6 +183,7 @@ app.register_blueprint(report_builder_bp, url_prefix='/api')
 app.register_blueprint(mappings_bp, url_prefix='/api')
 app.register_blueprint(license_bp, url_prefix='/api')
 app.register_blueprint(branding_bp, url_prefix='/api')
+app.register_blueprint(distribution_bp, url_prefix='/api')
 
 # Demo mode: single source of truth for Production vs Demo (emulator)
 @app.route('/api/settings/demo-mode', methods=['GET'])

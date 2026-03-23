@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { name: 'Tag Groups', icon: FaLayerGroup, link: '/settings/tag-groups', description: 'Organize tags for reports' },
   { name: 'Formulas', icon: FaSuperscript, link: '/settings/formulas', description: 'Reusable calculations' },
   { name: 'Mappings', icon: FaExchangeAlt, link: '/settings/mappings', description: 'Value mapping rules' },
-  { name: 'Email / SMTP', icon: FaEnvelope, link: '/settings/email', description: 'Email delivery config' },
+  { name: 'Distribution', icon: FaEnvelope, link: '/settings/distribution', description: 'Report scheduling & delivery' },
   { name: 'Shifts', icon: FaClock, link: '/settings/shifts', description: 'Shift schedule config' },
   { name: 'Export / Import', icon: FaDownload, link: '/settings/export-import', description: 'System configurations' },
   { name: 'Branding', icon: FaImage, link: '/settings/branding', description: 'Client logo & branding' },
