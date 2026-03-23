@@ -455,7 +455,9 @@
 }
   
 @page {
-  margin: 5mm;
+  /* margin: 0 suppresses browser-injected corner headers/footers (URL, date, page number)
+     in modern browsers (Chrome, Edge, Firefox). Content spacing is handled via padding below. */
+  margin: 0;
   size: A4 portrait;
 }
 
@@ -474,7 +476,8 @@
     background: white !important;
     box-shadow: none !important;
     margin: 0 !important;
-    padding: 0 !important;
+    /* Compensate for @page margin:0 so content doesn't hit the page edge */
+    padding: 8mm !important;
   }
 
   /* Paginated reports — clean full-width A4 output */
@@ -500,6 +503,13 @@
     padding: 5mm 8mm !important;
     border: none !important;
     border-radius: 0 !important;
+  }
+
+  /* Ensure logos and colored backgrounds render correctly in print */
+  #report-print-section img,
+  #paginated-report-print img {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   /* Page breaks for paginated reports */

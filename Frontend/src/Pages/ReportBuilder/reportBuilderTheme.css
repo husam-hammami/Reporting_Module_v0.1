@@ -1089,7 +1089,8 @@
    ═══════════════════════════════════════════════════════════════ */
 @media print {
   @page {
-    margin: 5mm;
+    /* margin: 0 suppresses browser corner headers/footers (URL, date, page number) */
+    margin: 0;
     size: A4 portrait;
   }
 
