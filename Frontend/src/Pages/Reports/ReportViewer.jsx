@@ -376,7 +376,38 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     setExporting(true);
     try {
       const el = document.getElementById('report-print-section');
-      await exportAsPDF(el, template?.name || 'report', { pageMode });
+      // Add PDF-export class for optimized styling during capture
+      el.classList.add('rb-pdf-export');
+
+      // For tabular mode: temporarily remove max-width constraint and expand container
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+      }
+
+      // Wait a frame for styles to apply
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+      await exportAsPDF(el, template?.name || 'report', {
+        pageMode,
+        orientation: viewMode === 'tabular' ? 'landscape' : 'auto',
+      });
+
+      // Restore original styles
+      el.classList.remove('rb-pdf-export');
+      if (scrollContainer) {
+        scrollContainer.style.overflow = prevScrollOverflow || '';
+        scrollContainer.style.height = prevScrollHeight || '';
+        scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+        scrollContainer.style.flex = prevScrollFlex || '';
+      }
     } finally { setExporting(false); }
   };
   const handleExportPNG = async () => {
@@ -611,7 +642,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                         <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
                       </div>
                       {showPagination && (
-                        <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#e3e9f0] dark:border-gray-700 bg-white/60 dark:bg-[#0a1525]/60">
+                        <div className="rb-tabular-pagination flex items-center justify-between px-4 py-2.5 border-t border-[#e3e9f0] dark:border-gray-700 bg-white/60 dark:bg-[#0a1525]/60">
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] text-[#6b7f94]">Rows per page:</span>
                             <select

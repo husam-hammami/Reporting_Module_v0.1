@@ -62,6 +62,9 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
+      // Ensure full scroll width is captured (prevents wide table clipping)
+      windowWidth: Math.max(element.scrollWidth, element.offsetWidth),
+      width: Math.max(element.scrollWidth, element.offsetWidth),
     })
   );
 
@@ -78,17 +81,20 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
 
-  const imgData = canvas.toDataURL('image/png');
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
 
-  // Scale image to fit page width
-  const scaledWidth = pdfWidth - 16; // 8mm margin each side
+  // Use comfortable margins: 12mm sides, 10mm top, leave room for footer
+  const marginX = 12;
+  const marginTop = 10;
+  const footerHeight = 8; // mm reserved for page number footer
+
+  // Scale image to fit page width within margins
+  const scaledWidth = pdfWidth - 2 * marginX;
   const scaledHeight = (imgHeight / imgWidth) * scaledWidth;
 
-  // Content area height (leave room for page number footer)
-  const footerHeight = 8; // mm
-  const contentHeight = pdfHeight - 8 - footerHeight; // 8mm top margin
+  // Content area height per page
+  const contentHeight = pdfHeight - marginTop - footerHeight;
 
   // Calculate total pages needed
   const totalPages = Math.ceil(scaledHeight / contentHeight);
@@ -110,7 +116,7 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
     const pageImgData = pageCanvas.toDataURL('image/png');
     const sliceScaledHeight = (srcH / imgWidth) * scaledWidth;
 
-    pdf.addImage(pageImgData, 'PNG', 8, 8, scaledWidth, sliceScaledHeight);
+    pdf.addImage(pageImgData, 'PNG', marginX, marginTop, scaledWidth, sliceScaledHeight);
 
     // Page number footer
     pdf.setFontSize(8);
@@ -126,7 +132,7 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
     if (page === 0) {
       pdf.text(
         new Date().toLocaleString(),
-        pdfWidth - 8,
+        pdfWidth - marginX,
         pdfHeight - 4,
         { align: 'right' }
       );

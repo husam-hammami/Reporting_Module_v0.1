@@ -1240,6 +1240,163 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   PDF EXPORT STYLES — Applied during html2canvas capture
+   These override screen styles for cleaner, more readable PDF output.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Hide pagination controls during PDF capture */
+.rb-pdf-export .rb-tabular-pagination {
+  display: none !important;
+}
+
+/* Force light background, remove decorative shadows/borders */
+.rb-pdf-export {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+.rb-pdf-export .rb-widget-card {
+  box-shadow: none !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 4px !important;
+  background: #ffffff !important;
+}
+
+/* Remove overflow clipping so wide tables are fully captured */
+.rb-pdf-export .overflow-x-auto,
+.rb-pdf-export .overflow-auto {
+  overflow: visible !important;
+}
+
+/* Table styling for PDF — larger fonts, better spacing, forced light colors */
+.rb-pdf-export .rb-production-table {
+  padding: 0 !important;
+}
+
+.rb-pdf-export .rb-production-table table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11px;
+  border: 1.5px solid #333;
+}
+
+.rb-pdf-export .rb-table-header-row {
+  background-color: #1e3a5f !important;
+  color: #ffffff !important;
+}
+
+.rb-pdf-export .rb-table-header-row th {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 12px;
+  border: 1px solid rgba(30, 58, 95, 0.5);
+  border-bottom: 2px solid #0f3460;
+  color: #ffffff !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.rb-pdf-export .rb-table-body-row td {
+  padding: 7px 12px;
+  border: 1px solid #d1d5db;
+  font-size: 11px;
+  color: #111827 !important;
+  background: #ffffff !important;
+}
+
+.rb-pdf-export .rb-table-body-row.rb-row-striped td {
+  background: #f9fafb !important;
+}
+
+.rb-pdf-export .rb-table-body-row:hover {
+  background: transparent !important;
+}
+
+.rb-pdf-export .rb-table-body-row td.rb-cell-numeric {
+  font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+  font-weight: 500;
+  color: #111827 !important;
+}
+
+/* Section headers in PDF */
+.rb-pdf-export .rb-section-header-row td {
+  background: #e5e7eb !important;
+  font-weight: 700;
+  font-size: 11px;
+  border-top: 2px solid #333;
+  border-bottom: 1px solid #666;
+  padding: 6px 12px;
+  color: #111827 !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Summary rows in PDF */
+.rb-pdf-export .rb-summary-row td {
+  font-weight: 700;
+  font-size: 11px;
+  border-top: 2px solid #333;
+  padding: 7px 12px;
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Report header in PDF */
+.rb-pdf-export .rb-report-header {
+  border-bottom: 2px solid #333 !important;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+}
+
+.rb-pdf-export .rb-report-header h3 {
+  color: #000 !important;
+  font-size: 16px;
+}
+
+.rb-pdf-export .rb-report-header p,
+.rb-pdf-export .rb-report-header span {
+  color: #333 !important;
+}
+
+/* Widget title in PDF */
+.rb-pdf-export .rb-table-title,
+.rb-pdf-export .rb-heading,
+.rb-pdf-export .rb-widget-title {
+  color: #111827 !important;
+  font-size: 14px;
+}
+
+/* Checkbox cells in PDF */
+.rb-pdf-export .rb-checkbox-cell {
+  border: 1.5px solid #444 !important;
+  width: 14px !important;
+  height: 14px !important;
+  background: #fff !important;
+}
+
+.rb-pdf-export .rb-checkbox-cell svg path {
+  stroke: #000 !important;
+}
+
+/* Non-table widgets in PDF — ensure readable sizing */
+.rb-pdf-export .text-\[10px\],
+.rb-pdf-export .text-\[11px\] {
+  font-size: 11px !important;
+}
+
+.rb-pdf-export .text-\[12px\] {
+  font-size: 12px !important;
+}
+
+.rb-pdf-export .text-\[13px\] {
+  font-size: 13px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    uPlot Legend — constrain height to prevent overflow
    ═══════════════════════════════════════════════════════════════ */
 .uplot-container .u-legend {
