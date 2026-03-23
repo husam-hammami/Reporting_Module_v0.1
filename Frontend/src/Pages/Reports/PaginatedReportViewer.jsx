@@ -251,9 +251,26 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
         <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
           <ArrowLeft size={15} style={{ color: 'var(--rb-text)' }} />
         </button>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-[13px] font-bold truncate" style={{ color: 'var(--rb-text)' }}>{template?.name || 'Report'}</h2>
-          <div className="text-[8px] font-bold uppercase tracking-widest" style={{ color: 'var(--rb-text-muted)' }}>Paginated Report</div>
+
+        {/* Center: report selector or name */}
+        <div className="flex-1 min-w-0 flex items-center justify-center">
+          {siblingReports?.length > 1 ? (
+            <select
+              value={reportId}
+              onChange={(e) => onSelectReport?.(e.target.value)}
+              className="text-[13px] font-bold truncate max-w-[280px] bg-transparent border rounded-lg px-3 py-1.5 focus:outline-none cursor-pointer"
+              style={{ color: 'var(--rb-text)', borderColor: 'var(--rb-border)' }}
+            >
+              {siblingReports.map((r) => (
+                <option key={r.id} value={r.id}>{r.name || 'Untitled'}</option>
+              ))}
+            </select>
+          ) : (
+            <div className="text-center">
+              <h2 className="text-[13px] font-bold truncate" style={{ color: 'var(--rb-text)' }}>{template?.name || 'Report'}</h2>
+              <div className="text-[8px] font-bold uppercase tracking-widest" style={{ color: 'var(--rb-text-muted)' }}>Paginated Report</div>
+            </div>
+          )}
         </div>
 
         {!isLive && (
@@ -280,27 +297,6 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
           <Printer size={12} /> Print
         </button>
       </div>
-
-      {/* ── Report navigation tabs ── */}
-      {siblingReports?.length > 1 && (
-        <div className="flex items-center gap-1 px-3 py-1.5 overflow-x-auto"
-          style={{ background: 'var(--rb-surface)', borderBottom: '1px solid var(--rb-border)', scrollbarWidth: 'none' }}>
-          {siblingReports.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => onSelectReport?.(r.id)}
-              className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg whitespace-nowrap transition-colors flex-shrink-0 ${
-                String(r.id) === String(reportId)
-                  ? 'bg-brand text-white shadow-sm'
-                  : 'text-[#6b7f94] dark:text-[#8898aa] hover:bg-white dark:hover:bg-[#0a1525] hover:text-[#2a3545] dark:hover:text-[#e1e8f0]'
-              }`}
-              style={String(r.id) === String(reportId) ? { background: 'var(--rb-accent)' } : {}}
-            >
-              {r.name || 'Untitled'}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* ── Time period tabs ── */}
       <TimePeriodTabs

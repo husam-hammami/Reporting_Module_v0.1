@@ -435,17 +435,29 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
 
   return (
     <div className="flex flex-col h-[calc(100vh-80px)] bg-transparent">
-      {/* ── Toolbar: back + title | date/time + time filters (left, centered) | actions ── */}
+      {/* ── Toolbar: back + report selector (centered) | actions ── */}
       <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
-        {/* Left: back + report name */}
+        {/* Left: back */}
         <button onClick={onBack} className="p-2 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0">
           <FaChevronLeft size={14} />
         </button>
-        <span className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] truncate min-w-0">{template?.name || 'Report'}</span>
 
-        {/* Center/left: current date & time */}
-        <div className="flex items-center gap-4 flex-1 justify-center min-w-0">
-          <span className="text-[13px] font-medium text-[#3a4a5c] dark:text-[#c1ccd9] whitespace-nowrap tabular-nums" title="Current date and time">
+        {/* Center: report selector or name + date/time */}
+        <div className="flex items-center gap-3 flex-1 justify-center min-w-0">
+          {siblingReports?.length > 1 ? (
+            <select
+              value={reportId}
+              onChange={(e) => onSelectReport?.(e.target.value)}
+              className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] bg-transparent border border-[#e3e9f0] dark:border-gray-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-brand cursor-pointer max-w-[280px] truncate"
+            >
+              {siblingReports.map((r) => (
+                <option key={r.id} value={r.id}>{r.name || 'Untitled'}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] truncate">{template?.name || 'Report'}</span>
+          )}
+          <span className="text-[12px] font-medium text-[#8898aa] whitespace-nowrap tabular-nums hidden sm:inline" title="Current date and time">
             {now.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })} · {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </span>
         </div>
@@ -491,26 +503,6 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
           </div>
         </div>
       </div>
-
-      {/* ── Report navigation tabs ── */}
-      {siblingReports?.length > 1 && (
-        <div className="flex items-center gap-1 px-4 py-1.5 bg-[#f8fafc] dark:bg-[#060d18] border-b border-[#e3e9f0] dark:border-gray-700 overflow-x-auto print:hidden"
-          style={{ scrollbarWidth: 'none' }}>
-          {siblingReports.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => onSelectReport?.(r.id)}
-              className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg whitespace-nowrap transition-colors flex-shrink-0 ${
-                String(r.id) === String(reportId)
-                  ? 'bg-brand text-white shadow-sm'
-                  : 'text-[#6b7f94] dark:text-[#8898aa] hover:bg-white dark:hover:bg-[#0a1525] hover:text-[#2a3545] dark:hover:text-[#e1e8f0]'
-              }`}
-            >
-              {r.name || 'Untitled'}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* ── Time period tabs ── */}
       <TimePeriodTabs
