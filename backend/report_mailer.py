@@ -59,27 +59,47 @@ def html_fcl_scl(summary, start_date, end_date, label):
     ])
     return f"""
     <html><head><style>
-    body {{ font-family: Arial; font-size: 14px; }}
-    table {{ border-collapse: collapse; width: 100%; margin-bottom: 20px; }}
-    th, td {{ border: 1px solid #000; padding: 6px; }}
-    h2 {{ font-size: 18px; }}
+    @page {{ size: A4; margin: 15mm 12mm 15mm 12mm; }}
+    body {{ font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #1a1a2e; line-height: 1.5; }}
+    h2 {{ font-size: 16pt; font-weight: bold; color: #0f3460; margin: 0 0 4pt 0; border-bottom: 2px solid #0f3460; padding-bottom: 4pt; }}
+    h3 {{ font-size: 12pt; font-weight: bold; color: #1a5276; margin: 12pt 0 4pt 0; }}
+    table {{ border-collapse: collapse; width: 100%; margin-bottom: 12pt; table-layout: fixed; }}
+    th {{ border: 1px solid #9ca3af; padding: 5pt 6pt; background-color: #f1f5f9; font-weight: bold; font-size: 10pt; text-align: left; }}
+    td {{ border: 1px solid #d1d5db; padding: 4pt 6pt; font-size: 11pt; word-break: break-word; }}
+    tr:nth-child(even) td {{ background-color: #f8fafc; }}
+    .summary-row td {{ font-weight: bold; background-color: #f1f5f9; }}
+    p {{ font-size: 10pt; color: #64748b; margin: 4pt 0; }}
     </style></head><body>
-    <h2>{label} Report ({start_date} to {end_date})</h2>
-    <table><tr><td><b>Produced:</b> {total_prod} kg</td>
-               <td><b>Consumed:</b> {total_recv} kg</td></tr></table>
-    <h3>Sender</h3>
-    <table><tr><th>ID</th><th>Product</th><th>Weight</th></tr>
-    {sender_rows}
-    <tr><td colspan="2"><b>Total</b></td><td><b>{total_prod} kg</b></td></tr></table>
-    <h3>Receiver</h3>
-    <table><tr><td>0031</td><td>N/A</td><td>Output Bin</td><td>{total_recv} kg</td></tr></table>
-    <h3>Setpoints</h3>
-    <table><tr><th>Parameter</th><th>Value</th></tr>
-    <tr><td>Flowrate</td><td>{summary.get('average_flow_rate', 'N/A')}</td></tr>
-    <tr><td>Moisture Setpoint</td><td>15.3</td></tr>
-    <tr><td>Moisture Offset</td><td>{summary.get('average_moisture_offset', 'N/A')}</td></tr>
+    <h2>{label} Report</h2>
+    <p style="font-size:10pt; color:#64748b; margin-bottom:8pt;">Period: {start_date} to {end_date}</p>
+    <table>
+      <tr>
+        <th style="width:50%">Metric</th>
+        <th style="width:50%">Value</th>
+      </tr>
+      <tr><td><b>Total Produced</b></td><td>{total_prod:.1f} kg</td></tr>
+      <tr><td><b>Total Consumed</b></td><td>{total_recv:.1f} kg</td></tr>
     </table>
-    <p><i>Records: {summary.get('record_count', 0)}</i></p></body></html>
+    <h3>Sender</h3>
+    <table>
+      <tr><th style="width:25%">ID</th><th style="width:45%">Product</th><th style="width:30%">Weight</th></tr>
+      {sender_rows}
+      <tr class="summary-row"><td colspan="2"><b>Total</b></td><td><b>{total_prod:.1f} kg</b></td></tr>
+    </table>
+    <h3>Receiver</h3>
+    <table>
+      <tr><th style="width:15%">ID</th><th style="width:20%">Code</th><th style="width:35%">Description</th><th style="width:30%">Weight</th></tr>
+      <tr><td>0031</td><td>N/A</td><td>Output Bin</td><td>{total_recv:.1f} kg</td></tr>
+    </table>
+    <h3>Setpoints</h3>
+    <table>
+      <tr><th style="width:60%">Parameter</th><th style="width:40%">Value</th></tr>
+      <tr><td>Flowrate</td><td>{summary.get('average_flow_rate', 'N/A')}</td></tr>
+      <tr><td>Moisture Setpoint</td><td>15.3</td></tr>
+      <tr><td>Moisture Offset</td><td>{summary.get('average_moisture_offset', 'N/A')}</td></tr>
+    </table>
+    <p><i>Total records: {summary.get('record_count', 0)}</i></p>
+    </body></html>
     """
 
 def html_mila(summary, start_date, end_date):
@@ -101,22 +121,41 @@ def html_mila(summary, start_date, end_date):
 
     return f"""
     <html><head><style>
-    body {{ font-family: Arial; font-size: 13px; }}
-    table {{ border-collapse: collapse; width: 100%; margin-bottom: 15px; }}
-    th, td {{ border: 1px solid #000; padding: 6px; }}
-    h2 {{ font-size: 18px; }}
+    @page {{ size: A4; margin: 15mm 12mm 15mm 12mm; }}
+    body {{ font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #1a1a2e; line-height: 1.5; }}
+    h2 {{ font-size: 16pt; font-weight: bold; color: #0f3460; margin: 0 0 4pt 0; border-bottom: 2px solid #0f3460; padding-bottom: 4pt; }}
+    h3 {{ font-size: 12pt; font-weight: bold; color: #1a5276; margin: 12pt 0 4pt 0; }}
+    table {{ border-collapse: collapse; width: 100%; margin-bottom: 12pt; table-layout: fixed; }}
+    th {{ border: 1px solid #9ca3af; padding: 5pt 6pt; background-color: #f1f5f9; font-weight: bold; font-size: 10pt; text-align: left; }}
+    td {{ border: 1px solid #d1d5db; padding: 4pt 6pt; font-size: 11pt; word-break: break-word; }}
+    tr:nth-child(even) td {{ background-color: #f8fafc; }}
+    p {{ font-size: 10pt; color: #64748b; margin: 4pt 0; }}
     </style></head><body>
-    <h2>MILA Report ({start_date} to {end_date})</h2>
-    <p><b>Produced:</b> {summary.get('total_produced_weight', 0.0)} kg</p>
+    <h2>MILA Report</h2>
+    <p style="font-size:10pt; color:#64748b; margin-bottom:6pt;">Period: {start_date} to {end_date}</p>
+    <p style="font-size:11pt;"><b>Total Produced:</b> {summary.get('total_produced_weight', 0.0):.1f} kg</p>
     <h3>Receiver</h3>
-    <table><tr><th>Material</th><th>Product name</th><th>Actual weight</th></tr>{receiver_rows}</table>
+    <table>
+      <tr><th style="width:35%">Material</th><th style="width:40%">Product Name</th><th style="width:25%">Actual Weight</th></tr>
+      {receiver_rows}
+    </table>
     <h3>Bran Receiver</h3>
-    <table><tr><th>Material</th><th>Product name</th><th>Actual weight</th></tr>{bran_rows}</table>
+    <table>
+      <tr><th style="width:35%">Material</th><th style="width:40%">Product Name</th><th style="width:25%">Actual Weight</th></tr>
+      {bran_rows}
+    </table>
     <h3>Yield Log</h3>
-    <table><tr><th>Label</th><th>Value</th></tr>{flow_rows}{yield_rows}</table>
+    <table>
+      <tr><th style="width:60%">Label</th><th style="width:40%">Value</th></tr>
+      {flow_rows}{yield_rows}
+    </table>
     <h3>Setpoints</h3>
-    <table><tr><th>Identification</th><th>Target value</th><th>Actual value</th></tr>{setpoint_rows}</table>
-    <p><i>Records: {summary.get('record_count', 0)}</i></p></body></html>
+    <table>
+      <tr><th style="width:40%">Identification</th><th style="width:30%">Target Value</th><th style="width:30%">Actual Value</th></tr>
+      {setpoint_rows}
+    </table>
+    <p><i>Total records: {summary.get('record_count', 0)}</i></p>
+    </body></html>
     """
 
 def run_combined_monthly_report():

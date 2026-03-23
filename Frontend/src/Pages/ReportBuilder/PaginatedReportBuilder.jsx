@@ -1298,17 +1298,17 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
         const showStatus = hasStatusConfig && resolvedStatus !== '' && resolvedStatus !== '—';
         return (
           <div key={section.id} className="mb-1" style={{ textAlign: section.align || 'center' }}>
-            <h1 className="text-[18px] font-bold tracking-tight text-[#0f172a] mb-0.5" style={{ marginTop: '2px' }}>
+            <h1 className="text-[20px] font-bold tracking-tight text-[#0f172a] mb-0.5" style={{ marginTop: '2px' }}>
               {section.title || 'Untitled Report'}
             </h1>
             {section.subtitle && (
-              <p className="text-[11px] text-[#64748b] mb-0.5">{section.subtitle}</p>
+              <p className="text-[13px] text-[#64748b] mb-0.5">{section.subtitle}</p>
             )}
             {showStatus && (
-              <p className="text-[11px] text-[#64748b] mb-0.5">{statusLabel}: {resolvedStatus}</p>
+              <p className="text-[13px] text-[#64748b] mb-0.5">{statusLabel}: {resolvedStatus}</p>
             )}
             {section.showDateRange && dateRange && (
-              <p className="text-[10px] text-[#94a3b8] font-medium">
+              <p className="text-[12px] text-[#94a3b8] font-medium">
                 ({formatDate(dateRange.from)} to {formatDate(dateRange.to)})
               </p>
             )}
@@ -1322,7 +1322,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
         return (
           <div key={section.id} className="mb-2">
             {section.label && (
-              <div className="text-[9px] font-bold uppercase tracking-wider text-[#94a3b8] mb-1">{section.label}</div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[#94a3b8] mb-1">{section.label}</div>
             )}
             <div className="flex justify-end gap-4 flex-wrap">
               {(section.kpis || []).map((kpi) => {
@@ -1331,8 +1331,8 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                   : resolveCellConfigLabel(kpi);
                 return (
                   <div key={kpi.id} className="text-right">
-                    <span className="text-[9px] font-medium text-[#64748b]">{kpi.label}: </span>
-                    <span className={`text-[12px] font-bold tabular-nums ${isPreviewMode ? 'text-[#0f172a]' : 'text-[#0f3460]'}`}>{displayValue}</span>
+                    <span className="text-[11px] font-medium text-[#64748b]">{kpi.label}: </span>
+                    <span className={`text-[14px] font-bold tabular-nums ${isPreviewMode ? 'text-[#0f172a]' : 'text-[#0f3460]'}`}>{displayValue}</span>
                   </div>
                 );
               })}
@@ -1343,18 +1343,18 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
       /* ── Table ─── */
       case 'table':
         return (
-          <div key={section.id} className="mb-2">
+          <div key={section.id} className="mb-2" style={{ overflow: 'hidden', maxWidth: '100%' }}>
             {section.label && (
-              <div className="text-[11px] font-bold text-[#0f172a] mb-1">{section.label}</div>
+              <div className="text-[13px] font-bold text-[#0f172a] mb-1">{section.label}</div>
             )}
-            <table className="w-full border-collapse text-[10px]">
+            <table className="w-full border-collapse text-[13px]" style={{ tableLayout: 'fixed', wordBreak: 'break-word' }}>
               <thead>
                 <tr>
                   {(section.columns || []).map((col) => (
                     <th
                       key={col.id}
-                      className="px-2 py-1 font-bold border border-[#d1d5db] bg-[#f1f5f9] text-[#334155]"
-                      style={{ textAlign: col.align || 'left', width: col.width !== 'auto' ? col.width : undefined }}
+                      className="px-2 py-1.5 font-bold border border-[#d1d5db] bg-[#f1f5f9] text-[#334155]"
+                      style={{ textAlign: col.align || 'left', width: col.width !== 'auto' ? col.width : undefined, overflow: 'hidden' }}
                     >
                       {col.header}
                     </th>
@@ -1384,8 +1384,8 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                         return (
                           <td
                             key={ci}
-                            className={`px-2 py-0.5 border border-[#e2e8f0] ${!isPreviewMode && cell.sourceType && cell.sourceType !== 'static' ? 'text-[#0f3460] italic' : ''}`}
-                            style={{ textAlign: col?.align || 'left' }}
+                            className={`px-2 py-1 border border-[#e2e8f0] ${!isPreviewMode && cell.sourceType && cell.sourceType !== 'static' ? 'text-[#0f3460] italic' : ''}`}
+                            style={{ textAlign: col?.align || 'left', overflow: 'hidden' }}
                           >
                             {displayValue}
                           </td>
@@ -1494,11 +1494,11 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
             <div className="flex gap-8">
               {(section.fields || []).map((f) => (
                 <div key={f.id} className="flex-1">
-                  <div className="text-[9px] font-medium text-[#64748b] mb-6">{f.label}</div>
+                  <div className="text-[11px] font-medium text-[#64748b] mb-6">{f.label}</div>
                   <div className="border-b border-[#cbd5e1] pb-1">
-                    <span className="text-[10px] text-[#334155]">{f.value || '\u00a0'}</span>
+                    <span className="text-[12px] text-[#334155]">{f.value || '\u00a0'}</span>
                   </div>
-                  <div className="text-[8px] text-[#94a3b8] mt-1">Date: _______________</div>
+                  <div className="text-[10px] text-[#94a3b8] mt-1">Date: _______________</div>
                 </div>
               ))}
             </div>
@@ -1527,7 +1527,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
         }}>
           <ReportLogoHeader clientLogo={clientLogo} />
           {currentPageSections}
-          <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-[8px] text-[#94a3b8] print:text-[7pt]">
+          <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-[10px] text-[#94a3b8] print:text-[8pt]">
             <span>Records: {totalRows}</span>
             <span>Page {pageNum}</span>
           </div>
@@ -1554,7 +1554,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
         <ReportLogoHeader clientLogo={clientLogo} />
         {currentPageSections}
         {!compact && (
-          <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-[8px] text-[#94a3b8] print:text-[7pt]">
+          <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-[10px] text-[#94a3b8] print:text-[8pt]">
             <span>{totalRows > 0 ? `Records: ${totalRows}` : ''}</span>
             <span>Page {pageNum}{pageBreaks.length > 0 ? ` of ${pageNum}` : ''}</span>
           </div>

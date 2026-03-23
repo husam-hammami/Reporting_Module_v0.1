@@ -174,13 +174,28 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
       // Capture the inner paginated-preview-root element (width: 210mm), not the
       // outer wrapper div which inherits max-w-[1200px] and would include empty side margins.
       const el = reportRef.current.querySelector('.paginated-preview-root') || reportRef.current.firstElementChild || reportRef.current;
-      const canvas = await html2canvas(el, { scale: 3, useCORS: true, backgroundColor: '#ffffff', logging: false });
+
+      // Temporarily force the element to render at its natural width (no clipping)
+      const prevOverflow = el.style.overflow;
+      el.style.overflow = 'hidden';
+
+      const canvas = await html2canvas(el, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        // Ensure html2canvas treats the element's full scroll width as the viewport
+        windowWidth: Math.max(el.scrollWidth, el.offsetWidth),
+        width: el.offsetWidth,
+      });
+
+      el.style.overflow = prevOverflow;
 
       const imgWidth = 210; // A4 width mm
       const pageHeight = 297; // A4 height mm
-      const margin = 5;
+      const margin = 3; // reduced from 5mm for more content space
       const usableWidth = imgWidth - 2 * margin;
-      const usableHeight = pageHeight - 2 * margin - 6;
+      const usableHeight = pageHeight - 2 * margin - 5;
 
       const imgHeight = (canvas.height * usableWidth) / canvas.width;
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -206,10 +221,10 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
         pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, destH);
 
         // Footer
-        pdf.setFontSize(7);
+        pdf.setFontSize(8);
         pdf.setTextColor(150, 150, 150);
-        pdf.text(`Page ${pageNum} of ${totalPages}`, imgWidth / 2, pageHeight - 3, { align: 'center' });
-        pdf.text(new Date().toLocaleDateString('en-GB'), imgWidth - margin, pageHeight - 3, { align: 'right' });
+        pdf.text(`Page ${pageNum} of ${totalPages}`, imgWidth / 2, pageHeight - 1.5, { align: 'center' });
+        pdf.text(new Date().toLocaleDateString('en-GB'), imgWidth - margin, pageHeight - 1.5, { align: 'right' });
 
         yOffset += usableHeight;
         pageNum++;
