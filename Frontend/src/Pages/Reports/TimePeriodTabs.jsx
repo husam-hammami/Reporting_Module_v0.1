@@ -19,7 +19,7 @@
  *   import TimePeriodTabs, { VIEWER_TABS, PAGINATED_TABS } from './TimePeriodTabs';
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaClock } from 'react-icons/fa';
 import TabSelector from '../../Components/ui/TabSelector';
 import DateRangePicker from '../../Components/ui/DateRangePicker';
@@ -83,6 +83,7 @@ export const PAGINATED_TABS = [
   { id: 'this-week',  label: 'This Week' },
   { id: 'last-week',  label: 'Last Week' },
   { id: 'this-month', label: 'This Month' },
+  { id: 'shift',      label: 'Shift' },
   { id: 'custom',     label: 'Custom' },
 ];
 
@@ -105,8 +106,14 @@ export default function TimePeriodTabs({
   selectedShift = '',
   onShiftChange,
 }) {
-  const showCustom = activeTab === 'custom';
+  const [customOpen, setCustomOpen] = useState(false);
   const showShift  = activeTab === 'shift';
+
+  // Auto-open custom panel when switching to custom tab
+  useEffect(() => {
+    if (activeTab === 'custom') setCustomOpen(true);
+    else setCustomOpen(false);
+  }, [activeTab]);
 
   return (
     <div className="flex flex-col print:hidden">
@@ -115,19 +122,24 @@ export default function TimePeriodTabs({
         <TabSelector
           tabs={tabs}
           activeId={activeTab}
-          onChange={onTabChange}
+          onChange={(id) => {
+            onTabChange(id);
+            if (id === 'custom') setCustomOpen(true);
+          }}
         />
       </div>
 
-      {/* ── Custom date range picker ── */}
-      {showCustom && (
+      {/* ── Custom date range picker — hides after Apply ── */}
+      {activeTab === 'custom' && customOpen && (
         <DateRangePicker
           from={customFrom}
           to={customTo}
+          shiftsConfig={shiftsConfig}
           onApply={({ from, to }) => {
             onCustomFrom?.(from);
             onCustomTo?.(to);
           }}
+          onClose={() => setCustomOpen(false)}
         />
       )}
 

@@ -30,7 +30,8 @@ export default function PaginatedReportView({ reportId, onBack }) {
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
   const { socket } = useSocket();
 
-  const { state: timePeriod, dateRange, actions: tpActions } = useTimePeriod('live');
+  const [shiftsConfig, setShiftsConfig] = useState(null);
+  const { state: timePeriod, dateRange, actions: tpActions } = useTimePeriod('live', shiftsConfig);
   const isLive = timePeriod.tab === 'live';
   const [tagValues, setTagValues] = useState({});
   const [liveTagValues, setLiveTagValues] = useState({});
@@ -57,6 +58,13 @@ export default function PaginatedReportView({ reportId, onBack }) {
   // Collect all tag names needed
   const tagNames = useMemo(() => collectPaginatedTagNames(sections), [sections]);
 
+
+  // Fetch shift schedule
+  useEffect(() => {
+    axios.get('/api/settings/shifts')
+      .then(res => setShiftsConfig(res.data))
+      .catch(() => {});
+  }, []);
 
   // ── Live mode: poll REST + listen WebSocket ──
   useEffect(() => {
@@ -282,6 +290,9 @@ export default function PaginatedReportView({ reportId, onBack }) {
         customTo={timePeriod.customTo}
         onCustomFrom={tpActions.setCustomFrom}
         onCustomTo={tpActions.setCustomTo}
+        shiftsConfig={shiftsConfig}
+        selectedShift={timePeriod.selectedShift}
+        onShiftChange={tpActions.setShift}
       />
 
       {/* ── Status bar — single persistent div, bg cross-fades via transition-colors ── */}

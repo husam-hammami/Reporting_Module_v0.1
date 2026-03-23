@@ -156,7 +156,7 @@ function MonthPanel({ year, month, start, end, phase, hover, today, onDayClick, 
 
 /* ── DateRangePicker ──────────────────────────────────────────────── */
 
-export default function DateRangePicker({ from, to, onApply }) {
+export default function DateRangePicker({ from, to, onApply, onClose, shiftsConfig }) {
   const today    = new Date();
   const initFrom = parse(from);
   const initTo   = parse(to);
@@ -227,7 +227,8 @@ export default function DateRangePicker({ from, to, onApply }) {
   const handleApply = useCallback(() => {
     if (!canApply) return;
     onApply({ from: fmt(lo, fromTime), to: fmt(hi, toTime) });
-  }, [canApply, lo, hi, fromTime, toTime, onApply]);
+    onClose?.();
+  }, [canApply, lo, hi, fromTime, toTime, onApply, onClose]);
 
   /* ── Summary label ── */
   const fmtDisplay = (d) => d
@@ -239,26 +240,34 @@ export default function DateRangePicker({ from, to, onApply }) {
   return (
     <div className="flex flex-col gap-3 px-4 py-3 bg-white dark:bg-[#080d19] border-b border-[#e3e9f0] dark:border-[#1e293b] animate-slide-up">
 
-      {/* ── Quick presets ── */}
-      <div className="flex items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-[#8898aa]">Quick:</span>
-        {[
-          { id: 'today',     label: 'Today'    },
-          { id: 'yesterday', label: 'Yesterday' },
-          { id: '7d',        label: 'Last 7 days' },
-          { id: '30d',       label: 'Last 30 days' },
-          { id: 'month',     label: 'This month'  },
-        ].map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => applyPreset(id)}
-            className="px-2.5 py-1 text-[10px] font-semibold rounded-md border border-[#e3e9f0] dark:border-[#1e293b] text-[#5a6d80] dark:text-[#8898aa] hover:border-brand hover:text-brand dark:hover:text-brand transition-colors"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* ── Shift quick-select ── */}
+      {shiftsConfig?.shifts?.length > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-[#8898aa]">Shift:</span>
+          {shiftsConfig.shifts.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => {
+                const now = new Date();
+                const [sh, sm] = s.start.split(':').map(Number);
+                const [eh, em] = s.end.split(':').map(Number);
+                const fromD = new Date(now.getFullYear(), now.getMonth(), now.getDate(), sh, sm, 0);
+                const toD   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eh, em, 0);
+                if (toD <= fromD) toD.setDate(toD.getDate() + 1);
+                setStart(midnight(fromD)); setEnd(midnight(toD));
+                setFromTime(`${String(sh).padStart(2,'0')}:${String(sm).padStart(2,'0')}`);
+                setToTime(`${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}`);
+                setPhase('start'); setHover(null);
+                setViewYear(fromD.getFullYear()); setViewMonth(fromD.getMonth());
+              }}
+              className="px-2.5 py-1 text-[10px] font-semibold rounded-md border border-[#e3e9f0] dark:border-[#1e293b] text-[#5a6d80] dark:text-[#8898aa] hover:border-brand hover:text-brand dark:hover:text-brand transition-colors"
+            >
+              {s.name} ({s.start}–{s.end})
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Calendars ── */}
       <div className="flex items-start gap-2">
