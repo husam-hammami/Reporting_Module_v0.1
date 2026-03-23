@@ -50,6 +50,7 @@ Welcome to the Reporting Module documentation. This system connects to industria
 | Document | Description |
 |----------|-------------|
 | [Desktop_App_Plan_2026-03-18](Desktop_App_Plan_2026-03-18.md) | Electron + PyInstaller desktop app with license enforcement |
+| [16-REPORT-DISTRIBUTION](plan/16-REPORT-DISTRIBUTION.md) | Report Distribution — automated report delivery via email with scheduling |
 
 ### Templates & Seed Data
 
