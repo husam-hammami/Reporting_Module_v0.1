@@ -29,6 +29,7 @@ const PRESETS = [
   { key: 'this-week', label: 'This Week' },
   { key: 'last-week', label: 'Last Week' },
   { key: 'this-month', label: 'This Month' },
+  { key: 'shift', label: 'Shift' },
   { key: 'custom', label: 'Custom' },
 ];
 
@@ -80,6 +81,9 @@ export default function PaginatedReportView({ reportId, onBack }) {
   const [preset, setPreset] = useState('live');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [showCustomPanel, setShowCustomPanel] = useState(false);
+  const [shiftsConfig, setShiftsConfig] = useState(null);
+  const [selectedShift, setSelectedShift] = useState('');
   const [tagValues, setTagValues] = useState({});
   const [liveTagValues, setLiveTagValues] = useState({});
   const [fetchLoading, setFetchLoading] = useState(false);
@@ -119,14 +123,34 @@ export default function PaginatedReportView({ reportId, onBack }) {
     return `${y}-${m}-${day}T${h}:${min}`;
   };
 
+  // Fetch shift schedule
+  useEffect(() => {
+    axios.get('/api/settings/shifts')
+      .then(res => setShiftsConfig(res.data))
+      .catch(() => {});
+  }, []);
+
   // Date range (only used for historical modes)
   const dateRange = useMemo(() => {
     if (preset === 'live') return { from: new Date().toISOString(), to: new Date().toISOString() };
     if (preset === 'custom') {
       return { from: customFrom || new Date().toISOString(), to: customTo || new Date().toISOString() };
     }
+    if (preset === 'shift' && selectedShift !== '' && shiftsConfig?.shifts) {
+      const idx = parseInt(selectedShift);
+      const shift = shiftsConfig.shifts[idx];
+      if (shift) {
+        const today = new Date();
+        const [startH, startM] = shift.start.split(':').map(Number);
+        const [endH, endM] = shift.end.split(':').map(Number);
+        const from = new Date(today.getFullYear(), today.getMonth(), today.getDate(), startH, startM, 0);
+        const to = new Date(today.getFullYear(), today.getMonth(), today.getDate(), endH, endM, 0);
+        if (to <= from) to.setDate(to.getDate() + 1);
+        return { from: from.toISOString(), to: to.toISOString() };
+      }
+    }
     return getPresetRange(preset);
-  }, [preset, customFrom, customTo]);
+  }, [preset, customFrom, customTo, selectedShift, shiftsConfig]);
 
   // ── Live mode: poll REST + listen WebSocket ──
   useEffect(() => {
@@ -316,33 +340,93 @@ export default function PaginatedReportView({ reportId, onBack }) {
         </div>
 
         {/* Date range selector */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 relative">
           <Calendar size={12} style={{ color: 'var(--rb-text-muted)' }} />
           <select
             value={preset}
-            onChange={(e) => setPreset(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setPreset(val);
+              if (val === 'custom') setShowCustomPanel(true);
+              else setShowCustomPanel(false);
+            }}
             className="rb-input-base text-[11px] py-1.5 px-2"
           >
             {PRESETS.map((p) => (
               <option key={p.key} value={p.key}>{p.label}</option>
             ))}
           </select>
-          {preset === 'custom' && (
-            <>
-              <input
-                type="datetime-local"
-                value={isoToLocalDatetime(customFrom)}
-                onChange={(e) => setCustomFrom(new Date(e.target.value).toISOString())}
+          {/* Shift selector */}
+          {preset === 'shift' && (
+            shiftsConfig?.shifts?.length > 0 ? (
+              <select
+                value={selectedShift}
+                onChange={(e) => setSelectedShift(e.target.value)}
                 className="rb-input-base text-[11px] py-1.5 px-2"
-              />
-              <span className="text-[10px]" style={{ color: 'var(--rb-text-muted)' }}>to</span>
-              <input
-                type="datetime-local"
-                value={isoToLocalDatetime(customTo)}
-                onChange={(e) => setCustomTo(new Date(e.target.value).toISOString())}
-                className="rb-input-base text-[11px] py-1.5 px-2"
-              />
-            </>
+              >
+                <option value="">Select shift...</option>
+                {shiftsConfig.shifts.map((s, i) => (
+                  <option key={i} value={i}>{s.name} ({s.start} - {s.end})</option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-[10px] font-medium" style={{ color: '#d97706' }}>No shifts configured</span>
+            )
+          )}
+          {/* Custom date range panel */}
+          {preset === 'custom' && showCustomPanel && (
+            <div className="absolute top-full right-0 mt-1 z-50 p-3 rounded-lg shadow-lg border flex flex-col gap-2"
+              style={{ background: 'var(--rb-panel)', borderColor: 'var(--rb-border)' }}>
+              {/* Shift quick-select inside custom panel */}
+              {shiftsConfig?.shifts?.length > 0 && (
+                <div className="flex items-center gap-1.5 pb-2 mb-1 border-b" style={{ borderColor: 'var(--rb-border)' }}>
+                  <span className="text-[10px] font-medium" style={{ color: 'var(--rb-text-muted)' }}>Shift:</span>
+                  {shiftsConfig.shifts.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        const today = new Date();
+                        const [startH, startM] = s.start.split(':').map(Number);
+                        const [endH, endM] = s.end.split(':').map(Number);
+                        const from = new Date(today.getFullYear(), today.getMonth(), today.getDate(), startH, startM, 0);
+                        const to = new Date(today.getFullYear(), today.getMonth(), today.getDate(), endH, endM, 0);
+                        if (to <= from) to.setDate(to.getDate() + 1);
+                        setCustomFrom(from.toISOString());
+                        setCustomTo(to.toISOString());
+                      }}
+                      className="px-2 py-1 text-[10px] font-medium rounded border transition-colors hover:border-[var(--rb-accent)]"
+                      style={{ borderColor: 'var(--rb-border)', color: 'var(--rb-text)' }}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-medium" style={{ color: 'var(--rb-text-muted)' }}>From</span>
+                <input
+                  type="datetime-local"
+                  value={isoToLocalDatetime(customFrom)}
+                  onChange={(e) => setCustomFrom(new Date(e.target.value).toISOString())}
+                  className="rb-input-base text-[11px] py-1.5 px-2"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-medium" style={{ color: 'var(--rb-text-muted)' }}>To</span>
+                <input
+                  type="datetime-local"
+                  value={isoToLocalDatetime(customTo)}
+                  onChange={(e) => setCustomTo(new Date(e.target.value).toISOString())}
+                  className="rb-input-base text-[11px] py-1.5 px-2 ml-3.5"
+                />
+              </div>
+              <button
+                onClick={() => setShowCustomPanel(false)}
+                className="rb-btn-primary mt-1 text-[11px] py-1.5 px-4 self-end"
+              >
+                Apply
+              </button>
+            </div>
           )}
         </div>
 
