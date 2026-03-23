@@ -252,19 +252,25 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
           <ArrowLeft size={15} style={{ color: 'var(--rb-text)' }} />
         </button>
 
-        {/* Center: report selector or name */}
+        {/* Center: report tab bar or name */}
         <div className="flex-1 min-w-0 flex items-center justify-center">
           {siblingReports?.length > 1 ? (
-            <select
-              value={reportId}
-              onChange={(e) => onSelectReport?.(e.target.value)}
-              className="text-[13px] font-bold truncate max-w-[280px] bg-transparent border rounded-lg px-3 py-1.5 focus:outline-none cursor-pointer"
-              style={{ color: 'var(--rb-text)', borderColor: 'var(--rb-border)' }}
-            >
+            <div className="flex items-center gap-1 overflow-x-auto max-w-full">
               {siblingReports.map((r) => (
-                <option key={r.id} value={r.id}>{r.name || 'Untitled'}</option>
+                <button
+                  key={r.id}
+                  onClick={() => onSelectReport?.(String(r.id))}
+                  className="px-3 py-1.5 text-[12px] font-bold rounded-lg whitespace-nowrap transition-colors"
+                  style={
+                    String(r.id) === String(reportId)
+                      ? { background: 'var(--rb-accent)', color: '#fff' }
+                      : { color: 'var(--rb-text-muted)', background: 'transparent' }
+                  }
+                >
+                  {r.name || 'Untitled'}
+                </button>
               ))}
-            </select>
+            </div>
           ) : (
             <div className="text-center">
               <h2 className="text-[13px] font-bold truncate" style={{ color: 'var(--rb-text)' }}>{template?.name || 'Report'}</h2>

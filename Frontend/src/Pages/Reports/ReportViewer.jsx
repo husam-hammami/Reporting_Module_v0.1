@@ -442,18 +442,24 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
           <FaChevronLeft size={14} />
         </button>
 
-        {/* Center: report selector or name + date/time */}
+        {/* Center: report tab bar or name + date/time */}
         <div className="flex items-center gap-3 flex-1 justify-center min-w-0">
           {siblingReports?.length > 1 ? (
-            <select
-              value={reportId}
-              onChange={(e) => onSelectReport?.(e.target.value)}
-              className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] bg-transparent border border-[#e3e9f0] dark:border-gray-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-brand cursor-pointer max-w-[280px] truncate"
-            >
+            <div className="flex items-center gap-1 overflow-x-auto max-w-full">
               {siblingReports.map((r) => (
-                <option key={r.id} value={r.id}>{r.name || 'Untitled'}</option>
+                <button
+                  key={r.id}
+                  onClick={() => onSelectReport?.(String(r.id))}
+                  className={`px-3 py-1.5 text-[13px] font-semibold rounded-lg whitespace-nowrap transition-colors ${
+                    String(r.id) === String(reportId)
+                      ? 'bg-brand text-white'
+                      : 'text-[#6b7f94] hover:text-brand hover:bg-brand-subtle'
+                  }`}
+                >
+                  {r.name || 'Untitled'}
+                </button>
               ))}
-            </select>
+            </div>
           ) : (
             <span className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] truncate">{template?.name || 'Report'}</span>
           )}
