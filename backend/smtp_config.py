@@ -88,11 +88,11 @@ def test_smtp_connection(to_email=None):
 
         port = cfg.get("smtp_port", 465)
         if port == 465:
-            with smtplib.SMTP_SSL(cfg["smtp_server"], port) as server:
+            with smtplib.SMTP_SSL(cfg["smtp_server"], port, timeout=30) as server:
                 server.login(cfg["username"], cfg["password"])
                 server.send_message(msg)
         else:
-            with smtplib.SMTP(cfg["smtp_server"], port) as server:
+            with smtplib.SMTP(cfg["smtp_server"], port, timeout=30) as server:
                 server.starttls()
                 server.login(cfg["username"], cfg["password"])
                 server.send_message(msg)

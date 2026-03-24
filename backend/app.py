@@ -1,6 +1,7 @@
-import eventlet
-eventlet.monkey_patch()  # Required for eventlet to work with standard library
 import os
+os.environ['EVENTLET_NO_GREENDNS'] = 'yes'
+import eventlet
+eventlet.monkey_patch()
 import logging
 try:
     from dotenv import load_dotenv
