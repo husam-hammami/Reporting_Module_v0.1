@@ -30,7 +30,7 @@ Runner/
 
 # VS Code
 .vscode/
-# VITE_API_URL=http://100.118.31.61:5001
+
 # Local Netlify folder
 .netlify
 
@@ -40,18 +40,27 @@ Runner/
 
 backend/venv/
 venv/
-# Ignore installer & build files
 
+# Installer & build files
 installer.iss
 
-
-# Ignore folders
+# Bundled tooling folders
 psql/
 python_embed/
 installer/
 
-# Ignore dependencies file
+# Root dependencies file (backend/requirements.txt is tracked)
 requirements.txt
+
+# Generated reports and PDFs
+backend/reports/
+*.pdf
+
+# Stale frontend build served by backend
+backend/static/
+
+# Vite prebundle cache
+Frontend/.vite/
 
 # Desktop app (Electron + bundled binaries)
 desktop/node_modules/
