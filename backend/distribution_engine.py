@@ -20,8 +20,8 @@ from psycopg2.extras import RealDictCursor
 
 logger = logging.getLogger(__name__)
 
-# Allowed base directory for disk saves (configurable via env)
-ALLOWED_SAVE_ROOT = os.getenv(
+# Default save directory (used when no path is provided)
+DEFAULT_SAVE_DIR = os.getenv(
     'REPORT_SAVE_ROOT',
     os.path.join(os.path.abspath(os.path.dirname(__file__)), 'reports')
 )
@@ -1092,11 +1092,10 @@ def _send_email(recipients, subject, body_html, attachment_bytes=None, attachmen
 # ── Disk delivery ────────────────────────────────────────────────────────────
 
 def _save_to_disk(save_path, filename, content_bytes):
-    """Save report file to disk, validated against ALLOWED_SAVE_ROOT."""
+    """Save report file to disk at the user-specified path."""
+    if not save_path or not save_path.strip():
+        save_path = DEFAULT_SAVE_DIR
     resolved = os.path.realpath(os.path.join(save_path, filename))
-    root = os.path.realpath(ALLOWED_SAVE_ROOT)
-    if not resolved.startswith(root + os.sep) and resolved != root:
-        raise ValueError(f"save_path must be under {ALLOWED_SAVE_ROOT}")
     os.makedirs(os.path.dirname(resolved), exist_ok=True)
     with open(resolved, 'wb') as f:
         f.write(content_bytes)

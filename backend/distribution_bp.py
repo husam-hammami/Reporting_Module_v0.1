@@ -5,6 +5,7 @@ CRUD API for report distribution rules — schedule any report
 for automatic email delivery or disk save.
 """
 
+import os
 import logging
 import json
 import re
@@ -340,3 +341,55 @@ def run_rule(rule_id):
     except Exception as e:
         logger.error(f"Error running distribution rule {rule_id}: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': 'Execution failed'}), 500
+
+
+# ---------------------------------------------------------------------------
+# GET /api/distribution/browse-folders — Browse server directories
+# ---------------------------------------------------------------------------
+@distribution_bp.route('/distribution/browse-folders', methods=['GET'])
+@login_required
+def browse_folders():
+    """List folders on the server for the disk-save path picker."""
+    requested = request.args.get('path', '')
+
+    # Default: show drive roots on Windows, / on Linux
+    if not requested:
+        if os.name == 'nt':
+            import string
+            drives = []
+            for letter in string.ascii_uppercase:
+                drive = f'{letter}:\\'
+                if os.path.isdir(drive):
+                    drives.append({'name': f'{letter}:', 'path': drive})
+            return jsonify({'status': 'success', 'current': '', 'parent': '', 'folders': drives})
+        else:
+            requested = '/'
+
+    requested = os.path.realpath(requested)
+    if not os.path.isdir(requested):
+        return jsonify({'status': 'error', 'message': f'Directory not found: {requested}'}), 400
+
+    parent = os.path.dirname(requested)
+    if parent == requested:
+        parent = ''  # at root
+
+    try:
+        entries = []
+        for entry in sorted(os.scandir(requested), key=lambda e: e.name.lower()):
+            if entry.is_dir():
+                try:
+                    # Skip dirs we can't read
+                    os.listdir(entry.path)
+                    entries.append({'name': entry.name, 'path': entry.path})
+                except PermissionError:
+                    pass
+        return jsonify({
+            'status': 'success',
+            'current': requested,
+            'parent': parent,
+            'folders': entries,
+        })
+    except PermissionError:
+        return jsonify({'status': 'error', 'message': 'Permission denied'}), 403
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
