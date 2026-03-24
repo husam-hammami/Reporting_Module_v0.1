@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Mail, HardDrive, Layers, Save, Play } from 'lucide-react';
+import { ArrowLeft, Mail, HardDrive, Layers, Save, Play, FolderOpen, ChevronRight, ArrowUp } from 'lucide-react';
 import { reportBuilderApi } from '../../API/reportBuilderApi';
 import RecipientInput from '../Settings/ReportDistribution/RecipientInput';
 import { toast } from 'react-toastify';
+import axios from '../../API/axios';
 
 const SCHEDULE_TYPES = [
   { value: 'daily', label: 'Daily' },
@@ -45,11 +46,113 @@ function schedulePreview(form) {
   return '';
 }
 
+/* ── Server folder browser modal ──────────────────────────────────────────── */
+function FolderBrowserModal({ open, onClose, onSelect, theme: t }) {
+  const [current, setCurrent] = useState('');
+  const [parent, setParent] = useState('');
+  const [folders, setFolders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const browse = useCallback(async (path) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get('/api/distribution/browse-folders', { params: { path } });
+      const d = res.data;
+      setCurrent(d.current || '');
+      setParent(d.parent || '');
+      setFolders(d.folders || []);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to browse folders');
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (open) browse('');
+  }, [open, browse]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}>
+      <div className="w-full max-w-lg rounded-xl shadow-2xl overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+        {/* Header */}
+        <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: `1px solid ${t.border}` }}>
+          <h3 className="text-sm font-bold" style={{ color: t.text }}>Browse Server Folders</h3>
+          <button onClick={onClose} className="text-lg leading-none px-1" style={{ color: t.textSecondary }}>&times;</button>
+        </div>
+
+        {/* Current path */}
+        <div className="px-5 py-2 flex items-center gap-2" style={{ background: t.modalInputBg, borderBottom: `1px solid ${t.border}` }}>
+          {parent !== '' && (
+            <button onClick={() => browse(parent)} className="p-1 rounded hover:opacity-70" title="Go up" style={{ color: t.accent }}>
+              <ArrowUp size={14} />
+            </button>
+          )}
+          <span className="text-xs font-mono truncate flex-1" style={{ color: t.textSecondary }}>
+            {current || 'Drives'}
+          </span>
+        </div>
+
+        {/* Folder list */}
+        <div className="overflow-y-auto" style={{ maxHeight: '320px', minHeight: '200px' }}>
+          {loading && (
+            <div className="py-8 text-center text-xs" style={{ color: t.textSecondary }}>Loading...</div>
+          )}
+          {error && (
+            <div className="py-8 text-center text-xs text-red-500">{error}</div>
+          )}
+          {!loading && !error && folders.length === 0 && (
+            <div className="py-8 text-center text-xs" style={{ color: t.textSecondary }}>No subfolders</div>
+          )}
+          {!loading && !error && folders.map((f) => (
+            <button
+              key={f.path}
+              onClick={() => browse(f.path)}
+              className="w-full flex items-center gap-2.5 px-5 py-2.5 text-left transition-colors"
+              style={{ color: t.text }}
+              onMouseEnter={e => { e.currentTarget.style.background = t.hoverBg; }}
+              onMouseLeave={e => { e.currentTarget.style.background = ''; }}
+            >
+              <FolderOpen size={15} style={{ color: t.accent, flexShrink: 0 }} />
+              <span className="text-xs font-medium truncate flex-1">{f.name}</span>
+              <ChevronRight size={12} style={{ color: t.textMuted, flexShrink: 0 }} />
+            </button>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 flex items-center justify-between gap-3" style={{ borderTop: `1px solid ${t.border}` }}>
+          <span className="text-[10px] truncate flex-1" style={{ color: t.textMuted }}>{current || 'Select a folder'}</span>
+          <div className="flex gap-2">
+            <button onClick={onClose}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+              style={{ color: t.textSecondary }}>
+              Cancel
+            </button>
+            <button
+              onClick={() => { if (current) { onSelect(current); onClose(); } }}
+              disabled={!current}
+              className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-40"
+              style={{ background: t.accent, color: t.btnText }}>
+              Select Folder
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export default function DistributionRuleEditor({ rule, theme: t, onSave, onCancel, onRunNow }) {
   const isEdit = !!rule?.id;
   const [form, setForm] = useState({ ...EMPTY_RULE });
   const [reports, setReports] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [folderBrowserOpen, setFolderBrowserOpen] = useState(false);
 
   useEffect(() => {
     if (rule && rule.id) {
@@ -192,11 +295,24 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
 
           {form.delivery_method !== 'email' && (
             <div>
-              <label className="block text-[11px] font-medium mb-1.5" style={{ color: t.textSecondary }}>Save Path *</label>
-              <input type="text" value={form.save_path} onChange={e => set('save_path', e.target.value)}
-                placeholder="C:\Reports"
-                className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors"
-                style={{ ...inputStyle, '--tw-ring-color': t.accentBg }} />
+              <label className="block text-[11px] font-medium mb-1.5" style={{ color: t.textSecondary }}>Save Path (on server) *</label>
+              <div className="flex gap-2">
+                <input type="text" value={form.save_path} onChange={e => set('save_path', e.target.value)}
+                  placeholder="Click Browse to select a folder on the server"
+                  className="flex-1 px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors"
+                  style={{ ...inputStyle, '--tw-ring-color': t.accentBg }} />
+                <button type="button" onClick={() => setFolderBrowserOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap"
+                  style={{ background: t.accent, color: t.btnText }}>
+                  <FolderOpen size={13} /> Browse
+                </button>
+              </div>
+              <FolderBrowserModal
+                open={folderBrowserOpen}
+                onClose={() => setFolderBrowserOpen(false)}
+                onSelect={(path) => set('save_path', path)}
+                theme={t}
+              />
             </div>
           )}
         </div>
