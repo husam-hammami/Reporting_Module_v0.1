@@ -1,4 +1,4 @@
-import { LayoutGrid, BarChart2, Settings, Table2 } from 'lucide-react';
+import { LayoutGrid, BarChart2, Settings, Table2, Send } from 'lucide-react';
 import { Roles } from './Roles';
 
 export const menuItems = [
@@ -22,6 +22,13 @@ export const menuItems = [
     tooltip: 'View released table reports',
     link: '/reports',
     roles: [Roles.Admin, Roles.Manager, Roles.Operator],
+  },
+  {
+    name: 'Distribution',
+    icon: Send,
+    tooltip: 'Scheduled report delivery',
+    link: '/distribution',
+    roles: [Roles.Admin, Roles.Manager],
   },
   {
     name: 'Engineering',

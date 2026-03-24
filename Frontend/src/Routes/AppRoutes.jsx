@@ -23,6 +23,7 @@ import PaginatedReportBuilder from '../Pages/ReportBuilder/PaginatedReportBuilde
 import ReportViewer, { DashboardViewer, TableReportViewer } from '../Pages/Reports/ReportViewer';
 import FormulaManager from '../Pages/Settings/Formulas/FormulaManager';
 import ReportDistribution from '../Pages/Settings/ReportDistribution/ReportDistribution';
+import DistributionPage from '../Pages/Distribution/DistributionPage';
 import ShiftsSettings from '../Pages/Settings/Shifts/ShiftsSettings';
 import UserManagement from '../Pages/Settings/Users/UserManagement';
 import LicenseActivations from '../Pages/Settings/LicenseActivations/LicenseActivations';
@@ -162,6 +163,16 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
                 <TableReportViewer />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Distribution */}
+          <Route
+            path="distribution"
+            element={
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager]}>
+                <DistributionPage />
               </ProtectedRoute>
             }
           />
