@@ -9,9 +9,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Config file path (relative to backend directory)
-_BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-_CONFIG_DIR = os.path.join(_BASE_DIR, "config")
+from config_paths import get_config_dir
+_CONFIG_DIR = get_config_dir()
 _CONFIG_FILE = os.path.join(_CONFIG_DIR, "demo_mode.json")
 
 # In-memory cache: (value, timestamp)

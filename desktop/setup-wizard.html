@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hercules — Setup Wizard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0a1018;
+      color: #e1e8f0;
+      padding: 32px;
+    }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .subtitle { color: #6b7f94; font-size: 13px; margin-bottom: 24px; }
+    .step { display: none; }
+    .step.active { display: block; }
+    .step-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #93c5fd; }
+    label { display: block; color: #8898aa; font-size: 12px; margin-bottom: 4px; margin-top: 12px; }
+    input, select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #1e2d40;
+      border-radius: 8px;
+      background: #0f1923;
+      color: #e1e8f0;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: #3b82f6; }
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+    .btn-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+    button {
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: 1px solid #1e2d40;
+      background: #0f1923;
+      color: #e1e8f0;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:hover { background: #162232; }
+    button.primary { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+    button.primary:hover { background: #2563eb; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+    .checkbox-row input { width: auto; }
+    .progress { display: flex; gap: 6px; margin-bottom: 24px; }
+    .progress .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #1e2d40;
+    }
+    .progress .dot.active { background: #3b82f6; }
+    .progress .dot.done { background: #22c55e; }
+  </style>
+</head>
+<body>
+  <h1>Hercules Setup</h1>
+  <p class="subtitle">First-time configuration — this only runs once.</p>
+
+  <div class="progress" id="progress">
+    <div class="dot active" data-step="0"></div>
+    <div class="dot" data-step="1"></div>
+    <div class="dot" data-step="2"></div>
+    <div class="dot" data-step="3"></div>
+  </div>
+
+  <!-- Step 0: Database config -->
+  <div class="step active" id="step-0">
+    <div class="step-title">Database Configuration</div>
+    <p style="color: #6b7f94; font-size: 12px; margin-bottom: 12px;">The app uses a bundled PostgreSQL database. Configure the port and password below.</p>
+    <div class="row">
+      <div>
+        <label>PostgreSQL Port</label>
+        <input type="number" id="db-port" value="5435" min="1024" max="65535">
+      </div>
+      <div>
+        <label>Database Password</label>
+        <input type="password" id="db-password" placeholder="Set a password for the database">
+      </div>
+    </div>
+    <p style="color: #4b5e73; font-size: 11px; margin-top: 8px;">Port 5435 avoids conflict with existing PostgreSQL installations (5432). Leave password blank for trust authentication.</p>
+    <div class="btn-row">
+      <button class="primary" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 1: PLC config -->
+  <div class="step" id="step-1">
+    <div class="step-title">PLC Connection</div>
+    <label>PLC IP Address</label>
+    <input type="text" id="plc-ip" value="192.168.23.11" placeholder="192.168.23.11">
+    <div class="row">
+      <div>
+        <label>Rack</label>
+        <input type="number" id="plc-rack" value="0" min="0">
+      </div>
+      <div>
+        <label>Slot</label>
+        <input type="number" id="plc-slot" value="3" min="0">
+      </div>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="demo-mode">
+      <label for="demo-mode" style="margin: 0; color: #e1e8f0;">Enable Demo Mode (PLC emulator)</label>
+    </div>
+    <div class="btn-row">
+      <button class="primary" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Admin user -->
+  <div class="step" id="step-2">
+    <div class="step-title">Admin Account</div>
+    <label>Username</label>
+    <input type="text" id="admin-user" value="admin">
+    <label>Password</label>
+    <input type="password" id="admin-pass" value="">
+    <label>Confirm Password</label>
+    <input type="password" id="admin-pass2" value="">
+    <div class="btn-row">
+      <button onclick="prevStep()">Back</button>
+      <button class="primary" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 3: SMTP (optional) -->
+  <div class="step" id="step-3">
+    <div class="step-title">Email / SMTP (Optional)</div>
+    <p style="color: #6b7f94; font-size: 12px; margin-bottom: 12px;">Skip this step if you don't need automated report emails.</p>
+    <label>SMTP Server</label>
+    <input type="text" id="smtp-server" placeholder="smtp.gmail.com">
+    <div class="row">
+      <div>
+        <label>Port</label>
+        <input type="number" id="smtp-port" value="465">
+      </div>
+      <div>
+        <label>Username</label>
+        <input type="text" id="smtp-user" placeholder="user@company.com">
+      </div>
+    </div>
+    <label>Password</label>
+    <input type="password" id="smtp-pass">
+    <label>From Address</label>
+    <input type="email" id="smtp-from" placeholder="reports@company.com">
+    <div class="btn-row">
+      <button onclick="prevStep()">Back</button>
+      <button class="primary" onclick="finishSetup()">Complete Setup</button>
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 0;
+    const totalSteps = 4;
+
+    function updateProgress() {
+      document.querySelectorAll('.progress .dot').forEach((dot, i) => {
+        dot.className = 'dot' + (i < currentStep ? ' done' : i === currentStep ? ' active' : '');
+      });
+      document.querySelectorAll('.step').forEach((s, i) => {
+        s.classList.toggle('active', i === currentStep);
+      });
+    }
+
+    function nextStep() {
+      if (currentStep < totalSteps - 1) { currentStep++; updateProgress(); }
+    }
+
+    function prevStep() {
+      if (currentStep > 0) { currentStep--; updateProgress(); }
+    }
+
+    function finishSetup() {
+      const config = {
+        db_port: parseInt(document.getElementById('db-port').value) || 5435,
+        db_password: document.getElementById('db-password').value,
+        plc: {
+          ip: document.getElementById('plc-ip').value.trim() || '192.168.23.11',
+          rack: parseInt(document.getElementById('plc-rack').value) || 0,
+          slot: parseInt(document.getElementById('plc-slot').value) || 3,
+        },
+        demo_mode: document.getElementById('demo-mode').checked,
+        admin: {
+          username: document.getElementById('admin-user').value.trim() || 'admin',
+          password: document.getElementById('admin-pass').value || 'admin',
+        },
+        smtp: {
+          smtp_server: document.getElementById('smtp-server').value.trim(),
+          smtp_port: parseInt(document.getElementById('smtp-port').value) || 465,
+          username: document.getElementById('smtp-user').value.trim(),
+          password: document.getElementById('smtp-pass').value,
+          from_address: document.getElementById('smtp-from').value.trim(),
+        },
+        setup_complete: true,
+      };
+
+      if (window.hercules) {
+        window.hercules.setupComplete(config);
+      }
+    }
+  </script>
+</body>
+</html>

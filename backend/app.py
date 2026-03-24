@@ -3,9 +3,21 @@ os.environ['EVENTLET_NO_GREENDNS'] = 'yes'
 import eventlet
 eventlet.monkey_patch()
 import logging
+import sys
+
+# Frozen-exe path resolution (PyInstaller sets sys.frozen)
+if getattr(sys, 'frozen', False):
+    _BUNDLE_DIR = sys._MEIPASS
+    _INSTALL_DIR = os.path.dirname(sys.executable)
+else:
+    _BUNDLE_DIR = os.path.dirname(os.path.abspath(__file__))
+    _INSTALL_DIR = _BUNDLE_DIR
+
+sys.path.insert(0, _BUNDLE_DIR)
+
 try:
     from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+    load_dotenv(os.path.join(_BUNDLE_DIR, '.env'))
 except ImportError:
     pass
 import webbrowser
@@ -14,8 +26,6 @@ from flask import Flask, jsonify, request, render_template, redirect, url_for, f
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from contextlib import closing
-import sys
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from tags_bp import tags_bp
 from tag_groups_bp import tag_groups_bp
 from live_monitor_bp import live_monitor_bp
@@ -57,7 +67,7 @@ logger = logging.getLogger(__name__)
 _historian_worker_started = False
 logger.setLevel(logging.INFO)
 # Initialize the Flask application
-app = Flask(__name__, static_folder='frontend/dist')
+app = Flask(__name__, static_folder=os.path.join(_BUNDLE_DIR, 'frontend', 'dist'))
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'hercules-dev-secret-key-2026')
 
 # Session cookie: use env for HTTP (dev/remote) vs HTTPS (production).
@@ -398,15 +408,21 @@ class PooledConnection:
     def __getattr__(self, name):
         return getattr(self._conn, name)
 
+_DB_NAME = os.getenv('POSTGRES_DB', 'Dynamic_DB_Hercules')
+_DB_USER = os.getenv('POSTGRES_USER', 'postgres')
+_DB_PASS = os.getenv('POSTGRES_PASSWORD', 'Admin@123')
+_DB_HOST = os.getenv('DB_HOST', '127.0.0.1')
+_DB_PORT = int(os.getenv('DB_PORT', 5433))
+
 try:
     db_pool = psycopg2.pool.ThreadedConnectionPool(
         minconn=5,
         maxconn=20,
-        dbname=os.getenv('POSTGRES_DB', 'Dynamic_DB_Hercules'),
-        user=os.getenv('POSTGRES_USER', 'postgres'),
-        password=os.getenv('POSTGRES_PASSWORD', 'Admin@123'),
-        host=os.getenv('DB_HOST', '127.0.0.1'),
-        port=int(os.getenv('DB_PORT', 5433)),
+        dbname=_DB_NAME,
+        user=_DB_USER,
+        password=_DB_PASS,
+        host=_DB_HOST,
+        port=_DB_PORT,
         connect_timeout=10
     )
     logger.info("Database connection pool created (5-20 connections, 10s timeout)")
@@ -426,13 +442,13 @@ def get_db_connection():
         except Exception as e:
             logger.warning(f"Failed to get connection from pool: {e}, creating new connection")
 
-    # Fallback: create new connection if pool fails (same defaults as run_users_migration.py)
+    # Fallback: create new connection if pool fails (same defaults as pool above)
     conn = psycopg2.connect(
-        dbname=os.getenv('POSTGRES_DB', 'dynamic_db_hercules'),
-        user=os.getenv('POSTGRES_USER', 'postgres'),
-        password=os.getenv('POSTGRES_PASSWORD', 'Hercules'),
-        host=os.getenv('DB_HOST', '127.0.0.1'),
-        port=int(os.getenv('DB_PORT', 5432)),
+        dbname=_DB_NAME,
+        user=_DB_USER,
+        password=_DB_PASS,
+        host=_DB_HOST,
+        port=_DB_PORT,
         cursor_factory=RealDictCursor,
         connect_timeout=10
     )
@@ -853,6 +869,12 @@ try:
         logger.info("Demo mode: seeded emulator with all DB tags")
 except Exception as e:
     logger.warning("Demo mode emulator seed skipped: %s", e)
+
+
+# Health endpoint for Electron / desktop launcher to poll during startup
+@app.route('/health')
+def health_check():
+    return jsonify({'status': 'ok'}), 200
 
 
 # React catch-all route - MUST be last to avoid intercepting API routes

@@ -10,8 +10,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-_BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-_CONFIG_DIR = os.path.join(_BASE_DIR, "config")
+from config_paths import get_config_dir
+_CONFIG_DIR = get_config_dir()
 _CONFIG_FILE = os.path.join(_CONFIG_DIR, "plc_config.json")
 
 _DEFAULTS = {"ip": "192.168.23.11", "rack": 0, "slot": 3}

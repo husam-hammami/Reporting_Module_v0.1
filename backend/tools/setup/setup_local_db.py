@@ -75,6 +75,11 @@ MIGRATION_ORDER = [
     'alter_tag_history_nullable_layout.sql',
     # Phase 6: License activation
     'create_licenses_table.sql',
+    # Phase 7: Mappings + archive unique
+    'create_mappings_table.sql',
+    'add_tag_history_archive_unique_universal.sql',
+    # Phase 8: Desktop app — license machine info
+    'add_license_machine_info.sql',
 ]
 
 DIVIDER = '=' * 60

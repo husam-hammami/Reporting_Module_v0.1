@@ -1,0 +1,54 @@
+{
+  "name": "hercules-reporting",
+  "version": "1.0.0",
+  "description": "Hercules Reporting Module — Windows Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "pack": "electron-builder --dir"
+  },
+  "author": "Hercules",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.hercules.reporting",
+    "productName": "Hercules Reporting Module",
+    "win": {
+      "target": "nsis",
+      "icon": "icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "include": "installer-scripts/vcredist-check.nsh"
+    },
+    "extraResources": [
+      {
+        "from": "../backend/dist/hercules-backend",
+        "to": "backend"
+      },
+      {
+        "from": "pgsql",
+        "to": "pgsql"
+      },
+      {
+        "from": "vcredist",
+        "to": "vcredist"
+      }
+    ],
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "license-pending.html",
+      "license-denied.html",
+      "setup-wizard.html"
+    ]
+  }
+}

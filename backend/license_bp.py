@@ -6,7 +6,7 @@ managing machine license activations (superadmin only).
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from functools import wraps
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
@@ -48,9 +48,21 @@ def _require_superadmin(f):
 # Public routes (called by customer EXE, no auth required)
 # ---------------------------------------------------------------------------
 
+def _effective_status(row):
+    """Return the effective status, enforcing expiry server-side."""
+    status = row['status']
+    expiry = row.get('expiry')
+    if status == 'approved' and expiry:
+        expiry_date = expiry if isinstance(expiry, date) else datetime.strptime(str(expiry), '%Y-%m-%d').date()
+        if expiry_date < date.today():
+            return 'expired'
+    return status
+
+
 @license_bp.route('/license/register', methods=['POST'])
 def register_machine():
-    """Register or check-in a machine. Creates a pending row if new."""
+    """Register or check-in a machine. Creates a pending row if new.
+    Accepts rich machine info: mac_address, ip_address, os_version, cpu_info, ram_gb, disk_serial."""
     data = request.get_json(silent=True) or {}
     machine_id = (data.get('machine_id') or '').strip()
     if not machine_id:
@@ -58,6 +70,12 @@ def register_machine():
 
     user_id = (data.get('user_id') or '').strip() or None
     hostname = (data.get('hostname') or '').strip() or None
+    mac_address = (data.get('mac_address') or '').strip() or None
+    ip_address = (data.get('ip_address') or '').strip() or None
+    os_version = (data.get('os_version') or '').strip() or None
+    cpu_info = (data.get('cpu_info') or '').strip() or None
+    ram_gb = data.get('ram_gb')
+    disk_serial = (data.get('disk_serial') or '').strip() or None
 
     get_conn = _get_db_connection()
     try:
@@ -73,18 +91,32 @@ def register_machine():
 
             if row:
                 cur.execute(
-                    "UPDATE licenses SET last_seen_at = NOW(), user_id = COALESCE(%s, user_id), hostname = COALESCE(%s, hostname) WHERE machine_id = %s",
-                    (user_id, hostname, machine_id),
+                    """UPDATE licenses SET
+                        last_seen_at = NOW(),
+                        user_id = COALESCE(%s, user_id),
+                        hostname = COALESCE(%s, hostname),
+                        mac_address = COALESCE(%s, mac_address),
+                        ip_address = COALESCE(%s, ip_address),
+                        os_version = COALESCE(%s, os_version),
+                        cpu_info = COALESCE(%s, cpu_info),
+                        ram_gb = COALESCE(%s, ram_gb),
+                        disk_serial = COALESCE(%s, disk_serial)
+                    WHERE machine_id = %s""",
+                    (user_id, hostname, mac_address, ip_address, os_version,
+                     cpu_info, ram_gb, disk_serial, machine_id),
                 )
                 actual.commit()
                 expiry_str = row['expiry'].strftime('%Y-%m-%d') if row['expiry'] else None
-                return jsonify({'status': row['status'], 'expiry': expiry_str}), 200
+                return jsonify({'status': _effective_status(row), 'expiry': expiry_str}), 200
 
             cur.execute(
-                """INSERT INTO licenses (machine_id, user_id, hostname, status)
-                   VALUES (%s, %s, %s, 'pending')
+                """INSERT INTO licenses
+                    (machine_id, user_id, hostname, status, mac_address, ip_address,
+                     os_version, cpu_info, ram_gb, disk_serial)
+                   VALUES (%s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s)
                    RETURNING id""",
-                (machine_id, user_id, hostname),
+                (machine_id, user_id, hostname, mac_address, ip_address,
+                 os_version, cpu_info, ram_gb, disk_serial),
             )
             actual.commit()
             return jsonify({'status': 'pending', 'expiry': None}), 200
@@ -96,7 +128,7 @@ def register_machine():
 
 @license_bp.route('/license/status', methods=['GET'])
 def license_status():
-    """Return license status for a machine_id (no record creation)."""
+    """Return license status for a machine_id (no record creation). Updates last_seen_at."""
     machine_id = (request.args.get('machine_id') or '').strip()
     if not machine_id:
         return jsonify({'error': 'machine_id query param required'}), 400
@@ -113,8 +145,14 @@ def license_status():
             row = cur.fetchone()
             if not row:
                 return jsonify({'error': 'Not found'}), 404
+            # Update last_seen_at so admin can tell if a machine is still active
+            cur.execute(
+                "UPDATE licenses SET last_seen_at = NOW() WHERE machine_id = %s",
+                (machine_id,),
+            )
+            actual.commit()
             expiry_str = row['expiry'].strftime('%Y-%m-%d') if row['expiry'] else None
-            return jsonify({'status': row['status'], 'expiry': expiry_str}), 200
+            return jsonify({'status': _effective_status(row), 'expiry': expiry_str}), 200
     except Exception as e:
         logger.error("license/status error: %s", e, exc_info=True)
         return jsonify({'error': 'Server error', 'detail': str(e)}), 500
@@ -159,13 +197,19 @@ def list_licenses():
 @login_required
 @_require_superadmin
 def update_license(license_id):
-    """Approve, deny, or extend a license. Default expiry = today + 15 days on approve."""
+    """Approve, deny, or extend a license. Default expiry = today + 15 days on approve.
+    Also supports updating the admin-editable 'label' field."""
     data = request.get_json(silent=True) or {}
     new_status = data.get('status')
     expiry_str = data.get('expiry')
+    label = data.get('label')
 
     sets = []
     params = []
+
+    if label is not None:
+        sets.append("label = %s")
+        params.append(label.strip())
 
     if new_status:
         if new_status not in ('approved', 'denied', 'pending'):

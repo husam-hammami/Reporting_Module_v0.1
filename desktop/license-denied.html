@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hercules — License Denied</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0a1018;
+      color: #e1e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .card {
+      background: #0f1923;
+      border: 1px solid #1e2d40;
+      border-radius: 16px;
+      padding: 48px 40px;
+      text-align: center;
+      max-width: 420px;
+    }
+    .icon { font-size: 48px; margin-bottom: 16px; }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    p { color: #6b7f94; font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 16px;
+    }
+    .denied { background: #2d0a0a; color: #ef4444; }
+    .expired { background: #2d1f00; color: #f59e0b; }
+    .error { background: #1a1a2e; color: #8b5cf6; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">&#128274;</div>
+    <h1>Access Denied</h1>
+    <p>Your license has been denied, expired, or could not be verified.</p>
+    <p>Please contact your administrator to resolve this issue.</p>
+    <div class="status denied">Denied / Expired</div>
+  </div>
+</body>
+</html>
