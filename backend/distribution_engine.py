@@ -10,6 +10,7 @@ import re
 import json
 import logging
 import smtplib
+import base64
 from datetime import datetime, timedelta
 from email.message import EmailMessage
 from html import escape as html_escape
@@ -330,14 +331,247 @@ def _resolve_cell(cell, tag_data):
     return '—'
 
 
+# ── Row visibility (mirrors frontend isRowHidden) ────────────────────────────
+
+def _is_row_hidden(row, tag_data):
+    """Return True if the row should be hidden (bin inactive)."""
+    if not row.get('hideWhenInactive'):
+        return False
+    ref_col = row.get('hideReferenceCol', 0) or 0
+    cells = row.get('cells', [])
+    if ref_col >= len(cells):
+        return False
+    cell = cells[ref_col]
+    if not cell:
+        return False
+    resolved = _resolve_cell(cell, tag_data)
+    if resolved in ('—', ''):
+        return True
+    cleaned = re.sub(r'[^0-9.\-]', '', str(resolved))
+    if cleaned:
+        try:
+            return float(cleaned) == 0
+        except (TypeError, ValueError):
+            pass
+    return False
+
+
+# ── Logo helpers ─────────────────────────────────────────────────────────────
+
+def _file_to_base64_data_uri(filepath):
+    """Read an image file and return a data:image URI for HTML embedding."""
+    if not os.path.isfile(filepath):
+        return ''
+    ext = os.path.splitext(filepath)[1].lower()
+    mime = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+            'svg': 'image/svg+xml', 'gif': 'image/gif'}.get(ext.lstrip('.'), 'image/png')
+    with open(filepath, 'rb') as f:
+        encoded = base64.b64encode(f.read()).decode('ascii')
+    return f'data:{mime};base64,{encoded}'
+
+
+def _get_logo_data_uris():
+    """Return (hercules_uri, asm_uri, client_logo_uri) for embedding in HTML reports."""
+    static_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static', 'assets')
+
+    # Find logo files (Vite hashes filenames, so glob for the pattern)
+    hercules_uri = ''
+    asm_uri = ''
+    for fname in os.listdir(static_dir) if os.path.isdir(static_dir) else []:
+        if fname.startswith('Hercules_New') and fname.endswith('.png'):
+            hercules_uri = _file_to_base64_data_uri(os.path.join(static_dir, fname))
+        elif fname.startswith('Asm_Logo') and fname.endswith('.png'):
+            asm_uri = _file_to_base64_data_uri(os.path.join(static_dir, fname))
+
+    # Client logo from DB (stored as base64 data URI)
+    client_logo_uri = ''
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual_conn = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual_conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("SELECT value FROM system_settings WHERE key = 'client_logo'")
+            row = cur.fetchone()
+            if row and row.get('value'):
+                client_logo_uri = row['value']
+    except Exception:
+        pass
+
+    return hercules_uri, asm_uri, client_logo_uri
+
+
+# ── Shared CSS (matches frontend PaginatedReportPreview / ReportViewer) ──────
+
+_SHARED_CSS = """
+@page { size: A4; margin: 8mm 10mm; }
+body {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: #1a1a2e;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ── Logo header bar ── */
+.logo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+  padding: 0 0 2px 0;
+}
+.logo-header img.hercules { height: 44px; width: auto; filter: brightness(0.15); }
+.logo-header .right-logos { display: flex; align-items: center; gap: 14px; }
+.logo-header img.client { height: 40px; width: auto; max-width: 140px; object-fit: contain; }
+.logo-header img.asm { height: 40px; width: auto; object-fit: contain; }
+
+/* ── Report header ── */
+h1.report-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  margin: 2px 0 2px 0;
+}
+p.subtitle { font-size: 13px; color: #64748b; margin: 0 0 2px 0; }
+p.period   { font-size: 12px; color: #94a3b8; font-weight: 500; margin: 0 0 4px 0; }
+.header-rule {
+  margin-top: 4px;
+  height: 1.5px;
+  background: linear-gradient(90deg, #0f3460, #1a5276, #0f3460);
+}
+
+/* ── Section label ── */
+.section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 12px 0 4px 0;
+}
+.kpi-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin: 10px 0 4px 0;
+}
+
+/* ── KPI row (right-aligned inline, matching frontend) ── */
+.kpi-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.kpi-item { text-align: right; }
+.kpi-item .kpi-label { font-size: 11px; font-weight: 500; color: #64748b; }
+.kpi-item .kpi-value { font-size: 14px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
+
+/* ── Data tables ── */
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  word-break: break-word;
+  margin: 4px 0 8px 0;
+  font-size: 13px;
+}
+table.data-table th {
+  padding: 6px 8px;
+  font-weight: 700;
+  border: 1px solid #d1d5db;
+  background: #f1f5f9;
+  color: #334155;
+}
+table.data-table td {
+  padding: 5px 8px;
+  border: 1px solid #e2e8f0;
+}
+table.data-table tbody tr:nth-child(even) { background: #f8fafc; }
+table.data-table .summary-row { font-weight: 700; background: #f1f5f9 !important; }
+
+/* ── Text blocks ── */
+.text-block { margin-bottom: 6px; }
+
+/* ── Signature block ── */
+.sig-block { margin-top: 24px; margin-bottom: 8px; }
+.sig-block table { width: 100%; border-collapse: collapse; }
+.sig-block td { padding: 0 16px; vertical-align: top; }
+.sig-label { font-size: 11px; font-weight: 500; color: #64748b; margin-bottom: 24px; }
+.sig-line  { border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; font-size: 12px; color: #334155; min-height: 18px; }
+.sig-date  { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+
+/* ── Page footer ── */
+.page-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 10mm;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/* ── Dashboard grid (for dashboard-type reports) ── */
+.dashboard-section { margin-bottom: 12px; }
+.dashboard-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+}
+.widget-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+.widget-value { font-size: 22px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
+.widget-unit  { font-size: 13px; font-weight: 500; color: #94a3b8; margin-left: 4px; }
+.widget-silo  { font-size: 14px; color: #334155; }
+.widget-chart-note { font-size: 11px; color: #94a3b8; font-style: italic; padding: 8px 0; }
+
+/* ── Generated footer ── */
+.gen-footer {
+  margin-top: 28px;
+  font-size: 10px;
+  color: #94a3b8;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
+}
+"""
+
+
+# ── Logo header HTML builder ─────────────────────────────────────────────────
+
+def _build_logo_header_html(hercules_uri, asm_uri, client_logo_uri):
+    """Build the logo header bar matching frontend ReportLogoHeader."""
+    parts = ['<div class="logo-header">']
+    if hercules_uri:
+        parts.append(f'<img class="hercules" src="{hercules_uri}" alt="Hercules" />')
+    else:
+        parts.append('<span></span>')
+    parts.append('<div class="right-logos">')
+    if client_logo_uri:
+        parts.append(f'<img class="client" src="{client_logo_uri}" alt="Client" />')
+    if asm_uri:
+        parts.append(f'<img class="asm" src="{asm_uri}" alt="ASM" />')
+    parts.append('</div></div>')
+    return '\n'.join(parts)
+
+
 # ── HTML report generation ───────────────────────────────────────────────────
 
 def _generate_dashboard_html(report_name, widgets, tag_data, from_dt, to_dt):
-    """Generate HTML report from dashboard widgets."""
-    period = f"{from_dt.strftime('%Y-%m-%d %H:%M')} — {to_dt.strftime('%Y-%m-%d %H:%M')}"
+    """Generate HTML report from dashboard widgets, styled to match frontend viewer."""
+    period = f"{from_dt.strftime('%d/%m/%Y, %H:%M:%S')} to {to_dt.strftime('%d/%m/%Y, %H:%M:%S')}"
+    hercules_uri, asm_uri, client_logo_uri = _get_logo_data_uris()
 
-    rows_html = ""
-    for widget in widgets:
+    cards_html = ""
+    for widget in sorted(widgets, key=lambda w: (w.get('y', 0), w.get('x', 0))):
         w_type = widget.get('type', '')
         config = widget.get('config', {})
         label = config.get('label') or config.get('title') or widget.get('i', w_type)
@@ -345,82 +579,114 @@ def _generate_dashboard_html(report_name, widgets, tag_data, from_dt, to_dt):
         if w_type in ('kpi', 'gauge', 'stat'):
             ds = config.get('dataSource', {})
             tag = ds.get('tagName', '')
-            val = tag_data.get(tag, 'N/A')
+            val = tag_data.get(tag, '—')
             if isinstance(val, float):
-                val = f"{val:.2f}"
+                val = f"{val:,.2f}"
             unit = config.get('unit', '')
-            rows_html += f"<tr><td>{_esc(label)}</td><td>{_esc(val)} {_esc(unit)}</td></tr>\n"
+            unit_html = f'<span class="widget-unit">{_esc(unit)}</span>' if unit else ''
+            cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div class="widget-value">{_esc(val)}{unit_html}</div></div>\n'
 
         elif w_type == 'silo':
             ds = config.get('dataSource', {})
             tag = ds.get('tagName', '')
-            val = tag_data.get(tag, 'N/A')
+            val = tag_data.get(tag, '—')
+            if isinstance(val, float):
+                val = f"{val:.1f}"
             cap_tag = config.get('capacityTag', '')
-            cap_val = tag_data.get(cap_tag, 'N/A')
+            cap_val = tag_data.get(cap_tag, '—')
             tons_tag = config.get('tonsTag', '')
-            tons_val = tag_data.get(tons_tag, 'N/A')
-            rows_html += f"<tr><td>{_esc(label)}</td><td>Level: {_esc(val)}%, Capacity: {_esc(cap_val)}, Tons: {_esc(tons_val)}</td></tr>\n"
+            tons_val = tag_data.get(tons_tag, '—')
+            if isinstance(cap_val, float):
+                cap_val = f"{cap_val:,.0f}"
+            if isinstance(tons_val, float):
+                tons_val = f"{tons_val:,.1f}"
+            cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+            cards_html += f'<div class="widget-silo">Level: <strong>{_esc(val)}%</strong> &nbsp;|&nbsp; Capacity: <strong>{_esc(cap_val)}</strong> &nbsp;|&nbsp; Tons: <strong>{_esc(tons_val)}</strong></div></div>\n'
 
-        elif w_type == 'chart':
+        elif w_type in ('chart', 'barchart'):
+            series_parts = []
             for s in config.get('series', []):
                 s_ds = s.get('dataSource', {})
                 s_tag = s_ds.get('tagName', '')
-                s_val = tag_data.get(s_tag, 'N/A')
+                s_val = tag_data.get(s_tag, '—')
                 if isinstance(s_val, float):
-                    s_val = f"{s_val:.2f}"
+                    s_val = f"{s_val:,.2f}"
                 s_label = s.get('label', s_tag)
-                rows_html += f"<tr><td>{_esc(label)} — {_esc(s_label)}</td><td>{_esc(s_val)}</td></tr>\n"
+                series_parts.append(f'<span class="kpi-item"><span class="kpi-label">{_esc(s_label)}: </span><span class="kpi-value">{_esc(s_val)}</span></span>')
+            cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+            cards_html += f'<div class="widget-chart-note">Chart — latest data point values:</div>'
+            cards_html += f'<div class="kpi-row" style="justify-content:flex-start">{"  ".join(series_parts)}</div></div>\n'
 
         elif w_type == 'table':
-            for col in config.get('tableColumns', []):
-                col_label = col.get('label', '')
+            cols = config.get('tableColumns', [])
+            header_cells = ''.join(f'<th>{_esc(c.get("label", ""))}</th>' for c in cols)
+            # Single row of latest values
+            data_cells = ''
+            for col in cols:
                 col_type = col.get('sourceType', 'tag')
                 if col_type == 'tag':
-                    c_tag = col.get('tagName', '')
-                    c_val = tag_data.get(c_tag, 'N/A')
+                    c_val = tag_data.get(col.get('tagName', ''), '—')
                     if isinstance(c_val, float):
-                        c_val = f"{c_val:.2f}"
-                    rows_html += f"<tr><td>{_esc(col_label)}</td><td>{_esc(c_val)}</td></tr>\n"
+                        c_val = f"{c_val:,.2f}"
+                    data_cells += f'<td>{_esc(c_val)}</td>'
                 elif col_type == 'group':
-                    vals = [str(tag_data.get(t, 'N/A')) for t in col.get('groupTags', [])]
-                    rows_html += f"<tr><td>{_esc(col_label)}</td><td>{_esc(', '.join(vals))}</td></tr>\n"
+                    vals = [str(tag_data.get(t, '—')) for t in col.get('groupTags', [])]
+                    data_cells += f'<td>{_esc(", ".join(vals))}</td>'
+                elif col_type == 'formula':
+                    result = _evaluate_formula(col.get('formula', ''), tag_data)
+                    data_cells += f'<td>{_esc(f"{result:,.2f}" if isinstance(result, float) else (result or "—"))}</td>'
+                else:
+                    data_cells += '<td>—</td>'
+            cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+            cards_html += f'<table class="data-table"><thead><tr>{header_cells}</tr></thead><tbody><tr>{data_cells}</tr></tbody></table></div>\n'
 
         elif w_type in ('text', 'header', 'image', 'spacer', 'divider'):
-            pass
+            if w_type == 'text':
+                text = config.get('text', config.get('content', ''))
+                if text:
+                    cards_html += f'<div class="text-block" style="font-size:13px;color:#334155">{_esc(text)}</div>\n'
+            elif w_type == 'header':
+                text = config.get('text', config.get('title', ''))
+                if text:
+                    cards_html += f'<div class="text-block" style="font-size:16px;font-weight:700;color:#0f172a">{_esc(text)}</div>\n'
 
         else:
             ds = config.get('dataSource', {})
             tag = ds.get('tagName', '')
             if tag:
-                val = tag_data.get(tag, 'N/A')
-                rows_html += f"<tr><td>{_esc(label)}</td><td>{_esc(val)}</td></tr>\n"
+                val = tag_data.get(tag, '—')
+                if isinstance(val, float):
+                    val = f"{val:,.2f}"
+                unit = config.get('unit', '')
+                unit_html = f'<span class="widget-unit">{_esc(unit)}</span>' if unit else ''
+                cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div class="widget-value">{_esc(val)}{unit_html}</div></div>\n'
+
+    logo_html = _build_logo_header_html(hercules_uri, asm_uri, client_logo_uri)
 
     return f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-body {{ font-family: Arial, sans-serif; font-size: 13px; padding: 20px; color: #222; }}
-h1 {{ font-size: 20px; margin-bottom: 4px; }}
-p.period {{ font-size: 12px; color: #666; margin-top: 0; }}
-table {{ border-collapse: collapse; width: 100%; margin-top: 16px; }}
-th, td {{ border: 1px solid #ccc; padding: 8px 12px; text-align: left; }}
-th {{ background: #f0f4f8; font-weight: 600; }}
-tr:nth-child(even) {{ background: #fafbfc; }}
-</style></head><body>
-<h1>{_esc(report_name)}</h1>
-<p class="period">{_esc(period)}</p>
-<table>
-<tr><th>Metric</th><th>Value</th></tr>
-{rows_html}
-</table>
-<p style="margin-top:24px;font-size:11px;color:#999;">
-Generated by Hercules Reporting Module on {datetime.now().strftime('%Y-%m-%d %H:%M')}
-</p>
+<html><head><meta charset="utf-8"><style>{_SHARED_CSS}</style></head>
+<body style="padding: 4mm 10mm 8mm 10mm; width: 190mm;">
+{logo_html}
+<h1 class="report-title" style="text-align:center">{_esc(report_name)}</h1>
+<p class="period" style="text-align:center">({_esc(period)})</p>
+<div class="header-rule"></div>
+<div class="dashboard-section" style="margin-top:12px">
+{cards_html}
+</div>
+<div class="gen-footer">
+Generated by Hercules Reporting Module on {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}
+</div>
 </body></html>"""
 
 
 def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
-    """Generate HTML report from paginated (Table Report) sections."""
-    period = f"{from_dt.strftime('%Y-%m-%d %H:%M')} — {to_dt.strftime('%Y-%m-%d %H:%M')}"
-    body_parts = []
+    """Generate HTML report from paginated (Table Report) sections, styled to match frontend."""
+    period = f"{from_dt.strftime('%d/%m/%Y, %H:%M:%S')} to {to_dt.strftime('%d/%m/%Y, %H:%M:%S')}"
+    hercules_uri, asm_uri, client_logo_uri = _get_logo_data_uris()
+    logo_html = _build_logo_header_html(hercules_uri, asm_uri, client_logo_uri)
+    body_parts = [logo_html]
+
+    total_rows = sum(len(s.get('rows', [])) for s in (sections or []) if s.get('type') == 'table')
 
     for s in (sections or []):
         s_type = s.get('type', '')
@@ -428,18 +694,48 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
         if s_type == 'header':
             title = s.get('title', report_name) or report_name
             subtitle = s.get('subtitle', '')
-            body_parts.append(f'<h1>{_esc(title)}</h1>')
+            align = s.get('align', 'center')
+            body_parts.append(f'<div style="text-align:{_esc(align)};margin-bottom:4px">')
+            body_parts.append(f'<h1 class="report-title">{_esc(title)}</h1>')
             if subtitle:
                 body_parts.append(f'<p class="subtitle">{_esc(subtitle)}</p>')
+
+            # Status field
+            status_src = s.get('statusSourceType', 'static')
+            status_val = None
+            if status_src == 'static':
+                sv = s.get('statusValue', '')
+                if sv is not None and sv != '':
+                    status_val = str(sv)
+            elif status_src == 'tag' and s.get('statusTagName'):
+                cell = {'sourceType': 'tag', 'tagName': s['statusTagName'],
+                        'decimals': 1, 'unit': '', 'customUnit': ''}
+                status_val = _resolve_cell(cell, tag_data)
+            elif status_src == 'formula' and s.get('statusFormula'):
+                cell = {'sourceType': 'formula', 'formula': s['statusFormula'],
+                        'decimals': 1, 'unit': '', 'customUnit': ''}
+                status_val = _resolve_cell(cell, tag_data)
+            elif status_src == 'group' and s.get('statusGroupTags'):
+                cell = {'sourceType': 'group', 'groupTags': s['statusGroupTags'],
+                        'aggregation': s.get('statusAggregation', 'avg'),
+                        'decimals': 1, 'unit': '', 'customUnit': ''}
+                status_val = _resolve_cell(cell, tag_data)
+
+            if status_val and status_val not in ('—', ''):
+                status_label = s.get('statusLabel', 'Status')
+                body_parts.append(f'<p class="subtitle">{_esc(status_label)}: {_esc(status_val)}</p>')
+
             if s.get('showDateRange', True):
-                body_parts.append(f'<p class="period">{_esc(period)}</p>')
+                body_parts.append(f'<p class="period">({_esc(period)})</p>')
+            body_parts.append('<div class="header-rule"></div>')
+            body_parts.append('</div>')
 
         elif s_type == 'kpi-row':
             label = s.get('label', '')
             kpis = s.get('kpis', [])
             if label:
-                body_parts.append(f'<h3 class="section-label">{_esc(label)}</h3>')
-            kpi_cells = []
+                body_parts.append(f'<div class="kpi-section-label">{_esc(label)}</div>')
+            kpi_items = []
             for k in kpis:
                 kpi_label = k.get('label', '')
                 cell_data = {
@@ -453,61 +749,179 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                     'aggregation': k.get('aggregation', 'avg'),
                 }
                 val = _resolve_cell(cell_data, tag_data)
-                kpi_cells.append(f'<td class="kpi-cell"><div class="kpi-val">{_esc(val)}</div><div class="kpi-label">{_esc(kpi_label)}</div></td>')
-            if kpi_cells:
-                body_parts.append(f'<table class="kpi-table"><tr>{"".join(kpi_cells)}</tr></table>')
+                kpi_items.append(
+                    f'<span class="kpi-item"><span class="kpi-label">{_esc(kpi_label)}: </span>'
+                    f'<span class="kpi-value">{_esc(val)}</span></span>'
+                )
+            if kpi_items:
+                body_parts.append(f'<div class="kpi-row">{"".join(kpi_items)}</div>')
 
         elif s_type == 'table':
             label = s.get('label', '')
             columns = s.get('columns', [])
             rows = s.get('rows', [])
             if label:
-                body_parts.append(f'<h3 class="section-label">{_esc(label)}</h3>')
-            header_cells = ''.join(f'<th style="text-align:{_esc(c.get("align", "left"))}">{_esc(c.get("header", ""))}</th>' for c in columns)
+                body_parts.append(f'<div class="section-label">{_esc(label)}</div>')
+
+            header_cells = ''.join(
+                f'<th style="text-align:{_esc(c.get("align", "left"))}'
+                f'{";width:" + _esc(c["width"]) if c.get("width") and c["width"] != "auto" else ""}">'
+                f'{_esc(c.get("header", ""))}</th>'
+                for c in columns
+            )
             body_parts.append(f'<table class="data-table"><thead><tr>{header_cells}</tr></thead><tbody>')
+
+            visible_row_idx = 0
             for row in rows:
+                if _is_row_hidden(row, tag_data):
+                    continue
                 cells = row.get('cells', [])
+                stripe = ' style="background:#f8fafc"' if visible_row_idx % 2 == 1 else ''
                 td_parts = []
                 for i, cell in enumerate(cells):
                     align = columns[i].get('align', 'left') if i < len(columns) else 'left'
                     val = _resolve_cell(cell, tag_data)
                     td_parts.append(f'<td style="text-align:{_esc(align)}">{_esc(val)}</td>')
-                body_parts.append(f'<tr>{"".join(td_parts)}</tr>')
+                body_parts.append(f'<tr{stripe}>{"".join(td_parts)}</tr>')
+                visible_row_idx += 1
+
+            # Summary row (per-column or legacy)
+            has_summary = s.get('showSummaryRow') or any(
+                c.get('summary', {}).get('enabled') or (c.get('summary', {}).get('type') and c.get('summary', {}).get('type') != 'none')
+                for c in columns
+            )
+            if has_summary:
+                has_per_col = any(
+                    c.get('summary', {}).get('type') and c['summary']['type'] != 'none'
+                    for c in columns
+                )
+                summary_cells = []
+                for ci, col in enumerate(columns):
+                    sm = col.get('summary', {})
+                    sm_type = sm.get('type', 'none')
+
+                    if sm_type == 'label':
+                        summary_cells.append(
+                            f'<td class="summary-row" style="text-align:{_esc(col.get("align", "left"))}">'
+                            f'{_esc(sm.get("label", s.get("summaryLabel", "Total")))}</td>'
+                        )
+                    elif sm_type == 'formula':
+                        result = _evaluate_formula(sm.get('formula', ''), tag_data)
+                        unit = sm.get('unit', '')
+                        val_str = f"{result:,.1f}" if isinstance(result, (int, float)) and result is not None else '—'
+                        if unit and val_str != '—':
+                            val_str = f"{val_str} {unit}"
+                        summary_cells.append(
+                            f'<td class="summary-row" style="text-align:{_esc(col.get("align", "right"))}">{_esc(val_str)}</td>'
+                        )
+                    elif sm_type in ('sum', 'avg', 'min', 'max', 'count'):
+                        # Aggregate from visible row values in this column
+                        col_vals = []
+                        for row in rows:
+                            if _is_row_hidden(row, tag_data):
+                                continue
+                            cell = row.get('cells', [None] * (ci + 1))[ci] if ci < len(row.get('cells', [])) else None
+                            if cell:
+                                rv = _resolve_cell(cell, tag_data)
+                                cleaned = re.sub(r'[^0-9.\-]', '', str(rv))
+                                if cleaned:
+                                    try:
+                                        col_vals.append(float(cleaned))
+                                    except (TypeError, ValueError):
+                                        pass
+                        if col_vals:
+                            if sm_type == 'sum':
+                                agg = sum(col_vals)
+                            elif sm_type == 'avg':
+                                agg = sum(col_vals) / len(col_vals)
+                            elif sm_type == 'min':
+                                agg = min(col_vals)
+                            elif sm_type == 'max':
+                                agg = max(col_vals)
+                            elif sm_type == 'count':
+                                agg = len(col_vals)
+                            else:
+                                agg = None
+                            val_str = f"{agg:,.1f}" if agg is not None else '—'
+                            sm_unit = sm.get('unit', '')
+                            if sm_unit and val_str != '—':
+                                val_str = f"{val_str} {sm_unit}"
+                            agg_label = f"{sm.get('label', '')}: " if sm.get('label') else ''
+                            summary_cells.append(
+                                f'<td class="summary-row" style="text-align:{_esc(col.get("align", "right"))}">{_esc(agg_label)}{_esc(val_str)}</td>'
+                            )
+                        else:
+                            summary_cells.append(f'<td class="summary-row">—</td>')
+                    elif not has_per_col:
+                        # Legacy mode
+                        if ci == 0:
+                            colspan = max(1, len(columns) - 1)
+                            summary_cells.append(
+                                f'<td class="summary-row" style="text-align:right" colspan="{colspan}">'
+                                f'{_esc(s.get("summaryLabel", "Total"))}</td>'
+                            )
+                        elif ci == len(columns) - 1 and s.get('summaryFormula'):
+                            result = _evaluate_formula(s['summaryFormula'], tag_data)
+                            su = s.get('summaryUnit', '')
+                            val_str = f"{result:,.1f}" if isinstance(result, (int, float)) and result is not None else '—'
+                            if su and val_str != '—':
+                                val_str = f"{val_str} {su}"
+                            summary_cells.append(
+                                f'<td class="summary-row" style="text-align:right">{_esc(val_str)}</td>'
+                            )
+                        # else: skip (covered by colspan)
+                    else:
+                        # Per-column mode but this column has no summary
+                        if ci == 0:
+                            summary_cells.append(
+                                f'<td class="summary-row" style="text-align:left">'
+                                f'{_esc(s.get("summaryLabel", "Total"))}</td>'
+                            )
+                        else:
+                            summary_cells.append(f'<td class="summary-row"></td>')
+
+                body_parts.append(f'<tr class="summary-row">{"".join(summary_cells)}</tr>')
+
             body_parts.append('</tbody></table>')
 
         elif s_type == 'text-block':
             content = s.get('content', '')
             fs = s.get('fontSize', '14px')
-            fw = s.get('fontWeight', '400')
+            fw = s.get('fontWeight', '600')
             align = s.get('align', 'left')
-            body_parts.append(f'<p style="font-size:{_esc(fs)};font-weight:{_esc(fw)};text-align:{_esc(align)}">{_esc(content)}</p>')
+            color = s.get('color', '#0f172a')
+            body_parts.append(
+                f'<div class="text-block" style="font-size:{_esc(fs)};font-weight:{_esc(fw)};'
+                f'text-align:{_esc(align)};color:{_esc(color)}">{_esc(content)}</div>'
+            )
 
         elif s_type == 'spacer':
-            h = s.get('height', 24)
+            h = s.get('height', 16)
             body_parts.append(f'<div style="height:{h}px"></div>')
+
+        elif s_type == 'signature-block':
+            fields = s.get('fields', [])
+            if fields:
+                body_parts.append('<div class="sig-block"><table><tr>')
+                for f in fields:
+                    body_parts.append(
+                        f'<td><div class="sig-label">{_esc(f.get("label", ""))}</div>'
+                        f'<div class="sig-line">{_esc(f.get("value", ""))}&nbsp;</div>'
+                        f'<div class="sig-date">Date: _______________</div></td>'
+                    )
+                body_parts.append('</tr></table></div>')
 
     content_html = '\n'.join(body_parts)
 
+    footer_records = f'Records: {total_rows}' if total_rows > 0 else ''
     return f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-body {{ font-family: Arial, sans-serif; font-size: 13px; padding: 24px 28px; color: #222; }}
-h1 {{ font-size: 20px; margin-bottom: 2px; color: #1a1a1a; }}
-h3.section-label {{ font-size: 13px; font-weight: 600; color: #444; margin: 18px 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px; }}
-p.subtitle {{ font-size: 13px; color: #555; margin: 0 0 2px 0; }}
-p.period {{ font-size: 12px; color: #888; margin: 0 0 16px 0; }}
-table.kpi-table {{ width: 100%; margin: 8px 0 16px 0; border-collapse: collapse; }}
-table.kpi-table td.kpi-cell {{ text-align: center; padding: 10px 12px; border: 1px solid #ddd; background: #f8fafc; }}
-.kpi-val {{ font-size: 18px; font-weight: 700; color: #0369a1; }}
-.kpi-label {{ font-size: 10px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; }}
-table.data-table {{ width: 100%; border-collapse: collapse; margin: 6px 0 16px 0; }}
-table.data-table th {{ background: #f0f4f8; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; padding: 8px 10px; border: 1px solid #ccc; color: #444; }}
-table.data-table td {{ padding: 7px 10px; border: 1px solid #ddd; font-size: 12px; }}
-table.data-table tbody tr:nth-child(even) {{ background: #fafbfc; }}
-</style></head><body>
+<html><head><meta charset="utf-8"><style>{_SHARED_CSS}</style></head>
+<body style="padding: 4mm 10mm 8mm 10mm; width: 190mm;">
 {content_html}
-<p style="margin-top:28px;font-size:10px;color:#aaa;border-top:1px solid #eee;padding-top:8px;">
-Generated by Hercules Reporting Module on {datetime.now().strftime('%Y-%m-%d %H:%M')}
-</p>
+<div class="gen-footer" style="display:flex;justify-content:space-between">
+<span>{_esc(footer_records)}</span>
+<span>Generated by Hercules Reporting Module on {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}</span>
+</div>
 </body></html>"""
 
 
@@ -538,8 +952,100 @@ def _html_to_pdf(html_content):
 
 # ── Email delivery ───────────────────────────────────────────────────────────
 
-def _send_email(recipients, subject, body_text, attachment_bytes=None, attachment_name=None):
-    """Send email with optional PDF attachment using SMTP config."""
+def _build_email_html(report_name, from_dt, to_dt, filename):
+    """Build a professionally formatted HTML email body with logos and report info."""
+    hercules_uri, asm_uri, client_logo_uri = _get_logo_data_uris()
+    period = f"{from_dt.strftime('%d/%m/%Y, %H:%M')} — {to_dt.strftime('%d/%m/%Y, %H:%M')}"
+    generated = datetime.now().strftime('%d/%m/%Y, %H:%M')
+
+    # Logo images for the header
+    hercules_img = f'<img src="{hercules_uri}" alt="Hercules" style="height:40px;width:auto" />' if hercules_uri else ''
+    asm_img = f'<img src="{asm_uri}" alt="ASM" style="height:36px;width:auto" />' if asm_uri else ''
+    client_img = f'<img src="{client_logo_uri}" alt="" style="height:36px;width:auto;max-width:120px;object-fit:contain" />' if client_logo_uri else ''
+    right_logos = f'{client_img}{asm_img}'
+
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,system-ui,-apple-system,sans-serif;color:#1a1a2e">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08)">
+
+  <!-- Logo header bar -->
+  <tr>
+    <td style="background:linear-gradient(135deg,#0f1b2d 0%,#1a3a5c 100%);padding:16px 24px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="text-align:left">{hercules_img}</td>
+          <td style="text-align:right">{right_logos}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Report title & period -->
+  <tr>
+    <td style="padding:28px 32px 0 32px;text-align:center">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;margin-bottom:6px">Scheduled Report</div>
+      <div style="font-size:22px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;margin-bottom:4px">{_esc(report_name)}</div>
+      <div style="height:2px;width:60px;background:linear-gradient(90deg,#0f3460,#1a5276);margin:8px auto 12px auto;border-radius:1px"></div>
+    </td>
+  </tr>
+
+  <!-- Details card -->
+  <tr>
+    <td style="padding:0 32px 24px 32px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin-bottom:2px">Report Period</div>
+            <div style="font-size:14px;font-weight:600;color:#334155">{_esc(period)}</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin-bottom:2px">Generated</div>
+            <div style="font-size:14px;font-weight:600;color:#334155">{_esc(generated)}</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin-bottom:2px">Attachment</div>
+            <div style="font-size:14px;font-weight:600;color:#334155">{_esc(filename)}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Message -->
+  <tr>
+    <td style="padding:0 32px 28px 32px">
+      <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
+        Please find the scheduled report <strong>{_esc(report_name)}</strong> attached to this email.
+        The report covers the period shown above. If you have questions about this report, please
+        contact your system administrator.
+      </p>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 32px;text-align:center">
+      <div style="font-size:11px;color:#94a3b8;line-height:1.5">
+        This is an automated email from the <strong style="color:#64748b">Hercules Reporting Module</strong>.
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _send_email(recipients, subject, body_html, attachment_bytes=None, attachment_name=None):
+    """Send HTML email with optional PDF attachment using SMTP config."""
     from smtp_config import get_smtp_config
     cfg = get_smtp_config()
 
@@ -550,7 +1056,14 @@ def _send_email(recipients, subject, body_text, attachment_bytes=None, attachmen
     msg['Subject'] = subject
     msg['From'] = cfg.get('from_address') or cfg.get('username', '')
     msg['To'] = ', '.join(recipients)
-    msg.set_content(body_text)
+
+    # Plain-text fallback for clients that don't render HTML
+    plain_text = (
+        f"Scheduled Report: {attachment_name or 'report'}\n\n"
+        f"Please find the report attached to this email.\n"
+    )
+    msg.set_content(plain_text)
+    msg.add_alternative(body_html, subtype='html')
 
     if attachment_bytes and attachment_name:
         msg.add_attachment(
@@ -666,9 +1179,9 @@ def execute_distribution_rule(rule_id):
         errors = []
 
         if delivery in ('email', 'both') and recipients:
-            subject = f"Report: {report_name} — {datetime.now().strftime('%Y-%m-%d')}"
-            body = f"Attached is the scheduled report '{report_name}'.\nPeriod: {from_dt.strftime('%Y-%m-%d %H:%M')} to {to_dt.strftime('%Y-%m-%d %H:%M')}"
-            email_result = _send_email(recipients, subject, body, content_bytes, filename)
+            subject = f"Hercules Report: {report_name} — {datetime.now().strftime('%Y-%m-%d')}"
+            email_html = _build_email_html(report_name, from_dt, to_dt, filename)
+            email_result = _send_email(recipients, subject, email_html, content_bytes, filename)
             if not email_result['success']:
                 errors.append(f"Email: {email_result['error']}")
 
