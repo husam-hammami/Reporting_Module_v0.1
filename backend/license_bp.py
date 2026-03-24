@@ -6,7 +6,7 @@ managing machine license activations (superadmin only).
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from functools import wraps
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
@@ -44,13 +44,23 @@ def _require_superadmin(f):
     return wrapper
 
 
+def _effective_status(row):
+    """Check expiry server-side. Returns 'expired' if approved but past expiry date."""
+    status = row['status']
+    expiry = row.get('expiry')
+    if status == 'approved' and expiry and expiry < date.today():
+        return 'expired'
+    return status
+
+
 # ---------------------------------------------------------------------------
 # Public routes (called by customer EXE, no auth required)
 # ---------------------------------------------------------------------------
 
 @license_bp.route('/license/register', methods=['POST'])
 def register_machine():
-    """Register or check-in a machine. Creates a pending row if new."""
+    """Register or check-in a machine. Creates a pending row if new.
+    Accepts rich machine info payload from desktop EXE."""
     data = request.get_json(silent=True) or {}
     machine_id = (data.get('machine_id') or '').strip()
     if not machine_id:
@@ -58,6 +68,14 @@ def register_machine():
 
     user_id = (data.get('user_id') or '').strip() or None
     hostname = (data.get('hostname') or '').strip() or None
+
+    # Machine info fields from desktop EXE
+    mac_address = (data.get('mac_address') or '').strip() or None
+    ip_address = (data.get('ip_address') or '').strip() or None
+    os_version = (data.get('os_version') or '').strip() or None
+    cpu_info = (data.get('cpu_info') or '').strip() or None
+    ram_gb = data.get('ram_gb')
+    disk_serial = (data.get('disk_serial') or '').strip() or None
 
     get_conn = _get_db_connection()
     try:
@@ -72,19 +90,36 @@ def register_machine():
             row = cur.fetchone()
 
             if row:
+                # Update last_seen_at and machine info on every check-in
                 cur.execute(
-                    "UPDATE licenses SET last_seen_at = NOW(), user_id = COALESCE(%s, user_id), hostname = COALESCE(%s, hostname) WHERE machine_id = %s",
-                    (user_id, hostname, machine_id),
+                    """UPDATE licenses SET
+                        last_seen_at = NOW(),
+                        user_id = COALESCE(%s, user_id),
+                        hostname = COALESCE(%s, hostname),
+                        mac_address = COALESCE(%s, mac_address),
+                        ip_address = COALESCE(%s, ip_address),
+                        os_version = COALESCE(%s, os_version),
+                        cpu_info = COALESCE(%s, cpu_info),
+                        ram_gb = COALESCE(%s, ram_gb),
+                        disk_serial = COALESCE(%s, disk_serial)
+                    WHERE machine_id = %s""",
+                    (user_id, hostname, mac_address, ip_address, os_version,
+                     cpu_info, ram_gb, disk_serial, machine_id),
                 )
                 actual.commit()
+                effective = _effective_status(row)
                 expiry_str = row['expiry'].strftime('%Y-%m-%d') if row['expiry'] else None
-                return jsonify({'status': row['status'], 'expiry': expiry_str}), 200
+                return jsonify({'status': effective, 'expiry': expiry_str}), 200
 
+            # New machine — insert with pending status
             cur.execute(
-                """INSERT INTO licenses (machine_id, user_id, hostname, status)
-                   VALUES (%s, %s, %s, 'pending')
+                """INSERT INTO licenses
+                    (machine_id, user_id, hostname, status, mac_address, ip_address,
+                     os_version, cpu_info, ram_gb, disk_serial)
+                   VALUES (%s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s)
                    RETURNING id""",
-                (machine_id, user_id, hostname),
+                (machine_id, user_id, hostname, mac_address, ip_address,
+                 os_version, cpu_info, ram_gb, disk_serial),
             )
             actual.commit()
             return jsonify({'status': 'pending', 'expiry': None}), 200
@@ -96,7 +131,8 @@ def register_machine():
 
 @license_bp.route('/license/status', methods=['GET'])
 def license_status():
-    """Return license status for a machine_id (no record creation)."""
+    """Return license status for a machine_id (no record creation).
+    Also updates last_seen_at so admin can track active machines."""
     machine_id = (request.args.get('machine_id') or '').strip()
     if not machine_id:
         return jsonify({'error': 'machine_id query param required'}), 400
@@ -113,8 +149,17 @@ def license_status():
             row = cur.fetchone()
             if not row:
                 return jsonify({'error': 'Not found'}), 404
+
+            # Update last_seen_at on status checks too
+            cur.execute(
+                "UPDATE licenses SET last_seen_at = NOW() WHERE machine_id = %s",
+                (machine_id,),
+            )
+            actual.commit()
+
+            effective = _effective_status(row)
             expiry_str = row['expiry'].strftime('%Y-%m-%d') if row['expiry'] else None
-            return jsonify({'status': row['status'], 'expiry': expiry_str}), 200
+            return jsonify({'status': effective, 'expiry': expiry_str}), 200
     except Exception as e:
         logger.error("license/status error: %s", e, exc_info=True)
         return jsonify({'error': 'Server error', 'detail': str(e)}), 500
@@ -144,6 +189,9 @@ def list_licenses():
                 cur.execute("SELECT * FROM licenses ORDER BY created_at DESC")
             rows = cur.fetchall()
             for r in rows:
+                # Server-side expiry enforcement in list view
+                if r.get('status') == 'approved' and r.get('expiry') and r['expiry'] < date.today():
+                    r['status'] = 'expired'
                 if r.get('expiry'):
                     r['expiry'] = r['expiry'].strftime('%Y-%m-%d')
                 for col in ('created_at', 'updated_at', 'last_seen_at'):
@@ -159,10 +207,11 @@ def list_licenses():
 @login_required
 @_require_superadmin
 def update_license(license_id):
-    """Approve, deny, or extend a license. Default expiry = today + 15 days on approve."""
+    """Approve, deny, extend, or update label for a license."""
     data = request.get_json(silent=True) or {}
     new_status = data.get('status')
     expiry_str = data.get('expiry')
+    label = data.get('label')
 
     sets = []
     params = []
@@ -185,6 +234,10 @@ def update_license(license_id):
             return jsonify({'error': 'Invalid expiry format, use YYYY-MM-DD'}), 400
         sets.append("expiry = %s")
         params.append(expiry_str)
+
+    if label is not None:
+        sets.append("label = %s")
+        params.append(label.strip())
 
     if not sets:
         return jsonify({'error': 'Nothing to update'}), 400

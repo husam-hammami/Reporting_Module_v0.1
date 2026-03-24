@@ -54,8 +54,10 @@ logger = logging.getLogger(__name__)
 # Guard: only one historian worker per process (avoids duplicate tag_history rows)
 _historian_worker_started = False
 logger.setLevel(logging.INFO)
-# Initialize the Flask application
-app = Flask(__name__, static_folder='frontend/dist')
+# Initialize the Flask application — resolve static folder for frozen mode
+import config_paths as _cp
+_static_folder = os.path.join(_cp.get_bundle_dir(), 'frontend', 'dist')
+app = Flask(__name__, static_folder=_static_folder)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'hercules-dev-secret-key-2026')
 
 # Session cookie: use env for HTTP (dev/remote) vs HTTPS (production).
@@ -142,6 +144,7 @@ def options_handler(path):
     return response, 200
 
 # Debug routes - only registered in DEV_MODE
+DESKTOP_MODE = os.environ.get('HERCULES_DESKTOP') == '1'
 DEV_MODE = os.environ.get('FLASK_ENV') == 'development' or os.environ.get('DEV_MODE') == '1'
 if DEV_MODE:
     @app.route('/test', methods=['GET', 'POST'])
@@ -403,7 +406,7 @@ try:
         user=os.getenv('POSTGRES_USER', 'postgres'),
         password=os.getenv('POSTGRES_PASSWORD', 'Admin@123'),
         host=os.getenv('DB_HOST', '127.0.0.1'),
-        port=int(os.getenv('DB_PORT', 5433)),
+        port=int(os.getenv('DB_PORT', 5432)),
         connect_timeout=10
     )
     logger.info("Database connection pool created (5-20 connections, 10s timeout)")
@@ -427,7 +430,7 @@ def get_db_connection():
     conn = psycopg2.connect(
         dbname=os.getenv('POSTGRES_DB', 'dynamic_db_hercules'),
         user=os.getenv('POSTGRES_USER', 'postgres'),
-        password=os.getenv('POSTGRES_PASSWORD', 'Hercules'),
+        password=os.getenv('POSTGRES_PASSWORD', 'Admin@123'),
         host=os.getenv('DB_HOST', '127.0.0.1'),
         port=int(os.getenv('DB_PORT', 5432)),
         cursor_factory=RealDictCursor,
@@ -850,6 +853,12 @@ try:
         logger.info("Demo mode: seeded emulator with all DB tags")
 except Exception as e:
     logger.warning("Demo mode emulator seed skipped: %s", e)
+
+
+# Health endpoint for Electron to poll during startup
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'ok'}), 200
 
 
 # React catch-all route - MUST be last to avoid intercepting API routes

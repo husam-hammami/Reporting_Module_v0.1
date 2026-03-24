@@ -11,11 +11,10 @@ from email.message import EmailMessage
 
 logger = logging.getLogger(__name__)
 
-_BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-_CONFIG_DIR = os.path.join(_BASE_DIR, "config")
-_CONFIG_FILE = os.path.join(_CONFIG_DIR, "smtp_config.json")
+from config_paths import get_config_dir
 
-os.makedirs(_CONFIG_DIR, exist_ok=True)
+_CONFIG_DIR = get_config_dir()
+_CONFIG_FILE = os.path.join(_CONFIG_DIR, "smtp_config.json")
 
 _DEFAULTS = {
     "smtp_server": "",

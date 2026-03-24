@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hercules — Setup Wizard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0d1825;
+      color: #e1e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 32px;
+    }
+    h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .subtitle { font-size: 12px; color: #6b7f94; margin-bottom: 24px; }
+    .step { display: none; }
+    .step.active { display: block; }
+    .step-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #3b82f6; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 11px; color: #8898aa; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input, .field select {
+      width: 100%;
+      padding: 8px 12px;
+      background: #131f2e;
+      border: 1px solid #1e2d40;
+      border-radius: 6px;
+      color: #e1e8f0;
+      font-size: 13px;
+      outline: none;
+    }
+    .field input:focus, .field select:focus { border-color: #3b82f6; }
+    .row { display: flex; gap: 12px; }
+    .row .field { flex: 1; }
+    .btn-row { display: flex; gap: 8px; margin-top: 24px; justify-content: flex-end; }
+    button {
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #1e2d40; color: #e1e8f0; border: 1px solid #2a3f57; }
+    .btn-secondary:hover { background: #2a3f57; }
+    .progress { display: flex; gap: 6px; margin-bottom: 24px; }
+    .progress .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #1e2d40;
+    }
+    .progress .dot.active { background: #3b82f6; }
+    .progress .dot.done { background: #22c55e; }
+    .status-msg { font-size: 11px; margin-top: 8px; padding: 8px; border-radius: 4px; }
+    .status-msg.error { background: #ef444420; color: #ef4444; }
+    .status-msg.success { background: #22c55e20; color: #22c55e; }
+    .check-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .check-row input[type="checkbox"] { width: 16px; height: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Hercules Setup</h1>
+  <div class="subtitle">First-time configuration — this only runs once</div>
+
+  <div class="progress">
+    <div class="dot active" id="dot-0"></div>
+    <div class="dot" id="dot-1"></div>
+    <div class="dot" id="dot-2"></div>
+    <div class="dot" id="dot-3"></div>
+  </div>
+
+  <!-- Step 0: Database -->
+  <div class="step active" id="step-0">
+    <div class="step-title">1. Database Setup</div>
+    <p style="font-size:12px; color:#8898aa; margin-bottom:16px">
+      The database will be automatically initialized. Click "Initialize" to create tables and default data.
+    </p>
+    <div class="row">
+      <div class="field">
+        <label>Host</label>
+        <input id="db-host" value="127.0.0.1" />
+      </div>
+      <div class="field">
+        <label>Port</label>
+        <input id="db-port" value="5432" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>User</label>
+        <input id="db-user" value="postgres" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="db-password" type="password" value="postgres" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="initDb()">Initialize Database</button>
+    </div>
+    <div id="db-status"></div>
+  </div>
+
+  <!-- Step 1: PLC -->
+  <div class="step" id="step-1">
+    <div class="step-title">2. PLC Connection</div>
+    <div class="check-row">
+      <input type="checkbox" id="demo-mode" onchange="toggleDemoMode()" />
+      <label for="demo-mode" style="font-size:12px; color:#e1e8f0; cursor:pointer">
+        Enable Demo Mode (simulated PLC data)
+      </label>
+    </div>
+    <div id="plc-fields">
+      <div class="field">
+        <label>PLC IP Address</label>
+        <input id="plc-ip" value="192.168.23.11" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Rack</label>
+          <input id="plc-rack" value="0" type="number" />
+        </div>
+        <div class="field">
+          <label>Slot</label>
+          <input id="plc-slot" value="3" type="number" />
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="goStep(0)">Back</button>
+      <button class="btn-primary" onclick="savePlc()">Next</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Admin User -->
+  <div class="step" id="step-2">
+    <div class="step-title">3. Admin Account</div>
+    <div class="field">
+      <label>Username</label>
+      <input id="admin-user" value="admin" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="admin-pass" type="password" value="" placeholder="Enter admin password" />
+    </div>
+    <div class="field">
+      <label>Confirm Password</label>
+      <input id="admin-pass-confirm" type="password" value="" placeholder="Confirm password" />
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="goStep(1)">Back</button>
+      <button class="btn-primary" onclick="saveAdmin()">Next</button>
+    </div>
+    <div id="admin-status"></div>
+  </div>
+
+  <!-- Step 3: Complete -->
+  <div class="step" id="step-3">
+    <div class="step-title">4. Setup Complete</div>
+    <p style="font-size:13px; color:#e1e8f0; margin-bottom:16px">
+      Hercules is configured and ready to use. Click "Launch" to start the application.
+    </p>
+    <div style="background:#131f2e; padding:12px; border-radius:6px; font-size:11px; color:#8898aa; margin-bottom:16px">
+      <div>Database: <span style="color:#22c55e">Initialized</span></div>
+      <div id="summary-plc">PLC: —</div>
+      <div id="summary-admin">Admin: —</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="finishSetup()">Launch Hercules</button>
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 0;
+    const config = {};
+
+    function goStep(n) {
+      document.getElementById(`step-${currentStep}`).classList.remove('active');
+      document.getElementById(`step-${n}`).classList.add('active');
+      for (let i = 0; i < 4; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        dot.className = 'dot' + (i < n ? ' done' : i === n ? ' active' : '');
+      }
+      currentStep = n;
+    }
+
+    function showStatus(id, msg, type) {
+      const el = document.getElementById(id);
+      el.className = 'status-msg ' + type;
+      el.textContent = msg;
+    }
+
+    async function initDb() {
+      const host = document.getElementById('db-host').value;
+      const port = document.getElementById('db-port').value;
+      const user = document.getElementById('db-user').value;
+      const password = document.getElementById('db-password').value;
+
+      showStatus('db-status', 'Initializing database...', 'success');
+      try {
+        await window.hercules.runInitDb({ host, port, user, password });
+        config.db = { host, port, user, password };
+        await window.hercules.saveConfig('db_config.json', config.db);
+        showStatus('db-status', 'Database initialized successfully!', 'success');
+        setTimeout(() => goStep(1), 1000);
+      } catch (e) {
+        showStatus('db-status', 'Failed: ' + e, 'error');
+      }
+    }
+
+    function toggleDemoMode() {
+      const demo = document.getElementById('demo-mode').checked;
+      document.getElementById('plc-fields').style.display = demo ? 'none' : 'block';
+    }
+
+    async function savePlc() {
+      const demo = document.getElementById('demo-mode').checked;
+      config.plc = demo
+        ? { demo_mode: true }
+        : {
+            demo_mode: false,
+            ip: document.getElementById('plc-ip').value,
+            rack: parseInt(document.getElementById('plc-rack').value),
+            slot: parseInt(document.getElementById('plc-slot').value),
+          };
+      await window.hercules.saveConfig('plc_config.json', { ip: config.plc.ip || '192.168.23.11', rack: config.plc.rack || 0, slot: config.plc.slot || 3 });
+      await window.hercules.saveConfig('demo_mode.json', { demo_mode: config.plc.demo_mode });
+      document.getElementById('summary-plc').textContent = 'PLC: ' + (demo ? 'Demo Mode' : config.plc.ip);
+      goStep(2);
+    }
+
+    async function saveAdmin() {
+      const user = document.getElementById('admin-user').value.trim();
+      const pass = document.getElementById('admin-pass').value;
+      const confirm = document.getElementById('admin-pass-confirm').value;
+
+      if (!user) { showStatus('admin-status', 'Username is required', 'error'); return; }
+      if (pass.length < 2) { showStatus('admin-status', 'Password must be at least 2 characters', 'error'); return; }
+      if (pass !== confirm) { showStatus('admin-status', 'Passwords do not match', 'error'); return; }
+
+      config.admin = { user, pass };
+
+      // Re-run init_db with admin credentials
+      try {
+        await window.hercules.runInitDb({
+          ...config.db,
+          adminUser: user,
+          adminPass: pass,
+        });
+      } catch (e) {
+        // Might fail if user already exists — that's ok
+      }
+
+      document.getElementById('summary-admin').textContent = 'Admin: ' + user;
+      goStep(3);
+    }
+
+    function finishSetup() {
+      window.hercules.setupComplete();
+    }
+  </script>
+</body>
+</html>
