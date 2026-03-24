@@ -52,3 +52,10 @@ installer/
 
 # Ignore dependencies file
 requirements.txt
+
+# Desktop app (Electron + bundled binaries)
+desktop/node_modules/
+desktop/pgsql/
+desktop/vcredist/
+desktop/dist/
+*.exe
