@@ -4,6 +4,7 @@ import { Plus, Search, Send } from 'lucide-react';
 import { DarkModeContext } from '../../Context/DarkModeProvider';
 import { distributionApi } from '../../API/distributionApi';
 import { toast } from 'react-toastify';
+import ConfirmationModal from '../../Components/Common/ConfirmationModal';
 import DistributionRuleCard from './DistributionRuleCard';
 import DistributionRuleEditor from './DistributionRuleEditor';
 import '../ReportBuilder/reportBuilderTheme.css';
@@ -97,15 +98,13 @@ export default function DistributionPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this distribution rule?')) return;
-    try {
-      await distributionApi.deleteRule(id);
-      toast.success('Rule deleted');
-      loadRules();
-    } catch {
-      toast.error('Failed to delete rule');
-    }
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
+  const handleDelete = (id) => {
+    setConfirmModal({ open: true, title: 'Delete Rule', description: 'Delete this distribution rule?', confirmText: 'Delete', confirmColor: 'red', onConfirm: async () => {
+      setConfirmModal(m => ({ ...m, open: false }));
+      try { await distributionApi.deleteRule(id); toast.success('Rule deleted'); loadRules(); }
+      catch { toast.error('Failed to delete rule'); }
+    }});
   };
 
   const handleToggle = async (rule) => {
@@ -297,6 +296,7 @@ export default function DistributionPage() {
           )}
         </AnimatePresence>
       </div>
+      <ConfirmationModal isOpen={confirmModal.open} title={confirmModal.title} description={confirmModal.description} onConfirm={confirmModal.onConfirm || (() => {})} onCancel={() => setConfirmModal(m => ({ ...m, open: false }))} confirmText={confirmModal.confirmText} confirmColor={confirmModal.confirmColor} />
     </motion.div>
   );
 }

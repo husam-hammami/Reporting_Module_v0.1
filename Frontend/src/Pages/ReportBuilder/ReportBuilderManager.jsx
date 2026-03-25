@@ -1,10 +1,11 @@
-import { useState, useMemo, useContext, forwardRef } from 'react';
+import { useState, useMemo, useContext, forwardRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Copy, Trash2, Search, LayoutGrid, FileText, X, Layers, Table2, Clock, ArrowUpRight, MoreVertical, Filter, List, Send } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useReportTemplates } from '../../Hooks/useReportBuilder';
 import ReportThumbnail from './ReportThumbnail';
 import { DarkModeContext } from '../../Context/DarkModeProvider';
+import ConfirmationModal from '../../Components/Common/ConfirmationModal';
 import '../ReportBuilder/reportBuilderTheme.css';
 
 function timeAgo(iso) {
@@ -219,9 +220,12 @@ export default function ReportBuilderManager() {
       else navigate(`/report-builder/${created.id}`);
     }
   };
-  const handleDelete = (id) => { if (window.confirm('Delete this report? This cannot be undone.')) deleteTemplate(id); };
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
+  const handleDelete = (id) => {
+    setConfirmModal({ open: true, title: 'Delete Report', description: 'Delete this report? This cannot be undone.', confirmText: 'Delete', confirmColor: 'red', onConfirm: () => { deleteTemplate(id); setConfirmModal(m => ({ ...m, open: false })); } });
+  };
   const handleClearAll = () => {
-    if (window.confirm('Remove all report templates? This cannot be undone.')) clearAllTemplates();
+    setConfirmModal({ open: true, title: 'Remove All Reports', description: 'Remove all report templates? This cannot be undone.', confirmText: 'Remove All', confirmColor: 'red', onConfirm: () => { clearAllTemplates(); setConfirmModal(m => ({ ...m, open: false })); } });
   };
 
   const sc = (status) => {
@@ -481,6 +485,16 @@ export default function ReportBuilderManager() {
         <AnimatePresence>
           {showCreate && <CreateModal open={showCreate} onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
         </AnimatePresence>
+
+        <ConfirmationModal
+          isOpen={confirmModal.open}
+          title={confirmModal.title}
+          description={confirmModal.description}
+          onConfirm={confirmModal.onConfirm || (() => {})}
+          onCancel={() => setConfirmModal(m => ({ ...m, open: false }))}
+          confirmText={confirmModal.confirmText}
+          confirmColor={confirmModal.confirmColor}
+        />
       </div>
     </motion.div>
   );

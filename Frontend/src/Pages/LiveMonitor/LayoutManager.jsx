@@ -3,6 +3,7 @@ import { useLenisScroll } from '../../Hooks/useLenisScroll';
 import { FaPlus, FaEdit, FaTrash, FaSpinner, FaEye } from 'react-icons/fa';
 import axios from '../../API/axios';
 import { useNavigate } from 'react-router-dom';
+import ConfirmationModal from '../../Components/Common/ConfirmationModal';
 
 const LayoutManager = () => {
   useLenisScroll();
@@ -55,16 +56,13 @@ const LayoutManager = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (layoutId) => {
-    if (window.confirm('Are you sure you want to delete this layout? This action cannot be undone.')) {
-      try {
-        await axios.delete(`/api/live-monitor/layouts/${layoutId}`);
-        await loadLayouts();
-      } catch (e) {
-        console.error('Error deleting layout:', e);
-        alert('Failed to delete layout: ' + (e.response?.data?.message || e.message));
-      }
-    }
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
+  const handleDelete = (layoutId) => {
+    setConfirmModal({ open: true, title: 'Delete Layout', description: 'Are you sure you want to delete this layout? This action cannot be undone.', confirmText: 'Delete', confirmColor: 'red', onConfirm: async () => {
+      setConfirmModal(m => ({ ...m, open: false }));
+      try { await axios.delete(`/api/live-monitor/layouts/${layoutId}`); await loadLayouts(); }
+      catch (e) { console.error('Error deleting layout:', e); }
+    }});
   };
 
   const handleSave = async () => {
@@ -250,6 +248,7 @@ const LayoutManager = () => {
           </div>
         </div>
       )}
+      <ConfirmationModal isOpen={confirmModal.open} title={confirmModal.title} description={confirmModal.description} onConfirm={confirmModal.onConfirm || (() => {})} onCancel={() => setConfirmModal(m => ({ ...m, open: false }))} confirmText={confirmModal.confirmText} confirmColor={confirmModal.confirmColor} />
     </div>
   );
 };

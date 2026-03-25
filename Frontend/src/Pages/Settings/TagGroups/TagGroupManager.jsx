@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLenisScroll } from '../../../Hooks/useLenisScroll';
 import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaSearch, FaSpinner, FaChevronDown } from 'react-icons/fa';
 import axios from '../../../API/axios';
+import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
 
 const FALLBACK_GROUPS = [
   { id: 1, group_name: 'Process Sensors', description: 'Core process measurement sensors', is_active: true, tag_count: 4, tags: [
@@ -258,16 +259,13 @@ const TagGroupManager = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (groupId) => {
-    if (window.confirm('Are you sure you want to delete this tag group? This action cannot be undone.')) {
-      try {
-        await axios.delete(`/api/tag-groups/${groupId}`);
-        await loadTagGroups();
-      } catch (e) {
-        console.error('Error deleting tag group:', e);
-        alert('Failed to delete tag group: ' + (e.response?.data?.message || e.message));
-      }
-    }
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
+  const handleDelete = (groupId) => {
+    setConfirmModal({ open: true, title: 'Delete Tag Group', description: 'Are you sure you want to delete this tag group? This action cannot be undone.', confirmText: 'Delete', confirmColor: 'red', onConfirm: async () => {
+      setConfirmModal(m => ({ ...m, open: false }));
+      try { await axios.delete(`/api/tag-groups/${groupId}`); await loadTagGroups(); }
+      catch (e) { console.error('Error deleting tag group:', e); }
+    }});
   };
 
   const handleSave = async () => {
@@ -635,6 +633,7 @@ const TagGroupManager = () => {
           </div>
         </div>
       )}
+      <ConfirmationModal isOpen={confirmModal.open} title={confirmModal.title} description={confirmModal.description} onConfirm={confirmModal.onConfirm || (() => {})} onCancel={() => setConfirmModal(m => ({ ...m, open: false }))} confirmText={confirmModal.confirmText} confirmColor={confirmModal.confirmColor} />
     </div>
   );
 };

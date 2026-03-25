@@ -6,6 +6,7 @@ import { useEmulator } from '../../../Context/EmulatorContext';
 import { useAvailableTags } from '../../../Hooks/useReportBuilder';
 import { evaluateFormula } from '../../ReportBuilder/formulas/formulaEngine';
 import { DarkModeContext } from '../../../Context/DarkModeProvider';
+import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
 import '../../ReportBuilder/reportBuilderTheme.css';
 
 function useTheme() {
@@ -93,11 +94,12 @@ export default function FormulaManager() {
     setEditing(undefined);
   };
 
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
   const handleDelete = (id) => {
-    if (!window.confirm('Delete this formula?')) return;
-    const updated = formulas.filter(f => f.id !== id);
-    save(updated);
-    setFormulas(updated);
+    setConfirmModal({ open: true, title: 'Delete Formula', description: 'Delete this formula?', confirmText: 'Delete', confirmColor: 'red', onConfirm: () => {
+      const updated = formulas.filter(f => f.id !== id); save(updated); setFormulas(updated);
+      setConfirmModal(m => ({ ...m, open: false }));
+    }});
   };
 
   const isFormOpen = editing !== undefined;
@@ -299,6 +301,7 @@ export default function FormulaManager() {
         </div>,
         document.body
       )}
+      <ConfirmationModal isOpen={confirmModal.open} title={confirmModal.title} description={confirmModal.description} onConfirm={confirmModal.onConfirm || (() => {})} onCancel={() => setConfirmModal(m => ({ ...m, open: false }))} confirmText={confirmModal.confirmText} confirmColor={confirmModal.confirmColor} />
     </div>
   );
 }
