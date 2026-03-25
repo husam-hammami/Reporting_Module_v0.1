@@ -5,30 +5,37 @@ const ConfirmationModal = ({
   onConfirm,
   onCancel,
   confirmText = 'Yes',
-  cancelText = 'No',
+  cancelText = 'Cancel',
+  confirmColor = 'brand',
   id,
 }) => {
   if (!isOpen) return null;
 
+  const colorMap = {
+    brand: 'bg-brand hover:bg-brand-hover',
+    red: 'bg-[#dc2626] hover:bg-[#b91c1c]',
+    green: 'bg-[#059669] hover:bg-[#047857]',
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 dark:bg-opacity-75">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-96">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white dark:bg-[#131b2d] rounded-xl shadow-xl border border-[#e3e9f0] dark:border-[#1e2d40] p-6 w-full max-w-sm">
+        <h3 className="text-[13px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] mb-2">
           {title}
-        </h2>
-        <p className="mb-6 text-gray-800 dark:text-gray-200">{description}</p>
-        <div className="flex justify-between">
-          {/* No button */}
+        </h3>
+        <p className="text-[11px] text-[#6b7f94] mb-5 leading-relaxed whitespace-pre-line">
+          {description}
+        </p>
+        <div className="flex gap-2 justify-end">
           <button
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            className="px-3 py-1.5 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] transition-colors"
           >
             {cancelText}
           </button>
-          {/* Yes button */}
           <button
             onClick={() => onConfirm(id)}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-400"
+            className={`px-3 py-1.5 text-[11px] font-medium rounded-lg text-white transition-colors ${colorMap[confirmColor] || colorMap.brand}`}
           >
             {confirmText}
           </button>

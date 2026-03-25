@@ -5,6 +5,8 @@ import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaDownload, FaUpload, FaSear
 import axios from '../../../API/axios';
 import TagForm from './TagForm';
 import { useEmulator } from '../../../Context/EmulatorContext';
+import { toast } from 'react-toastify';
+import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
 
 const FALLBACK_TAGS = [
   { id: 1, tag_name: 'Temperature_1', display_name: 'Temperature Sensor 1', source_type: 'PLC', plc_address: 'DB2099.0', data_type: 'REAL', unit: '°C', description: 'Main process temperature', decimal_places: 1, is_active: true },
@@ -33,6 +35,7 @@ const TagManager = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingTag, setEditingTag] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [draftConfirm, setDraftConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sourceTypeFilter, setSourceTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('tag_name');
@@ -182,7 +185,7 @@ const TagManager = () => {
       window.dispatchEvent(new Event('tagsUpdated'));
       setDeleteConfirm(null);
     } catch (e) {
-      alert('Failed to delete tag: ' + (e.response?.data?.message || e.message));
+      toast.error('Failed to delete tag: ' + (e.response?.data?.message || e.message));
       setDeleteConfirm(null);
     }
   };
@@ -192,7 +195,7 @@ const TagManager = () => {
       await axios.put(`/api/tags/${tag.tag_name}`, { ...tag, is_active: !tag.is_active });
       await loadTags();
       window.dispatchEvent(new Event('tagsUpdated'));
-    } catch (e) { alert('Failed to update tag: ' + (e.response?.data?.message || e.message)); }
+    } catch (e) { toast.error('Failed to update tag: ' + (e.response?.data?.message || e.message)); }
   };
 
   const handleSave = async (tagData) => {
@@ -203,7 +206,7 @@ const TagManager = () => {
       window.dispatchEvent(new Event('tagsUpdated'));
       setShowForm(false); setEditingTag(null);
     } catch (e) {
-      alert('Failed to save tag: ' + (e.response?.data?.message || e.response?.data?.error || e.message));
+      toast.error('Failed to save tag: ' + (e.response?.data?.message || e.response?.data?.error || e.message));
     }
   };
 
@@ -220,7 +223,7 @@ const TagManager = () => {
         a.href = url; a.download = `tags_export_${new Date().toISOString().split('T')[0]}.json`;
         a.click(); URL.revokeObjectURL(url);
       }
-    } catch (e) { alert('Failed to export: ' + (e.response?.data?.message || e.message)); }
+    } catch (e) { toast.error('Failed to export: ' + (e.response?.data?.message || e.message)); }
   };
 
   const handleExportCSV = async () => {
@@ -234,7 +237,7 @@ const TagManager = () => {
         a.href = url; a.download = `tags_export_${new Date().toISOString().split('T')[0]}.csv`;
         a.click(); URL.revokeObjectURL(url);
       }
-    } catch (e) { alert('Failed to export CSV: ' + (e.response?.data?.message || e.message)); }
+    } catch (e) { toast.error('Failed to export CSV: ' + (e.response?.data?.message || e.message)); }
   };
 
   const handleImport = async (event) => {
@@ -299,24 +302,19 @@ const TagManager = () => {
         window.dispatchEvent(new Event('tagsUpdated'));
 
         // Offer to create report drafts for PLC imports
-        if ((csvFiles.length > 0 || xlsxFiles.length > 0) && window.confirm('Also create report drafts from imported tags? (one report per DB)')) {
-          try {
-            const draftRes = await axios.post('/api/tags/generate-report-drafts', {});
-            if (draftRes.data.status === 'success' && draftRes.data.templates?.length > 0) {
-              const existing = JSON.parse(localStorage.getItem('hercules_report_builder_templates') || '[]');
-              // Deduplicate by name
-              const existingNames = new Set(existing.map(t => t.name));
-              const newTemplates = draftRes.data.templates.filter(t => !existingNames.has(t.name));
-              localStorage.setItem('hercules_report_builder_templates', JSON.stringify([...existing, ...newTemplates]));
-              results.push(`Report drafts: created ${newTemplates.length}`);
-            }
-          } catch { /* skip if fails */ }
+        if (csvFiles.length > 0 || xlsxFiles.length > 0) {
+          setDraftConfirm(true);
         }
       }
 
-      if (results.length > 0) alert('Import results:\n' + results.join('\n'));
+      if (results.length > 0) {
+        const successes = results.filter(r => !r.startsWith('Error') && !r.includes('failed') && !r.includes('invalid'));
+        const errors = results.filter(r => r.startsWith('Error') || r.includes('failed') || r.includes('invalid'));
+        if (successes.length > 0) toast.success(successes.join('\n'), { style: { whiteSpace: 'pre-line' } });
+        if (errors.length > 0) toast.error(errors.join('\n'), { autoClose: 8000, style: { whiteSpace: 'pre-line' } });
+      }
     } catch (e) {
-      alert('Error importing: ' + (e.response?.data?.message || e.message));
+      toast.error('Error importing: ' + (e.response?.data?.message || e.message));
     }
 
     event.target.value = '';
@@ -334,6 +332,20 @@ const TagManager = () => {
     Formula: 'bg-[#ecfdf5] text-[#059669] dark:bg-[#0d2e1f] dark:text-[#34d399]',
     Mapping: 'bg-[#f1f5f9] text-[#475569] dark:bg-[#1e293b] dark:text-[#94a3b8]',
     Manual: 'bg-[#f5f5f4] text-[#57534e] dark:bg-[#1c1917] dark:text-[#a8a29e]',
+  };
+
+  const handleCreateDrafts = async () => {
+    setDraftConfirm(false);
+    try {
+      const draftRes = await axios.post('/api/tags/generate-report-drafts', {});
+      if (draftRes.data.status === 'success' && draftRes.data.templates?.length > 0) {
+        const existing = JSON.parse(localStorage.getItem('hercules_report_builder_templates') || '[]');
+        const existingNames = new Set(existing.map(t => t.name));
+        const newTemplates = draftRes.data.templates.filter(t => !existingNames.has(t.name));
+        localStorage.setItem('hercules_report_builder_templates', JSON.stringify([...existing, ...newTemplates]));
+        toast.success(`Created ${newTemplates.length} report draft(s)`);
+      }
+    } catch { /* skip */ }
   };
 
   const totalPages = Math.max(1, Math.ceil(filteredTags.length / PAGE_SIZE));
@@ -546,6 +558,17 @@ const TagManager = () => {
           </div>
         </div>
       )}
+
+      {/* ── Report Drafts Confirmation ── */}
+      <ConfirmationModal
+        isOpen={draftConfirm}
+        title="Create Report Drafts"
+        description="Create table report drafts from imported tags? One report will be generated per DB."
+        onConfirm={handleCreateDrafts}
+        onCancel={() => setDraftConfirm(false)}
+        confirmText="Create Drafts"
+        confirmColor="brand"
+      />
     </div>
   );
 };
