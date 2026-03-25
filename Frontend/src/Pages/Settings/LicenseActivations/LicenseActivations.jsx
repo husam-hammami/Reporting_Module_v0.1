@@ -20,8 +20,7 @@ export default function LicenseActivations() {
   const [extendId, setExtendId] = useState(null);
   const [extendDate, setExtendDate] = useState('');
   const [deleteId, setDeleteId] = useState(null);
-  const [editLabelId, setEditLabelId] = useState(null);
-  const [editLabelValue, setEditLabelValue] = useState('');
+  const [editField, setEditField] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
 
   const fetchLicenses = useCallback(() => {
@@ -90,15 +89,17 @@ export default function LicenseActivations() {
     }
   };
 
-  const handleSaveLabel = async (id) => {
+  const FIELD_LABELS = { label: 'Label', site_name: 'Site Name', license_name: 'License Name' };
+
+  const handleSaveField = async () => {
+    if (!editField) return;
     try {
-      await axios.patch(endpoints.licenses.update(id), { label: editLabelValue });
-      toast.success('Label saved');
-      setEditLabelId(null);
-      setEditLabelValue('');
+      await axios.patch(endpoints.licenses.update(editField.id), { [editField.field]: editField.value });
+      toast.success(`${FIELD_LABELS[editField.field] || editField.field} saved`);
+      setEditField(null);
       fetchLicenses();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save label');
+      toast.error(err.response?.data?.error || 'Failed to save');
     }
   };
 
@@ -173,6 +174,8 @@ export default function LicenseActivations() {
               <thead>
                 <tr className="border-b border-[#e3e9f0] dark:border-[#1e2d40]">
                   <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">Label / Machine</th>
+                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">Site Name</th>
+                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">License Name</th>
                   <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">Hostname</th>
                   <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">Status</th>
                   <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">Expiry</th>
@@ -187,21 +190,21 @@ export default function LicenseActivations() {
                     <tr className="border-b border-[#e3e9f0] dark:border-[#1e2d40] hover:bg-[#f5f8fb] dark:hover:bg-[#0d1825]">
                       {/* Label / Machine ID */}
                       <td className="py-2.5 px-3">
-                        {editLabelId === lic.id ? (
+                        {editField?.id === lic.id && editField.field === 'label' ? (
                           <div className="flex items-center gap-1">
                             <input
                               type="text"
-                              value={editLabelValue}
-                              onChange={e => setEditLabelValue(e.target.value)}
+                              value={editField.value}
+                              onChange={e => setEditField({ ...editField, value: e.target.value })}
                               placeholder="e.g. Al-Jahra Cement - Line 2"
                               className="px-2 py-0.5 text-[11px] rounded border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#0d1825] text-[#2a3545] dark:text-[#e1e8f0] w-48"
                               autoFocus
-                              onKeyDown={e => { if (e.key === 'Enter') handleSaveLabel(lic.id); if (e.key === 'Escape') setEditLabelId(null); }}
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveField(); if (e.key === 'Escape') setEditField(null); }}
                             />
-                            <button onClick={() => handleSaveLabel(lic.id)} className={`${smallBtnClass} bg-emerald-600 text-white hover:bg-emerald-700`}>
+                            <button onClick={handleSaveField} className={`${smallBtnClass} bg-emerald-600 text-white hover:bg-emerald-700`}>
                               <FaCheck size={9} />
                             </button>
-                            <button onClick={() => setEditLabelId(null)} className={`${smallBtnClass} bg-gray-200 text-gray-600 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300`}>
+                            <button onClick={() => setEditField(null)} className={`${smallBtnClass} bg-gray-200 text-gray-600 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300`}>
                               <FaTimes size={9} />
                             </button>
                           </div>
@@ -212,7 +215,7 @@ export default function LicenseActivations() {
                                 {lic.label || '(unlabeled)'}
                               </span>
                               <button
-                                onClick={() => { setEditLabelId(lic.id); setEditLabelValue(lic.label || ''); }}
+                                onClick={() => setEditField({ id: lic.id, field: 'label', value: lic.label || '' })}
                                 className="text-[#8898aa] hover:text-brand"
                                 title="Edit label"
                               >
@@ -222,6 +225,76 @@ export default function LicenseActivations() {
                             <div className="font-mono text-[10px] text-[#8898aa] mt-0.5 truncate max-w-[180px]" title={lic.machine_id}>
                               {lic.machine_id}
                             </div>
+                          </div>
+                        )}
+                      </td>
+                      {/* Site Name */}
+                      <td className="py-2.5 px-3">
+                        {editField?.id === lic.id && editField.field === 'site_name' ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={editField.value}
+                              onChange={e => setEditField({ ...editField, value: e.target.value })}
+                              placeholder="e.g. Al-Jahra Plant"
+                              className="px-2 py-0.5 text-[11px] rounded border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#0d1825] text-[#2a3545] dark:text-[#e1e8f0] w-40"
+                              autoFocus
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveField(); if (e.key === 'Escape') setEditField(null); }}
+                            />
+                            <button onClick={handleSaveField} className={`${smallBtnClass} bg-emerald-600 text-white hover:bg-emerald-700`}>
+                              <FaCheck size={9} />
+                            </button>
+                            <button onClick={() => setEditField(null)} className={`${smallBtnClass} bg-gray-200 text-gray-600 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300`}>
+                              <FaTimes size={9} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[#2a3545] dark:text-[#e1e8f0]">
+                              {lic.site_name || '—'}
+                            </span>
+                            <button
+                              onClick={() => setEditField({ id: lic.id, field: 'site_name', value: lic.site_name || '' })}
+                              className="text-[#8898aa] hover:text-brand"
+                              title="Edit site name"
+                            >
+                              <FaEdit size={9} />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                      {/* License Name */}
+                      <td className="py-2.5 px-3">
+                        {editField?.id === lic.id && editField.field === 'license_name' ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={editField.value}
+                              onChange={e => setEditField({ ...editField, value: e.target.value })}
+                              placeholder="e.g. Production Line 2"
+                              className="px-2 py-0.5 text-[11px] rounded border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#0d1825] text-[#2a3545] dark:text-[#e1e8f0] w-40"
+                              autoFocus
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveField(); if (e.key === 'Escape') setEditField(null); }}
+                            />
+                            <button onClick={handleSaveField} className={`${smallBtnClass} bg-emerald-600 text-white hover:bg-emerald-700`}>
+                              <FaCheck size={9} />
+                            </button>
+                            <button onClick={() => setEditField(null)} className={`${smallBtnClass} bg-gray-200 text-gray-600 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300`}>
+                              <FaTimes size={9} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[#2a3545] dark:text-[#e1e8f0]">
+                              {lic.license_name || '—'}
+                            </span>
+                            <button
+                              onClick={() => setEditField({ id: lic.id, field: 'license_name', value: lic.license_name || '' })}
+                              className="text-[#8898aa] hover:text-brand"
+                              title="Edit license name"
+                            >
+                              <FaEdit size={9} />
+                            </button>
                           </div>
                         )}
                       </td>
@@ -307,7 +380,7 @@ export default function LicenseActivations() {
                     {/* Expanded machine info row */}
                     {expandedId === lic.id && (
                       <tr className="bg-[#f8fafc] dark:bg-[#0a1018]">
-                        <td colSpan={7} className="py-3 px-6">
+                        <td colSpan={9} className="py-3 px-6">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-2 text-[11px]">
                             <div>
                               <span className="text-[#8898aa]">MAC: </span>

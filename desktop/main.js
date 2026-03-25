@@ -337,6 +337,7 @@ function runInitDb() {
       'create_mappings_table.sql',
       'add_tag_history_archive_unique_universal.sql',
       'add_license_machine_info.sql',
+      'add_site_and_license_name.sql',
     ];
 
     for (const file of migrationOrder) {

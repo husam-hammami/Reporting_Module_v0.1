@@ -9,6 +9,7 @@ import json
 import csv
 import io
 import re
+import time
 from flask import Blueprint, jsonify, request
 from contextlib import closing
 import psycopg2

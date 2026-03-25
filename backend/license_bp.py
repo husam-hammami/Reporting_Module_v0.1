@@ -198,11 +198,13 @@ def list_licenses():
 @_require_superadmin
 def update_license(license_id):
     """Approve, deny, or extend a license. Default expiry = today + 15 days on approve.
-    Also supports updating the admin-editable 'label' field."""
+    Also supports updating the admin-editable 'label', 'site_name', and 'license_name' fields."""
     data = request.get_json(silent=True) or {}
     new_status = data.get('status')
     expiry_str = data.get('expiry')
     label = data.get('label')
+    site_name = data.get('site_name')
+    license_name = data.get('license_name')
 
     sets = []
     params = []
@@ -210,6 +212,14 @@ def update_license(license_id):
     if label is not None:
         sets.append("label = %s")
         params.append(label.strip())
+
+    if site_name is not None:
+        sets.append("site_name = %s")
+        params.append(site_name.strip())
+
+    if license_name is not None:
+        sets.append("license_name = %s")
+        params.append(license_name.strip())
 
     if new_status:
         if new_status not in ('approved', 'denied', 'pending'):
