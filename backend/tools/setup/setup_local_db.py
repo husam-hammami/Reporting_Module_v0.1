@@ -175,12 +175,16 @@ def create_default_user():
     cur = conn.cursor()
 
     try:
+        from werkzeug.security import generate_password_hash
+        hashed = generate_password_hash('admin', method='pbkdf2:sha256')
+    except ImportError:
+        hashed = 'pbkdf2:sha256:1000000$L8PYc32OmEHANAxE$041d9b91b968b44ffe538df07458f6a82ed6ddfff50a146453f79d7ff960a4d0'
+
+    try:
         cur.execute("SELECT 1 FROM users WHERE username = 'Yaser'")
         if cur.fetchone():
             print('  User "Yaser" already exists — skipping.')
         else:
-            # bcrypt hash for "admin"
-            hashed = '$2b$12$LJ3m4ys3Lk0TSwMBQWJxaeflIOwnGGkahJCsOvn/F9JDOaFf1liGu'
             cur.execute(
                 "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
                 ('Yaser', hashed, 'admin'),
@@ -189,11 +193,9 @@ def create_default_user():
     except psycopg2.errors.UndefinedColumn:
         conn.rollback()
         conn.autocommit = True
-        # Table might have different columns — try minimal insert
         try:
             cur.execute("SELECT 1 FROM users WHERE username = 'Yaser'")
             if not cur.fetchone():
-                hashed = '$2b$12$LJ3m4ys3Lk0TSwMBQWJxaeflIOwnGGkahJCsOvn/F9JDOaFf1liGu'
                 cur.execute(
                     "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
                     ('Yaser', hashed, 'admin'),

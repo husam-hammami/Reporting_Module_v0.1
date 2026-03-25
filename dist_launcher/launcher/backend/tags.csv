@@ -1,0 +1,44 @@
+"id","tag_name","display_name","source_type","db_number","offset","data_type","bit_position","string_length","byte_swap","unit","scaling","decimal_places","formula","mapping_name","description","is_active","created_at","updated_at","is_bin_tag","activation_tag_name","activation_condition","activation_value","value_formula","is_counter"
+262,"scale_weight","Scale Weight","PLC",499,0,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+263,"e11_selected","E11 Selected","PLC",499,1,"BOOL",2,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+264,"e10_selected","E10 Selected","PLC",499,1,"BOOL",3,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+265,"b1_deopt_emptying","B1 Deopt Emptying","PLC",499,1,"BOOL",4,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+266,"mill_emptying","Mill Emptying","PLC",499,1,"BOOL",5,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+267,"semolina_selected","Semolina Selected","PLC",499,254,"BOOL",0,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+268,"mila_2_b789we_selected","Mila 2 B789We Selected","PLC",499,296,"BOOL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+269,"flour2_receiver_bin_id_1","Flour2 Receiver Bin Id 1","PLC",499,172,"INT",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+270,"flour2_receiver_bin_id_2","Flour2 Receiver Bin Id 2","PLC",499,214,"INT",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+271,"order_scale_flowrate","Order Scale Flowrate","PLC",499,470,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+272,"feeder_1_target","Feeder 1 Target","PLC",499,478,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+273,"feeder_1_selected","Feeder 1 Selected","PLC",499,482,"BOOL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+274,"feeder_2_target","Feeder 2 Target","PLC",499,484,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+275,"feeder_2_selected","Feeder 2 Selected","PLC",499,488,"BOOL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+276,"b1_scale1","B1 Scale1","PLC",499,490,"BOOL",0,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+277,"b3_chocke_feeder","B3 Chocke Feeder","PLC",499,490,"BOOL",1,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+278,"filter_flour_feeder","Filter Flour Feeder","PLC",499,490,"BOOL",2,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+279,"depot_selected","Depot Selected","PLC",499,490,"BOOL",5,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+280,"flap_1_selected","Flap 1 Selected","PLC",499,514,"BOOL",0,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+281,"flap_2_selected","Flap 2 Selected","PLC",499,514,"BOOL",1,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+282,"linning_running","Linning Running","PLC",499,532,"BOOL",0,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+283,"linning_stopped","Linning Stopped","PLC",499,532,"BOOL",1,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+284,"receiver_bin_id_1","Receiver Bin Id 1","PLC",499,536,"INT",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+285,"receiver_bin_id_2","Receiver Bin Id 2","PLC",499,544,"INT",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+286,"yield_max_flow","Yield Max Flow","PLC",2099,0,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+287,"yield_min_flow","Yield Min Flow","PLC",2099,0,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+288,"mila_B1_scale","Mila B1 Scale","PLC",2099,0,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+289,"mila_unknown","Mila Unknown","PLC",2099,16,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+290,"mila_bran_coarse","Mila Bran Coarse","PLC",2099,20,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+291,"mila_flour_1","Mila Flour 1","PLC",2099,24,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+292,"mila_b1","Mila B1","PLC",2099,28,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+293,"mila_bran_fine","Mila Bran Fine","PLC",2099,32,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+294,"mila_semolina","Mila Semolina","PLC",2099,36,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+295,"mila_2_b789we","Mila 2 B789We","PLC",2099,96,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+296,"job_status","Job Status","PLC",2099,104,"BOOL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+297,"bran_coarse","Bran Coarse","PLC",2099,112,"DINT",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,True
+298,"flour_1","Flour 1","PLC",2099,116,"DINT",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,True
+299,"b1","B1","PLC",2099,120,"DINT",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,True
+300,"bran_fine","Bran Fine","PLC",2099,124,"DINT",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,True
+301,"semolina","Semolina","PLC",2099,128,"DINT",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,True
+302,"flow_rate_tph","Flow Rate Tph","PLC",2099,176,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+303,"flow_percentage","Flow Percentage","PLC",2099,180,"REAL",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,False
+304,"totalizer_kg","Totalizer Kg","PLC",2099,184,"DINT",NULL,40,True,"","1.0000",2,NULL,NULL,NULL,True,"2026-02-26 12:26:52.77653","2026-02-26 12:26:52.77653",False,NULL,NULL,NULL,NULL,True
