@@ -1809,31 +1809,34 @@ def generate_report_drafts():
                 'statusAggregation': 'avg',
             })
 
-            # ── Table section with ALL tags as columns, one data row ──
-            columns = []
-            row_cells = []
+            # ── Table section: tags as ROWS (Ident | Name | Value | Unit) ──
+            columns = [
+                {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Ident',  'width': 'auto', 'align': 'left'},
+                {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Name',   'width': 'auto', 'align': 'left'},
+                {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Value',  'width': 'auto', 'align': 'right'},
+                {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Unit',   'width': 'auto', 'align': 'center'},
+            ]
+
+            rows = []
             for tag in db_tags:
-                col_id = f'ps-{uuid.uuid4().hex[:8]}'
                 unit = tag.get('unit', '') or ''
                 decimals = 2 if tag['data_type'] == 'REAL' else 0
                 display = tag.get('display_name') or tag['tag_name']
 
-                columns.append({
-                    'id': col_id,
-                    'header': display,
-                    'width': 'auto',
-                    'align': 'center',
-                })
-                row_cells.append({
-                    'sourceType': 'tag',
-                    'tagName': tag['tag_name'],
-                    'value': '',
-                    'formula': '',
-                    'unit': unit,
-                    'decimals': decimals,
-                    'groupTags': [],
-                    'aggregation': 'last',
-                    'mappingName': '',
+                rows.append({
+                    'id': f'ps-{uuid.uuid4().hex[:8]}',
+                    'cells': [
+                        # Ident — static text from tag name
+                        {'sourceType': 'static', 'value': tag['tag_name']},
+                        # Name — static text from display name / comment
+                        {'sourceType': 'static', 'value': display},
+                        # Value — live tag data
+                        {'sourceType': 'tag', 'tagName': tag['tag_name'], 'value': '',
+                         'formula': '', 'unit': '', 'decimals': decimals,
+                         'groupTags': [], 'aggregation': 'last', 'mappingName': ''},
+                        # Unit — static text
+                        {'sourceType': 'static', 'value': unit},
+                    ],
                 })
 
             sections.append({
@@ -1841,10 +1844,7 @@ def generate_report_drafts():
                 'type': 'table',
                 'label': f'DB{db_number} Tags',
                 'columns': columns,
-                'rows': [{
-                    'id': f'ps-{uuid.uuid4().hex[:8]}',
-                    'cells': row_cells,
-                }],
+                'rows': rows,
                 'showSummaryRow': False,
                 'summaryLabel': 'Total',
                 'summaryFormula': '',
