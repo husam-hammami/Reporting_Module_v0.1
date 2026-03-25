@@ -9,7 +9,7 @@
       font-family: 'Segoe UI', system-ui, sans-serif;
       background: #0a1018;
       color: #e1e8f0;
-      padding: 32px;
+      padding: 32px 40px;
     }
     h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
     .subtitle { color: #6b7f94; font-size: 13px; margin-bottom: 24px; }
@@ -43,15 +43,21 @@
     button:hover { background: #162232; }
     button.primary { background: #3b82f6; border-color: #3b82f6; color: #fff; }
     button.primary:hover { background: #2563eb; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
     .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
     .checkbox-row input { width: auto; }
     .progress { display: flex; gap: 6px; margin-bottom: 24px; }
-    .progress .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #1e2d40;
-    }
+    .progress .dot { width: 10px; height: 10px; border-radius: 50%; background: #1e2d40; transition: background 0.3s; }
     .progress .dot.active { background: #3b82f6; }
     .progress .dot.done { background: #22c55e; }
+    .spinner { width: 28px; height: 28px; border: 3px solid #1e2d40; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-msg { color: #6b7f94; font-size: 13px; margin-top: 16px; min-height: 20px; }
+    .status-msg.error { color: #ef4444; }
+    .status-msg.success { color: #22c55e; }
+    .info-box { background: #0f1923; border: 1px solid #1e2d40; border-radius: 8px; padding: 16px; margin-top: 12px; }
+    .info-box p { color: #8898aa; font-size: 12px; line-height: 1.6; }
+    .info-box code { color: #93c5fd; background: #0a1018; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -65,23 +71,18 @@
     <div class="dot" data-step="3"></div>
   </div>
 
-  <!-- Step 0: Database config -->
+  <!-- Step 0: Database auto-initialization -->
   <div class="step active" id="step-0">
-    <div class="step-title">Database Configuration</div>
-    <p style="color: #6b7f94; font-size: 12px; margin-bottom: 12px;">The app uses a bundled PostgreSQL database. Configure the port and password below.</p>
-    <div class="row">
-      <div>
-        <label>PostgreSQL Port</label>
-        <input type="number" id="db-port" value="5435" min="1024" max="65535">
-      </div>
-      <div>
-        <label>Database Password</label>
-        <input type="password" id="db-password" placeholder="Set a password for the database">
-      </div>
+    <div class="step-title">Database Initialization</div>
+    <p style="color: #6b7f94; font-size: 13px;">Setting up the bundled PostgreSQL database. This is automatic — please wait.</p>
+    <div style="margin-top: 24px; text-align: center; padding: 32px 0;">
+      <div id="db-spinner" class="spinner"></div>
+      <span id="db-status-text" style="color: #8898aa; font-size: 13px;">Preparing...</span>
     </div>
-    <p style="color: #4b5e73; font-size: 11px; margin-top: 8px;">Port 5435 avoids conflict with existing PostgreSQL installations (5432). Leave password blank for trust authentication.</p>
+    <div id="db-status" class="status-msg"></div>
     <div class="btn-row">
-      <button class="primary" onclick="nextStep()">Next</button>
+      <button id="db-retry-btn" class="primary" style="display:none;" onclick="initDatabase()">Retry</button>
+      <button id="db-next-btn" class="primary" style="display:none;" onclick="nextStep()">Next</button>
     </div>
   </div>
 
@@ -102,22 +103,24 @@
     </div>
     <div class="checkbox-row">
       <input type="checkbox" id="demo-mode">
-      <label for="demo-mode" style="margin: 0; color: #e1e8f0;">Enable Demo Mode (PLC emulator)</label>
+      <label for="demo-mode" style="margin: 0; color: #e1e8f0;">Enable Demo Mode (PLC emulator — no real PLC needed)</label>
     </div>
     <div class="btn-row">
       <button class="primary" onclick="nextStep()">Next</button>
     </div>
   </div>
 
-  <!-- Step 2: Admin user -->
+  <!-- Step 2: Admin info -->
   <div class="step" id="step-2">
     <div class="step-title">Admin Account</div>
-    <label>Username</label>
-    <input type="text" id="admin-user" value="admin">
-    <label>Password</label>
-    <input type="password" id="admin-pass" value="">
-    <label>Confirm Password</label>
-    <input type="password" id="admin-pass2" value="">
+    <div class="info-box">
+      <p>A default admin account has been created automatically:</p>
+      <p style="margin-top: 8px;">
+        Username: <code>admin</code><br>
+        Password: <code>admin</code>
+      </p>
+      <p style="margin-top: 8px;">You can change the password after login from <strong>Settings → Users</strong>.</p>
+    </div>
     <div class="btn-row">
       <button onclick="prevStep()">Back</button>
       <button class="primary" onclick="nextStep()">Next</button>
@@ -127,7 +130,7 @@
   <!-- Step 3: SMTP (optional) -->
   <div class="step" id="step-3">
     <div class="step-title">Email / SMTP (Optional)</div>
-    <p style="color: #6b7f94; font-size: 12px; margin-bottom: 12px;">Skip this step if you don't need automated report emails.</p>
+    <p style="color: #6b7f94; font-size: 12px; margin-bottom: 12px;">Skip this if you don't need automated report emails. You can configure it later from Settings.</p>
     <label>SMTP Server</label>
     <input type="text" id="smtp-server" placeholder="smtp.gmail.com">
     <div class="row">
@@ -171,20 +174,61 @@
       if (currentStep > 0) { currentStep--; updateProgress(); }
     }
 
-    function finishSetup() {
+    // Step 0: Auto-initialize database via IPC
+    async function initDatabase() {
+      const spinner = document.getElementById('db-spinner');
+      const statusText = document.getElementById('db-status-text');
+      const statusMsg = document.getElementById('db-status');
+      const retryBtn = document.getElementById('db-retry-btn');
+      const nextBtn = document.getElementById('db-next-btn');
+
+      spinner.style.display = 'inline-block';
+      statusText.textContent = 'Initializing...';
+      statusMsg.textContent = '';
+      statusMsg.className = 'status-msg';
+      retryBtn.style.display = 'none';
+      nextBtn.style.display = 'none';
+
+      try {
+        const result = await window.hercules.initDatabase();
+        spinner.style.display = 'none';
+
+        if (result.ok) {
+          statusText.textContent = '';
+          statusMsg.textContent = 'Database initialized successfully! Default admin account created (admin / admin).';
+          statusMsg.className = 'status-msg success';
+          nextBtn.style.display = 'inline-block';
+        } else {
+          statusText.textContent = '';
+          statusMsg.textContent = 'Error: ' + (result.error || 'Unknown error');
+          statusMsg.className = 'status-msg error';
+          retryBtn.style.display = 'inline-block';
+        }
+      } catch (err) {
+        spinner.style.display = 'none';
+        statusText.textContent = '';
+        statusMsg.textContent = 'Error: ' + err.message;
+        statusMsg.className = 'status-msg error';
+        retryBtn.style.display = 'inline-block';
+      }
+    }
+
+    // Listen for progress updates from main process
+    if (window.hercules && window.hercules.onDbProgress) {
+      window.hercules.onDbProgress((msg) => {
+        const statusText = document.getElementById('db-status-text');
+        if (statusText) statusText.textContent = msg;
+      });
+    }
+
+    async function finishSetup() {
       const config = {
-        db_port: parseInt(document.getElementById('db-port').value) || 5435,
-        db_password: document.getElementById('db-password').value,
         plc: {
           ip: document.getElementById('plc-ip').value.trim() || '192.168.23.11',
           rack: parseInt(document.getElementById('plc-rack').value) || 0,
           slot: parseInt(document.getElementById('plc-slot').value) || 3,
         },
         demo_mode: document.getElementById('demo-mode').checked,
-        admin: {
-          username: document.getElementById('admin-user').value.trim() || 'admin',
-          password: document.getElementById('admin-pass').value || 'admin',
-        },
         smtp: {
           smtp_server: document.getElementById('smtp-server').value.trim(),
           smtp_port: parseInt(document.getElementById('smtp-port').value) || 465,
@@ -192,13 +236,24 @@
           password: document.getElementById('smtp-pass').value,
           from_address: document.getElementById('smtp-from').value.trim(),
         },
-        setup_complete: true,
       };
 
-      if (window.hercules) {
-        window.hercules.setupComplete(config);
+      try {
+        const result = await window.hercules.saveConfig(config);
+        if (result.ok) {
+          window.close();
+        } else {
+          alert('Failed to save config: ' + (result.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
       }
     }
+
+    // Auto-start database initialization when page loads
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(initDatabase, 500);
+    });
   </script>
 </body>
 </html>

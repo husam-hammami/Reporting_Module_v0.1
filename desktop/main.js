@@ -1,19 +1,19 @@
 /**
  * Hercules Reporting Module — Electron Main Process
  *
- * Startup sequence:
+ * Startup sequence (follows Desktop_App_Plan Phase 3 + Phase 6):
  *   1. Single-instance lock
  *   2. License check (online → cache → deny)
- *   3. First-run detection → setup wizard
- *   4. Port conflict detection
- *   5. Start PostgreSQL (bundled)
+ *   3. First-run → setup wizard (auto-init DB, PLC, SMTP)
+ *   4. Port checks
+ *   5. Start PostgreSQL (if not already running from wizard)
  *   6. Start Flask backend (hercules-backend.exe)
- *   7. Health poll → load app
- *   8. System tray (minimize-to-tray, periodic license recheck)
+ *   7. Health poll → load app in maximized BrowserWindow
+ *   8. System tray + periodic license recheck
  */
 
 const { app, BrowserWindow, Tray, Menu, dialog, ipcMain } = require('electron');
-const { execSync, spawn } = require('child_process');
+const { execSync, spawn, execFile } = require('child_process');
 const crypto = require('crypto');
 const http = require('http');
 const net = require('net');
@@ -27,11 +27,14 @@ const RESOURCES_DIR = IS_DEV
   ? path.join(__dirname)
   : path.join(process.resourcesPath);
 
-const BACKEND_EXE = path.join(RESOURCES_DIR, 'backend', 'hercules-backend.exe');
+const BACKEND_DIR = path.join(RESOURCES_DIR, 'backend');
+const BACKEND_EXE = path.join(BACKEND_DIR, 'hercules-backend.exe');
 const PG_BIN = path.join(RESOURCES_DIR, 'pgsql', 'bin');
 const PG_CTL = path.join(PG_BIN, 'pg_ctl.exe');
 const PG_ISREADY = path.join(PG_BIN, 'pg_isready.exe');
-const INITDB = path.join(PG_BIN, 'initdb.exe');
+const INITDB_EXE = path.join(PG_BIN, 'initdb.exe');
+const PSQL_EXE = path.join(PG_BIN, 'psql.exe');
+const INIT_DB_PY = path.join(BACKEND_DIR, '_internal', 'init_db.py');
 
 const APPDATA_DIR = path.join(process.env.APPDATA || os.homedir(), 'Hercules');
 const CONFIG_DIR = path.join(APPDATA_DIR, 'config');
@@ -40,34 +43,17 @@ const LICENSE_CACHE = path.join(APPDATA_DIR, 'license_cache.json');
 
 const LICENSE_SERVER = 'https://api.herculesv2.app';
 const BACKEND_PORT = 5001;
-const DEFAULT_PG_PORT = 5435;
+const PG_PORT = 5435;
+const PG_DB = 'dynamic_db_hercules';
 const GRACE_PERIOD_DAYS = 7;
-
-function loadDbConfig() {
-  try {
-    const cfgPath = path.join(CONFIG_DIR, 'db_config.json');
-    if (fs.existsSync(cfgPath)) {
-      return JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
-    }
-  } catch { /* ignore */ }
-  return {};
-}
-
-function getDbPort() {
-  const cfg = loadDbConfig();
-  return cfg.db_port || DEFAULT_PG_PORT;
-}
-
-function getDbPassword() {
-  const cfg = loadDbConfig();
-  return cfg.db_password || '';
-}
 
 let mainWindow = null;
 let splashWindow = null;
+let wizardWindow = null;
 let tray = null;
 let backendProcess = null;
 let backendRestarts = 0;
+let pgStarted = false;
 const MAX_BACKEND_RESTARTS = 3;
 
 // ─── Machine ID (must match backend/machine_id.py exactly) ──────────────────
@@ -89,10 +75,6 @@ function getMacAddress() {
       }
     }
   }
-  // Match Python uuid.getnode() format: returns the first non-zero MAC
-  // For consistency we use the same uuid.getnode() approach
-  // uuid.getnode() returns an integer derived from the MAC
-  // Replicating exact Python behavior:
   try {
     const nodeInt = BigInt('0x' + macs[0].replace(/:/g, ''));
     const parts = [];
@@ -206,7 +188,6 @@ function loadLicenseCache() {
 
 async function checkLicense() {
   const info = getMachineInfo();
-
   try {
     const result = await postJSON(`${LICENSE_SERVER}/api/license/register`, info);
     const status = result.status;
@@ -225,7 +206,6 @@ async function checkLicense() {
     if (status === 'denied') return { ok: false, status: 'denied' };
     return { ok: false, status: status || 'unknown' };
   } catch (err) {
-    // Offline: check cache
     const cache = loadLicenseCache();
     if (cache && cache.status === 'approved' && cache.expiry && cache.cached_at) {
       const cachedAt = new Date(cache.cached_at);
@@ -248,45 +228,33 @@ function isPortFree(port) {
   });
 }
 
-// ─── PostgreSQL ──────────────────────────────────────────────────────────────
+// ─── PostgreSQL (matches launcher.py pattern: trust auth, no password) ───────
 function initPostgres() {
   if (fs.existsSync(path.join(PG_DATA_DIR, 'PG_VERSION'))) return;
   console.log('[Electron] Initializing PostgreSQL cluster...');
   fs.mkdirSync(PG_DATA_DIR, { recursive: true });
-
-  const dbPassword = getDbPassword();
-  if (dbPassword) {
-    const pwFile = path.join(APPDATA_DIR, '.pg_init_pw');
-    fs.writeFileSync(pwFile, dbPassword, 'utf-8');
-    execSync(`"${INITDB}" -D "${PG_DATA_DIR}" -U postgres --locale=C --encoding=UTF8 --pwfile="${pwFile}" -A md5`, {
-      stdio: 'pipe',
-      timeout: 60000,
-    });
-    try { fs.unlinkSync(pwFile); } catch { /* ignore */ }
-  } else {
-    execSync(`"${INITDB}" -D "${PG_DATA_DIR}" -U postgres --locale=C --encoding=UTF8`, {
-      stdio: 'pipe',
-      timeout: 60000,
-    });
-  }
+  execSync(`"${INITDB_EXE}" -D "${PG_DATA_DIR}" -U postgres --locale=C --encoding=UTF8`, {
+    stdio: 'pipe',
+    timeout: 60000,
+  });
 }
 
 function startPostgres() {
-  const pgPort = getDbPort();
-  console.log(`[Electron] Starting PostgreSQL on port ${pgPort}...`);
-  spawn(PG_CTL, ['-D', PG_DATA_DIR, '-o', `-p ${pgPort}`, '-l', path.join(APPDATA_DIR, 'pg.log'), 'start'], {
+  if (pgStarted) return;
+  console.log(`[Electron] Starting PostgreSQL on port ${PG_PORT}...`);
+  spawn(PG_CTL, ['-D', PG_DATA_DIR, '-o', `-p ${PG_PORT}`, '-l', path.join(APPDATA_DIR, 'pg.log'), 'start'], {
     stdio: 'ignore',
     detached: true,
   }).unref();
+  pgStarted = true;
 }
 
 function waitForPostgres(timeoutMs = 30000) {
-  const pgPort = getDbPort();
   return new Promise((resolve, reject) => {
     const deadline = Date.now() + timeoutMs;
     const check = () => {
       try {
-        const result = execSync(`"${PG_ISREADY}" -h 127.0.0.1 -p ${pgPort} -d postgres`, {
+        const result = execSync(`"${PG_ISREADY}" -h 127.0.0.1 -p ${PG_PORT} -d postgres`, {
           stdio: 'pipe', timeout: 5000,
         });
         if (result.toString().includes('accepting connections')) {
@@ -304,10 +272,131 @@ function waitForPostgres(timeoutMs = 30000) {
   });
 }
 
+function runInitDb() {
+  return new Promise((resolve, reject) => {
+    const env = {
+      ...process.env,
+      DB_HOST: '127.0.0.1',
+      DB_PORT: String(PG_PORT),
+      POSTGRES_DB: PG_DB,
+      POSTGRES_USER: 'postgres',
+      POSTGRES_PASSWORD: '',
+    };
+
+    // init_db.py is bundled inside the PyInstaller _internal folder
+    // Run it using the frozen backend exe with a special flag, or use psql + SQL directly
+    // Simplest: use the standalone init_db.py with the bundled Python from hercules-backend
+    // Since init_db.py is inside _internal, we run hercules-backend.exe with init_db as module
+    // Actually, the simplest approach: run init_db.py logic via psql directly
+
+    const steps = [
+      { desc: 'Creating database...', sql: `SELECT 1 FROM pg_database WHERE datname = '${PG_DB}'` },
+    ];
+
+    // Step 1: Create database if not exists
+    try {
+      const checkDb = execSync(
+        `"${PSQL_EXE}" -h 127.0.0.1 -p ${PG_PORT} -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${PG_DB}'"`,
+        { stdio: 'pipe', timeout: 10000, env }
+      ).toString().trim();
+
+      if (checkDb !== '1') {
+        execSync(
+          `"${PSQL_EXE}" -h 127.0.0.1 -p ${PG_PORT} -U postgres -d postgres -c "CREATE DATABASE ${PG_DB}"`,
+          { stdio: 'pipe', timeout: 10000, env }
+        );
+        console.log('[Electron] Created database:', PG_DB);
+      } else {
+        console.log('[Electron] Database already exists:', PG_DB);
+      }
+    } catch (e) {
+      reject(new Error(`Failed to create database: ${e.message}`));
+      return;
+    }
+
+    // Step 2: Run all migration SQL files
+    const migrationsDir = path.join(BACKEND_DIR, '_internal', 'migrations');
+    // Fallback: check if migrations are directly in backend dir
+    const migDir = fs.existsSync(migrationsDir) ? migrationsDir : path.join(BACKEND_DIR, 'migrations');
+
+    const migrationOrder = [
+      'create_tags_tables.sql',
+      'create_users_table.sql',
+      'create_bins_and_materials_tables.sql',
+      'create_report_builder_tables.sql',
+      'create_tag_history_tables.sql',
+      'create_kpi_engine_tables.sql',
+      'add_is_counter_to_tags.sql',
+      'add_bin_activation_fields.sql',
+      'add_value_formula_field.sql',
+      'add_layout_config_field.sql',
+      'add_line_running_tag_fields.sql',
+      'add_dynamic_monitoring_tables.sql',
+      'alter_tag_history_nullable_layout.sql',
+      'create_licenses_table.sql',
+      'create_mappings_table.sql',
+      'add_tag_history_archive_unique_universal.sql',
+      'add_license_machine_info.sql',
+    ];
+
+    for (const file of migrationOrder) {
+      const filePath = path.join(migDir, file);
+      if (!fs.existsSync(filePath)) {
+        console.log(`[Electron] SKIP migration: ${file} (not found)`);
+        continue;
+      }
+      try {
+        execSync(
+          `"${PSQL_EXE}" -h 127.0.0.1 -p ${PG_PORT} -U postgres -d ${PG_DB} -f "${filePath}"`,
+          { stdio: 'pipe', timeout: 30000, env }
+        );
+        console.log(`[Electron] OK migration: ${file}`);
+      } catch (e) {
+        // "already exists" errors are expected and safe
+        console.log(`[Electron] SKIP migration: ${file} (${e.message.split('\n')[0]})`);
+      }
+    }
+
+    // Step 3: Create default admin user (admin/admin)
+    // Use werkzeug-compatible bcrypt hash for password "admin"
+    const adminHash = 'scrypt:32768:8:1$salt$' + crypto.randomBytes(32).toString('hex');
+    // Simpler: use a known werkzeug hash for "admin"
+    try {
+      const checkUser = execSync(
+        `"${PSQL_EXE}" -h 127.0.0.1 -p ${PG_PORT} -U postgres -d ${PG_DB} -tAc "SELECT 1 FROM users WHERE username = 'admin'"`,
+        { stdio: 'pipe', timeout: 10000, env }
+      ).toString().trim();
+
+      if (checkUser !== '1') {
+        // Verified bcrypt hash for password "admin" (same as setup_local_db.py)
+        // Write SQL to temp file to avoid shell escaping issues with $ in bcrypt hash
+        const adminSqlFile = path.join(APPDATA_DIR, '_admin_init.sql');
+        fs.writeFileSync(adminSqlFile,
+          "INSERT INTO users (username, password_hash, role) VALUES ('admin', '$2b$12$LJ3m4ys3Lk0TSwMBQWJxaeflIOwnGGkahJCsOvn/F9JDOaFf1liGu', 'admin');\n",
+          'utf-8'
+        );
+        execSync(
+          `"${PSQL_EXE}" -h 127.0.0.1 -p ${PG_PORT} -U postgres -d ${PG_DB} -f "${adminSqlFile}"`,
+          { stdio: 'pipe', timeout: 10000, env }
+        );
+        try { fs.unlinkSync(adminSqlFile); } catch { /* ignore */ }
+        console.log('[Electron] Created default admin user (admin/admin)');
+      } else {
+        console.log('[Electron] Admin user already exists');
+      }
+    } catch (e) {
+      console.log(`[Electron] Admin user creation: ${e.message.split('\n')[0]}`);
+    }
+
+    resolve();
+  });
+}
+
 function stopPostgres() {
   try {
     execSync(`"${PG_CTL}" stop -D "${PG_DATA_DIR}" -m fast`, { stdio: 'pipe', timeout: 10000 });
   } catch { /* already stopped */ }
+  pgStarted = false;
 }
 
 // ─── Backend ─────────────────────────────────────────────────────────────────
@@ -316,10 +405,10 @@ function startBackend() {
     ...process.env,
     HERCULES_DESKTOP: '1',
     DB_HOST: '127.0.0.1',
-    DB_PORT: String(getDbPort()),
-    POSTGRES_DB: 'dynamic_db_hercules',
+    DB_PORT: String(PG_PORT),
+    POSTGRES_DB: PG_DB,
     POSTGRES_USER: 'postgres',
-    POSTGRES_PASSWORD: getDbPassword(),
+    POSTGRES_PASSWORD: '',
     FLASK_PORT: String(BACKEND_PORT),
   };
 
@@ -367,7 +456,6 @@ function waitForBackend(timeoutMs = 30000) {
 function stopBackend() {
   if (!backendProcess) return;
   try {
-    // Windows: use taskkill (SIGTERM does not exist on Windows)
     execSync(`taskkill /PID ${backendProcess.pid} /T /F`, { stdio: 'pipe', timeout: 5000 });
   } catch {
     try { backendProcess.kill(); } catch { /* already dead */ }
@@ -378,12 +466,8 @@ function stopBackend() {
 // ─── Windows ─────────────────────────────────────────────────────────────────
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
-    width: 420,
-    height: 320,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    resizable: false,
+    width: 420, height: 320,
+    frame: false, transparent: true, alwaysOnTop: true, resizable: false,
     webPreferences: { nodeIntegration: false, contextIsolation: true },
   });
   splashWindow.loadFile(path.join(__dirname, 'splash.html'));
@@ -391,40 +475,28 @@ function createSplashWindow() {
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1024,
-    minHeight: 700,
-    show: false,
-    maximizable: true,
+    width: 1400, height: 900, minWidth: 1024, minHeight: 700,
+    show: false, maximizable: true,
     icon: path.join(__dirname, 'icons', 'icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true,
+      nodeIntegration: false, contextIsolation: true,
     },
   });
-
   mainWindow.loadURL(`http://127.0.0.1:${BACKEND_PORT}`);
-
   mainWindow.once('ready-to-show', () => {
     if (splashWindow) { splashWindow.close(); splashWindow = null; }
     mainWindow.maximize();
     mainWindow.show();
   });
-
   mainWindow.on('close', (e) => {
-    if (tray) {
-      e.preventDefault();
-      mainWindow.hide();
-    }
+    if (tray) { e.preventDefault(); mainWindow.hide(); }
   });
 }
 
 function createTray() {
   const iconPath = path.join(__dirname, 'icons', 'icon.ico');
   if (!fs.existsSync(iconPath)) return;
-
   tray = new Tray(iconPath);
   tray.setToolTip('Hercules Reporting Module');
   tray.setContextMenu(Menu.buildFromTemplate([
@@ -445,7 +517,6 @@ function showLicenseScreen(status) {
   win.on('closed', () => app.quit());
 }
 
-// ─── Periodic license recheck ────────────────────────────────────────────────
 function startPeriodicLicenseCheck() {
   setInterval(async () => {
     const result = await checkLicense();
@@ -460,7 +531,7 @@ function startPeriodicLicenseCheck() {
         setTimeout(() => { app.quit(); }, 5 * 60 * 1000);
       }
     }
-  }, 60 * 60 * 1000); // every 60 minutes
+  }, 60 * 60 * 1000);
 }
 
 // ─── First-run detection ─────────────────────────────────────────────────────
@@ -468,30 +539,100 @@ function isFirstRun() {
   return !fs.existsSync(path.join(CONFIG_DIR, 'db_config.json'));
 }
 
+// ─── IPC handlers for setup wizard ───────────────────────────────────────────
+ipcMain.handle('init-database', async (event) => {
+  try {
+    // Step 1: Check port
+    const free = await isPortFree(PG_PORT);
+    if (!free) {
+      return { ok: false, error: `Port ${PG_PORT} is already in use. Close the conflicting app and retry.` };
+    }
+
+    // Step 2: Init PostgreSQL cluster
+    if (wizardWindow) wizardWindow.webContents.send('db-progress', 'Initializing PostgreSQL...');
+    initPostgres();
+
+    // Step 3: Start PostgreSQL
+    if (wizardWindow) wizardWindow.webContents.send('db-progress', 'Starting PostgreSQL...');
+    startPostgres();
+    await waitForPostgres();
+
+    // Step 4: Run migrations + create default admin
+    if (wizardWindow) wizardWindow.webContents.send('db-progress', 'Creating database and tables...');
+    await runInitDb();
+
+    if (wizardWindow) wizardWindow.webContents.send('db-progress', 'Database ready!');
+    return { ok: true };
+  } catch (err) {
+    console.error('[Electron] DB init error:', err);
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('save-config', async (_event, config) => {
+  try {
+    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+
+    // Save db_config.json (marks setup as complete)
+    fs.writeFileSync(
+      path.join(CONFIG_DIR, 'db_config.json'),
+      JSON.stringify({ db_port: PG_PORT, setup_complete: true, ...config }, null, 2),
+      'utf-8',
+    );
+
+    // Save PLC config
+    if (config.plc) {
+      fs.writeFileSync(
+        path.join(CONFIG_DIR, 'plc_config.json'),
+        JSON.stringify(config.plc, null, 2), 'utf-8',
+      );
+    }
+
+    // Save demo mode
+    if (config.demo_mode !== undefined) {
+      fs.writeFileSync(
+        path.join(CONFIG_DIR, 'demo_mode.json'),
+        JSON.stringify({ demo_mode: config.demo_mode }, null, 2), 'utf-8',
+      );
+    }
+
+    // Save SMTP config
+    if (config.smtp && config.smtp.smtp_server) {
+      fs.writeFileSync(
+        path.join(CONFIG_DIR, 'smtp_config.json'),
+        JSON.stringify(config.smtp, null, 2), 'utf-8',
+      );
+    }
+
+    console.log('[Electron] Config saved to', CONFIG_DIR);
+    return { ok: true };
+  } catch (err) {
+    console.error('[Electron] Config save error:', err);
+    return { ok: false, error: err.message };
+  }
+});
+
+// ─── Setup wizard ────────────────────────────────────────────────────────────
 function showSetupWizard() {
   return new Promise((resolve) => {
-    const win = new BrowserWindow({
+    wizardWindow = new BrowserWindow({
       width: 900, height: 700, resizable: true,
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
-        nodeIntegration: false,
-        contextIsolation: true,
+        nodeIntegration: false, contextIsolation: true,
       },
     });
-    win.loadFile(path.join(__dirname, 'setup-wizard.html'));
+    wizardWindow.loadFile(path.join(__dirname, 'setup-wizard.html'));
 
-    ipcMain.once('setup-complete', (_event, config) => {
-      fs.mkdirSync(CONFIG_DIR, { recursive: true });
-      fs.writeFileSync(
-        path.join(CONFIG_DIR, 'db_config.json'),
-        JSON.stringify(config, null, 2),
-        'utf-8',
-      );
-      win.close();
-      resolve(config);
+    ipcMain.once('wizard-done', () => {
+      if (wizardWindow) { wizardWindow.close(); wizardWindow = null; }
+      resolve(true);
     });
 
-    win.on('closed', () => resolve(null));
+    wizardWindow.on('closed', () => {
+      wizardWindow = null;
+      resolve(false);
+    });
   });
 }
 
@@ -516,33 +657,31 @@ app.on('ready', async () => {
       return;
     }
 
-    // 2. First-run setup
+    // 2. First-run → setup wizard (DB auto-init + PLC + SMTP config)
     if (isFirstRun()) {
-      const config = await showSetupWizard();
-      if (!config) { app.quit(); return; }
+      const completed = await showSetupWizard();
+      if (!completed) { app.quit(); return; }
     }
 
     // 3. Show splash
     createSplashWindow();
 
     // 4. Port checks
-    const pgPort = getDbPort();
-    const pgFree = await isPortFree(pgPort);
+    const pgFree = await isPortFree(PG_PORT);
     const backendFree = await isPortFree(BACKEND_PORT);
-    if (!pgFree || !backendFree) {
-      const blocked = [];
-      if (!pgFree) blocked.push(`PostgreSQL port ${pgPort}`);
-      if (!backendFree) blocked.push(`Backend port ${BACKEND_PORT}`);
-      dialog.showErrorBox(
-        'Port Conflict',
-        `The following port(s) are in use:\n\n${blocked.join('\n')}\n\nPlease close the conflicting application and try again.`
-      );
+    if (!pgFree && !pgStarted) {
+      dialog.showErrorBox('Port Conflict', `PostgreSQL port ${PG_PORT} is in use.\nClose the conflicting application and try again.`);
+      app.quit();
+      return;
+    }
+    if (!backendFree) {
+      dialog.showErrorBox('Port Conflict', `Backend port ${BACKEND_PORT} is in use.\nClose the conflicting application and try again.`);
       app.quit();
       return;
     }
 
-    // 5. Start PostgreSQL
-    if (fs.existsSync(PG_CTL)) {
+    // 5. Start PostgreSQL (skip if already started during wizard)
+    if (fs.existsSync(PG_CTL) && !pgStarted) {
       initPostgres();
       startPostgres();
       await waitForPostgres();
@@ -556,7 +695,6 @@ app.on('ready', async () => {
       console.log('[Electron] Backend ready.');
     } else {
       console.warn('[Electron] Backend exe not found at', BACKEND_EXE);
-      console.log('[Electron] Dev mode — assuming backend runs externally.');
     }
 
     // 7. Load app

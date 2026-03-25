@@ -4,6 +4,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('hercules', {
-  setupComplete: (config) => ipcRenderer.send('setup-complete', config),
-  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  initDatabase: () => ipcRenderer.invoke('init-database'),
+  saveConfig: (config) => ipcRenderer.invoke('save-config', config),
+  onDbProgress: (callback) => ipcRenderer.on('db-progress', (_event, msg) => callback(msg)),
 });

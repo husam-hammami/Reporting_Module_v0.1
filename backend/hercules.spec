@@ -93,6 +93,10 @@ a = Analysis(
         'report_mailer',
         'xhtml2pdf',
         'reportlab',
+        'reportlab.graphics.barcode',
+        'reportlab.graphics.barcode.code128',
+        'reportlab.graphics.barcode.code39',
+        'reportlab.graphics.barcode.common',
 
         # Libraries
         'psycopg2',
