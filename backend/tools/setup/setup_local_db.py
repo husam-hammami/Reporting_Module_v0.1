@@ -208,9 +208,24 @@ def create_default_user():
     conn.close()
 
 
-# ── Step 4: Seed demo data ───────────────────────────────────────────────
+# ── Step 4: Seed Mil B production data (always runs) ─────────────────────
+def seed_production_data():
+    print_header('Step 4 — Seed Mil B production data')
+    if SCRIPT_DIR not in sys.path:
+        sys.path.insert(0, SCRIPT_DIR)
+    try:
+        from seed_mil_b_data import seed as mil_b_seed
+        conn = connect(DB_NAME)
+        conn.autocommit = False
+        mil_b_seed(conn)
+        conn.close()
+    except Exception as e:
+        print(f'  WARN  Could not seed Mil B data: {e}')
+
+
+# ── Step 5: Seed demo data ───────────────────────────────────────────────
 def seed_demo_data():
-    print_header('Step 4 — Seed demo data')
+    print_header('Step 5 — Seed demo data')
 
     seed_tags = os.path.join(SCRIPT_DIR, 'seed_demo_tags.py')
     seed_layout = os.path.join(SCRIPT_DIR, 'seed_demo_layout.py')
@@ -244,7 +259,7 @@ def seed_demo_data():
 
 # ── Step 5: Verify ───────────────────────────────────────────────────────
 def verify():
-    print_header('Step 5 — Verify')
+    print_header('Step 6 — Verify')
     conn = connect(DB_NAME)
     cur = conn.cursor()
 
@@ -277,11 +292,12 @@ def main():
     create_database()
     run_migrations()
     create_default_user()
+    seed_production_data()
 
     if not args.no_seed:
         seed_demo_data()
     else:
-        print_header('Step 4 — Seed demo data (SKIPPED via --no-seed)')
+        print_header('Step 5 — Seed demo data (SKIPPED via --no-seed)')
 
     verify()
 
