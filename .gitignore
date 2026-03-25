@@ -68,3 +68,6 @@ desktop/pgsql/
 desktop/vcredist/
 desktop/dist/
 *.exe
+dist_launcher/
+dist/
+build/

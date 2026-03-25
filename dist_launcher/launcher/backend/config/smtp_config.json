@@ -1,9 +1,0 @@
-{
-  "smtp_server": "smtp.gmail.com",
-  "smtp_port": 465,
-  "username": "imroz32492@gmail.com",
-  "password": "vkky aqof jhow tqbl",
-  "tls": true,
-  "from_address": "",
-  "recipient": ""
-}
