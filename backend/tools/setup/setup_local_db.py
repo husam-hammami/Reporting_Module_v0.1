@@ -163,6 +163,23 @@ def run_migrations():
             msg = str(e).split('\n')[0]
             print(f'  SKIP  {filename}  ({msg})')
 
+    # Auto-discover migrations not in MIGRATION_ORDER (e.g. delivered via OTA update)
+    all_sql = set(f for f in os.listdir(MIGRATIONS_DIR) if f.endswith('.sql'))
+    ordered = set(MIGRATION_ORDER)
+    extra = sorted(all_sql - ordered)
+    for filename in extra:
+        path = os.path.join(MIGRATIONS_DIR, filename)
+        with open(path, 'r', encoding='utf-8') as f:
+            sql = f.read()
+        try:
+            cur.execute(sql)
+            print(f'  OK    {filename}  (auto-discovered)')
+        except Exception as e:
+            conn.rollback()
+            conn.autocommit = True
+            msg = str(e).split('\n')[0]
+            print(f'  SKIP  {filename}  ({msg})')
+
     cur.close()
     conn.close()
 

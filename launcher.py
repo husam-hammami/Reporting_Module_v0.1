@@ -3,17 +3,21 @@ Hercules Reporting Module — Standalone launcher.
 Starts portable PostgreSQL, runs DB setup on first run, then starts the Flask backend.
 Designed to be compiled to launcher.exe (e.g. PyInstaller) for the installer bundle.
 """
+import hashlib
 import json
 import os
 import platform
+import shutil
 import ssl
 import subprocess
 import sys
+import tempfile
 import time
 import traceback
 import urllib.request
 import urllib.error
 import webbrowser
+import zipfile
 from datetime import datetime
 
 try:
@@ -124,6 +128,10 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 BACKEND_DIR = os.path.join(BASE_DIR, "backend")
 SETUP_SCRIPT = os.path.join(BACKEND_DIR, "tools", "setup", "setup_local_db.py")
 APP_MAIN = os.path.join(BACKEND_DIR, "app.py")
+
+GITHUB_REPO = "husam-hammami/Reporting_Module_v0.1"
+GITHUB_RELEASES_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+VERSION_FILE = os.path.join(BASE_DIR, "version.txt")
 
 PG_CTL = os.path.join(PG_BIN, "pg_ctl.exe")
 INITDB = os.path.join(PG_BIN, "initdb.exe")
@@ -275,6 +283,94 @@ def start_backend():
     )
 
 
+def _get_local_version():
+    try:
+        with open(VERSION_FILE, encoding="utf-8") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return "0.0.0"
+
+
+def _version_tuple(v):
+    return tuple(int(x) for x in v.replace("v", "").split("."))
+
+
+def check_and_apply_update():
+    local_ver = _get_local_version()
+    print(f"Current version: {local_ver}")
+
+    try:
+        req = urllib.request.Request(
+            GITHUB_RELEASES_URL,
+            headers={
+                "User-Agent": "HerculesLauncher/1.0",
+                "Accept": "application/vnd.github+json",
+            },
+        )
+        ctx = _ssl_context()
+        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+            release = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"Update check skipped (GitHub unreachable): {e}")
+        return
+
+    remote_ver = release.get("tag_name", "v0.0.0").lstrip("v")
+    if _version_tuple(remote_ver) <= _version_tuple(local_ver):
+        print(f"Already up to date (v{local_ver}).")
+        return
+
+    assets = release.get("assets", [])
+    zip_asset = None
+    for a in assets:
+        if a.get("name", "").endswith(".zip"):
+            zip_asset = a
+            break
+    if not zip_asset:
+        print("No zip asset in release — skipping update.")
+        return
+
+    download_url = zip_asset["browser_download_url"]
+    print(f"Update available: v{local_ver} -> v{remote_ver}")
+
+    tmp = os.path.join(tempfile.gettempdir(), zip_asset["name"])
+    try:
+        print("Downloading update...")
+        req = urllib.request.Request(download_url, headers={"User-Agent": "HerculesLauncher/1.0"})
+        with urllib.request.urlopen(req, timeout=120, context=ctx) as resp:
+            with open(tmp, "wb") as f:
+                while True:
+                    chunk = resp.read(65536)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+    except Exception as e:
+        print(f"Download failed: {e}")
+        return
+
+    backup = BACKEND_DIR + "_backup"
+    try:
+        print("Applying update...")
+        if os.path.exists(backup):
+            shutil.rmtree(backup)
+        os.rename(BACKEND_DIR, backup)
+
+        with zipfile.ZipFile(tmp, "r") as zf:
+            zf.extractall(BASE_DIR)
+
+        shutil.rmtree(backup, ignore_errors=True)
+        os.remove(tmp)
+
+        with open(VERSION_FILE, "w", encoding="utf-8") as f:
+            f.write(remote_ver)
+        print(f"Updated to v{remote_ver}.")
+
+    except Exception as e:
+        print(f"Update failed: {e}")
+        if os.path.exists(backup) and not os.path.exists(BACKEND_DIR):
+            os.rename(backup, BACKEND_DIR)
+        print("Rolled back to previous version.")
+
+
 def main():
     machine_id = _machine_id_fallback()
     license_path = os.path.join(BASE_DIR, "license.json")
@@ -335,6 +431,8 @@ def main():
             print("Please check your internet connection and try again.")
             pause_before_exit()
             sys.exit(1)
+
+    check_and_apply_update()
 
     if not os.path.exists(PG_CTL):
         print(f"Error: PostgreSQL binaries not found at {PG_BIN}")
