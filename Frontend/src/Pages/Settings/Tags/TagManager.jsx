@@ -242,7 +242,10 @@ const TagManager = () => {
     if (!files.length) return;
 
     const csvFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv'));
+    const xlsxFiles = files.filter(f => f.name.toLowerCase().endsWith('.xlsx') || f.name.toLowerCase().endsWith('.xls'));
     const jsonFiles = files.filter(f => f.name.toLowerCase().endsWith('.json'));
+
+    const results = [];
 
     try {
       // Handle CSV files (PLC engineering format) via dedicated endpoint
@@ -253,33 +256,65 @@ const TagManager = () => {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         if (res.data.status === 'success') {
-          const msg = [`Imported ${res.data.imported} tags from ${csvFiles.length} CSV file(s)`];
-          if (res.data.errors?.length) msg.push(`${res.data.errors.length} tag errors`);
-          if (res.data.file_errors?.length) msg.push(`${res.data.file_errors.length} file errors`);
-          alert(msg.join('\n'));
+          results.push(`CSV: imported ${res.data.imported} tags`);
         } else {
-          alert('CSV import failed: ' + (res.data.message || 'Unknown error'));
+          results.push(`CSV: failed - ${res.data.message || 'Unknown error'}`);
+        }
+      }
+
+      // Handle Excel files (PLC engineering format) via dedicated endpoint
+      if (xlsxFiles.length > 0) {
+        const formData = new FormData();
+        xlsxFiles.forEach(f => formData.append('files', f));
+        const res = await axios.post('/api/tags/import-plc-excel', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        if (res.data.status === 'success') {
+          results.push(`Excel: imported ${res.data.imported} tags`);
+        } else {
+          results.push(`Excel: failed - ${res.data.message || 'Unknown error'}`);
         }
       }
 
       // Handle JSON files via existing bulk-import
       for (const file of jsonFiles) {
-        const text = await file.text();
-        const imported = JSON.parse(text);
-        if (imported.tags && Array.isArray(imported.tags)) {
-          const res = await axios.post('/api/tags/bulk-import', { tags: imported.tags });
-          if (res.data.status === 'success') {
-            alert(`Imported ${res.data.imported} tags from ${file.name}`);
+        try {
+          const text = await file.text();
+          const imported = JSON.parse(text);
+          if (imported.tags && Array.isArray(imported.tags)) {
+            const res = await axios.post('/api/tags/bulk-import', { tags: imported.tags });
+            if (res.data.status === 'success') {
+              results.push(`${file.name}: imported ${res.data.imported} tags`);
+            }
+          } else {
+            results.push(`${file.name}: invalid JSON format`);
           }
-        } else {
-          alert(`Invalid JSON format in ${file.name}`);
+        } catch (jsonErr) {
+          results.push(`${file.name}: ${jsonErr.message}`);
         }
       }
 
-      if (csvFiles.length > 0 || jsonFiles.length > 0) {
+      if (csvFiles.length > 0 || xlsxFiles.length > 0 || jsonFiles.length > 0) {
         await loadTags();
         window.dispatchEvent(new Event('tagsUpdated'));
+
+        // Offer to create report drafts for PLC imports
+        if ((csvFiles.length > 0 || xlsxFiles.length > 0) && window.confirm('Also create report drafts from imported tags? (one report per DB)')) {
+          try {
+            const draftRes = await axios.post('/api/tags/generate-report-drafts', {});
+            if (draftRes.data.status === 'success' && draftRes.data.templates?.length > 0) {
+              const existing = JSON.parse(localStorage.getItem('hercules_report_builder_templates') || '[]');
+              // Deduplicate by name
+              const existingNames = new Set(existing.map(t => t.name));
+              const newTemplates = draftRes.data.templates.filter(t => !existingNames.has(t.name));
+              localStorage.setItem('hercules_report_builder_templates', JSON.stringify([...existing, ...newTemplates]));
+              results.push(`Report drafts: created ${newTemplates.length}`);
+            }
+          } catch { /* skip if fails */ }
+        }
       }
+
+      if (results.length > 0) alert('Import results:\n' + results.join('\n'));
     } catch (e) {
       alert('Error importing: ' + (e.response?.data?.message || e.message));
     }
@@ -316,7 +351,7 @@ const TagManager = () => {
         <div className="flex items-center gap-2">
           <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] bg-white dark:bg-[#131b2d] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] cursor-pointer transition-colors">
             <FaUpload size={11} /> Import
-            <input type="file" accept=".json,.csv" multiple onChange={handleImport} className="hidden" />
+            <input type="file" accept=".json,.csv,.xlsx,.xls" multiple onChange={handleImport} className="hidden" />
           </label>
           <div className="relative">
             <button onClick={() => setExportMenuOpen(!exportMenuOpen)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] bg-white dark:bg-[#131b2d] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] transition-colors">

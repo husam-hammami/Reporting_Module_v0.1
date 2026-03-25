@@ -30,8 +30,11 @@ const ExportImport = () => {
   const [importPreview, setImportPreview] = useState(null);
   const [importSections, setImportSections] = useState(new Set());
   const [csvFiles, setCsvFiles] = useState([]);
+  const [xlsxFiles, setXlsxFiles] = useState([]);
   const [importCsv, setImportCsv] = useState(true);
+  const [importXlsx, setImportXlsx] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [createReportDrafts, setCreateReportDrafts] = useState(false);
   const [importFileName, setImportFileName] = useState('');
 
   // ─── Toggle helpers ───
@@ -138,14 +141,17 @@ const ExportImport = () => {
     if (!files.length) return;
 
     const csv = files.filter(f => f.name.toLowerCase().endsWith('.csv'));
+    const xlsx = files.filter(f => f.name.toLowerCase().endsWith('.xlsx') || f.name.toLowerCase().endsWith('.xls'));
     const json = files.filter(f => f.name.toLowerCase().endsWith('.json'));
 
     setCsvFiles(csv);
+    setXlsxFiles(xlsx);
     setImportCsv(csv.length > 0);
+    setImportXlsx(xlsx.length > 0);
 
     if (json.length > 0) {
       const file = json[0];
-      setImportFileName([file.name, ...csv.map(f => f.name)].join(', '));
+      setImportFileName([file.name, ...csv.map(f => f.name), ...xlsx.map(f => f.name)].join(', '));
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
@@ -163,8 +169,8 @@ const ExportImport = () => {
         }
       };
       reader.readAsText(file);
-    } else if (csv.length > 0) {
-      setImportFileName(csv.map(f => f.name).join(', '));
+    } else if (csv.length > 0 || xlsx.length > 0) {
+      setImportFileName([...csv, ...xlsx].map(f => f.name).join(', '));
       setImportPreview(null);
       setImportFile(null);
       setImportSections(new Set());
@@ -175,11 +181,11 @@ const ExportImport = () => {
 
   // ─── IMPORT EXECUTION ───
   const handleImport = async () => {
-    if (!importFile && csvFiles.length === 0) {
+    if (!importFile && csvFiles.length === 0 && xlsxFiles.length === 0) {
       alert('Please select a file first');
       return;
     }
-    if (importSections.size === 0 && !(csvFiles.length > 0 && importCsv)) {
+    if (importSections.size === 0 && !(csvFiles.length > 0 && importCsv) && !(xlsxFiles.length > 0 && importXlsx)) {
       alert('Please select at least one section to import');
       return;
     }
@@ -207,6 +213,26 @@ const ExportImport = () => {
           window.dispatchEvent(new Event('tagsUpdated'));
         } catch (e) {
           results.push(`Tags (CSV): failed - ${e.response?.data?.message || e.message}`);
+        }
+      }
+
+      // Excel files → PLC tag import
+      if (xlsxFiles.length > 0 && importXlsx) {
+        try {
+          const formData = new FormData();
+          xlsxFiles.forEach(f => formData.append('files', f));
+          const res = await axios.post('/api/tags/import-plc-excel', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          if (res.data.status === 'success') {
+            results.push(`Tags (Excel): imported ${res.data.imported} from ${xlsxFiles.length} file(s)`);
+            if (res.data.errors?.length) results.push(`  ${res.data.errors.length} tag errors`);
+          } else {
+            results.push(`Tags (Excel): failed - ${res.data.message}`);
+          }
+          window.dispatchEvent(new Event('tagsUpdated'));
+        } catch (e) {
+          results.push(`Tags (Excel): failed - ${e.response?.data?.message || e.message}`);
         }
       }
 
@@ -289,12 +315,31 @@ const ExportImport = () => {
         }
       }
 
+      // Generate report drafts if requested
+      if (createReportDrafts && (csvFiles.length > 0 || xlsxFiles.length > 0)) {
+        try {
+          const draftRes = await axios.post('/api/tags/generate-report-drafts', {});
+          if (draftRes.data.status === 'success' && draftRes.data.templates?.length > 0) {
+            const existing = JSON.parse(localStorage.getItem('hercules_report_builder_templates') || '[]');
+            const existingNames = new Set(existing.map(t => t.name));
+            const newTemplates = draftRes.data.templates.filter(t => !existingNames.has(t.name));
+            localStorage.setItem('hercules_report_builder_templates', JSON.stringify([...existing, ...newTemplates]));
+            results.push(`Report Drafts: created ${newTemplates.length}`);
+          }
+        } catch (e) {
+          results.push(`Report Drafts: failed - ${e.message}`);
+        }
+      }
+
       alert('Import completed!\n' + results.join('\n'));
       setImportFile(null);
       setImportPreview(null);
       setImportSections(new Set());
       setCsvFiles([]);
+      setXlsxFiles([]);
       setImportCsv(false);
+      setImportXlsx(false);
+      setCreateReportDrafts(false);
       setImportFileName('');
     } catch (err) {
       alert('Error importing: ' + err.message);
@@ -307,7 +352,9 @@ const ExportImport = () => {
     setImportPreview(null);
     setImportSections(new Set());
     setCsvFiles([]);
+    setXlsxFiles([]);
     setImportCsv(false);
+    setImportXlsx(false);
     setImportFileName('');
   };
 
@@ -402,14 +449,14 @@ const ExportImport = () => {
             {/* File picker */}
             <div>
               <label className="text-[11px] font-medium text-[#6b7f94] mb-1.5 block">
-                Select File(s) — JSON or CSV (PLC tags)
+                Select File(s) — JSON, CSV, or Excel (PLC tags)
               </label>
               <label className="w-full px-3 py-2.5 bg-[#f5f8fb] dark:bg-[#081320] hover:bg-[#edf2f7] dark:hover:bg-[#131b2d] text-[#6b7f94] text-[12px] font-medium rounded-lg flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-[#e3e9f0] dark:border-[#1e2d40] transition-colors">
                 <FaUpload className="text-[12px]" />
                 {importFileName || 'Choose File(s)'}
                 <input
                   type="file"
-                  accept=".json,.csv"
+                  accept=".json,.csv,.xlsx,.xls"
                   multiple
                   onChange={handleImportFile}
                   className="hidden"
@@ -418,7 +465,7 @@ const ExportImport = () => {
             </div>
 
             {/* Section checkboxes after file loaded */}
-            {(availableImportSections.length > 0 || csvFiles.length > 0) && (
+            {(availableImportSections.length > 0 || csvFiles.length > 0 || xlsxFiles.length > 0) && (
               <div className="bg-[#f0f7ff] dark:bg-[#1a2a3e] border border-[#c4d8ef] dark:border-[#1e2d40] rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-[12px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">
@@ -441,6 +488,34 @@ const ExportImport = () => {
                       />
                       <span className={lblClass}>PLC Tags from CSV</span>
                       <span className="text-[10px] text-[#8898aa]">({csvFiles.length} file{csvFiles.length > 1 ? 's' : ''})</span>
+                    </label>
+                  )}
+
+                  {/* Excel tags option */}
+                  {xlsxFiles.length > 0 && (
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={importXlsx}
+                        onChange={() => setImportXlsx(!importXlsx)}
+                        className={cbClass}
+                      />
+                      <span className={lblClass}>PLC Tags from Excel</span>
+                      <span className="text-[10px] text-[#8898aa]">({xlsxFiles.length} file{xlsxFiles.length > 1 ? 's' : ''})</span>
+                    </label>
+                  )}
+
+                  {/* Report draft generation option */}
+                  {(csvFiles.length > 0 || xlsxFiles.length > 0) && (
+                    <label className="flex items-center gap-2 border-t border-[#e3e9f0] dark:border-[#1e2d40] pt-1.5 mt-1">
+                      <input
+                        type="checkbox"
+                        checked={createReportDrafts}
+                        onChange={() => setCreateReportDrafts(!createReportDrafts)}
+                        className={cbClass}
+                      />
+                      <span className={lblClass}>Create report drafts</span>
+                      <span className="text-[10px] text-[#8898aa]">(one table report per DB)</span>
                     </label>
                   )}
 
@@ -474,7 +549,7 @@ const ExportImport = () => {
 
             <button
               onClick={handleImport}
-              disabled={importing || (importSections.size === 0 && !(csvFiles.length > 0 && importCsv))}
+              disabled={importing || (importSections.size === 0 && !(csvFiles.length > 0 && importCsv) && !(xlsxFiles.length > 0 && importXlsx))}
               className="w-full bg-[#059669] hover:bg-[#047857] disabled:bg-[#e3e9f0] disabled:text-[#8898aa] disabled:cursor-not-allowed text-white text-[11px] font-medium rounded-lg px-3 py-1.5 flex items-center justify-center gap-2 transition-colors"
             >
               {importing ? <FaSpinner className="animate-spin text-[11px]" /> : <FaUpload className="text-[11px]" />}

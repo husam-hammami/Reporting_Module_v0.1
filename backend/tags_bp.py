@@ -8,6 +8,7 @@ import logging
 import json
 import csv
 import io
+import re
 from flask import Blueprint, jsonify, request
 from contextlib import closing
 import psycopg2
@@ -17,6 +18,14 @@ from utils.tag_reader import read_tag_value, read_all_tags
 from plc_utils import connect_to_plc_fast
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_tag_name(name):
+    """Sanitize tag name: replace spaces with underscores, strip special chars."""
+    clean = name.replace(' ', '_')
+    clean = re.sub(r'[^a-zA-Z0-9_\-.]', '', clean)
+    return clean or 'unnamed_tag'
+
 
 tags_bp = Blueprint('tags_bp', __name__)
 
@@ -1070,6 +1079,8 @@ def import_plc_csv():
         files = request.files.getlist('files')
         if not files:
             return jsonify({'status': 'error', 'message': 'No files provided'}), 400
+        if len(files) > 20:
+            return jsonify({'status': 'error', 'message': 'Too many files (max 20)'}), 400
 
         all_tags = []
         file_errors = []
@@ -1077,6 +1088,9 @@ def import_plc_csv():
         for f in files:
             try:
                 content = f.read().decode('utf-8-sig')  # handle BOM
+                if len(content) > 10 * 1024 * 1024:  # 10MB limit
+                    file_errors.append({'file': f.filename, 'error': 'File too large (max 10MB)'})
+                    continue
                 reader = csv.reader(io.StringIO(content))
                 rows = list(reader)
 
@@ -1143,7 +1157,7 @@ def import_plc_csv():
                         # Fallback: last non-empty cell
                         for cell in reversed(row):
                             cell = cell.strip()
-                            if cell and cell.upper() not in ('TRUE', 'FALSE', '0', ''):
+                            if cell and cell.upper() not in ('TRUE', 'FALSE', '0', '', 'REAL', 'INT', 'DINT', 'BOOL', 'STRING', 'STRUCT', 'WORD'):
                                 try:
                                     float(cell)
                                 except ValueError:
@@ -1167,7 +1181,7 @@ def import_plc_csv():
                         plc_address = f"DB{db_number}.{offset}"
 
                     # Clean tag name: replace spaces with underscores
-                    clean_name = tag_name.replace(' ', '_')
+                    clean_name = _sanitize_tag_name(tag_name)
 
                     all_tags.append({
                         'tag_name': clean_name,
@@ -1182,6 +1196,27 @@ def import_plc_csv():
             except Exception as e:
                 file_errors.append({'file': f.filename, 'error': str(e)})
 
+        # Deduplicate: prefix with DB number, and offset if still not unique
+        name_counts = {}
+        for t in all_tags:
+            name_counts[t['tag_name']] = name_counts.get(t['tag_name'], 0) + 1
+        dupes = {n for n, c in name_counts.items() if c > 1}
+        if dupes:
+            for t in all_tags:
+                if t['tag_name'] in dupes:
+                    parsed_addr = parse_plc_address(t['plc_address'])
+                    t['tag_name'] = f"DB{parsed_addr['db_number']}_{t['tag_name']}"
+            # Check again for same-DB duplicates, append offset
+            name_counts2 = {}
+            for t in all_tags:
+                name_counts2[t['tag_name']] = name_counts2.get(t['tag_name'], 0) + 1
+            dupes2 = {n for n, c in name_counts2.items() if c > 1}
+            if dupes2:
+                for t in all_tags:
+                    if t['tag_name'] in dupes2:
+                        parsed_addr = parse_plc_address(t['plc_address'])
+                        t['tag_name'] = f"{t['tag_name']}_off{parsed_addr['offset']}"
+
         if not all_tags:
             return jsonify({
                 'status': 'error',
@@ -1195,7 +1230,8 @@ def import_plc_csv():
 
         get_db_connection_func = _get_db_connection()
         with closing(get_db_connection_func()) as conn:
-            cursor = conn.cursor()
+            actual_conn = conn._conn if hasattr(conn, '_conn') else conn
+            cursor = actual_conn.cursor()
 
             for tag_data in all_tags:
                 try:
@@ -1243,7 +1279,7 @@ def import_plc_csv():
                 except Exception as e:
                     tag_errors.append({'tag': tag_data.get('tag_name', '?'), 'error': str(e)})
 
-            conn.commit()
+            actual_conn.commit()
 
         # Auto-register in emulator if demo mode
         try:
@@ -1301,7 +1337,7 @@ def export_tags_csv():
             writer.writerow([
                 'tag_name', 'display_name', 'source_type', 'data_type',
                 'plc_address', 'unit', 'scaling', 'decimal_places',
-                'formula', 'description', 'is_active'
+                'formula', 'mapping_name', 'description', 'is_active'
             ])
 
             for tag in tags:
@@ -1323,6 +1359,7 @@ def export_tags_csv():
                     t.get('scaling', 1.0),
                     t.get('decimal_places', 2),
                     t.get('formula', ''),
+                    t.get('mapping_name', ''),
                     t.get('description', ''),
                     t.get('is_active', True),
                 ])
@@ -1336,5 +1373,523 @@ def export_tags_csv():
 
     except Exception as e:
         logger.error(f"Error exporting tags CSV: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@tags_bp.route('/tags/import-plc-excel', methods=['POST'])
+def import_plc_excel():
+    """Import tags from PLC engineering Excel files (.xlsx).
+
+    Supports two formats:
+
+    Format A (engineer spec sheets):
+      - DB number extracted from sheet name (e.g. "Mill B DB499" -> 499)
+      - Row 1: section title (skipped)
+      - Row 2: column headers Name|Type|Offset|Comment (skipped)
+      - Data rows: Name, Type, Offset, Comment (unit extracted from Comment)
+      - Multiple sections per sheet separated by empty rows + new title/header
+
+    Format B (TIA Portal CSV-style saved as .xlsx):
+      - Cell A1 contains the DB number
+      - Remaining rows: Name, Type, Offset, Default, [flags...], Unit (last col)
+      - Struct rows skipped
+    """
+    try:
+        try:
+            import openpyxl
+        except ImportError:
+            return jsonify({'status': 'error', 'message': 'openpyxl library not installed — Excel import is unavailable'}), 500
+
+        files = request.files.getlist('files')
+        if not files:
+            return jsonify({'status': 'error', 'message': 'No files provided'}), 400
+        if len(files) > 20:
+            return jsonify({'status': 'error', 'message': 'Too many files (max 20)'}), 400
+
+        all_tags = []
+        file_errors = []
+
+        # Known unit patterns to extract from comment text
+        unit_patterns = [
+            't/h', 'kg', 'kg/h', '%', 'l/h', 'l/m', 'bar', 'rpm', 'mm/s',
+            'kw', 'kwh', 'mw', 'hz', 'm³/h', 'm3/h', '°c', '°f',
+        ]
+
+        def extract_unit_from_comment(comment):
+            """Try to extract a unit from comment text."""
+            if not comment:
+                return ''
+            comment_lower = comment.strip().lower()
+            # Direct match: comment IS the unit
+            for u in unit_patterns:
+                if comment_lower == u:
+                    return comment.strip()
+            # Check if comment starts with a known unit (e.g. "t/h" or "% Sender 1")
+            for u in unit_patterns:
+                if comment_lower.startswith(u + ' ') or comment_lower.startswith(u + ',') or comment_lower == u:
+                    return u.upper() if len(u) <= 2 else u
+            # Check for unit at end in parens: "Some desc (t/h)"
+            paren_match = re.search(r'\(([^)]+)\)\s*$', comment)
+            if paren_match:
+                inner = paren_match.group(1).strip().lower()
+                for u in unit_patterns:
+                    if inner == u:
+                        return paren_match.group(1).strip()
+            return ''
+
+        def detect_format(rows):
+            """Detect if sheet is Format A (engineer spec) or Format B (TIA export)."""
+            if not rows or not rows[0]:
+                return 'A'
+            a1 = str(rows[0][0] or '').strip()
+            # Format B: first cell is just a number (DB number)
+            try:
+                int(a1)
+                return 'B'
+            except ValueError:
+                pass
+            return 'A'
+
+        def extract_db_from_sheet_name(name):
+            """Extract DB number from sheet name like 'Mill B DB499'."""
+            match = re.search(r'DB\s*(\d+)', name, re.IGNORECASE)
+            if match:
+                return int(match.group(1))
+            return None
+
+        type_map = {
+            'real': 'REAL', 'bool': 'BOOL', 'dint': 'DINT',
+            'int': 'INT', 'string': 'STRING', 'word': 'INT',
+        }
+
+        unit_normalize = {
+            'ton per hour': 't/h', 'percentage per second': '%/s',
+            'leter per hour': 'L/h', 'litre per hour': 'L/h',
+            'liter per hour': 'L/h',
+        }
+
+        for f in files:
+            try:
+                wb = openpyxl.load_workbook(f, data_only=True, read_only=True)
+
+                for sheet_name in wb.sheetnames:
+                    ws = wb[sheet_name]
+                    rows = list(ws.iter_rows(values_only=True))
+                    if not rows:
+                        continue
+
+                    fmt = detect_format(rows)
+
+                    if fmt == 'B':
+                        # Format B: TIA-style, cell A1 = DB number
+                        try:
+                            db_number = int(str(rows[0][0]).strip())
+                        except (ValueError, TypeError):
+                            file_errors.append({'file': f.filename, 'sheet': sheet_name, 'error': 'Cell A1 is not a valid DB number'})
+                            continue
+
+                        for row_idx, row in enumerate(rows[1:], start=2):
+                            if not row or not row[0]:
+                                continue
+                            tag_name = str(row[0]).strip()
+                            data_type_raw = str(row[1]).strip() if len(row) > 1 and row[1] else ''
+                            if data_type_raw.lower() == 'struct':
+                                continue
+                            offset_raw = str(row[2]).strip() if len(row) > 2 and row[2] is not None else ''
+                            if not offset_raw:
+                                continue
+
+                            data_type = type_map.get(data_type_raw.lower(), 'REAL')
+                            bit_position = None
+                            if '.' in offset_raw:
+                                parts = offset_raw.split('.')
+                                try:
+                                    offset = int(parts[0])
+                                    bit_position = int(parts[1])
+                                except (ValueError, IndexError):
+                                    continue
+                            else:
+                                try:
+                                    offset = int(float(offset_raw))
+                                except ValueError:
+                                    continue
+
+                            # Unit from last non-empty, non-flag column
+                            unit = ''
+                            if len(row) > 9 and row[9]:
+                                unit = str(row[9]).strip()
+                            elif len(row) > 1:
+                                for cell in reversed(row):
+                                    if cell is None:
+                                        continue
+                                    cell_s = str(cell).strip()
+                                    if cell_s and cell_s.upper() not in ('TRUE', 'FALSE', '0', ''):
+                                        try:
+                                            float(cell_s)
+                                        except ValueError:
+                                            unit = cell_s
+                                            break
+
+                            unit = unit_normalize.get(unit.lower(), unit)
+                            plc_address = f"DB{db_number}.{offset}" if bit_position is None else f"DB{db_number}.{offset}.{bit_position}"
+                            clean_name = _sanitize_tag_name(tag_name)
+
+                            all_tags.append({
+                                'tag_name': clean_name, 'display_name': tag_name,
+                                'source_type': 'PLC', 'plc_address': plc_address,
+                                'data_type': data_type, 'unit': unit, 'is_active': True,
+                            })
+
+                    else:
+                        # Format A: engineer spec sheet, DB from sheet name
+                        db_number = extract_db_from_sheet_name(sheet_name)
+                        if db_number is None:
+                            file_errors.append({'file': f.filename, 'sheet': sheet_name, 'error': f'Cannot extract DB number from sheet name "{sheet_name}"'})
+                            continue
+
+                        # Parse rows, skipping title rows and headers
+                        for row_idx, row in enumerate(rows, start=1):
+                            if not row or all(c is None for c in row):
+                                continue
+
+                            col_a = str(row[0]).strip() if row[0] is not None else ''
+                            col_b = str(row[1]).strip() if len(row) > 1 and row[1] is not None else ''
+                            col_c = str(row[2]).strip() if len(row) > 2 and row[2] is not None else ''
+                            col_d = str(row[3]).strip() if len(row) > 3 and row[3] is not None else ''
+
+                            # Skip header rows (Name|Type|Offset|Comment)
+                            if col_a.lower() == 'name' and col_b.lower() == 'type':
+                                continue
+
+                            # Skip section title rows (only col_a filled, no type/offset)
+                            if col_a and not col_b and not col_c:
+                                continue
+
+                            # Must have a valid type
+                            data_type_raw = col_b.lower()
+                            if data_type_raw not in type_map:
+                                continue
+
+                            data_type = type_map[data_type_raw]
+
+                            # Parse offset
+                            if not col_c:
+                                continue
+                            bit_position = None
+                            if '.' in col_c:
+                                parts = col_c.split('.')
+                                try:
+                                    offset = int(parts[0])
+                                    bit_position = int(parts[1])
+                                except (ValueError, IndexError):
+                                    continue
+                            else:
+                                try:
+                                    offset = int(float(col_c))
+                                except ValueError:
+                                    continue
+
+                            # Extract unit from comment
+                            unit = extract_unit_from_comment(col_d)
+
+                            plc_address = f"DB{db_number}.{offset}" if bit_position is None else f"DB{db_number}.{offset}.{bit_position}"
+                            clean_name = _sanitize_tag_name(col_a)
+
+                            all_tags.append({
+                                'tag_name': clean_name, 'display_name': col_a,
+                                'source_type': 'PLC', 'plc_address': plc_address,
+                                'data_type': data_type, 'unit': unit,
+                                'description': col_d if col_d and col_d != unit else '',
+                                'is_active': True,
+                            })
+
+            except Exception as e:
+                file_errors.append({'file': f.filename, 'error': str(e)})
+            finally:
+                try:
+                    wb.close()
+                except Exception:
+                    pass
+
+        # Deduplicate: prefix with DB number, and offset if still not unique
+        name_counts = {}
+        for t in all_tags:
+            name_counts[t['tag_name']] = name_counts.get(t['tag_name'], 0) + 1
+        dupes = {n for n, c in name_counts.items() if c > 1}
+        if dupes:
+            for t in all_tags:
+                if t['tag_name'] in dupes:
+                    parsed_addr = parse_plc_address(t['plc_address'])
+                    t['tag_name'] = f"DB{parsed_addr['db_number']}_{t['tag_name']}"
+            # Check again for same-DB duplicates, append offset
+            name_counts2 = {}
+            for t in all_tags:
+                name_counts2[t['tag_name']] = name_counts2.get(t['tag_name'], 0) + 1
+            dupes2 = {n for n, c in name_counts2.items() if c > 1}
+            if dupes2:
+                for t in all_tags:
+                    if t['tag_name'] in dupes2:
+                        parsed_addr = parse_plc_address(t['plc_address'])
+                        t['tag_name'] = f"{t['tag_name']}_off{parsed_addr['offset']}"
+
+        if not all_tags:
+            return jsonify({
+                'status': 'error',
+                'message': 'No valid tags found in the uploaded files',
+                'file_errors': file_errors
+            }), 400
+
+        # Upsert into database
+        imported = 0
+        tag_errors = []
+
+        get_db_connection_func = _get_db_connection()
+        with closing(get_db_connection_func()) as conn:
+            actual_conn = conn._conn if hasattr(conn, '_conn') else conn
+            cursor = actual_conn.cursor()
+
+            for tag_data in all_tags:
+                try:
+                    tag_name = tag_data['tag_name']
+                    parsed = parse_plc_address(tag_data['plc_address'])
+                    db_num = parsed['db_number']
+                    off = parsed['offset']
+                    bit_pos = parsed.get('bit')
+
+                    cursor.execute("SELECT id FROM tags WHERE tag_name = %s", (tag_name,))
+                    if cursor.fetchone():
+                        cursor.execute("""
+                            UPDATE tags SET
+                                display_name = %s, source_type = %s, db_number = %s,
+                                "offset" = %s, data_type = %s, bit_position = %s,
+                                unit = %s, description = %s, is_active = %s
+                            WHERE tag_name = %s
+                        """, (
+                            tag_data.get('display_name', tag_name),
+                            'PLC', db_num, off, tag_data.get('data_type', 'REAL'),
+                            bit_pos, tag_data.get('unit', ''),
+                            tag_data.get('description', ''), True, tag_name
+                        ))
+                    else:
+                        cursor.execute("""
+                            INSERT INTO tags (
+                                tag_name, display_name, source_type, db_number, "offset",
+                                data_type, bit_position, unit, scaling, decimal_places,
+                                description, is_active
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            tag_name, tag_data.get('display_name', tag_name),
+                            'PLC', db_num, off, tag_data.get('data_type', 'REAL'),
+                            bit_pos, tag_data.get('unit', ''), 1.0, 2,
+                            tag_data.get('description', ''), True
+                        ))
+
+                    imported += 1
+                except Exception as e:
+                    tag_errors.append({'tag': tag_data.get('tag_name', '?'), 'error': str(e)})
+
+            actual_conn.commit()
+
+        # Auto-register in emulator if demo mode
+        try:
+            from demo_mode import get_demo_mode
+            if get_demo_mode():
+                from plc_data_source import register_tag_in_emulator
+                for tag_data in all_tags:
+                    try:
+                        parsed = parse_plc_address(tag_data['plc_address'])
+                        register_tag_in_emulator(
+                            tag_data['tag_name'], 'PLC',
+                            parsed['db_number'], parsed['offset'],
+                            tag_data.get('data_type', 'REAL'), tag_data.get('unit', '')
+                        )
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        return jsonify({
+            'status': 'success',
+            'imported': imported,
+            'total_parsed': len(all_tags),
+            'errors': tag_errors,
+            'file_errors': file_errors,
+            'message': f'Imported {imported} tags from {len(files)} file(s)'
+        })
+
+    except Exception as e:
+        logger.error(f"Error importing PLC Excel: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@tags_bp.route('/tags/generate-report-drafts', methods=['POST'])
+def generate_report_drafts():
+    """Generate report builder template drafts from tags, grouped by DB number.
+
+    Accepts optional JSON body:
+      { "db_numbers": [199, 499, 899] }  — only generate for these DBs
+    If omitted, generates for all DBs that have tags.
+
+    Each report draft gets:
+      - A table widget with all tags from that DB as columns
+      - KPI cards for REAL-type tags (flow rates, percentages, etc.)
+    """
+    import uuid
+
+    try:
+        data = request.get_json(silent=True) or {}
+        requested_dbs = data.get('db_numbers')
+        sheet_names = data.get('sheet_names', {})  # {db_number: "sheet name"}
+
+        # Validate db_numbers are integers
+        if requested_dbs:
+            try:
+                requested_dbs = [int(d) for d in requested_dbs]
+            except (ValueError, TypeError):
+                return jsonify({'status': 'error', 'message': 'db_numbers must be a list of integers'}), 400
+
+        get_db_connection_func = _get_db_connection()
+        with closing(get_db_connection_func()) as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+            query = """
+                SELECT tag_name, display_name, db_number, "offset", data_type,
+                       bit_position, unit
+                FROM tags
+                WHERE source_type = 'PLC' AND is_active = TRUE
+                  AND db_number IS NOT NULL
+            """
+            params = []
+            if requested_dbs:
+                placeholders = ','.join(['%s'] * len(requested_dbs))
+                query += f" AND db_number IN ({placeholders})"
+                params = requested_dbs
+
+            query += " ORDER BY db_number, \"offset\""
+            cursor.execute(query, params)
+            tags = cursor.fetchall()
+
+        if not tags:
+            return jsonify({'status': 'error', 'message': 'No PLC tags found'}), 400
+
+        # Group by db_number
+        groups = {}
+        for tag in tags:
+            db = tag['db_number']
+            if db not in groups:
+                groups[db] = []
+            groups[db].append(dict(tag))
+
+        templates = []
+
+        for db_number, db_tags in groups.items():
+            report_name = sheet_names.get(str(db_number), sheet_names.get(db_number, f"DB{db_number} Report"))
+            ts = int(time.time() * 1000)
+
+            widgets = []
+            y_cursor = 0
+
+            # ── Title text widget ──
+            widgets.append({
+                'id': f'w-{uuid.uuid4().hex[:8]}',
+                'type': 'text',
+                'x': 0, 'y': y_cursor, 'w': 12, 'h': 1,
+                'locked': False,
+                'config': {
+                    'content': f'**{report_name}**',
+                    'fontSize': '18px',
+                    'fontWeight': '700',
+                    'color': '#2a3545',
+                    'align': 'left',
+                    'fontStyle': 'normal',
+                    'showCard': False,
+                }
+            })
+            y_cursor += 1
+
+            # ── Table widget with ALL tags ──
+            table_columns = []
+            for tag in db_tags:
+                fmt = 'number'
+                if tag['data_type'] == 'BOOL':
+                    fmt = 'boolean'
+                elif tag.get('unit', '').strip() in ('%', '%/s'):
+                    fmt = 'percentage'
+                elif tag.get('unit', '').lower() in ('kg', 't', 'ton'):
+                    fmt = 'weight'
+
+                table_columns.append({
+                    'label': tag.get('display_name') or tag['tag_name'],
+                    'sourceType': 'tag',
+                    'tagName': tag['tag_name'],
+                    'formula': '',
+                    'groupTags': [],
+                    'aggregation': 'last',
+                    'mappingName': '',
+                    'staticValue': '',
+                    'format': fmt,
+                    'decimals': 2 if tag['data_type'] == 'REAL' else 0,
+                    'unit': tag.get('unit', ''),
+                    'align': 'center',
+                    'width': 100,
+                    'thresholds': [],
+                })
+
+            widgets.append({
+                'id': f'w-{uuid.uuid4().hex[:8]}',
+                'type': 'table',
+                'x': 0, 'y': y_cursor, 'w': 12, 'h': max(3, min(8, len(db_tags) // 2)),
+                'locked': False,
+                'config': {
+                    'title': f'DB{db_number} Tags',
+                    'tableColumns': table_columns,
+                    'summaryRows': [],
+                    'staticDataRows': [],
+                    'sectionHeaders': [],
+                    'reportHeader': None,
+                    'showUnitsInCells': True,
+                    'striped': True,
+                    'compact': False,
+                    'showCard': True,
+                    'headerBg': '',
+                    'headerColor': '',
+                    'rowBg': '',
+                    'stripedRowBg': '',
+                    'borderColor': '',
+                    'sectionHeaderBg': '',
+                    'sectionHeaderColor': '',
+                }
+            })
+
+            template = {
+                'id': uuid.uuid4().hex,
+                'name': report_name,
+                'description': f'Auto-generated draft from DB{db_number} import ({len(db_tags)} tags)',
+                'status': 'draft',
+                'layout_config': {
+                    'schemaVersion': 2,
+                    'widgets': widgets,
+                    'parameters': [],
+                    'computedSignals': [],
+                    'grid': {
+                        'cols': 12,
+                        'rowHeight': 40,
+                        'pageMode': 'a4',
+                    },
+                },
+                'created_at': None,
+                'updated_at': None,
+            }
+            templates.append(template)
+
+        return jsonify({
+            'status': 'success',
+            'templates': templates,
+            'count': len(templates),
+            'message': f'Generated {len(templates)} report draft(s)',
+        })
+
+    except Exception as e:
+        logger.error(f"Error generating report drafts: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
