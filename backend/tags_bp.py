@@ -1809,35 +1809,83 @@ def generate_report_drafts():
                 'statusAggregation': 'avg',
             })
 
-            # ── Table section: tags as ROWS (Ident | Name | Value | Unit) ──
-            columns = [
-                {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Ident',  'width': 'auto', 'align': 'left'},
-                {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Name',   'width': 'auto', 'align': 'left'},
-                {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Value',  'width': 'auto', 'align': 'right'},
-                {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Unit',   'width': 'auto', 'align': 'center'},
-            ]
+            # ── Table section: tags as ROWS ──
+            # Check if tags are counters/totalizers (DInt/Int types typically are)
+            # Counter reports: Ident | Name | Total [unit] | Start [unit] | End [unit]
+            # Regular reports: Ident | Name | Value [unit] | Unit
+            has_counters = any(t['data_type'] in ('DINT', 'INT') for t in db_tags)
+            has_reals = any(t['data_type'] == 'REAL' for t in db_tags)
 
-            rows = []
-            for tag in db_tags:
-                unit = tag.get('unit', '') or ''
-                decimals = 2 if tag['data_type'] == 'REAL' else 0
-                display = tag.get('display_name') or tag['tag_name']
+            # If mix of types, use the general 5-column layout (works for both)
+            if has_counters:
+                # Counter/totalizer layout: show delta, start, end values
+                # Determine a common unit label for headers
+                units_in_group = set(t.get('unit', '') or '' for t in db_tags)
+                common_unit = units_in_group.pop() if len(units_in_group) == 1 else ''
+                total_hdr = f'Total {common_unit}'.strip() if common_unit else 'Total'
+                start_hdr = f'StartValue {common_unit}'.strip() if common_unit else 'StartValue'
+                end_hdr   = f'EndValue {common_unit}'.strip() if common_unit else 'EndValue'
 
-                rows.append({
-                    'id': f'ps-{uuid.uuid4().hex[:8]}',
-                    'cells': [
-                        # Ident — static text from tag name
-                        {'sourceType': 'static', 'value': tag['tag_name']},
-                        # Name — static text from display name / comment
-                        {'sourceType': 'static', 'value': display},
-                        # Value — live tag data
-                        {'sourceType': 'tag', 'tagName': tag['tag_name'], 'value': '',
-                         'formula': '', 'unit': '', 'decimals': decimals,
-                         'groupTags': [], 'aggregation': 'last', 'mappingName': ''},
-                        # Unit — static text
-                        {'sourceType': 'static', 'value': unit},
-                    ],
-                })
+                columns = [
+                    {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Ident',   'width': 'auto', 'align': 'left'},
+                    {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Name',    'width': 'auto', 'align': 'left'},
+                    {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': total_hdr, 'width': 'auto', 'align': 'right'},
+                    {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': start_hdr, 'width': 'auto', 'align': 'right'},
+                    {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': end_hdr,   'width': 'auto', 'align': 'right'},
+                ]
+
+                rows = []
+                for tag in db_tags:
+                    unit = tag.get('unit', '') or ''
+                    decimals = 2 if tag['data_type'] == 'REAL' else 0
+                    display = tag.get('display_name') or tag['tag_name']
+                    cell_unit = '' if common_unit else unit  # avoid double unit display
+
+                    rows.append({
+                        'id': f'ps-{uuid.uuid4().hex[:8]}',
+                        'cells': [
+                            {'sourceType': 'static', 'value': tag['tag_name']},
+                            {'sourceType': 'static', 'value': display},
+                            # Total = delta (end - start)
+                            {'sourceType': 'tag', 'tagName': tag['tag_name'], 'value': '',
+                             'formula': '', 'unit': cell_unit, 'decimals': decimals,
+                             'groupTags': [], 'aggregation': 'delta', 'mappingName': ''},
+                            # Start = first value in period
+                            {'sourceType': 'tag', 'tagName': tag['tag_name'], 'value': '',
+                             'formula': '', 'unit': cell_unit, 'decimals': decimals,
+                             'groupTags': [], 'aggregation': 'first', 'mappingName': ''},
+                            # End = last value in period
+                            {'sourceType': 'tag', 'tagName': tag['tag_name'], 'value': '',
+                             'formula': '', 'unit': cell_unit, 'decimals': decimals,
+                             'groupTags': [], 'aggregation': 'last', 'mappingName': ''},
+                        ],
+                    })
+            else:
+                # Regular (REAL/BOOL) layout: Ident | Name | Value | Unit
+                columns = [
+                    {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Ident',  'width': 'auto', 'align': 'left'},
+                    {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Name',   'width': 'auto', 'align': 'left'},
+                    {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Value',  'width': 'auto', 'align': 'right'},
+                    {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Unit',   'width': 'auto', 'align': 'center'},
+                ]
+
+                rows = []
+                for tag in db_tags:
+                    unit = tag.get('unit', '') or ''
+                    decimals = 2 if tag['data_type'] == 'REAL' else 0
+                    display = tag.get('display_name') or tag['tag_name']
+
+                    rows.append({
+                        'id': f'ps-{uuid.uuid4().hex[:8]}',
+                        'cells': [
+                            {'sourceType': 'static', 'value': tag['tag_name']},
+                            {'sourceType': 'static', 'value': display},
+                            {'sourceType': 'tag', 'tagName': tag['tag_name'], 'value': '',
+                             'formula': '', 'unit': '', 'decimals': decimals,
+                             'groupTags': [], 'aggregation': 'last', 'mappingName': ''},
+                            {'sourceType': 'static', 'value': unit},
+                        ],
+                    })
 
             sections.append({
                 'id': f'ps-{uuid.uuid4().hex[:8]}',

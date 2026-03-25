@@ -219,8 +219,8 @@ def get_by_tags():
         return jsonify({"error": "tag_names is required (comma-separated)"}), 400
     if not from_ts or not to_ts:
         return jsonify({"error": "from and to (ISO timestamps) are required"}), 400
-    if aggregation not in ("last", "avg", "min", "max", "sum", "delta", "count", "auto"):
-        return jsonify({"error": "aggregation must be one of: last, avg, min, max, sum, delta, count, auto"}), 400
+    if aggregation not in ("last", "first", "avg", "min", "max", "sum", "delta", "count", "auto"):
+        return jsonify({"error": "aggregation must be one of: last, first, avg, min, max, sum, delta, count, auto"}), 400
 
     tag_names = [n.strip() for n in tag_names_param.split(",") if n.strip()]
     if not tag_names:
@@ -294,6 +294,19 @@ def get_by_tags():
                     name = id_to_name.get(row["tag_id"])
                     if name:
                         result[name] = row["value"]
+            elif aggregation == "first":
+                cur.execute("""
+                    SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
+                    FROM tag_history h
+                    WHERE h.tag_id = ANY(%s)
+                      AND h."timestamp" >= %s::timestamp
+                      AND h."timestamp" <= %s::timestamp
+                    ORDER BY h.tag_id, h."timestamp" ASC
+                """, (tag_ids, from_ts, to_ts))
+                for row in cur.fetchall():
+                    name = id_to_name.get(row["tag_id"])
+                    if name:
+                        result[name] = row["value"]
             elif aggregation == "delta":
                 cur.execute("""
                     SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
@@ -342,6 +355,19 @@ def get_by_tags():
                           AND a.archive_hour >= %s::timestamp
                           AND a.archive_hour <= %s::timestamp
                         ORDER BY a.tag_id, a.archive_hour DESC
+                    """, (tag_ids, from_ts, to_ts))
+                    for row in cur.fetchall():
+                        name = id_to_name.get(row["tag_id"])
+                        if name and row["value"] is not None:
+                            result[name] = row["value"]
+                elif aggregation == "first":
+                    cur.execute("""
+                        SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                        FROM tag_history_archive a
+                        WHERE a.tag_id = ANY(%s)
+                          AND a.archive_hour >= %s::timestamp
+                          AND a.archive_hour <= %s::timestamp
+                        ORDER BY a.tag_id, a.archive_hour ASC
                     """, (tag_ids, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
