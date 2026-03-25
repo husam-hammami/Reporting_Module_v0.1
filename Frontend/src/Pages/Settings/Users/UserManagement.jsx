@@ -13,7 +13,7 @@ const ROLE_BADGE = {
 
 export default function UserManagement() {
   const { auth } = useContext(AuthContext);
-  const isAdmin = auth?.role === 'admin';
+  const isAdmin = auth?.role === 'admin' || auth?.role === 'superadmin';
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
