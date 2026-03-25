@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useLenisScroll } from '../../../Hooks/useLenisScroll';
 import { FaDownload, FaUpload, FaFileExport, FaFileImport, FaSpinner } from 'react-icons/fa';
 import axios from '../../../API/axios';
+import { toast } from 'react-toastify';
+import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
 
 const SECTIONS = [
   { key: 'tags',               label: 'Tags',                csvExport: true },
@@ -20,7 +22,7 @@ const ALL_KEYS = SECTIONS.map(s => s.key);
 const ExportImport = () => {
   useLenisScroll();
 
-  // Export state — set of selected section keys
+  // Export state
   const [exportKeys, setExportKeys] = useState(new Set(ALL_KEYS));
   const [exportCsvTags, setExportCsvTags] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -36,6 +38,9 @@ const ExportImport = () => {
   const [importing, setImporting] = useState(false);
   const [createReportDrafts, setCreateReportDrafts] = useState(false);
   const [importFileName, setImportFileName] = useState('');
+
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
 
   // ─── Toggle helpers ───
   const toggleExportKey = (key) => {
@@ -87,17 +92,16 @@ const ExportImport = () => {
     setExporting(true);
 
     try {
-      // If ONLY tags CSV is selected (nothing else), download CSV directly
       if (exportCsvTags && exportKeys.size === 0) {
         const res = await axios.get('/api/tags/export-csv');
         if (res.data.status === 'success') {
           downloadBlob(res.data.csv, `tags_export_${dateSuffix()}.csv`, 'text/csv');
+          toast.success('CSV exported successfully');
         }
         setExporting(false);
         return;
       }
 
-      // If tags CSV is selected alongside other items, download CSV separately
       if (exportCsvTags) {
         try {
           const res = await axios.get('/api/tags/export-csv');
@@ -107,7 +111,6 @@ const ExportImport = () => {
         } catch { /* skip csv */ }
       }
 
-      // Build JSON export for checked sections
       if (exportKeys.size > 0) {
         const data = {};
         const sel = exportKeys;
@@ -128,9 +131,10 @@ const ExportImport = () => {
 
         const label = sel.size === ALL_KEYS.length ? 'full' : [...sel].join('+');
         downloadBlob(JSON.stringify(data, null, 2), `hercules_export_${label}_${dateSuffix()}.json`);
+        toast.success(`Exported ${sel.size} section(s)`);
       }
     } catch (err) {
-      alert('Export failed: ' + err.message);
+      toast.error('Export failed: ' + err.message);
     }
     setExporting(false);
   };
@@ -158,14 +162,11 @@ const ExportImport = () => {
           const imported = JSON.parse(e.target.result);
           setImportPreview(imported);
           setImportFile(imported);
-          // Auto-select all available sections
           const available = new Set();
-          SECTIONS.forEach(s => {
-            if (imported[s.key]) available.add(s.key);
-          });
+          SECTIONS.forEach(s => { if (imported[s.key]) available.add(s.key); });
           setImportSections(available);
         } catch (err) {
-          alert('Error reading JSON file: ' + err.message);
+          toast.error('Error reading JSON file: ' + err.message);
         }
       };
       reader.readAsText(file);
@@ -180,72 +181,53 @@ const ExportImport = () => {
   };
 
   // ─── IMPORT EXECUTION ───
-  const handleImport = async () => {
-    if (!importFile && csvFiles.length === 0 && xlsxFiles.length === 0) {
-      alert('Please select a file first');
-      return;
-    }
-    if (importSections.size === 0 && !(csvFiles.length > 0 && importCsv) && !(xlsxFiles.length > 0 && importXlsx)) {
-      alert('Please select at least one section to import');
-      return;
-    }
-
-    if (!window.confirm('This will import the selected configurations. Continue?')) return;
-
+  const executeImport = async () => {
+    setConfirmModal(m => ({ ...m, open: false }));
     setImporting(true);
     const results = [];
 
     try {
-      // CSV files → PLC tag import
       if (csvFiles.length > 0 && importCsv) {
         try {
           const formData = new FormData();
           csvFiles.forEach(f => formData.append('files', f));
-          const res = await axios.post('/api/tags/import-plc-csv', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
+          const res = await axios.post('/api/tags/import-plc-csv', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
           if (res.data.status === 'success') {
-            results.push(`Tags (CSV): imported ${res.data.imported} from ${csvFiles.length} file(s)`);
-            if (res.data.errors?.length) results.push(`  ${res.data.errors.length} tag errors`);
+            results.push({ type: 'success', msg: `Tags (CSV): imported ${res.data.imported}` });
           } else {
-            results.push(`Tags (CSV): failed - ${res.data.message}`);
+            results.push({ type: 'error', msg: `Tags (CSV): ${res.data.message}` });
           }
           window.dispatchEvent(new Event('tagsUpdated'));
         } catch (e) {
-          results.push(`Tags (CSV): failed - ${e.response?.data?.message || e.message}`);
+          results.push({ type: 'error', msg: `Tags (CSV): ${e.response?.data?.message || e.message}` });
         }
       }
 
-      // Excel files → PLC tag import
       if (xlsxFiles.length > 0 && importXlsx) {
         try {
           const formData = new FormData();
           xlsxFiles.forEach(f => formData.append('files', f));
-          const res = await axios.post('/api/tags/import-plc-excel', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
+          const res = await axios.post('/api/tags/import-plc-excel', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
           if (res.data.status === 'success') {
-            results.push(`Tags (Excel): imported ${res.data.imported} from ${xlsxFiles.length} file(s)`);
-            if (res.data.errors?.length) results.push(`  ${res.data.errors.length} tag errors`);
+            results.push({ type: 'success', msg: `Tags (Excel): imported ${res.data.imported}` });
           } else {
-            results.push(`Tags (Excel): failed - ${res.data.message}`);
+            results.push({ type: 'error', msg: `Tags (Excel): ${res.data.message}` });
           }
           window.dispatchEvent(new Event('tagsUpdated'));
         } catch (e) {
-          results.push(`Tags (Excel): failed - ${e.response?.data?.message || e.message}`);
+          results.push({ type: 'error', msg: `Tags (Excel): ${e.response?.data?.message || e.message}` });
         }
       }
 
-      // JSON import — only selected sections
       if (importFile) {
         const sel = importSections;
 
         if (sel.has('tags') && importFile.tags && Array.isArray(importFile.tags)) {
           try {
             const res = await axios.post('/api/tags/bulk-import', { tags: importFile.tags });
-            results.push(`Tags: imported ${res.data.imported || 0}`);
+            results.push({ type: 'success', msg: `Tags: imported ${res.data.imported || 0}` });
             window.dispatchEvent(new Event('tagsUpdated'));
-          } catch (e) { results.push(`Tags: failed - ${e.response?.data?.message || e.message}`); }
+          } catch (e) { results.push({ type: 'error', msg: `Tags: ${e.response?.data?.message || e.message}` }); }
         }
 
         if (sel.has('tag_groups') && importFile.tag_groups && Array.isArray(importFile.tag_groups)) {
@@ -255,30 +237,30 @@ const ExportImport = () => {
               try { await axios.post('/api/tag-groups', group); count++; }
               catch { try { await axios.put(`/api/tag-groups/${group.id || group.group_name}`, group); count++; } catch { /* skip */ } }
             }
-            results.push(`Tag Groups: imported ${count}`);
+            results.push({ type: 'success', msg: `Tag Groups: imported ${count}` });
             window.dispatchEvent(new Event('tagGroupsUpdated'));
-          } catch (e) { results.push(`Tag Groups: failed - ${e.message}`); }
+          } catch (e) { results.push({ type: 'error', msg: `Tag Groups: ${e.message}` }); }
         }
 
         if (sel.has('mappings') && importFile.mappings) {
           try {
             const arr = Array.isArray(importFile.mappings) ? importFile.mappings : importFile.mappings.mappings || [];
             await axios.post('/api/mappings/migrate-from-local', arr);
-            results.push(`Mappings: imported ${arr.length}`);
+            results.push({ type: 'success', msg: `Mappings: imported ${arr.length}` });
             window.dispatchEvent(new Event('mappingsUpdated'));
-          } catch (e) { results.push(`Mappings: failed - ${e.message}`); }
+          } catch (e) { results.push({ type: 'error', msg: `Mappings: ${e.message}` }); }
         }
 
         if (sel.has('formulas') && importFile.formulas && Array.isArray(importFile.formulas)) {
           localStorage.setItem('system_saved_formulas', JSON.stringify(importFile.formulas));
-          results.push(`Formulas: imported ${importFile.formulas.length}`);
+          results.push({ type: 'success', msg: `Formulas: imported ${importFile.formulas.length}` });
           window.dispatchEvent(new Event('formulasUpdated'));
         }
 
         if (sel.has('reports') && importFile.reports) {
           const arr = Array.isArray(importFile.reports) ? importFile.reports : [];
           localStorage.setItem('dynamicReportConfigs', JSON.stringify(arr));
-          results.push(`Report Configs: imported ${arr.length}`);
+          results.push({ type: 'success', msg: `Report Configs: imported ${arr.length}` });
           window.dispatchEvent(new Event('reportConfigUpdated'));
         }
 
@@ -289,18 +271,18 @@ const ExportImport = () => {
               try { await axios.post('/api/report-builder/templates', tpl); count++; }
               catch { try { await axios.put(`/api/report-builder/templates/${tpl.id}`, tpl); count++; } catch { /* skip */ } }
             }
-            results.push(`Report Templates: imported ${count}`);
-          } catch (e) { results.push(`Report Templates: failed - ${e.message}`); }
+            results.push({ type: 'success', msg: `Report Templates: imported ${count}` });
+          } catch (e) { results.push({ type: 'error', msg: `Report Templates: ${e.message}` }); }
         }
 
         if (sel.has('shifts') && importFile.shifts) {
-          try { await axios.post('/api/settings/shifts', importFile.shifts); results.push(`Shifts: imported`); }
-          catch (e) { results.push(`Shifts: failed - ${e.message}`); }
+          try { await axios.post('/api/settings/shifts', importFile.shifts); results.push({ type: 'success', msg: 'Shifts: imported' }); }
+          catch (e) { results.push({ type: 'error', msg: `Shifts: ${e.message}` }); }
         }
 
         if (sel.has('smtp') && importFile.smtp) {
-          try { await axios.post('/api/settings/smtp-config', importFile.smtp); results.push(`SMTP Config: imported`); }
-          catch (e) { results.push(`SMTP Config: failed - ${e.message}`); }
+          try { await axios.post('/api/settings/smtp-config', importFile.smtp); results.push({ type: 'success', msg: 'SMTP Config: imported' }); }
+          catch (e) { results.push({ type: 'error', msg: `SMTP Config: ${e.message}` }); }
         }
 
         if (sel.has('distribution_rules') && importFile.distribution_rules && Array.isArray(importFile.distribution_rules)) {
@@ -310,8 +292,8 @@ const ExportImport = () => {
               try { await axios.post('/api/distribution/rules', rule); count++; }
               catch { try { await axios.put(`/api/distribution/rules/${rule.id}`, rule); count++; } catch { /* skip */ } }
             }
-            results.push(`Distribution Rules: imported ${count}`);
-          } catch (e) { results.push(`Distribution Rules: failed - ${e.message}`); }
+            results.push({ type: 'success', msg: `Distribution Rules: imported ${count}` });
+          } catch (e) { results.push({ type: 'error', msg: `Distribution Rules: ${e.message}` }); }
         }
       }
 
@@ -320,18 +302,35 @@ const ExportImport = () => {
         try {
           const draftRes = await axios.post('/api/tags/generate-report-drafts', {});
           if (draftRes.data.status === 'success' && draftRes.data.templates?.length > 0) {
-            const existing = JSON.parse(localStorage.getItem('hercules_report_builder_templates') || '[]');
-            const existingNames = new Set(existing.map(t => t.name));
-            const newTemplates = draftRes.data.templates.filter(t => !existingNames.has(t.name));
-            localStorage.setItem('hercules_report_builder_templates', JSON.stringify([...existing, ...newTemplates]));
-            results.push(`Report Drafts: created ${newTemplates.length}`);
+            let created = 0;
+            for (const tpl of draftRes.data.templates) {
+              try {
+                await axios.post('/api/report-builder/templates', {
+                  name: tpl.name,
+                  description: tpl.description || '',
+                  layout_config: tpl.layout_config || { widgets: [], grid: { cols: 12, rowHeight: 60 } },
+                });
+                created++;
+              } catch { /* skip duplicates */ }
+            }
+            results.push({ type: 'success', msg: `Report Drafts: created ${created}` });
           }
         } catch (e) {
-          results.push(`Report Drafts: failed - ${e.message}`);
+          results.push({ type: 'error', msg: `Report Drafts: ${e.message}` });
         }
       }
 
-      alert('Import completed!\n' + results.join('\n'));
+      // Show toast notifications for results
+      const successes = results.filter(r => r.type === 'success');
+      const errors = results.filter(r => r.type === 'error');
+
+      if (successes.length > 0) {
+        toast.success(successes.map(r => r.msg).join('\n'), { style: { whiteSpace: 'pre-line' } });
+      }
+      if (errors.length > 0) {
+        toast.error(errors.map(r => r.msg).join('\n'), { autoClose: 8000, style: { whiteSpace: 'pre-line' } });
+      }
+
       setImportFile(null);
       setImportPreview(null);
       setImportSections(new Set());
@@ -342,9 +341,36 @@ const ExportImport = () => {
       setCreateReportDrafts(false);
       setImportFileName('');
     } catch (err) {
-      alert('Error importing: ' + err.message);
+      toast.error('Import failed: ' + err.message);
     }
     setImporting(false);
+  };
+
+  const handleImport = () => {
+    if (!importFile && csvFiles.length === 0 && xlsxFiles.length === 0) {
+      toast.warning('Please select a file first');
+      return;
+    }
+    if (importSections.size === 0 && !(csvFiles.length > 0 && importCsv) && !(xlsxFiles.length > 0 && importXlsx)) {
+      toast.warning('Please select at least one section to import');
+      return;
+    }
+
+    // Count what's selected
+    const parts = [];
+    if (csvFiles.length > 0 && importCsv) parts.push(`${csvFiles.length} CSV file(s)`);
+    if (xlsxFiles.length > 0 && importXlsx) parts.push(`${xlsxFiles.length} Excel file(s)`);
+    if (importSections.size > 0) parts.push(`${importSections.size} section(s)`);
+    if (createReportDrafts) parts.push('report drafts');
+
+    setConfirmModal({
+      open: true,
+      title: 'Import Configuration',
+      description: `This will import: ${parts.join(', ')}.\n\nExisting items with the same name will be updated. Continue?`,
+      onConfirm: executeImport,
+      confirmText: 'Import',
+      confirmColor: 'green',
+    });
   };
 
   const handleClear = () => {
@@ -391,35 +417,22 @@ const ExportImport = () => {
 
           <p className="text-[11px] text-[#8898aa] mb-3">Select sections to include:</p>
 
-          {/* Select All / None */}
           <div className="flex items-center gap-3 mb-2">
             <button onClick={selectAllExport} className="text-[10px] text-brand hover:underline">Select All</button>
             <button onClick={selectNoneExport} className="text-[10px] text-[#8898aa] hover:underline">Clear All</button>
           </div>
 
-          {/* Checkboxes */}
           <div className="space-y-1.5 mb-4">
             {SECTIONS.map(s => (
               <label key={s.key} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={exportKeys.has(s.key)}
-                  onChange={() => toggleExportKey(s.key)}
-                  className={cbClass}
-                />
+                <input type="checkbox" checked={exportKeys.has(s.key)} onChange={() => toggleExportKey(s.key)} className={cbClass} />
                 <span className={lblClass}>{s.label}</span>
               </label>
             ))}
 
-            {/* CSV option for tags */}
             <div className="border-t border-[#e3e9f0] dark:border-[#1e2d40] pt-1.5 mt-1.5">
               <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={exportCsvTags}
-                  onChange={() => setExportCsvTags(!exportCsvTags)}
-                  className={cbClass}
-                />
+                <input type="checkbox" checked={exportCsvTags} onChange={() => setExportCsvTags(!exportCsvTags)} className={cbClass} />
                 <span className={lblClass}>Tags as CSV file</span>
                 <span className="text-[10px] text-[#8898aa]">(separate file)</span>
               </label>
@@ -446,7 +459,6 @@ const ExportImport = () => {
           </div>
 
           <div className="space-y-3">
-            {/* File picker */}
             <div>
               <label className="text-[11px] font-medium text-[#6b7f94] mb-1.5 block">
                 Select File(s) — JSON, CSV, or Excel (PLC tags)
@@ -454,17 +466,10 @@ const ExportImport = () => {
               <label className="w-full px-3 py-2.5 bg-[#f5f8fb] dark:bg-[#081320] hover:bg-[#edf2f7] dark:hover:bg-[#131b2d] text-[#6b7f94] text-[12px] font-medium rounded-lg flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-[#e3e9f0] dark:border-[#1e2d40] transition-colors">
                 <FaUpload className="text-[12px]" />
                 {importFileName || 'Choose File(s)'}
-                <input
-                  type="file"
-                  accept=".json,.csv,.xlsx,.xls"
-                  multiple
-                  onChange={handleImportFile}
-                  className="hidden"
-                />
+                <input type="file" accept=".json,.csv,.xlsx,.xls" multiple onChange={handleImportFile} className="hidden" />
               </label>
             </div>
 
-            {/* Section checkboxes after file loaded */}
             {(availableImportSections.length > 0 || csvFiles.length > 0 || xlsxFiles.length > 0) && (
               <div className="bg-[#f0f7ff] dark:bg-[#1a2a3e] border border-[#c4d8ef] dark:border-[#1e2d40] rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -477,60 +482,36 @@ const ExportImport = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  {/* CSV tags option */}
                   {csvFiles.length > 0 && (
                     <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={importCsv}
-                        onChange={() => setImportCsv(!importCsv)}
-                        className={cbClass}
-                      />
+                      <input type="checkbox" checked={importCsv} onChange={() => setImportCsv(!importCsv)} className={cbClass} />
                       <span className={lblClass}>PLC Tags from CSV</span>
                       <span className="text-[10px] text-[#8898aa]">({csvFiles.length} file{csvFiles.length > 1 ? 's' : ''})</span>
                     </label>
                   )}
 
-                  {/* Excel tags option */}
                   {xlsxFiles.length > 0 && (
                     <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={importXlsx}
-                        onChange={() => setImportXlsx(!importXlsx)}
-                        className={cbClass}
-                      />
+                      <input type="checkbox" checked={importXlsx} onChange={() => setImportXlsx(!importXlsx)} className={cbClass} />
                       <span className={lblClass}>PLC Tags from Excel</span>
                       <span className="text-[10px] text-[#8898aa]">({xlsxFiles.length} file{xlsxFiles.length > 1 ? 's' : ''})</span>
                     </label>
                   )}
 
-                  {/* Report draft generation option */}
                   {(csvFiles.length > 0 || xlsxFiles.length > 0) && (
                     <label className="flex items-center gap-2 border-t border-[#e3e9f0] dark:border-[#1e2d40] pt-1.5 mt-1">
-                      <input
-                        type="checkbox"
-                        checked={createReportDrafts}
-                        onChange={() => setCreateReportDrafts(!createReportDrafts)}
-                        className={cbClass}
-                      />
+                      <input type="checkbox" checked={createReportDrafts} onChange={() => setCreateReportDrafts(!createReportDrafts)} className={cbClass} />
                       <span className={lblClass}>Create report drafts</span>
                       <span className="text-[10px] text-[#8898aa]">(one table report per DB)</span>
                     </label>
                   )}
 
-                  {/* JSON sections */}
                   {availableImportSections.map(s => {
                     const raw = importFile[s.key];
                     const count = Array.isArray(raw) ? raw.length : (raw ? 1 : 0);
                     return (
                       <label key={s.key} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={importSections.has(s.key)}
-                          onChange={() => toggleImportSection(s.key)}
-                          className={cbClass}
-                        />
+                        <input type="checkbox" checked={importSections.has(s.key)} onChange={() => toggleImportSection(s.key)} className={cbClass} />
                         <span className={lblClass}>{s.label}</span>
                         <span className="text-[10px] text-[#8898aa]">({count})</span>
                       </label>
@@ -558,6 +539,17 @@ const ExportImport = () => {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        onConfirm={confirmModal.onConfirm || (() => {})}
+        onCancel={() => setConfirmModal(m => ({ ...m, open: false }))}
+        confirmText={confirmModal.confirmText}
+        confirmColor={confirmModal.confirmColor}
+      />
     </div>
   );
 };

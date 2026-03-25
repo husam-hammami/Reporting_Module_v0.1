@@ -1785,81 +1785,70 @@ def generate_report_drafts():
 
         for db_number, db_tags in groups.items():
             report_name = sheet_names.get(str(db_number), sheet_names.get(db_number, f"DB{db_number} Report"))
-            ts = int(time.time() * 1000)
 
-            widgets = []
-            y_cursor = 0
+            # Build paginatedSections for a tabular report
+            sections = []
 
-            # ── Title text widget ──
-            widgets.append({
-                'id': f'w-{uuid.uuid4().hex[:8]}',
-                'type': 'text',
-                'x': 0, 'y': y_cursor, 'w': 12, 'h': 1,
-                'locked': False,
-                'config': {
-                    'content': f'**{report_name}**',
-                    'fontSize': '18px',
-                    'fontWeight': '700',
-                    'color': '#2a3545',
-                    'align': 'left',
-                    'fontStyle': 'normal',
-                    'showCard': False,
-                }
+            # ── Header section ──
+            sections.append({
+                'id': f'ps-{uuid.uuid4().hex[:8]}',
+                'type': 'header',
+                'title': report_name,
+                'subtitle': f'DB{db_number} — {len(db_tags)} tags',
+                'showDateRange': True,
+                'showLogo': False,
+                'logoUrl': '',
+                'align': 'center',
+                'statusLabel': 'Status',
+                'statusSourceType': 'static',
+                'statusValue': '',
+                'statusTagName': '',
+                'statusMappingName': '',
+                'statusFormula': '',
+                'statusGroupTags': [],
+                'statusAggregation': 'avg',
             })
-            y_cursor += 1
 
-            # ── Table widget with ALL tags ──
-            table_columns = []
+            # ── Table section with ALL tags as columns, one data row ──
+            columns = []
+            row_cells = []
             for tag in db_tags:
-                fmt = 'number'
-                if tag['data_type'] == 'BOOL':
-                    fmt = 'boolean'
-                elif tag.get('unit', '').strip() in ('%', '%/s'):
-                    fmt = 'percentage'
-                elif tag.get('unit', '').lower() in ('kg', 't', 'ton'):
-                    fmt = 'weight'
+                col_id = f'ps-{uuid.uuid4().hex[:8]}'
+                unit = tag.get('unit', '') or ''
+                decimals = 2 if tag['data_type'] == 'REAL' else 0
+                display = tag.get('display_name') or tag['tag_name']
 
-                table_columns.append({
-                    'label': tag.get('display_name') or tag['tag_name'],
+                columns.append({
+                    'id': col_id,
+                    'header': display,
+                    'width': 'auto',
+                    'align': 'center',
+                })
+                row_cells.append({
                     'sourceType': 'tag',
                     'tagName': tag['tag_name'],
+                    'value': '',
                     'formula': '',
+                    'unit': unit,
+                    'decimals': decimals,
                     'groupTags': [],
                     'aggregation': 'last',
                     'mappingName': '',
-                    'staticValue': '',
-                    'format': fmt,
-                    'decimals': 2 if tag['data_type'] == 'REAL' else 0,
-                    'unit': tag.get('unit', ''),
-                    'align': 'center',
-                    'width': 100,
-                    'thresholds': [],
                 })
 
-            widgets.append({
-                'id': f'w-{uuid.uuid4().hex[:8]}',
+            sections.append({
+                'id': f'ps-{uuid.uuid4().hex[:8]}',
                 'type': 'table',
-                'x': 0, 'y': y_cursor, 'w': 12, 'h': max(3, min(8, len(db_tags) // 2)),
-                'locked': False,
-                'config': {
-                    'title': f'DB{db_number} Tags',
-                    'tableColumns': table_columns,
-                    'summaryRows': [],
-                    'staticDataRows': [],
-                    'sectionHeaders': [],
-                    'reportHeader': None,
-                    'showUnitsInCells': True,
-                    'striped': True,
-                    'compact': False,
-                    'showCard': True,
-                    'headerBg': '',
-                    'headerColor': '',
-                    'rowBg': '',
-                    'stripedRowBg': '',
-                    'borderColor': '',
-                    'sectionHeaderBg': '',
-                    'sectionHeaderColor': '',
-                }
+                'label': f'DB{db_number} Tags',
+                'columns': columns,
+                'rows': [{
+                    'id': f'ps-{uuid.uuid4().hex[:8]}',
+                    'cells': row_cells,
+                }],
+                'showSummaryRow': False,
+                'summaryLabel': 'Total',
+                'summaryFormula': '',
+                'summaryUnit': '',
             })
 
             template = {
@@ -1868,8 +1857,10 @@ def generate_report_drafts():
                 'description': f'Auto-generated draft from DB{db_number} import ({len(db_tags)} tags)',
                 'status': 'draft',
                 'layout_config': {
+                    'reportType': 'paginated',
                     'schemaVersion': 2,
-                    'widgets': widgets,
+                    'paginatedSections': sections,
+                    'widgets': [],
                     'parameters': [],
                     'computedSignals': [],
                     'grid': {
