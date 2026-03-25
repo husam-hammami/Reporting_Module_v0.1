@@ -302,11 +302,18 @@ const ExportImport = () => {
         try {
           const draftRes = await axios.post('/api/tags/generate-report-drafts', {});
           if (draftRes.data.status === 'success' && draftRes.data.templates?.length > 0) {
-            const existing = JSON.parse(localStorage.getItem('hercules_report_builder_templates') || '[]');
-            const existingNames = new Set(existing.map(t => t.name));
-            const newTemplates = draftRes.data.templates.filter(t => !existingNames.has(t.name));
-            localStorage.setItem('hercules_report_builder_templates', JSON.stringify([...existing, ...newTemplates]));
-            results.push({ type: 'success', msg: `Report Drafts: created ${newTemplates.length}` });
+            let created = 0;
+            for (const tpl of draftRes.data.templates) {
+              try {
+                await axios.post('/api/report-builder/templates', {
+                  name: tpl.name,
+                  description: tpl.description || '',
+                  layout_config: tpl.layout_config || { widgets: [], grid: { cols: 12, rowHeight: 60 } },
+                });
+                created++;
+              } catch { /* skip duplicates */ }
+            }
+            results.push({ type: 'success', msg: `Report Drafts: created ${created}` });
           }
         } catch (e) {
           results.push({ type: 'error', msg: `Report Drafts: ${e.message}` });

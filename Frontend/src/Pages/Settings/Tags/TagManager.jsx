@@ -339,13 +339,21 @@ const TagManager = () => {
     try {
       const draftRes = await axios.post('/api/tags/generate-report-drafts', {});
       if (draftRes.data.status === 'success' && draftRes.data.templates?.length > 0) {
-        const existing = JSON.parse(localStorage.getItem('hercules_report_builder_templates') || '[]');
-        const existingNames = new Set(existing.map(t => t.name));
-        const newTemplates = draftRes.data.templates.filter(t => !existingNames.has(t.name));
-        localStorage.setItem('hercules_report_builder_templates', JSON.stringify([...existing, ...newTemplates]));
-        toast.success(`Created ${newTemplates.length} report draft(s)`);
+        let created = 0;
+        for (const tpl of draftRes.data.templates) {
+          try {
+            await axios.post('/api/report-builder/templates', {
+              name: tpl.name,
+              description: tpl.description || '',
+              layout_config: tpl.layout_config || { widgets: [], grid: { cols: 12, rowHeight: 60 } },
+            });
+            created++;
+          } catch { /* skip duplicates */ }
+        }
+        if (created > 0) toast.success(`Created ${created} report draft(s)`);
+        else toast.info('Report drafts already exist');
       }
-    } catch { /* skip */ }
+    } catch (e) { toast.error(`Failed to create drafts: ${e.message}`); }
   };
 
   const totalPages = Math.max(1, Math.ceil(filteredTags.length / PAGE_SIZE));
