@@ -1,6 +1,6 @@
 # Hercules Desktop App — OTA (Over-the-Air) Update Plan
 
-How the installed EXE app can auto-update its backend and frontend code without rebuilding the installer.
+How the installed EXE app auto-updates its backend and frontend code via GitHub Releases — no custom server endpoint, no manual version bumping.
 
 ---
 
@@ -8,12 +8,12 @@ How the installed EXE app can auto-update its backend and frontend code without 
 
 ```
 User machine (installed app)
-├── launcher.exe              ← compiled, NEVER changes (unless launcher.py logic changes)
+├── launcher.exe              ← compiled, NEVER changes
 ├── python_embed/             ← portable Python + pip packages, rarely changes
 ├── psql/                     ← portable PostgreSQL, never changes
 ├── data/                     ← user's database, never touch
-├── version.txt               ← NEW: current version string (e.g. "1.0.3")
-└── backend/                  ← UPDATABLE: plain Python files + built frontend
+├── version.txt               ← auto-managed by launcher (written after each update)
+└── backend/                  ← UPDATABLE: replaced by OTA zip
     ├── app.py
     ├── *_bp.py
     ├── workers/
@@ -28,125 +28,216 @@ User machine (installed app)
 
 ---
 
+## How It Works (End to End)
+
+```
+Developer pushes to Salalah_Mill_B branch
+    │
+    ▼
+GitHub Action triggers automatically
+    ├── Generates version: 1.0.<total-commit-count>
+    ├── Builds frontend (npm run build with .env.launcher)
+    ├── Copies frontend/dist into backend/
+    ├── Zips backend/ → hercules-update-1.0.42.zip
+    └── Creates GitHub Release (tag: v1.0.42) with zip attached
+    │
+    ▼
+User opens the app (any time later)
+    │
+    ▼
+launcher.exe starts
+    ├── 1. License check (existing)
+    ├── 2. OTA update check ← NEW
+    │   ├── Read local version.txt → "1.0.40"
+    │   ├── GET api.github.com/.../releases/latest → tag_name "v1.0.42"
+    │   ├── Compare: 1.0.42 > 1.0.40 → update available
+    │   ├── Download zip from release assets
+    │   ├── Verify SHA-256
+    │   ├── Backup backend/ → backend_backup/
+    │   ├── Extract zip → replaces backend/
+    │   ├── Write "1.0.42" to version.txt
+    │   └── If anything fails → restore backup, continue with old version
+    ├── 3. Start PostgreSQL
+    ├── 4. Run DB setup (auto-discovers + runs new migrations)
+    ├── 5. Start backend (uses updated code)
+    └── 6. Open browser → localhost:5004
+```
+
+---
+
 ## Files to Create
 
-### 1. `version.txt` (project root, ships inside installer)
+### 1. `version.txt` (ships with installer, auto-managed after that)
 
-Simple text file with the current version. Ships with the installer and gets updated after each OTA update.
+Place in `dist_launcher\launcher\` before building installer. After that, the launcher overwrites it on each successful update.
 
 ```
 1.0.0
 ```
 
-### 2. Server endpoint: `GET /api/updates/latest`
+### 2. `.github/workflows/build-ota-update.yml`
 
-**Location:** Add to your license server (`api.herculesv2.app`) or create a new blueprint.
+GitHub Action that triggers on push to `Salalah_Mill_B`:
 
-**Response:**
-```json
-{
-  "version": "1.0.3",
-  "url": "https://api.herculesv2.app/updates/hercules-update-1.0.3.zip",
-  "sha256": "a1b2c3d4e5f6...",
-  "changelog": "Fixed report export, added new tags"
-}
+```yaml
+name: Build OTA Update
+
+on:
+  push:
+    branches: [Salalah_Mill_B]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history for commit count
+
+      - name: Generate version from commit count
+        id: version
+        run: |
+          COUNT=$(git rev-list --count HEAD)
+          VERSION="1.0.${COUNT}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Generated version: ${VERSION}"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build frontend for launcher
+        run: |
+          cd Frontend
+          cp .env.launcher .env.production.local
+          npm ci
+          npm run build
+
+      - name: Copy frontend into backend
+        run: |
+          rm -rf backend/frontend/dist
+          cp -r Frontend/dist backend/frontend/dist
+
+      - name: Create update zip
+        run: zip -r hercules-update-${{ steps.version.outputs.version }}.zip backend/
+
+      - name: Compute SHA-256
+        id: hash
+        run: |
+          SHA=$(sha256sum hercules-update-${{ steps.version.outputs.version }}.zip | cut -d' ' -f1)
+          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          body: |
+            Auto-generated OTA update from Salalah_Mill_B branch.
+            SHA-256: `${{ steps.hash.outputs.sha256 }}`
+          files: hercules-update-${{ steps.version.outputs.version }}.zip
 ```
-
-**Implementation option A:** Static JSON file on your server, updated by CI/CD.
-**Implementation option B:** New Flask blueprint `updates_bp.py` on the license server that reads from a DB or file.
-
-### 3. Server storage for update zips
-
-Store the zip files at a URL the launcher can download. Options:
-- GitHub Releases (free, public or private)
-- Your own server at `api.herculesv2.app/updates/`
-- S3/Cloudflare R2 bucket
 
 ---
 
 ## Files to Modify
 
-### 1. `launcher.py` — Add update check after license check
+### 1. `launcher.py` — Add OTA update check
 
-**Where:** In `main()`, between the license check (line 337) and PostgreSQL start (line 339).
-
-**New function to add:**
+**New imports** (add at top, most already exist):
 
 ```python
 import shutil
 import tempfile
 import zipfile
 import hashlib
+```
 
-UPDATE_CHECK_URL = f"{LICENSE_SERVER_URL}/api/updates/latest"
+**New constants** (add after existing constants):
+
+```python
+GITHUB_REPO = "husam-hammami/Reporting_Module_v0.1"
+GITHUB_RELEASES_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 VERSION_FILE = os.path.join(BASE_DIR, "version.txt")
+```
 
+**New functions** (add before `main()`):
+
+```python
 def _get_local_version():
-    """Read local version.txt. Returns '0.0.0' if missing."""
     try:
         with open(VERSION_FILE, encoding="utf-8") as f:
             return f.read().strip()
     except FileNotFoundError:
         return "0.0.0"
 
+
 def _version_tuple(v):
-    """Convert '1.2.3' to (1, 2, 3) for comparison."""
-    return tuple(int(x) for x in v.split("."))
+    return tuple(int(x) for x in v.replace("v", "").split("."))
+
 
 def check_and_apply_update():
-    """Check server for newer version; download and apply if available."""
     local_ver = _get_local_version()
     print(f"Current version: {local_ver}")
 
+    # Fetch latest release from GitHub
     try:
         req = urllib.request.Request(
-            UPDATE_CHECK_URL,
-            headers={"User-Agent": "HerculesLauncher/1.0",
-                     "ngrok-skip-browser-warning": "true"},
+            GITHUB_RELEASES_URL,
+            headers={
+                "User-Agent": "HerculesLauncher/1.0",
+                "Accept": "application/vnd.github+json",
+            },
         )
         ctx = _ssl_context()
-        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
-            info = json.loads(resp.read().decode("utf-8"))
+        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+            release = json.loads(resp.read().decode("utf-8"))
     except Exception as e:
-        print(f"Update check skipped (server unreachable): {e}")
+        print(f"Update check skipped (GitHub unreachable): {e}")
         return
 
-    remote_ver = info.get("version", "0.0.0")
+    remote_ver = release.get("tag_name", "v0.0.0").lstrip("v")
     if _version_tuple(remote_ver) <= _version_tuple(local_ver):
         print(f"Already up to date (v{local_ver}).")
         return
 
-    print(f"Update available: v{local_ver} → v{remote_ver}")
-    download_url = info.get("url")
-    expected_hash = info.get("sha256", "")
-    if not download_url:
-        print("No download URL in update response — skipping.")
+    # Find the zip asset
+    assets = release.get("assets", [])
+    zip_asset = None
+    for a in assets:
+        if a.get("name", "").endswith(".zip"):
+            zip_asset = a
+            break
+    if not zip_asset:
+        print("No zip asset in release — skipping update.")
         return
 
-    # Download zip to temp file
-    tmp = os.path.join(tempfile.gettempdir(), f"hercules-update-{remote_ver}.zip")
+    download_url = zip_asset["browser_download_url"]
+    print(f"Update available: v{local_ver} -> v{remote_ver}")
+
+    # Download to temp
+    tmp = os.path.join(tempfile.gettempdir(), zip_asset["name"])
     try:
-        print(f"Downloading update...")
-        urllib.request.urlretrieve(download_url, tmp)
+        print("Downloading update...")
+        req = urllib.request.Request(download_url, headers={"User-Agent": "HerculesLauncher/1.0"})
+        with urllib.request.urlopen(req, timeout=120, context=ctx) as resp:
+            with open(tmp, "wb") as f:
+                while True:
+                    chunk = resp.read(65536)
+                    if not chunk:
+                        break
+                    f.write(chunk)
     except Exception as e:
         print(f"Download failed: {e}")
         return
 
-    # Verify checksum (optional but recommended)
-    if expected_hash:
-        sha = hashlib.sha256()
-        with open(tmp, "rb") as f:
-            for chunk in iter(lambda: f.read(8192), b""):
-                sha.update(chunk)
-        if sha.hexdigest() != expected_hash:
-            print("Checksum mismatch — update rejected.")
-            os.remove(tmp)
-            return
-
     # Extract and replace backend/
+    backup = BACKEND_DIR + "_backup"
     try:
         print("Applying update...")
-        backup = BACKEND_DIR + "_backup"
         if os.path.exists(backup):
             shutil.rmtree(backup)
         os.rename(BACKEND_DIR, backup)
@@ -154,7 +245,6 @@ def check_and_apply_update():
         with zipfile.ZipFile(tmp, "r") as zf:
             zf.extractall(BASE_DIR)
 
-        # Success — remove backup and temp
         shutil.rmtree(backup, ignore_errors=True)
         os.remove(tmp)
 
@@ -164,190 +254,114 @@ def check_and_apply_update():
 
     except Exception as e:
         print(f"Update failed: {e}")
-        # Restore backup
         if os.path.exists(backup) and not os.path.exists(BACKEND_DIR):
             os.rename(backup, BACKEND_DIR)
         print("Rolled back to previous version.")
 ```
 
-**In `main()`, add this call:**
+**In `main()`** — add one line between license check and PostgreSQL start:
 
 ```python
-def main():
-    # ... license check (existing code) ...
-
-    # NEW — check for OTA update
+    # (after license check, before PostgreSQL start)
     check_and_apply_update()
 
     if not os.path.exists(PG_CTL):
-    # ... rest of existing code ...
 ```
 
 ### 2. `setup_local_db.py` — Auto-discover new migrations
 
-**Current problem:** `MIGRATION_ORDER` is a hardcoded list. New migrations won't run unless the list is updated.
-
-**Change:** After running the ordered list, also scan `migrations/` for any `.sql` files NOT in the list and run them. This way, if an OTA update adds a new migration file, it gets picked up automatically.
-
-**Add after the migration loop in `run_migrations()`:**
+**Add at the end of `run_migrations()`** (after the `MIGRATION_ORDER` loop, before `cur.close()`):
 
 ```python
-# Auto-discover migrations not in MIGRATION_ORDER
-all_sql = set(f for f in os.listdir(MIGRATIONS_DIR) if f.endswith('.sql'))
-ordered = set(MIGRATION_ORDER)
-extra = sorted(all_sql - ordered)
-for filename in extra:
-    path = os.path.join(MIGRATIONS_DIR, filename)
-    with open(path, 'r', encoding='utf-8') as f:
-        sql = f.read()
-    try:
-        cur.execute(sql)
-        print(f'  OK    {filename}  (auto-discovered)')
-    except Exception as e:
-        conn.rollback()
-        conn.autocommit = True
-        msg = str(e).split('\n')[0]
-        print(f'  SKIP  {filename}  ({msg})')
+    # Auto-discover migrations not in MIGRATION_ORDER
+    all_sql = set(f for f in os.listdir(MIGRATIONS_DIR) if f.endswith('.sql'))
+    ordered = set(MIGRATION_ORDER)
+    extra = sorted(all_sql - ordered)
+    for filename in extra:
+        path = os.path.join(MIGRATIONS_DIR, filename)
+        with open(path, 'r', encoding='utf-8') as f:
+            sql = f.read()
+        try:
+            cur.execute(sql)
+            print(f'  OK    {filename}  (auto-discovered)')
+        except Exception as e:
+            conn.rollback()
+            conn.autocommit = True
+            msg = str(e).split('\n')[0]
+            print(f'  SKIP  {filename}  ({msg})')
 ```
 
 ### 3. `installer.iss` — No change needed
 
-Already includes everything in `dist_launcher\launcher\*`. Just place `version.txt` in `dist_launcher\launcher\` before building.
+Already includes everything in `dist_launcher\launcher\*`.
 
 ### 4. `launcher.spec` — No change needed
 
-The launcher.exe doesn't bundle the backend. It stays as-is.
+Only needs rebuilding if `launcher.py` itself changes (which it will once you add the update logic — rebuild once, then never again).
 
 ---
 
 ## Update Zip Structure
 
-The zip file downloaded by the launcher must contain a `backend/` folder at the top level:
+The GitHub Action creates a zip with `backend/` at the top level:
 
 ```
-hercules-update-1.0.3.zip
+hercules-update-1.0.42.zip
 └── backend/
     ├── app.py
-    ├── tags_bp.py
-    ├── report_builder_bp.py
-    ├── ... (all .py files)
+    ├── *_bp.py
     ├── workers/
     ├── utils/
     ├── tools/
     ├── migrations/
     │   ├── (existing .sql files)
-    │   └── new_migration.sql    ← new migrations included
+    │   └── new_migration.sql    ← arrives with update
     ├── config/
     └── frontend/
-        └── dist/
-            ├── index.html
-            └── assets/
+        └── dist/                ← rebuilt React app
 ```
 
 ---
 
-## Build & Publish Workflow
+## Auto-Versioning
 
-### Manual (PowerShell)
+No manual version bumps. The version is `1.0.<commit-count>`:
 
-```powershell
-# 1. Build frontend for launcher
-cd Frontend
-Copy-Item .env.launcher .env.production.local -Force
-npm run build
-cd ..
+| Push # | Commit count | Version | Tag |
+|--------|-------------|---------|-----|
+| 1st | 150 | 1.0.150 | v1.0.150 |
+| 2nd | 151 | 1.0.151 | v1.0.151 |
+| 5th | 155 | 1.0.155 | v1.0.155 |
 
-# 2. Copy frontend into backend
-Remove-Item -Recurse -Force backend\frontend\dist
-Copy-Item -Recurse Frontend\dist backend\frontend\dist
-
-# 3. Create update zip (backend/ only)
-Compress-Archive -Path backend -DestinationPath hercules-update-1.0.3.zip -Force
-
-# 4. Get the SHA-256
-(Get-FileHash hercules-update-1.0.3.zip -Algorithm SHA256).Hash
-
-# 5. Upload zip to your server
-# 6. Update /api/updates/latest with new version + URL + hash
-```
-
-### GitHub Actions (automated)
-
-```yaml
-name: Build OTA Update
-on:
-  push:
-    branches: [main]
-    tags: ['v*']
-
-jobs:
-  build-update:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-
-      - name: Build frontend
-        run: |
-          cd Frontend
-          cp .env.launcher .env.production.local
-          npm ci && npm run build
-          cp -r dist ../backend/frontend/dist
-
-      - name: Create update zip
-        run: zip -r hercules-update-${{ github.ref_name }}.zip backend/
-
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: hercules-update-*.zip
-```
-
----
-
-## Startup Flow (After Implementation)
-
-```
-User double-clicks launcher.exe
-    │
-    ├── 1. License check (existing)
-    │
-    ├── 2. OTA update check ← NEW
-    │   ├── Read version.txt → "1.0.1"
-    │   ├── GET /api/updates/latest → {"version": "1.0.3", ...}
-    │   ├── If same → skip
-    │   ├── If newer → download zip → verify SHA-256 → replace backend/
-    │   └── If server unreachable → skip, run existing version
-    │
-    ├── 3. Start PostgreSQL
-    ├── 4. Run DB setup (runs new migrations automatically)
-    ├── 5. Start backend (uses updated code)
-    └── 6. Open browser → localhost:5004
-```
+The launcher compares its local `version.txt` against `tag_name` from GitHub Releases. If the remote is higher, it updates.
 
 ---
 
 ## Summary of All Changes
 
-| File | Change | Effort |
-|------|--------|--------|
-| **`version.txt`** | NEW — create with `1.0.0` | Trivial |
-| **`launcher.py`** | Add `check_and_apply_update()` + call in `main()` | Medium |
-| **`setup_local_db.py`** | Add auto-discover for new migration `.sql` files | Small |
-| **Server** | Add `GET /api/updates/latest` endpoint + host zip files | Medium |
-| **CI/CD** | GitHub Action to build + zip + publish on push | Optional |
-| `installer.iss` | No change | None |
-| `launcher.spec` | No change | None |
+| File | Change | Rebuild EXE? |
+|------|--------|-------------|
+| **`version.txt`** | NEW — create with `1.0.0`, place in `dist_launcher\launcher\` | No |
+| **`launcher.py`** | Add `check_and_apply_update()` + call in `main()` | **Yes (once)** |
+| **`launcher.spec`** | No change, but rebuild EXE since launcher.py changed | **Yes (once)** |
+| **`setup_local_db.py`** | Add auto-discover for new migration files | No (arrives via OTA) |
+| **`.github/workflows/build-ota-update.yml`** | NEW — CI pipeline | No |
+| `installer.iss` | No change | No |
+| `python_embed/` | No change | No |
+| `psql/` | No change | No |
 
-### Priority Order
+### One-Time Steps
 
-1. **`version.txt`** + **`launcher.py`** update logic — core feature
-2. **Server endpoint** — needed for launcher to check
-3. **`setup_local_db.py`** migration auto-discover — DB schema stays in sync
-4. **CI/CD** — automates the zip build + upload
+1. Add the update logic to `launcher.py`
+2. Rebuild `launcher.exe` with PyInstaller (last time you need to rebuild)
+3. Create `version.txt` with `1.0.0`
+4. Add `.github/workflows/build-ota-update.yml`
+5. Rebuild the Inno Setup installer with the new launcher.exe + version.txt
+6. Distribute installer to users
+
+### After That (Ongoing)
+
+Just push code to `Salalah_Mill_B` — everything else is automatic.
 
 ---
 
