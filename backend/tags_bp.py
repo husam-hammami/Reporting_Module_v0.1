@@ -6,6 +6,8 @@ API endpoints for managing tags (PLC tags, formulas, mappings, manual inputs).
 
 import logging
 import json
+import csv
+import io
 from flask import Blueprint, jsonify, request
 from contextlib import closing
 import psycopg2
@@ -1051,5 +1053,288 @@ def export_tags():
     
     except Exception as e:
         logger.error(f"Error exporting tags: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@tags_bp.route('/tags/import-plc-csv', methods=['POST'])
+def import_plc_csv():
+    """Import tags from PLC engineering CSV files (exported from TIA Portal / Step 7).
+
+    Accepts one or more CSV files. Each file has:
+    - Row 1, Cell A1: the DB number (e.g. "2099")
+    - Remaining rows: Name, DataType, Offset, Default, [flags...], Unit
+    Struct rows are skipped (they are grouping containers).
+    For Bool tags the offset column may contain "178.1" meaning byte 178 bit 1.
+    """
+    try:
+        files = request.files.getlist('files')
+        if not files:
+            return jsonify({'status': 'error', 'message': 'No files provided'}), 400
+
+        all_tags = []
+        file_errors = []
+
+        for f in files:
+            try:
+                content = f.read().decode('utf-8-sig')  # handle BOM
+                reader = csv.reader(io.StringIO(content))
+                rows = list(reader)
+
+                if not rows or not rows[0]:
+                    file_errors.append({'file': f.filename, 'error': 'Empty file'})
+                    continue
+
+                # Row 1: DB number is in the first cell
+                db_number_raw = rows[0][0].strip()
+                try:
+                    db_number = int(db_number_raw)
+                except ValueError:
+                    file_errors.append({'file': f.filename, 'error': f'First cell is not a valid DB number: "{db_number_raw}"'})
+                    continue
+
+                # Process data rows (skip row 0 which is the DB number header)
+                for row_idx, row in enumerate(rows[1:], start=2):
+                    if not row or not row[0].strip():
+                        continue
+
+                    tag_name = row[0].strip()
+                    data_type_raw = row[1].strip() if len(row) > 1 else ''
+
+                    # Skip Struct rows - they are grouping containers
+                    if data_type_raw.lower() == 'struct':
+                        continue
+
+                    offset_raw = row[2].strip() if len(row) > 2 else ''
+                    if not offset_raw:
+                        continue
+
+                    # Map PLC data types to system types
+                    type_map = {
+                        'real': 'REAL',
+                        'bool': 'BOOL',
+                        'dint': 'DINT',
+                        'int': 'INT',
+                        'string': 'STRING',
+                    }
+                    data_type = type_map.get(data_type_raw.lower(), 'REAL')
+
+                    # Parse offset - Bool can have "178.1" format (byte.bit)
+                    bit_position = None
+                    if '.' in offset_raw:
+                        parts = offset_raw.split('.')
+                        try:
+                            offset = int(parts[0])
+                            bit_position = int(parts[1])
+                        except (ValueError, IndexError):
+                            file_errors.append({'file': f.filename, 'error': f'Row {row_idx}: invalid offset "{offset_raw}"'})
+                            continue
+                    else:
+                        try:
+                            offset = int(offset_raw)
+                        except ValueError:
+                            file_errors.append({'file': f.filename, 'error': f'Row {row_idx}: invalid offset "{offset_raw}"'})
+                            continue
+
+                    # Unit is in the last non-empty column
+                    unit = ''
+                    if len(row) > 9 and row[9].strip():
+                        unit = row[9].strip()
+                    elif len(row) > 1:
+                        # Fallback: last non-empty cell
+                        for cell in reversed(row):
+                            cell = cell.strip()
+                            if cell and cell.upper() not in ('TRUE', 'FALSE', '0', ''):
+                                try:
+                                    float(cell)
+                                except ValueError:
+                                    unit = cell
+                                    break
+
+                    # Normalize unit abbreviations
+                    unit_map = {
+                        'ton per hour': 't/h',
+                        'percentage per second': '%/s',
+                        'leter per hour': 'L/h',
+                        'litre per hour': 'L/h',
+                        'liter per hour': 'L/h',
+                    }
+                    unit = unit_map.get(unit.lower(), unit)
+
+                    # Build PLC address
+                    if bit_position is not None:
+                        plc_address = f"DB{db_number}.{offset}.{bit_position}"
+                    else:
+                        plc_address = f"DB{db_number}.{offset}"
+
+                    # Clean tag name: replace spaces with underscores
+                    clean_name = tag_name.replace(' ', '_')
+
+                    all_tags.append({
+                        'tag_name': clean_name,
+                        'display_name': tag_name,
+                        'source_type': 'PLC',
+                        'plc_address': plc_address,
+                        'data_type': data_type,
+                        'unit': unit,
+                        'is_active': True,
+                    })
+
+            except Exception as e:
+                file_errors.append({'file': f.filename, 'error': str(e)})
+
+        if not all_tags:
+            return jsonify({
+                'status': 'error',
+                'message': 'No valid tags found in the uploaded files',
+                'file_errors': file_errors
+            }), 400
+
+        # Use existing bulk import logic
+        imported = 0
+        tag_errors = []
+
+        get_db_connection_func = _get_db_connection()
+        with closing(get_db_connection_func()) as conn:
+            cursor = conn.cursor()
+
+            for tag_data in all_tags:
+                try:
+                    tag_name = tag_data['tag_name']
+                    parsed = parse_plc_address(tag_data['plc_address'])
+                    db_num = parsed['db_number']
+                    off = parsed['offset']
+                    bit_pos = parsed.get('bit')
+
+                    cursor.execute("SELECT id FROM tags WHERE tag_name = %s", (tag_name,))
+                    if cursor.fetchone():
+                        cursor.execute("""
+                            UPDATE tags SET
+                                display_name = %s, source_type = %s, db_number = %s,
+                                "offset" = %s, data_type = %s, bit_position = %s,
+                                unit = %s, is_active = %s
+                            WHERE tag_name = %s
+                        """, (
+                            tag_data.get('display_name', tag_name),
+                            'PLC', db_num, off,
+                            tag_data.get('data_type', 'REAL'),
+                            bit_pos,
+                            tag_data.get('unit', ''),
+                            True,
+                            tag_name
+                        ))
+                    else:
+                        cursor.execute("""
+                            INSERT INTO tags (
+                                tag_name, display_name, source_type, db_number, "offset",
+                                data_type, bit_position, unit, scaling, decimal_places,
+                                description, is_active
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            tag_name,
+                            tag_data.get('display_name', tag_name),
+                            'PLC', db_num, off,
+                            tag_data.get('data_type', 'REAL'),
+                            bit_pos,
+                            tag_data.get('unit', ''),
+                            1.0, 2, '', True
+                        ))
+
+                    imported += 1
+                except Exception as e:
+                    tag_errors.append({'tag': tag_data.get('tag_name', '?'), 'error': str(e)})
+
+            conn.commit()
+
+        # Auto-register in emulator if demo mode
+        try:
+            from demo_mode import get_demo_mode
+            if get_demo_mode():
+                from plc_data_source import register_tag_in_emulator
+                for tag_data in all_tags:
+                    try:
+                        parsed = parse_plc_address(tag_data['plc_address'])
+                        register_tag_in_emulator(
+                            tag_data['tag_name'], 'PLC',
+                            parsed['db_number'], parsed['offset'],
+                            tag_data.get('data_type', 'REAL'),
+                            tag_data.get('unit', '')
+                        )
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        return jsonify({
+            'status': 'success',
+            'imported': imported,
+            'total_parsed': len(all_tags),
+            'errors': tag_errors,
+            'file_errors': file_errors,
+            'message': f'Imported {imported} tags from {len(files)} file(s)'
+        })
+
+    except Exception as e:
+        logger.error(f"Error importing PLC CSV: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@tags_bp.route('/tags/export-csv', methods=['GET'])
+def export_tags_csv():
+    """Export all tags as CSV file"""
+    try:
+        get_db_connection_func = _get_db_connection()
+        with closing(get_db_connection_func()) as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("""
+                SELECT tag_name, display_name, source_type,
+                       db_number, "offset", data_type, bit_position,
+                       unit, scaling, decimal_places, formula,
+                       mapping_name, description, is_active
+                FROM tags
+                ORDER BY tag_name
+            """)
+
+            tags = cursor.fetchall()
+
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow([
+                'tag_name', 'display_name', 'source_type', 'data_type',
+                'plc_address', 'unit', 'scaling', 'decimal_places',
+                'formula', 'description', 'is_active'
+            ])
+
+            for tag in tags:
+                t = dict(tag)
+                plc_address = ''
+                if t.get('db_number') is not None and t.get('offset') is not None:
+                    if t.get('bit_position') is not None:
+                        plc_address = f"DB{t['db_number']}.{t['offset']}.{t['bit_position']}"
+                    else:
+                        plc_address = f"DB{t['db_number']}.{t['offset']}"
+
+                writer.writerow([
+                    t.get('tag_name', ''),
+                    t.get('display_name', ''),
+                    t.get('source_type', ''),
+                    t.get('data_type', ''),
+                    plc_address,
+                    t.get('unit', ''),
+                    t.get('scaling', 1.0),
+                    t.get('decimal_places', 2),
+                    t.get('formula', ''),
+                    t.get('description', ''),
+                    t.get('is_active', True),
+                ])
+
+            csv_content = output.getvalue()
+            return jsonify({
+                'status': 'success',
+                'csv': csv_content,
+                'count': len(tags)
+            })
+
+    except Exception as e:
+        logger.error(f"Error exporting tags CSV: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
