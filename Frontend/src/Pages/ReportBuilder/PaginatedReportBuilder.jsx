@@ -284,11 +284,20 @@ function resolveLookup(mapping, inputValue) {
   return inputValue;
 }
 
+/** Resolve the tag value key, considering per-cell aggregation namespacing.
+ *  When historical data is fetched per-aggregation, non-default aggregations
+ *  are stored as 'first::tagName', 'delta::tagName', etc. */
+function resolveTagKey(tagName, aggregation) {
+  if (!aggregation || aggregation === 'last') return tagName;
+  return `${aggregation}::${tagName}`;
+}
+
 function resolveCellValue(cell, tagValues, rowContext = null) {
   if (!cell) return '—';
   if (cell.sourceType === 'static') return cell.value ?? '';
   if (cell.sourceType === 'tag') {
-    const raw = tagValues?.[cell.tagName];
+    const key = resolveTagKey(cell.tagName, cell.aggregation);
+    const raw = tagValues?.[key] ?? tagValues?.[cell.tagName];
     if (raw == null) return '—';
     const n = Number(raw);
     if (isNaN(n)) return raw;
@@ -469,6 +478,52 @@ export function collectPaginatedTagNames(sections) {
     }
   });
   return [...names];
+}
+
+/**
+ * Collect per-tag aggregation types from paginated sections.
+ * Returns { aggregationType: Set<tagName> } so the viewer can fetch each group separately.
+ * Tags with no explicit aggregation default to 'last'.
+ */
+export function collectPaginatedTagAggregations(sections) {
+  const aggGroups = {}; // { 'last': Set, 'first': Set, 'delta': Set, ... }
+  const addTag = (tagName, agg) => {
+    if (!tagName) return;
+    const a = agg || 'last';
+    if (!aggGroups[a]) aggGroups[a] = new Set();
+    aggGroups[a].add(tagName);
+  };
+  if (!Array.isArray(sections)) return {};
+  sections.forEach((s) => {
+    if (s.type === 'header') {
+      if (s.statusTagName) addTag(s.statusTagName, 'last');
+    }
+    if (s.type === 'kpi-row' && Array.isArray(s.kpis)) {
+      s.kpis.forEach((k) => {
+        if (k.tagName) addTag(k.tagName, k.aggregation);
+      });
+    }
+    if (s.type === 'table' && Array.isArray(s.rows)) {
+      s.rows.forEach((row) => {
+        if (Array.isArray(row.cells)) {
+          row.cells.forEach((cell) => {
+            if (cell.sourceType === 'tag' && cell.tagName) {
+              addTag(cell.tagName, cell.aggregation);
+            }
+            if (cell.sourceType === 'formula' && cell.formula) {
+              extractTagRefs(cell.formula).forEach((t) => addTag(t, cell.aggregation));
+            }
+          });
+        }
+      });
+    }
+  });
+  // Convert sets to arrays
+  const result = {};
+  for (const [agg, tagSet] of Object.entries(aggGroups)) {
+    result[agg] = [...tagSet];
+  }
+  return result;
 }
 
 /* ══════════════════════════════════════════════════════════════════

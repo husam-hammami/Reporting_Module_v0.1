@@ -13,7 +13,7 @@ import {
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
 import { useReportCanvas, useAvailableTags } from '../../Hooks/useReportBuilder';
-import { PaginatedReportPreview, collectPaginatedTagNames } from '../ReportBuilder/PaginatedReportBuilder';
+import { PaginatedReportPreview, collectPaginatedTagNames, collectPaginatedTagAggregations } from '../ReportBuilder/PaginatedReportBuilder';
 import TimePeriodTabs, { PAGINATED_TABS } from './TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
 import axios from '../../API/axios';
@@ -57,7 +57,8 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
 
   // Collect all tag names needed
   const tagNames = useMemo(() => collectPaginatedTagNames(sections), [sections]);
-
+  // Collect per-tag aggregation groups for historical fetches
+  const tagAggGroups = useMemo(() => collectPaginatedTagAggregations(sections), [sections]);
 
   // Fetch shift schedule
   useEffect(() => {
@@ -106,23 +107,51 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
   }, [isLive, socket]);
 
   // ── Historical mode: fetch tag values for the date range ──
+  // Supports per-cell aggregation: same tag can have 'first', 'last', 'delta' etc.
+  // Non-default aggregations are namespaced as 'agg::tagName' in the merged result.
   const fetchData = useCallback(async () => {
     if (isLive || tagNames.length === 0 || !dateRange) return;
     setFetchLoading(true);
     setFetchError(null);
     try {
-      const res = await axios.get('/api/historian/by-tags', {
-        params: {
-          tag_names: tagNames.join(','),
-          from: dateRange.from.toISOString(),
-          to: dateRange.to.toISOString(),
-          aggregation: 'auto',
-        },
-        timeout: 15000,
-      });
-      const data = res?.data?.tag_values || res?.data?.data || res?.data;
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        setTagValues(data);
+      const fromISO = dateRange.from.toISOString();
+      const toISO = dateRange.to.toISOString();
+
+      const aggEntries = Object.entries(tagAggGroups);
+      if (aggEntries.length === 0) {
+        // Fallback: fetch all tags with 'auto'
+        const res = await axios.get('/api/historian/by-tags', {
+          params: { tag_names: tagNames.join(','), from: fromISO, to: toISO, aggregation: 'auto' },
+          timeout: 15000,
+        });
+        const data = res?.data?.tag_values || res?.data?.data || res?.data;
+        if (data && typeof data === 'object' && !Array.isArray(data)) setTagValues(data);
+      } else {
+        // Fire parallel requests per aggregation type
+        const results = await Promise.all(
+          aggEntries.map(([agg, tags]) =>
+            axios.get('/api/historian/by-tags', {
+              params: { tag_names: tags.join(','), from: fromISO, to: toISO, aggregation: agg },
+              timeout: 15000,
+            }).then((res) => ({ agg, data: res?.data?.tag_values || res?.data?.data || res?.data || {} }))
+              .catch(() => ({ agg, data: {} }))
+          )
+        );
+        // Merge: default agg ('last') uses plain tagName, others use 'agg::tagName'
+        const merged = {};
+        for (const { agg, data } of results) {
+          if (!data || typeof data !== 'object') continue;
+          for (const [tagName, value] of Object.entries(data)) {
+            if (agg === 'last') {
+              merged[tagName] = value;
+            } else {
+              merged[`${agg}::${tagName}`] = value;
+              // Also set plain tagName if not already set (so tags with only 'first' still work)
+              if (!(tagName in merged)) merged[tagName] = value;
+            }
+          }
+        }
+        setTagValues(merged);
       }
     } catch (err) {
       console.warn('Failed to fetch historical data for paginated report:', err);
@@ -138,7 +167,7 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
       }
     }
     setFetchLoading(false);
-  }, [isLive, tagNames, dateRange]);
+  }, [isLive, tagNames, tagAggGroups, dateRange]);
 
   useEffect(() => { if (!isLive) fetchData(); }, [fetchData, isLive]);
 

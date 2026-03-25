@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import MappingForm from './MappingForm';
 import { useEmulator } from '../../../Context/EmulatorContext';
 import axios from '../../../API/axios';
+import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
 import '../../ReportBuilder/reportBuilderTheme.css';
 
 function resolveLookup(mapping, inputValue) {
@@ -74,15 +75,13 @@ const MappingManager = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this mapping?')) return;
-    try {
-      await axios.delete(`/api/mappings/${id}`);
-      loadMappings();
-      window.dispatchEvent(new Event('mappingsUpdated'));
-    } catch (err) {
-      alert('Error deleting mapping: ' + (err.response?.data?.message || err.message));
-    }
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
+  const handleDelete = (id) => {
+    setConfirmModal({ open: true, title: 'Delete Mapping', description: 'Delete this mapping?', confirmText: 'Delete', confirmColor: 'red', onConfirm: async () => {
+      setConfirmModal(m => ({ ...m, open: false }));
+      try { await axios.delete(`/api/mappings/${id}`); loadMappings(); window.dispatchEvent(new Event('mappingsUpdated')); }
+      catch (err) { console.error('Error deleting mapping:', err); }
+    }});
   };
 
   const handleToggle = async (id) => {
@@ -200,6 +199,7 @@ const MappingManager = () => {
           onCancel={() => { setShowForm(false); setEditingMapping(null); }}
         />
       )}
+      <ConfirmationModal isOpen={confirmModal.open} title={confirmModal.title} description={confirmModal.description} onConfirm={confirmModal.onConfirm || (() => {})} onCancel={() => setConfirmModal(m => ({ ...m, open: false }))} confirmText={confirmModal.confirmText} confirmColor={confirmModal.confirmColor} />
     </div>
   );
 };

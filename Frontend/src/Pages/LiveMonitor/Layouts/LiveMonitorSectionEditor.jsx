@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useLenisScroll } from '../../../Hooks/useLenisScroll';
 import { FaPlus, FaEdit, FaTrash, FaArrowLeft, FaGripVertical, FaSave } from 'react-icons/fa';
 import LiveMonitorSectionBuilder from './Sections/LiveMonitorSectionBuilder';
+import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
 
 const LiveMonitorSectionEditor = () => {
   useLenisScroll();
@@ -83,11 +84,12 @@ const LiveMonitorSectionEditor = () => {
     setShowSectionForm(true);
   };
 
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
   const handleDeleteSection = (sectionId) => {
-    if (window.confirm('Are you sure you want to delete this section?')) {
-      const updated = sections.filter(s => s.id !== sectionId);
-      setSections(updated);
-    }
+    setConfirmModal({ open: true, title: 'Delete Section', description: 'Are you sure you want to delete this section?', confirmText: 'Delete', confirmColor: 'red', onConfirm: () => {
+      const updated = sections.filter(s => s.id !== sectionId); setSections(updated);
+      setConfirmModal(m => ({ ...m, open: false }));
+    }});
   };
 
   const handleSaveSection = (sectionData) => {
@@ -263,6 +265,7 @@ const LiveMonitorSectionEditor = () => {
           />
         </div>
       )}
+      <ConfirmationModal isOpen={confirmModal.open} title={confirmModal.title} description={confirmModal.description} onConfirm={confirmModal.onConfirm || (() => {})} onCancel={() => setConfirmModal(m => ({ ...m, open: false }))} confirmText={confirmModal.confirmText} confirmColor={confirmModal.confirmColor} />
     </div>
   );
 };

@@ -53,7 +53,8 @@ function Section({ icon: Icon, title, children, defaultOpen = true, isFirst = fa
 }
 
 const AGGREGATION_DESCRIPTIONS = {
-  last: 'Most recent value',
+  last: 'Most recent value (end of period)',
+  first: 'First value (start of period)',
   avg: 'Average over time range',
   sum: 'Total accumulated',
   min: 'Lowest recorded',
@@ -309,6 +310,7 @@ function DataSourceSection({ config, onUpdate, tags, tagValues, groups = [], sav
                 { value: 'min', label: 'Minimum' },
                 { value: 'max', label: 'Maximum' },
                 { value: 'count', label: 'Count' },
+                { value: 'first', label: 'First (Start)' },
                 { value: 'delta', label: 'Delta (Change)' },
               ]}
             />
@@ -397,6 +399,7 @@ function DataSourceSection({ config, onUpdate, tags, tagValues, groups = [], sav
                 { value: 'min', label: 'Minimum' },
                 { value: 'max', label: 'Maximum' },
                 { value: 'count', label: 'Count' },
+                { value: 'first', label: 'First (Start)' },
                 { value: 'delta', label: 'Delta (Change)' },
               ]}
             />
@@ -1198,7 +1201,8 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                         { value: 'min', label: 'Minimum' },
                         { value: 'max', label: 'Maximum' },
                         { value: 'count', label: 'Count' },
-                        { value: 'delta', label: 'Delta (Change)' },
+                        { value: 'first', label: 'First (Start)' },
+                { value: 'delta', label: 'Delta (Change)' },
                       ]}
                     />
                   </Field>

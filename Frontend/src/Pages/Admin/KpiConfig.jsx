@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLenisScroll } from '../../Hooks/useLenisScroll';
 import { FaPlus, FaEdit, FaTrash, FaCalculator } from 'react-icons/fa';
+import ConfirmationModal from '../../Components/Common/ConfirmationModal';
 
 // Mock data (Phase 1 — replace with API in Phase 3)
 const MOCK_KPI_LIST = [
@@ -58,10 +59,9 @@ const KpiConfig = () => {
     navigate(`/admin/kpi-config/${kpi.id}/edit`);
   };
 
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
   const handleDelete = (kpi) => {
-    if (window.confirm(`Delete KPI "${kpi.kpi_name}"? This action cannot be undone.`)) {
-      setKpis((prev) => prev.filter((k) => k.id !== kpi.id));
-    }
+    setConfirmModal({ open: true, title: 'Delete KPI', description: `Delete KPI "${kpi.kpi_name}"? This action cannot be undone.`, confirmText: 'Delete', confirmColor: 'red', onConfirm: () => { setKpis((prev) => prev.filter((k) => k.id !== kpi.id)); setConfirmModal(m => ({ ...m, open: false })); } });
   };
 
   return (
@@ -143,6 +143,7 @@ const KpiConfig = () => {
           </table>
         </div>
       </div>
+      <ConfirmationModal isOpen={confirmModal.open} title={confirmModal.title} description={confirmModal.description} onConfirm={confirmModal.onConfirm || (() => {})} onCancel={() => setConfirmModal(m => ({ ...m, open: false }))} confirmText={confirmModal.confirmText} confirmColor={confirmModal.confirmColor} />
     </div>
   );
 };

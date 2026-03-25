@@ -1549,6 +1549,7 @@ def import_plc_excel():
                             continue
 
                         # Parse rows, skipping title rows and headers
+                        current_section = ''  # Track section titles for report grouping
                         for row_idx, row in enumerate(rows, start=1):
                             if not row or all(c is None for c in row):
                                 continue
@@ -1562,8 +1563,9 @@ def import_plc_excel():
                             if col_a.lower() == 'name' and col_b.lower() == 'type':
                                 continue
 
-                            # Skip section title rows (only col_a filled, no type/offset)
+                            # Detect section title rows (only col_a filled, no type/offset)
                             if col_a and not col_b and not col_c:
+                                current_section = col_a
                                 continue
 
                             # Must have a valid type
@@ -1596,11 +1598,18 @@ def import_plc_excel():
                             plc_address = f"DB{db_number}.{offset}" if bit_position is None else f"DB{db_number}.{offset}.{bit_position}"
                             clean_name = _sanitize_tag_name(col_a)
 
+                            # Build description: prepend section name for report grouping
+                            comment = col_d if col_d and col_d != unit else ''
+                            if current_section:
+                                desc = f'[{current_section}] {comment}'.strip() if comment else f'[{current_section}]'
+                            else:
+                                desc = comment
+
                             all_tags.append({
                                 'tag_name': clean_name, 'display_name': col_a,
                                 'source_type': 'PLC', 'plc_address': plc_address,
                                 'data_type': data_type, 'unit': unit,
-                                'description': col_d if col_d and col_d != unit else '',
+                                'description': desc,
                                 'is_active': True,
                             })
 
@@ -1755,7 +1764,7 @@ def generate_report_drafts():
 
             query = """
                 SELECT tag_name, display_name, db_number, "offset", data_type,
-                       bit_position, unit
+                       bit_position, unit, description
                 FROM tags
                 WHERE source_type = 'PLC' AND is_active = TRUE
                   AND db_number IS NOT NULL
@@ -1809,47 +1818,131 @@ def generate_report_drafts():
                 'statusAggregation': 'avg',
             })
 
-            # ── Table section with ALL tags as columns, one data row ──
-            columns = []
-            row_cells = []
+            # ── Smart table sections: group by Excel section, then by type ──
+            import re as _re
+
+            def make_tag_cell(tag_name, decimals=0, unit='', aggregation='last'):
+                return {'sourceType': 'tag', 'tagName': tag_name, 'value': '',
+                        'formula': '', 'unit': unit, 'decimals': decimals,
+                        'groupTags': [], 'aggregation': aggregation, 'mappingName': ''}
+
+            def extract_section(tag):
+                """Extract [SectionName] from description field."""
+                desc = tag.get('description', '') or ''
+                m = _re.match(r'^\[(.+?)\]', desc)
+                return m.group(1) if m else ''
+
+            # Group tags by their section (from Excel import)
+            from collections import OrderedDict
+            section_groups = OrderedDict()
             for tag in db_tags:
-                col_id = f'ps-{uuid.uuid4().hex[:8]}'
-                unit = tag.get('unit', '') or ''
-                decimals = 2 if tag['data_type'] == 'REAL' else 0
-                display = tag.get('display_name') or tag['tag_name']
+                sec = extract_section(tag)
+                if sec not in section_groups:
+                    section_groups[sec] = []
+                section_groups[sec].append(tag)
 
-                columns.append({
-                    'id': col_id,
-                    'header': display,
-                    'width': 'auto',
-                    'align': 'center',
-                })
-                row_cells.append({
-                    'sourceType': 'tag',
-                    'tagName': tag['tag_name'],
-                    'value': '',
-                    'formula': '',
-                    'unit': unit,
-                    'decimals': decimals,
-                    'groupTags': [],
-                    'aggregation': 'last',
-                    'mappingName': '',
-                })
+            # If no sections detected, use a single unnamed group
+            if not section_groups:
+                section_groups[''] = db_tags
 
-            sections.append({
-                'id': f'ps-{uuid.uuid4().hex[:8]}',
-                'type': 'table',
-                'label': f'DB{db_number} Tags',
-                'columns': columns,
-                'rows': [{
-                    'id': f'ps-{uuid.uuid4().hex[:8]}',
-                    'cells': row_cells,
-                }],
-                'showSummaryRow': False,
-                'summaryLabel': 'Total',
-                'summaryFormula': '',
-                'summaryUnit': '',
-            })
+            def build_table_section(label, section_tags):
+                """Build a table section with appropriate columns based on tag types."""
+                totalizers = [t for t in section_tags if t['data_type'] == 'DINT']
+                reals = [t for t in section_tags if t['data_type'] == 'REAL']
+                bools = [t for t in section_tags if t['data_type'] == 'BOOL']
+                ints = [t for t in section_tags if t['data_type'] == 'INT']
+
+                # If ALL tags are totalizers (DInt only), use counter layout
+                if totalizers and not reals and not bools and not ints:
+                    tot_units = set(t.get('unit', '') or '' for t in totalizers)
+                    common_unit = tot_units.pop() if len(tot_units) == 1 else ''
+                    total_hdr = f'Total {common_unit}'.strip() if common_unit else 'Total'
+                    start_hdr = f'StartValue {common_unit}'.strip() if common_unit else 'StartValue'
+                    end_hdr   = f'EndValue {common_unit}'.strip() if common_unit else 'EndValue'
+
+                    rows = []
+                    for tag in totalizers:
+                        display = tag.get('display_name') or tag['tag_name']
+                        cell_unit = '' if common_unit else (tag.get('unit', '') or '')
+                        rows.append({
+                            'id': f'ps-{uuid.uuid4().hex[:8]}',
+                            'cells': [
+                                {'sourceType': 'static', 'value': tag['tag_name']},
+                                {'sourceType': 'static', 'value': display},
+                                make_tag_cell(tag['tag_name'], 0, cell_unit, 'delta'),
+                                make_tag_cell(tag['tag_name'], 0, cell_unit, 'first'),
+                                make_tag_cell(tag['tag_name'], 0, cell_unit, 'last'),
+                            ],
+                        })
+                    return {
+                        'id': f'ps-{uuid.uuid4().hex[:8]}', 'type': 'table', 'label': label or 'Totalizers',
+                        'columns': [
+                            {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Ident',   'width': 'auto', 'align': 'left'},
+                            {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Name',    'width': 'auto', 'align': 'left'},
+                            {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': total_hdr, 'width': 'auto', 'align': 'right'},
+                            {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': start_hdr, 'width': 'auto', 'align': 'right'},
+                            {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': end_hdr,   'width': 'auto', 'align': 'right'},
+                        ],
+                        'rows': rows,
+                        'showSummaryRow': False, 'summaryLabel': 'Total', 'summaryFormula': '', 'summaryUnit': '',
+                    }
+
+                # Mixed section: use Ident | Name | Value | Unit (general layout)
+                rows = []
+                for tag in section_tags:
+                    display = tag.get('display_name') or tag['tag_name']
+                    unit = tag.get('unit', '') or ''
+                    decimals = 2 if tag['data_type'] == 'REAL' else 0
+                    is_bool = tag['data_type'] == 'BOOL'
+                    is_totalizer = tag['data_type'] == 'DINT'
+
+                    if is_bool:
+                        # Checkbox display
+                        rows.append({
+                            'id': f'ps-{uuid.uuid4().hex[:8]}',
+                            'cells': [
+                                {'sourceType': 'static', 'value': tag['tag_name']},
+                                {'sourceType': 'static', 'value': display},
+                                make_tag_cell(tag['tag_name'], 0, '__checkbox__', 'last'),
+                                {'sourceType': 'static', 'value': ''},
+                            ],
+                        })
+                    elif is_totalizer:
+                        # Totalizer in a mixed section: show delta value
+                        rows.append({
+                            'id': f'ps-{uuid.uuid4().hex[:8]}',
+                            'cells': [
+                                {'sourceType': 'static', 'value': tag['tag_name']},
+                                {'sourceType': 'static', 'value': display},
+                                make_tag_cell(tag['tag_name'], decimals, '', 'delta'),
+                                {'sourceType': 'static', 'value': unit},
+                            ],
+                        })
+                    else:
+                        rows.append({
+                            'id': f'ps-{uuid.uuid4().hex[:8]}',
+                            'cells': [
+                                {'sourceType': 'static', 'value': tag['tag_name']},
+                                {'sourceType': 'static', 'value': display},
+                                make_tag_cell(tag['tag_name'], decimals, '', 'last'),
+                                {'sourceType': 'static', 'value': unit},
+                            ],
+                        })
+
+                return {
+                    'id': f'ps-{uuid.uuid4().hex[:8]}', 'type': 'table', 'label': label or 'Tags',
+                    'columns': [
+                        {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Ident', 'width': 'auto', 'align': 'left'},
+                        {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Name',  'width': 'auto', 'align': 'left'},
+                        {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Value', 'width': 'auto', 'align': 'right'},
+                        {'id': f'ps-{uuid.uuid4().hex[:8]}', 'header': 'Unit',  'width': 'auto', 'align': 'center'},
+                    ],
+                    'rows': rows,
+                    'showSummaryRow': False, 'summaryLabel': '', 'summaryFormula': '', 'summaryUnit': '',
+                }
+
+            for sec_name, sec_tags in section_groups.items():
+                sections.append(build_table_section(sec_name, sec_tags))
 
             template = {
                 'id': uuid.uuid4().hex,

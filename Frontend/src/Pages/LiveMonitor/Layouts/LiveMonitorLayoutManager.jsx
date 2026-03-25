@@ -3,6 +3,7 @@ import { useLenisScroll } from '../../../Hooks/useLenisScroll';
 import { FaPlus, FaEdit, FaTrash, FaCopy, FaEye, FaDownload, FaUpload, FaCheck, FaTimes } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import LiveMonitorLayoutForm from './LiveMonitorLayoutForm';
+import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
 
 const LiveMonitorLayoutManager = () => {
   useLenisScroll();
@@ -52,11 +53,12 @@ const LiveMonitorLayoutManager = () => {
     setShowForm(true);
   };
 
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
   const handleDelete = (layoutId) => {
-    if (window.confirm('Are you sure you want to delete this layout? This action cannot be undone.')) {
-      const updated = layouts.filter(l => l.id !== layoutId);
-      saveLayouts(updated);
-    }
+    setConfirmModal({ open: true, title: 'Delete Layout', description: 'Are you sure you want to delete this layout? This action cannot be undone.', confirmText: 'Delete', confirmColor: 'red', onConfirm: () => {
+      const updated = layouts.filter(l => l.id !== layoutId); saveLayouts(updated);
+      setConfirmModal(m => ({ ...m, open: false }));
+    }});
   };
 
   const handleCopy = (layout) => {
@@ -307,6 +309,7 @@ const LiveMonitorLayoutManager = () => {
           />
         </div>
       )}
+      <ConfirmationModal isOpen={confirmModal.open} title={confirmModal.title} description={confirmModal.description} onConfirm={confirmModal.onConfirm || (() => {})} onCancel={() => setConfirmModal(m => ({ ...m, open: false }))} confirmText={confirmModal.confirmText} confirmColor={confirmModal.confirmColor} />
     </div>
   );
 };

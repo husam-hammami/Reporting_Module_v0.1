@@ -100,7 +100,7 @@ export function collectWidgetTagAggregations(widgets) {
 
   // Priority: if same tag appears in multiple widgets with different aggregations,
   // keep the one that's most "informative" (sum > avg > delta > min/max > count > last)
-  const PRIORITY = { sum: 6, avg: 5, delta: 4, min: 3, max: 3, count: 2, last: 1 };
+  const PRIORITY = { sum: 6, avg: 5, delta: 4, min: 3, max: 3, count: 2, first: 1, last: 1 };
   const setAgg = (tagName, agg) => {
     if (!tagName) return;
     const a = agg || 'last';
