@@ -28,6 +28,15 @@ import ShiftsSettings from '../Pages/Settings/Shifts/ShiftsSettings';
 import UserManagement from '../Pages/Settings/Users/UserManagement';
 import LicenseActivations from '../Pages/Settings/LicenseActivations/LicenseActivations';
 import BrandingSettings from '../Pages/Settings/Branding/BrandingSettings';
+import { useContext } from 'react';
+import { AuthContext } from '../Context/AuthProvider';
+
+function DefaultRedirect() {
+  const { auth } = useContext(AuthContext);
+  const target = auth?.role === Roles.Operator ? '/reports' : '/report-builder';
+  return <Navigate to={target} replace />;
+}
+
 const AppRoutes = () => {
   const location = useLocation();
   return (
@@ -52,7 +61,7 @@ const AppRoutes = () => {
         >
           <Route
             index
-            element={<Navigate to="/report-builder" replace />}
+            element={<DefaultRedirect />}
           />
 
           {/* Live Monitor Routes */}
@@ -181,7 +190,7 @@ const AppRoutes = () => {
           <Route
             path="report-builder"
             element={
-              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager]}>
                 <ReportBuilderManager />
               </ProtectedRoute>
             }
@@ -189,7 +198,7 @@ const AppRoutes = () => {
           <Route
             path="report-builder/:id"
             element={
-              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager]}>
                 <ReportBuilderCanvas />
               </ProtectedRoute>
             }
@@ -197,7 +206,7 @@ const AppRoutes = () => {
           <Route
             path="report-builder/:id/preview"
             element={
-              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager]}>
                 <ReportBuilderPreview />
               </ProtectedRoute>
             }
@@ -205,7 +214,7 @@ const AppRoutes = () => {
           <Route
             path="report-builder/:id/paginated"
             element={
-              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager]}>
                 <PaginatedReportBuilder />
               </ProtectedRoute>
             }

@@ -7,7 +7,7 @@ export const menuItems = [
     icon: LayoutGrid,
     tooltip: 'Design and build reports',
     link: '/report-builder',
-    roles: [Roles.Admin, Roles.Manager, Roles.Operator],
+    roles: [Roles.Admin, Roles.Manager],
   },
   {
     name: 'Dashboards',
