@@ -31,7 +31,7 @@ jobs:
         run: |
           cd Frontend
           cp .env.launcher .env.production.local
-          npm ci
+          npm install
           npm run build
 
       - name: Copy frontend into backend
