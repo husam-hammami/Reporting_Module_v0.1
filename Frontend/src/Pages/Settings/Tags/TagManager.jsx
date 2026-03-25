@@ -207,8 +207,11 @@ const TagManager = () => {
     }
   };
 
-  const handleExport = async () => {
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+
+  const handleExportJSON = async () => {
     try {
+      setExportMenuOpen(false);
       const response = await axios.get('/api/tags/export');
       if (response.data.status === 'success') {
         const blob = new Blob([JSON.stringify({ tags: response.data.tags }, null, 2)], { type: 'application/json' });
@@ -220,20 +223,102 @@ const TagManager = () => {
     } catch (e) { alert('Failed to export: ' + (e.response?.data?.message || e.message)); }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      setExportMenuOpen(false);
+      const response = await axios.get('/api/tags/export-csv');
+      if (response.data.status === 'success') {
+        const blob = new Blob([response.data.csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `tags_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click(); URL.revokeObjectURL(url);
+      }
+    } catch (e) { alert('Failed to export CSV: ' + (e.response?.data?.message || e.message)); }
+  };
+
   const handleImport = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const imported = JSON.parse(e.target.result);
-        if (imported.tags && Array.isArray(imported.tags)) {
-          const res = await axios.post('/api/tags/bulk-import', { tags: imported.tags });
-          if (res.data.status === 'success') { alert(`Imported ${res.data.imported} tags`); await loadTags(); }
-        } else { alert('Invalid file format'); }
-      } catch (e) { alert('Error importing: ' + (e.response?.data?.message || e.message)); }
-    };
-    reader.readAsText(file);
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+
+    const csvFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv'));
+    const xlsxFiles = files.filter(f => f.name.toLowerCase().endsWith('.xlsx') || f.name.toLowerCase().endsWith('.xls'));
+    const jsonFiles = files.filter(f => f.name.toLowerCase().endsWith('.json'));
+
+    const results = [];
+
+    try {
+      // Handle CSV files (PLC engineering format) via dedicated endpoint
+      if (csvFiles.length > 0) {
+        const formData = new FormData();
+        csvFiles.forEach(f => formData.append('files', f));
+        const res = await axios.post('/api/tags/import-plc-csv', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        if (res.data.status === 'success') {
+          results.push(`CSV: imported ${res.data.imported} tags`);
+        } else {
+          results.push(`CSV: failed - ${res.data.message || 'Unknown error'}`);
+        }
+      }
+
+      // Handle Excel files (PLC engineering format) via dedicated endpoint
+      if (xlsxFiles.length > 0) {
+        const formData = new FormData();
+        xlsxFiles.forEach(f => formData.append('files', f));
+        const res = await axios.post('/api/tags/import-plc-excel', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        if (res.data.status === 'success') {
+          results.push(`Excel: imported ${res.data.imported} tags`);
+        } else {
+          results.push(`Excel: failed - ${res.data.message || 'Unknown error'}`);
+        }
+      }
+
+      // Handle JSON files via existing bulk-import
+      for (const file of jsonFiles) {
+        try {
+          const text = await file.text();
+          const imported = JSON.parse(text);
+          if (imported.tags && Array.isArray(imported.tags)) {
+            const res = await axios.post('/api/tags/bulk-import', { tags: imported.tags });
+            if (res.data.status === 'success') {
+              results.push(`${file.name}: imported ${res.data.imported} tags`);
+            }
+          } else {
+            results.push(`${file.name}: invalid JSON format`);
+          }
+        } catch (jsonErr) {
+          results.push(`${file.name}: ${jsonErr.message}`);
+        }
+      }
+
+      if (csvFiles.length > 0 || xlsxFiles.length > 0 || jsonFiles.length > 0) {
+        await loadTags();
+        window.dispatchEvent(new Event('tagsUpdated'));
+
+        // Offer to create report drafts for PLC imports
+        if ((csvFiles.length > 0 || xlsxFiles.length > 0) && window.confirm('Also create report drafts from imported tags? (one report per DB)')) {
+          try {
+            const draftRes = await axios.post('/api/tags/generate-report-drafts', {});
+            if (draftRes.data.status === 'success' && draftRes.data.templates?.length > 0) {
+              const existing = JSON.parse(localStorage.getItem('hercules_report_builder_templates') || '[]');
+              // Deduplicate by name
+              const existingNames = new Set(existing.map(t => t.name));
+              const newTemplates = draftRes.data.templates.filter(t => !existingNames.has(t.name));
+              localStorage.setItem('hercules_report_builder_templates', JSON.stringify([...existing, ...newTemplates]));
+              results.push(`Report drafts: created ${newTemplates.length}`);
+            }
+          } catch { /* skip if fails */ }
+        }
+      }
+
+      if (results.length > 0) alert('Import results:\n' + results.join('\n'));
+    } catch (e) {
+      alert('Error importing: ' + (e.response?.data?.message || e.message));
+    }
+
     event.target.value = '';
   };
 
@@ -266,11 +351,23 @@ const TagManager = () => {
         <div className="flex items-center gap-2">
           <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] bg-white dark:bg-[#131b2d] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] cursor-pointer transition-colors">
             <FaUpload size={11} /> Import
-            <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+            <input type="file" accept=".json,.csv,.xlsx,.xls" multiple onChange={handleImport} className="hidden" />
           </label>
-          <button onClick={handleExport} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] bg-white dark:bg-[#131b2d] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] transition-colors">
-            <FaDownload size={11} /> Export
-          </button>
+          <div className="relative">
+            <button onClick={() => setExportMenuOpen(!exportMenuOpen)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] bg-white dark:bg-[#131b2d] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] transition-colors">
+              <FaDownload size={11} /> Export
+            </button>
+            {exportMenuOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-white dark:bg-[#131b2d] border border-[#e3e9f0] dark:border-[#1e2d40] rounded-lg shadow-lg z-20 min-w-[140px]">
+                <button onClick={handleExportJSON} className="w-full text-left px-3 py-2 text-[11px] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] rounded-t-lg transition-colors">
+                  Export as JSON
+                </button>
+                <button onClick={handleExportCSV} className="w-full text-left px-3 py-2 text-[11px] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] rounded-b-lg transition-colors">
+                  Export as CSV
+                </button>
+              </div>
+            )}
+          </div>
           <button onClick={handleAdd} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg bg-brand hover:bg-brand-hover text-white transition-colors">
             <FaPlus size={11} /> Add Tag
           </button>
