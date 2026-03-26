@@ -10,15 +10,9 @@ import { useSystemStatus } from '../../Context/SystemStatusContext';
 import { useBranding } from '../../Context/BrandingContext';
 import { useLocation } from 'react-router-dom';
 import { DarkModeContext } from '../../Context/DarkModeProvider';
+import { useLanguage } from '../../Hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../../Pages/ReportBuilder/reportBuilderTheme.css';
-
-const PAGE_LABELS = {
-  'report-builder': 'Builder',
-  'dashboards': 'Dashboards',
-  'reports': 'Table Reports',
-  'settings': 'Engineering',
-};
 
 function Navbar({ isBlueprint = false }) {
   const { open, setOpen } = useContext(NavbarContext);
@@ -27,8 +21,16 @@ function Navbar({ isBlueprint = false }) {
   const { demoMode, loading: statusLoading } = useSystemStatus();
   const { clientLogo } = useBranding();
   const { mode, setMode } = useContext(DarkModeContext);
+  const { lang, setLang, t } = useLanguage();
   const isDark = mode === 'dark';
   const location = useLocation();
+
+  const PAGE_LABELS = {
+    'report-builder': t('nav.builder'),
+    'dashboards': t('nav.dashboards'),
+    'reports': t('nav.tableReports'),
+    'settings': t('nav.engineering'),
+  };
 
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const currentPage = PAGE_LABELS[pathSegments[0]] || 'Hercules SFMS';
@@ -70,7 +72,7 @@ function Navbar({ isBlueprint = false }) {
               <span className={`w-2 h-2 rounded-full animate-pulse shadow-[0_0_6px_currentColor] ${
                 demoMode ? 'bg-amber-500' : 'bg-[#34d399]'
               }`} />
-              <span className="text-[11px] font-bold tracking-widest">{demoMode ? 'DEMO' : 'LIVE'}</span>
+              <span className="text-[11px] font-bold tracking-widest">{demoMode ? t('nav.demo') : t('nav.live')}</span>
               <span className="text-[10px] text-[#556677] font-medium tracking-wide">{currentPage}</span>
             </div>
           )}
@@ -97,6 +99,14 @@ function Navbar({ isBlueprint = false }) {
           />
 
           <div className="h-7 w-px bg-[#1e293b]" />
+
+          <button
+            onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
+            className="px-2.5 py-1.5 hover:bg-[#1a2233] rounded-lg transition-colors text-[#8899ab] hover:text-[#f0f4f8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22d3ee] text-xs font-bold tracking-wide"
+            title={lang === 'en' ? t('common.switchToArabic') : t('common.switchToEnglish')}
+          >
+            {lang === 'en' ? 'ع' : 'EN'}
+          </button>
 
           <button
             onClick={() => setMode(isDark ? 'light' : 'dark')}
@@ -142,7 +152,7 @@ function Navbar({ isBlueprint = false }) {
                           className="w-full text-left px-3 py-2 text-xs font-semibold text-[#8899ab] hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-colors flex items-center gap-2.5"
                         >
                           <LogOut size={16} />
-                          Sign out
+                          {t('nav.signOut')}
                         </button>
                       </div>
                     </motion.div>

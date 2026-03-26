@@ -8,12 +8,14 @@ import SplashScreen from './Components/Common/SplashScreen.jsx';
 import useLoading from './Hooks/useLoading.jsx';
 import { useContext, useEffect } from 'react';
 import { DarkModeContext } from './Context/DarkModeProvider.jsx';
+import { useLanguage } from './Hooks/useLanguage';
 import { AuthContext } from './Context/AuthProvider.jsx';
 import { useLenisScroll } from './Hooks/useLenisScroll.js'; // ✅ Add this
 
 function App() {
   const loading = useLoading();
   const { mode } = useContext(DarkModeContext);
+  const { isRTL } = useLanguage();
   useLenisScroll(); // ✅ Add this
   // Global error handler for message channel errors
   useEffect(() => {
@@ -51,10 +53,10 @@ function App() {
           <div className="app">
             <AppRouter />
             <ToastContainer
-              position="top-right"
+              position={isRTL ? "top-left" : "top-right"}
               autoClose={5000}
               closeOnClick
-              rtl={false}
+              rtl={isRTL}
               pauseOnFocusLoss
               draggable
               pauseOnHover

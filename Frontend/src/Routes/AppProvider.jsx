@@ -8,6 +8,7 @@ import { SocketProvider } from '../Context/SocketContext';
 import { EmulatorProvider } from '../Context/EmulatorContext';
 import { SystemStatusProvider } from '../Context/SystemStatusContext';
 import { BrandingProvider } from '../Context/BrandingContext';
+import { LanguageProvider } from '../Context/LanguageProvider';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -33,9 +34,11 @@ const AppProviders = ({ children }) => {
         <BrandingProvider>
         <EmulatorProvider>
         <NavbarProvider>
-          <DarkModeProvider>
-            {children}
-          </DarkModeProvider>
+          <LanguageProvider>
+            <DarkModeProvider>
+              {children}
+            </DarkModeProvider>
+          </LanguageProvider>
         </NavbarProvider>
         </EmulatorProvider>
         </BrandingProvider>

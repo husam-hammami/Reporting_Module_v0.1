@@ -3,27 +3,29 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useLenisScroll } from '../../Hooks/useLenisScroll';
 import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaServer, FaSuperscript, FaEnvelope, FaClock, FaUsers, FaKey, FaImage } from 'react-icons/fa';
 import { AuthContext } from '../../Context/AuthProvider';
+import { useLanguage } from '../../Hooks/useLanguage';
 import '../ReportBuilder/reportBuilderTheme.css';
-
-const NAV_ITEMS = [
-  { name: 'Users', icon: FaUsers, link: '/settings/users', description: 'User accounts & roles' },
-  { name: 'Tags', icon: FaTags, link: '/settings/tags', description: 'PLC tags & data sources' },
-  { name: 'Tag Groups', icon: FaLayerGroup, link: '/settings/tag-groups', description: 'Organize tags for reports' },
-  { name: 'Formulas', icon: FaSuperscript, link: '/settings/formulas', description: 'Reusable calculations' },
-  { name: 'Mappings', icon: FaExchangeAlt, link: '/settings/mappings', description: 'Value mapping rules' },
-  { name: 'Email / SMTP', icon: FaEnvelope, link: '/settings/distribution', description: 'SMTP server configuration' },
-  { name: 'Shifts', icon: FaClock, link: '/settings/shifts', description: 'Shift schedule config' },
-  { name: 'Export / Import', icon: FaDownload, link: '/settings/export-import', description: 'System configurations' },
-  { name: 'Branding', icon: FaImage, link: '/settings/branding', description: 'Client logo & branding' },
-  { name: 'System', icon: FaServer, link: '/settings/system', description: 'PLC, mode & emulator' },
-  { name: 'Licenses', icon: FaKey, link: '/settings/license-activations', description: 'Machine license activations', superadminOnly: true },
-];
 
 const SettingsHome = () => {
   useLenisScroll();
   const location = useLocation();
   const navigate = useNavigate();
   const { auth } = useContext(AuthContext);
+  const { t } = useLanguage();
+
+  const NAV_ITEMS = [
+    { name: t('settings.users'), icon: FaUsers, link: '/settings/users', description: t('settings.desc.users') },
+    { name: t('settings.tags'), icon: FaTags, link: '/settings/tags', description: t('settings.desc.tags') },
+    { name: t('settings.tagGroups'), icon: FaLayerGroup, link: '/settings/tag-groups', description: t('settings.desc.tagGroups') },
+    { name: t('settings.formulas'), icon: FaSuperscript, link: '/settings/formulas', description: t('settings.desc.formulas') },
+    { name: t('settings.mappings'), icon: FaExchangeAlt, link: '/settings/mappings', description: t('settings.desc.mappings') },
+    { name: t('settings.emailSmtp'), icon: FaEnvelope, link: '/settings/distribution', description: t('settings.desc.emailSmtp') },
+    { name: t('settings.shifts'), icon: FaClock, link: '/settings/shifts', description: t('settings.desc.shifts') },
+    { name: t('settings.exportImport'), icon: FaDownload, link: '/settings/export-import', description: t('settings.desc.exportImport') },
+    { name: t('settings.branding'), icon: FaImage, link: '/settings/branding', description: t('settings.desc.branding') },
+    { name: t('settings.system'), icon: FaServer, link: '/settings/system', description: t('settings.desc.system') },
+    { name: t('settings.licenses'), icon: FaKey, link: '/settings/license-activations', description: t('settings.desc.licenses'), superadminOnly: true },
+  ];
 
   const filteredNavItems = NAV_ITEMS.filter(item => {
     if (item.superadminOnly) {
@@ -49,7 +51,7 @@ const SettingsHome = () => {
       <div className="sticky top-0 z-10 bg-white dark:bg-[#111827] border-b border-[#e5e7eb] dark:border-[#1e293b] px-3 sm:px-6 pt-4 pb-0">
         <div className="flex items-center gap-2 mb-3">
           <div className="w-1 h-4 rounded-full bg-[var(--brand)]" />
-          <h1 className="text-[15px] font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)] tracking-tight">Engineering</h1>
+          <h1 className="text-[15px] font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)] tracking-tight">{t('settings.title')}</h1>
         </div>
         <nav className="flex gap-0 -mb-px overflow-x-auto scrollbar-none">
           {filteredNavItems.map((item) => {
@@ -79,9 +81,9 @@ const SettingsHome = () => {
             <div className="w-12 h-12 rounded-xl bg-[var(--surface-sunken)] dark:bg-[var(--surface-sunken)] dark:border dark:border-[var(--border)] flex items-center justify-center mx-auto mb-4">
               <FaTags className="text-[var(--text-muted)] dark:text-[var(--text-muted)] text-lg" />
             </div>
-            <h2 className="text-[14px] font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] mb-1">Select a section</h2>
+            <h2 className="text-[14px] font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] mb-1">{t('settings.selectSection')}</h2>
             <p className="text-[12px] text-[var(--text-muted)] dark:text-[var(--text-muted)] max-w-sm mx-auto">
-              Choose a tab above to manage tags, groups, mappings, or system settings.
+              {t('settings.selectSectionHint')}
             </p>
           </div>
         ) : (
