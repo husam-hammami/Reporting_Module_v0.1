@@ -5,6 +5,7 @@ import MappingForm from './MappingForm';
 import { useEmulator } from '../../../Context/EmulatorContext';
 import axios from '../../../API/axios';
 import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
+import { useLanguage } from '../../../Hooks/useLanguage';
 import '../../ReportBuilder/reportBuilderTheme.css';
 
 function resolveLookup(mapping, inputValue) {
@@ -20,6 +21,7 @@ const MappingManager = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingMapping, setEditingMapping] = useState(null);
   const { tagValues, enabled: emulatorOn } = useEmulator();
+  const { t } = useLanguage();
 
   const loadMappings = useCallback(async () => {
     try {
@@ -50,7 +52,7 @@ const MappingManager = () => {
       }
     } catch (err) {
       console.error('Error loading mappings:', err);
-      setError('Failed to load mappings from server');
+      setError(t('mappings.failedLoad'));
     } finally {
       setLoading(false);
     }
@@ -77,7 +79,7 @@ const MappingManager = () => {
 
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
   const handleDelete = (id) => {
-    setConfirmModal({ open: true, title: 'Delete Mapping', description: 'Delete this mapping?', confirmText: 'Delete', confirmColor: 'red', onConfirm: async () => {
+    setConfirmModal({ open: true, title: t('mappings.deleteMapping'), description: t('mappings.deleteMappingConfirm'), confirmText: t('common.delete'), confirmColor: 'red', onConfirm: async () => {
       setConfirmModal(m => ({ ...m, open: false }));
       try { await axios.delete(`/api/mappings/${id}`); loadMappings(); window.dispatchEvent(new Event('mappingsUpdated')); }
       catch (err) { console.error('Error deleting mapping:', err); }
@@ -97,7 +99,7 @@ const MappingManager = () => {
   if (loading) {
     return (
       <div className="p-5">
-        <div className="text-center py-12 text-[12px] text-[#8898aa]">Loading mappings...</div>
+        <div className="text-center py-12 text-[12px] text-[#8898aa]">{t('mappings.loadingMappings')}</div>
       </div>
     );
   }
@@ -107,27 +109,27 @@ const MappingManager = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Mappings</h2>
+          <h2 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">{t('mappings.title')}</h2>
           <p className="text-[11px] text-[#8898aa] mt-0.5">
-            Map(Tag) → Lookup Table → New virtual tag available in reports
+            {t('mappings.subtitle')}
           </p>
         </div>
         <button onClick={() => { setEditingMapping(null); setShowForm(true); }} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg bg-brand hover:bg-brand-hover text-white transition-colors">
-          <FaPlus size={10} /> New Mapping
+          <FaPlus size={10} /> {t('mappings.newMapping')}
         </button>
       </div>
 
       {error && (
         <div className="mb-4 px-3 py-2 rounded-lg bg-[#fef2f2] border border-[#fecaca] text-[11px] text-[#dc2626]">
           {error}
-          <button onClick={loadMappings} className="ml-2 font-medium underline hover:no-underline">Retry</button>
+          <button onClick={loadMappings} className="ml-2 font-medium underline hover:no-underline">{t('common.retry')}</button>
         </div>
       )}
 
       {/* Cards */}
       <div className="space-y-3">
         {mappings.length === 0 ? (
-          <div className="text-center py-12 text-[12px] text-[#8898aa]">No mappings yet. Create one to convert PLC tag values into readable names.</div>
+          <div className="text-center py-12 text-[12px] text-[#8898aa]">{t('mappings.noMappings')}</div>
         ) : mappings.map((m) => {
           const liveInput = emulatorOn ? tagValues[m.input_tag] : null;
           const liveOutput = liveInput != null ? resolveLookup(m, liveInput) : null;
@@ -143,20 +145,20 @@ const MappingManager = () => {
                     <span className="rb-mapping-chip-arrow"><ArrowRight size={10} /></span>
                     <span className="rb-mapping-chip-output">{m.output_tag_name}</span>
                   </div>
-                  <span className="text-[11px] text-[#6b7f94] flex-shrink-0">{entryCount} rules</span>
+                  <span className="text-[11px] text-[#6b7f94] flex-shrink-0">{entryCount} {t('mappings.rules')}</span>
                 </div>
                 {/* Actions */}
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <span className={m.is_active ? 'rb-status-badge-active' : 'rb-status-badge-off'}>
-                    {m.is_active ? 'Active' : 'Off'}
+                    {m.is_active ? t('common.active') : t('common.off')}
                   </span>
-                  <button onClick={() => handleToggle(m.id)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors" title="Toggle">
+                  <button onClick={() => handleToggle(m.id)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors" title={t('common.active')}>
                     {m.is_active ? <FaCheck size={11} /> : <FaTimes size={11} />}
                   </button>
-                  <button onClick={() => { setEditingMapping(m); setShowForm(true); }} className="p-1.5 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors" title="Edit">
+                  <button onClick={() => { setEditingMapping(m); setShowForm(true); }} className="p-1.5 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors" title={t('common.edit')}>
                     <FaEdit size={11} />
                   </button>
-                  <button onClick={() => handleDelete(m.id)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors" title="Delete">
+                  <button onClick={() => handleDelete(m.id)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors" title={t('common.delete')}>
                     <FaTrash size={11} />
                   </button>
                 </div>
@@ -181,7 +183,7 @@ const MappingManager = () => {
                 {/* Live preview when emulator is on */}
                 {emulatorOn && liveInput != null && (
                   <div className="flex-shrink-0 text-right bg-[#f5f8fb] dark:bg-[#0d1825] rounded-lg px-3 py-2 border border-[#e3e9f0] dark:border-[#1e2d40]">
-                    <p className="text-[10px] text-[#8898aa] mb-0.5">Live</p>
+                    <p className="text-[10px] text-[#8898aa] mb-0.5">{t('mappings.live')}</p>
                     <p className="text-[11px] font-mono text-[#6b7f94]">{m.input_tag} = {typeof liveInput === 'number' ? liveInput.toFixed(0) : liveInput}</p>
                     <p className="text-[12px] font-semibold text-[#059669] dark:text-[#34d399] mt-0.5">{liveOutput}</p>
                   </div>

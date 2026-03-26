@@ -7,6 +7,7 @@ import { useAvailableTags } from '../../../Hooks/useReportBuilder';
 import { evaluateFormula } from '../../ReportBuilder/formulas/formulaEngine';
 import { DarkModeContext } from '../../../Context/DarkModeProvider';
 import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
+import { useLanguage } from '../../../Hooks/useLanguage';
 import '../../ReportBuilder/reportBuilderTheme.css';
 
 function useTheme() {
@@ -76,6 +77,7 @@ export default function FormulaManager() {
   const { tags } = useAvailableTags();
   const { tagValues, enabled: emulatorOn } = useEmulator();
   const t = useTheme();
+  const { t: tr } = useLanguage();
 
   const openNew = () => { setEditing(null); setDraft({ name: '', formula: '', unit: '', description: '' }); };
   const openEdit = (f) => { setEditing(f); setDraft({ name: f.name, formula: f.formula, unit: f.unit || '', description: f.description || '' }); };
@@ -96,7 +98,7 @@ export default function FormulaManager() {
 
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
   const handleDelete = (id) => {
-    setConfirmModal({ open: true, title: 'Delete Formula', description: 'Delete this formula?', confirmText: 'Delete', confirmColor: 'red', onConfirm: () => {
+    setConfirmModal({ open: true, title: tr('formulas.deleteFormula'), description: tr('formulas.deleteFormulaConfirm'), confirmText: tr('common.delete'), confirmColor: 'red', onConfirm: () => {
       const updated = formulas.filter(f => f.id !== id); save(updated); setFormulas(updated);
       setConfirmModal(m => ({ ...m, open: false }));
     }});
@@ -109,15 +111,15 @@ export default function FormulaManager() {
       <div className="max-w-[1400px] mx-auto px-6 md:px-8 lg:px-12 py-6 md:py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-xl font-bold" style={{ color: t.text }}>Saved Formulas</h1>
-            <p className="text-sm mt-1" style={{ color: t.textSecondary }}>Reusable formulas available in Report Builder</p>
+            <h1 className="text-xl font-bold" style={{ color: t.text }}>{tr('formulas.savedFormulas')}</h1>
+            <p className="text-sm mt-1" style={{ color: t.textSecondary }}>{tr('formulas.reusableDesc')}</p>
           </div>
           <button
             onClick={openNew}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
             style={{ background: t.accent, color: t.btnText, '--tw-ring-color': t.accent, '--tw-ring-offset-color': t.pageBg }}
           >
-            <Plus size={16} strokeWidth={2.5} /> New Formula
+            <Plus size={16} strokeWidth={2.5} /> {tr('formulas.newFormula')}
           </button>
         </div>
 
@@ -130,14 +132,14 @@ export default function FormulaManager() {
               style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}>
               <FlaskConical size={36} style={{ color: t.accent }} />
             </div>
-            <h3 className="text-lg font-bold mb-2" style={{ color: t.text }}>No saved formulas</h3>
-            <p className="text-sm mb-8 max-w-sm" style={{ color: t.textSecondary }}>Create reusable formulas to use across your reports.</p>
+            <h3 className="text-lg font-bold mb-2" style={{ color: t.text }}>{tr('formulas.noFormulas')}</h3>
+            <p className="text-sm mb-8 max-w-sm" style={{ color: t.textSecondary }}>{tr('formulas.noFormulasDesc')}</p>
             <button
               onClick={openNew}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg"
               style={{ background: t.accent, color: t.btnText }}
             >
-              <Plus size={16} /> Create First Formula
+              <Plus size={16} /> {tr('formulas.createFirst')}
             </button>
           </div>
         ) : (
@@ -146,10 +148,10 @@ export default function FormulaManager() {
               className="grid grid-cols-[1.5fr_2fr_100px_80px] items-center px-6 py-4 text-[11px] uppercase tracking-wider font-bold"
               style={{ color: t.textMuted, borderBottom: `1px solid ${t.border}`, background: t.dark ? 'rgba(10,15,26,0.5)' : 'rgba(0,0,0,0.02)' }}
             >
-              <span>Name</span>
-              <span>Expression</span>
-              <span>Live Value</span>
-              <span className="text-right">Actions</span>
+              <span>{tr('common.name')}</span>
+              <span>{tr('formulas.expression')}</span>
+              <span>{tr('formulas.liveValue')}</span>
+              <span className="text-right">{tr('common.actions')}</span>
             </div>
             {formulas.map((f) => {
               const liveResult = emulatorOn ? evaluateFormula(f.formula, tagValues) : null;
@@ -197,7 +199,7 @@ export default function FormulaManager() {
                       style={{ color: t.textSecondary }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = t.accent; e.currentTarget.style.background = t.accentBg; }}
                       onMouseLeave={(e) => { e.currentTarget.style.color = t.textSecondary; e.currentTarget.style.background = ''; }}
-                      title="Edit"
+                      title={tr('common.edit')}
                     >
                       <Edit3 size={16} />
                     </button>
@@ -205,7 +207,7 @@ export default function FormulaManager() {
                       onClick={() => handleDelete(f.id)}
                       className="p-2 rounded-lg transition-colors hover:bg-red-500/10 hover:text-red-400"
                       style={{ color: t.textSecondary }}
-                      title="Delete"
+                      title={tr('common.delete')}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -234,8 +236,8 @@ export default function FormulaManager() {
                   <FlaskConical size={16} style={{ color: t.accent }} />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold" style={{ color: t.text }}>{editing ? 'Edit Formula' : 'New Formula'}</h2>
-                  <p className="text-[10px] uppercase tracking-wider" style={{ color: t.textMuted }}>Formula Definition</p>
+                  <h2 className="text-sm font-bold" style={{ color: t.text }}>{editing ? tr('formulas.editFormula') : tr('formulas.newFormula')}</h2>
+                  <p className="text-[10px] uppercase tracking-wider" style={{ color: t.textMuted }}>{tr('formulas.formulaDefinition')}</p>
                 </div>
               </div>
               <button onClick={() => setEditing(undefined)} className="p-1.5 rounded-lg transition-colors" style={{ color: t.textSecondary }}>
@@ -244,7 +246,7 @@ export default function FormulaManager() {
             </div>
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 space-y-5 min-h-0">
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Name *</label>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>{tr('formulas.nameStar')}</label>
                 <input
                   value={draft.name}
                   onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
@@ -255,7 +257,7 @@ export default function FormulaManager() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Unit</label>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>{tr('common.unit')}</label>
                   <input
                     value={draft.unit}
                     onChange={e => setDraft(d => ({ ...d, unit: e.target.value }))}
@@ -265,18 +267,18 @@ export default function FormulaManager() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Description</label>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>{tr('common.description')}</label>
                   <input
                     value={draft.description}
                     onChange={e => setDraft(d => ({ ...d, description: e.target.value }))}
                     className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
                     style={{ background: t.modalInputBg, border: `1px solid ${t.border}`, color: t.text }}
-                    placeholder="What this calculates"
+                    placeholder={tr('formulas.descriptionPlaceholder')}
                   />
                 </div>
               </div>
               <div className="relative">
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Formula Expression *</label>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>{tr('formulas.expressionStar')}</label>
                 <FormulaEditor value={draft.formula} onChange={v => setDraft(d => ({ ...d, formula: v }))} tags={tags} tagValues={tagValues} />
               </div>
             </div>
@@ -286,7 +288,7 @@ export default function FormulaManager() {
                 className="px-4 py-2 text-xs font-medium rounded-lg transition-colors"
                 style={{ color: t.textSecondary }}
               >
-                Cancel
+                {tr('common.cancel')}
               </button>
               <button
                 onClick={handleSave}
@@ -294,7 +296,7 @@ export default function FormulaManager() {
                 className="px-4 py-2 text-xs font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ background: t.accent, color: t.btnText }}
               >
-                {editing ? 'Save' : 'Create Formula'}
+                {editing ? tr('common.save') : tr('formulas.createFormula')}
               </button>
             </div>
           </div>

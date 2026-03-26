@@ -1,26 +1,28 @@
 import React, { useState } from 'react';
 import { useLenisScroll } from '../../../Hooks/useLenisScroll';
+import { useLanguage } from '../../../Hooks/useLanguage';
 import { FaDownload, FaUpload, FaFileExport, FaFileImport, FaSpinner } from 'react-icons/fa';
 import axios from '../../../API/axios';
 import { toast } from 'react-toastify';
 import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
 
-const SECTIONS = [
-  { key: 'tags',               label: 'Tags',                csvExport: true },
-  { key: 'tag_groups',         label: 'Tag Groups'           },
-  { key: 'mappings',           label: 'Mappings'             },
-  { key: 'formulas',           label: 'Formulas'             },
-  { key: 'reports',            label: 'Report Configs'       },
-  { key: 'report_templates',   label: 'Report Templates'     },
-  { key: 'shifts',             label: 'Shifts'               },
-  { key: 'smtp',               label: 'SMTP / Email'         },
-  { key: 'distribution_rules', label: 'Distribution Rules'   },
-];
-
-const ALL_KEYS = SECTIONS.map(s => s.key);
-
 const ExportImport = () => {
   useLenisScroll();
+  const { t } = useLanguage();
+
+  const SECTIONS = [
+    { key: 'tags',               label: t('exportImport.tags'),              csvExport: true },
+    { key: 'tag_groups',         label: t('exportImport.tagGroups')          },
+    { key: 'mappings',           label: t('exportImport.mappingsLabel')      },
+    { key: 'formulas',           label: t('exportImport.formulasLabel')      },
+    { key: 'reports',            label: t('exportImport.reportConfigs')      },
+    { key: 'report_templates',   label: t('exportImport.reportTemplates')    },
+    { key: 'shifts',             label: t('exportImport.shiftsLabel')        },
+    { key: 'smtp',               label: t('exportImport.smtpEmail')          },
+    { key: 'distribution_rules', label: t('exportImport.distributionRules')  },
+  ];
+
+  const ALL_KEYS = SECTIONS.map(s => s.key);
 
   // Export state
   const [exportKeys, setExportKeys] = useState(new Set(ALL_KEYS));
@@ -348,11 +350,11 @@ const ExportImport = () => {
 
   const handleImport = () => {
     if (!importFile && csvFiles.length === 0 && xlsxFiles.length === 0) {
-      toast.warning('Please select a file first');
+      toast.warning(t('exportImport.selectFileFirst'));
       return;
     }
     if (importSections.size === 0 && !(csvFiles.length > 0 && importCsv) && !(xlsxFiles.length > 0 && importXlsx)) {
-      toast.warning('Please select at least one section to import');
+      toast.warning(t('exportImport.selectSection'));
       return;
     }
 
@@ -365,10 +367,10 @@ const ExportImport = () => {
 
     setConfirmModal({
       open: true,
-      title: 'Import Configuration',
+      title: t('exportImport.importConfig'),
       description: `This will import: ${parts.join(', ')}.\n\nExisting items with the same name will be updated. Continue?`,
       onConfirm: executeImport,
-      confirmText: 'Import',
+      confirmText: t('exportImport.import'),
       confirmColor: 'green',
     });
   };
@@ -398,10 +400,10 @@ const ExportImport = () => {
       {/* Header */}
       <div className="mb-4">
         <h2 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">
-          Export / Import Configuration
+          {t('exportImport.title')}
         </h2>
         <p className="text-[11px] text-[#8898aa] mt-1">
-          Select which configurations to export or import
+          {t('exportImport.subtitle')}
         </p>
       </div>
 
@@ -411,15 +413,15 @@ const ExportImport = () => {
           <div className="flex items-center gap-2.5 mb-3">
             <FaFileExport className="text-brand text-[14px]" />
             <h3 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">
-              Export
+              {t('exportImport.export')}
             </h3>
           </div>
 
-          <p className="text-[11px] text-[#8898aa] mb-3">Select sections to include:</p>
+          <p className="text-[11px] text-[#8898aa] mb-3">{t('exportImport.selectSections')}</p>
 
           <div className="flex items-center gap-3 mb-2">
-            <button onClick={selectAllExport} className="text-[10px] text-brand hover:underline">Select All</button>
-            <button onClick={selectNoneExport} className="text-[10px] text-[#8898aa] hover:underline">Clear All</button>
+            <button onClick={selectAllExport} className="text-[10px] text-brand hover:underline">{t('exportImport.selectAll')}</button>
+            <button onClick={selectNoneExport} className="text-[10px] text-[#8898aa] hover:underline">{t('exportImport.clearAll')}</button>
           </div>
 
           <div className="space-y-1.5 mb-4">
@@ -433,8 +435,8 @@ const ExportImport = () => {
             <div className="border-t border-[#e3e9f0] dark:border-[#1e2d40] pt-1.5 mt-1.5">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={exportCsvTags} onChange={() => setExportCsvTags(!exportCsvTags)} className={cbClass} />
-                <span className={lblClass}>Tags as CSV file</span>
-                <span className="text-[10px] text-[#8898aa]">(separate file)</span>
+                <span className={lblClass}>{t('exportImport.tagsAsCsv')}</span>
+                <span className="text-[10px] text-[#8898aa]">{t('exportImport.separateFile')}</span>
               </label>
             </div>
           </div>
@@ -445,7 +447,7 @@ const ExportImport = () => {
             className="w-full bg-brand hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-[11px] font-medium rounded-lg px-3 py-1.5 flex items-center justify-center gap-2 transition-colors"
           >
             {exporting ? <FaSpinner className="animate-spin text-[11px]" /> : <FaDownload className="text-[11px]" />}
-            {exporting ? 'Exporting...' : `Export${exportKeys.size > 0 ? ' JSON' : ''}${exportCsvTags ? (exportKeys.size > 0 ? ' + CSV' : ' CSV') : ''}`}
+            {exporting ? t('exportImport.exporting') : `${exportKeys.size > 0 ? t('exportImport.exportJson') : ''}${exportCsvTags ? (exportKeys.size > 0 ? ' + ' + t('exportImport.exportCsv') : t('exportImport.exportCsv')) : ''}`}
           </button>
         </div>
 
@@ -454,18 +456,18 @@ const ExportImport = () => {
           <div className="flex items-center gap-2.5 mb-3">
             <FaFileImport className="text-[#059669] text-[14px]" />
             <h3 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">
-              Import
+              {t('exportImport.import')}
             </h3>
           </div>
 
           <div className="space-y-3">
             <div>
               <label className="text-[11px] font-medium text-[#6b7f94] mb-1.5 block">
-                Select File(s) — JSON, CSV, or Excel (PLC tags)
+                {t('exportImport.selectFiles')}
               </label>
               <label className="w-full px-3 py-2.5 bg-[#f5f8fb] dark:bg-[#081320] hover:bg-[#edf2f7] dark:hover:bg-[#131b2d] text-[#6b7f94] text-[12px] font-medium rounded-lg flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-[#e3e9f0] dark:border-[#1e2d40] transition-colors">
                 <FaUpload className="text-[12px]" />
-                {importFileName || 'Choose File(s)'}
+                {importFileName || t('exportImport.chooseFiles')}
                 <input type="file" accept=".json,.csv,.xlsx,.xls" multiple onChange={handleImportFile} className="hidden" />
               </label>
             </div>
@@ -474,10 +476,10 @@ const ExportImport = () => {
               <div className="bg-[#f0f7ff] dark:bg-[#1a2a3e] border border-[#c4d8ef] dark:border-[#1e2d40] rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-[12px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">
-                    Select sections to import:
+                    {t('exportImport.selectSectionsImport')}
                   </h4>
                   <button onClick={handleClear} className="text-[10px] text-[#8898aa] hover:text-[#dc2626] transition-colors">
-                    Clear
+                    {t('exportImport.clear')}
                   </button>
                 </div>
 
@@ -485,24 +487,24 @@ const ExportImport = () => {
                   {csvFiles.length > 0 && (
                     <label className="flex items-center gap-2">
                       <input type="checkbox" checked={importCsv} onChange={() => setImportCsv(!importCsv)} className={cbClass} />
-                      <span className={lblClass}>PLC Tags from CSV</span>
-                      <span className="text-[10px] text-[#8898aa]">({csvFiles.length} file{csvFiles.length > 1 ? 's' : ''})</span>
+                      <span className={lblClass}>{t('exportImport.plcTagsCsv')}</span>
+                      <span className="text-[10px] text-[#8898aa]">({csvFiles.length} {csvFiles.length > 1 ? t('exportImport.files') : t('exportImport.file')})</span>
                     </label>
                   )}
 
                   {xlsxFiles.length > 0 && (
                     <label className="flex items-center gap-2">
                       <input type="checkbox" checked={importXlsx} onChange={() => setImportXlsx(!importXlsx)} className={cbClass} />
-                      <span className={lblClass}>PLC Tags from Excel</span>
-                      <span className="text-[10px] text-[#8898aa]">({xlsxFiles.length} file{xlsxFiles.length > 1 ? 's' : ''})</span>
+                      <span className={lblClass}>{t('exportImport.plcTagsExcel')}</span>
+                      <span className="text-[10px] text-[#8898aa]">({xlsxFiles.length} {xlsxFiles.length > 1 ? t('exportImport.files') : t('exportImport.file')})</span>
                     </label>
                   )}
 
                   {(csvFiles.length > 0 || xlsxFiles.length > 0) && (
                     <label className="flex items-center gap-2 border-t border-[#e3e9f0] dark:border-[#1e2d40] pt-1.5 mt-1">
                       <input type="checkbox" checked={createReportDrafts} onChange={() => setCreateReportDrafts(!createReportDrafts)} className={cbClass} />
-                      <span className={lblClass}>Create report drafts</span>
-                      <span className="text-[10px] text-[#8898aa]">(one table report per DB)</span>
+                      <span className={lblClass}>{t('exportImport.createReportDrafts')}</span>
+                      <span className="text-[10px] text-[#8898aa]">{t('exportImport.oneTablePerDb')}</span>
                     </label>
                   )}
 
@@ -534,7 +536,7 @@ const ExportImport = () => {
               className="w-full bg-[#059669] hover:bg-[#047857] disabled:bg-[#e3e9f0] disabled:text-[#8898aa] disabled:cursor-not-allowed text-white text-[11px] font-medium rounded-lg px-3 py-1.5 flex items-center justify-center gap-2 transition-colors"
             >
               {importing ? <FaSpinner className="animate-spin text-[11px]" /> : <FaUpload className="text-[11px]" />}
-              {importing ? 'Importing...' : 'Import Selected'}
+              {importing ? t('exportImport.importing') : t('exportImport.importSelected')}
             </button>
           </div>
         </div>

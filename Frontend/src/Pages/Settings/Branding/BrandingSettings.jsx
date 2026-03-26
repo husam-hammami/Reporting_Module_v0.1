@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Upload, Trash2, Check, ImageIcon, AlertCircle } from 'lucide-react';
 import { useBranding } from '../../../Context/BrandingContext';
+import { useLanguage } from '../../../Hooks/useLanguage';
 import HerculesLogo from '../../../Assets/Hercules_New.png';
 import AsmLogo from '../../../Assets/Asm_Logo.png';
 
@@ -36,6 +37,7 @@ function resizeImage(file, maxWidth = 400, maxHeight = 200) {
 }
 
 export default function BrandingSettings() {
+  const { t } = useLanguage();
   const { clientLogo, uploadLogo, removeLogo } = useBranding();
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -48,11 +50,11 @@ export default function BrandingSettings() {
   const handleFile = useCallback(async (file) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setError('Please select an image file (PNG, JPG, SVG, etc.)');
+      setError(t('branding.selectImage'));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be under 5 MB');
+      setError(t('branding.imageTooLarge'));
       return;
     }
     clearMessages();
@@ -60,10 +62,10 @@ export default function BrandingSettings() {
     try {
       const resized = await resizeImage(file, 400, 200);
       await uploadLogo(resized);
-      setSuccess('Client logo saved successfully');
+      setSuccess(t('branding.logoSaved'));
       setTimeout(() => setSuccess(null), 3000);
     } catch (e) {
-      setError(e.response?.data?.error || e.message || 'Failed to upload logo');
+      setError(e.response?.data?.error || e.message || t('branding.failedUpload'));
     } finally {
       setUploading(false);
     }
@@ -74,10 +76,10 @@ export default function BrandingSettings() {
     setRemoving(true);
     try {
       await removeLogo();
-      setSuccess('Client logo removed');
+      setSuccess(t('branding.logoRemoved'));
       setTimeout(() => setSuccess(null), 3000);
     } catch (e) {
-      setError(e.response?.data?.error || e.message || 'Failed to remove logo');
+      setError(e.response?.data?.error || e.message || t('branding.failedRemove'));
     } finally {
       setRemoving(false);
     }
@@ -97,9 +99,9 @@ export default function BrandingSettings() {
         <div className="px-4 py-2.5 border-b border-[#e3e9f0] dark:border-[#1e2d40]">
           <div className="flex items-center gap-2">
             <ImageIcon className="text-[#0284c7] dark:text-[#38bdf8]" size={13} />
-            <h3 className="text-[12px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">Client Logo</h3>
+            <h3 className="text-[12px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{t('branding.clientLogo')}</h3>
             <span className="text-[9px] text-[#8898aa]">
-              — Displayed in navigation bar and automatically in table reports
+              {t('branding.clientLogoDesc')}
             </span>
           </div>
         </div>
@@ -136,7 +138,7 @@ export default function BrandingSettings() {
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium rounded-md bg-[#0284c7] hover:bg-[#0369a1] text-white transition-colors disabled:opacity-50"
                 >
                   <Upload size={10} />
-                  {uploading ? 'Uploading...' : 'Replace'}
+                  {uploading ? t('branding.uploading') : t('branding.replace')}
                 </button>
                 <button
                   onClick={handleRemove}
@@ -144,7 +146,7 @@ export default function BrandingSettings() {
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium rounded-md bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 transition-colors disabled:opacity-50"
                 >
                   <Trash2 size={10} />
-                  {removing ? 'Removing...' : 'Remove'}
+                  {removing ? t('branding.removing') : t('branding.remove')}
                 </button>
               </div>
             </div>
@@ -158,10 +160,10 @@ export default function BrandingSettings() {
             >
               <Upload size={24} className="text-[#94a3b8] mb-2" strokeWidth={1.5} />
               <span className="text-[11px] font-semibold text-[#475569] dark:text-[#94a3b8]">
-                {uploading ? 'Uploading...' : 'Click or drag to upload client logo'}
+                {uploading ? t('branding.uploading') : t('branding.clickOrDrag')}
               </span>
               <span className="text-[9px] text-[#94a3b8] mt-1">
-                PNG, JPG, or SVG — max 5 MB — auto-resized to fit
+                {t('branding.fileTypes')}
               </span>
             </div>
           )}
@@ -180,10 +182,10 @@ export default function BrandingSettings() {
       <div className="bg-white dark:bg-[#131b2d] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40]">
         <div className="px-4 py-2.5 border-b border-[#e3e9f0] dark:border-[#1e2d40]">
           <h3 className="text-[11px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">
-            Table Report Header Preview
+            {t('branding.headerPreview')}
           </h3>
           <p className="text-[9px] text-[#8898aa] mt-0.5">
-            This header appears automatically at the top of every table report page
+            {t('branding.headerPreviewDesc')}
           </p>
         </div>
         <div className="px-4 py-4">
@@ -214,7 +216,7 @@ export default function BrandingSettings() {
           </div>
           {!clientLogo && (
             <p className="text-[9px] text-[#94a3b8] mt-2 text-center italic">
-              Upload a client logo above to see it in the preview
+              {t('branding.uploadToPreview')}
             </p>
           )}
         </div>
