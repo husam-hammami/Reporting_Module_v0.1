@@ -31,6 +31,7 @@ import BrandingSettings from '../Pages/Settings/Branding/BrandingSettings';
 import ProfilePage from '../Pages/Profile/ProfilePage';
 import MyAccount from '../Pages/Profile/MyAccount';
 import AppSettingsPage from '../Pages/AppSettings/AppSettingsPage';
+import SystemLogs from '../Pages/Settings/Logs/SystemLogs';
 import { useContext } from 'react';
 import { AuthContext } from '../Context/AuthProvider';
 
@@ -266,7 +267,7 @@ const AppRoutes = () => {
             }
           >
             <Route index element={<SystemSettings />} />
-            <Route path="logs" element={<SystemSettings />} />
+            <Route path="logs" element={<SystemLogs />} />
             <Route path="licenses" element={<LicenseActivations />} />
           </Route>
         </Route>
