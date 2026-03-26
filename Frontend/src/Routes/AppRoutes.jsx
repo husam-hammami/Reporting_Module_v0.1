@@ -9,7 +9,6 @@ import TagGroupManager from '../Pages/Settings/TagGroups/TagGroupManager';
 import MappingManager from '../Pages/Settings/Mappings/MappingManager';
 import ExportImport from '../Pages/Settings/ExportImport/ExportImport';
 import SystemSettings from '../Pages/Settings/System/SystemSettings';
-import SystemLogs from '../Pages/Settings/Logs/SystemLogs';
 import LiveMonitorLayoutManager from '../Pages/LiveMonitor/Layouts/LiveMonitorLayoutManager';
 import LiveMonitorSectionEditor from '../Pages/LiveMonitor/Layouts/LiveMonitorSectionEditor';
 import LiveMonitorTableSectionEditor from '../Pages/LiveMonitor/Layouts/Sections/LiveMonitorTableSectionEditor';
