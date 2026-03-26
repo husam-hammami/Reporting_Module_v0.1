@@ -6,17 +6,18 @@ import { useReportTemplates } from '../../Hooks/useReportBuilder';
 import ReportThumbnail from './ReportThumbnail';
 import { DarkModeContext } from '../../Context/DarkModeProvider';
 import ConfirmationModal from '../../Components/Common/ConfirmationModal';
+import { useLanguage } from '../../Hooks/useLanguage';
 import '../ReportBuilder/reportBuilderTheme.css';
 
-function timeAgo(iso) {
+function timeAgo(iso, tr) {
   if (!iso) return '';
   const d = Date.now() - new Date(iso).getTime();
   const m = Math.floor(d / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return tr('builder.justNow');
+  if (m < 60) return `${m}${tr('builder.mAgo')}`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 24) return `${h}${tr('builder.hAgo')}`;
+  return `${Math.floor(h / 24)}${tr('builder.dAgo')}`;
 }
 
 function useTheme() {
@@ -44,24 +45,24 @@ function useTheme() {
   };
 }
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG_STATIC = {
   draft: {
     darkBg: 'rgba(100,116,139,0.15)', darkColor: '#94a3b8',
     lightBg: '#f1f5f9', lightColor: '#475569',
-    label: 'Draft',
+    labelKey: 'builder.draft',
   },
   released: {
     darkBg: 'rgba(16,185,129,0.12)', darkColor: '#34d399',
     lightBg: '#ecfdf5', lightColor: '#047857',
-    label: 'Released',
+    labelKey: 'builder.released',
   },
 };
 
 const FILTER_TABS = ['all', 'draft', 'released'];
 
-const REPORT_TYPES = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutGrid, description: 'Drag-and-drop canvas with widgets (charts, KPIs, gauges, tables)', color: '#0369a1', darkColor: '#38bdf8' },
-  { key: 'paginated', label: 'Table Report', icon: Table2, description: 'Professional A4 document with sections, tables, and KPI summaries', color: '#9f1239', darkColor: '#fb7185' },
+const REPORT_TYPES_STATIC = [
+  { key: 'dashboard', labelKey: 'builder.dashboard', icon: LayoutGrid, descKey: 'builder.dashboardDesc', color: '#0369a1', darkColor: '#38bdf8' },
+  { key: 'paginated', labelKey: 'builder.tableReport', icon: Table2, descKey: 'builder.tableReportDesc', color: '#9f1239', darkColor: '#fb7185' },
 ];
 
 function CreateModal({ open, onClose, onCreate }) {
@@ -70,6 +71,7 @@ function CreateModal({ open, onClose, onCreate }) {
   const [reportType, setReportType] = useState('dashboard');
   const [submitting, setSubmitting] = useState(false);
   const t = useTheme();
+  const { t: tr } = useLanguage();
 
   if (!open) return null;
 
@@ -94,8 +96,8 @@ function CreateModal({ open, onClose, onCreate }) {
               <Plus size={16} style={{ color: t.accent }} />
             </div>
             <div>
-              <h2 className="text-sm font-bold" style={{ color: t.text }}>Create New Report</h2>
-              <p className="text-[10px] uppercase tracking-wider" style={{ color: t.textMuted }}>New Template</p>
+              <h2 className="text-sm font-bold" style={{ color: t.text }}>{tr('builder.createNewReport')}</h2>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: t.textMuted }}>{tr('builder.newTemplate')}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg transition-colors" style={{ color: t.textSecondary }}>
@@ -104,9 +106,9 @@ function CreateModal({ open, onClose, onCreate }) {
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2.5" style={{ color: t.accent }}>Report Type</label>
+            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2.5" style={{ color: t.accent }}>{tr('builder.reportType')}</label>
             <div className="grid grid-cols-2 gap-3">
-              {REPORT_TYPES.map((rt) => {
+              {REPORT_TYPES_STATIC.map((rt) => {
                 const selected = reportType === rt.key;
                 return (
                   <button key={rt.key} type="button" onClick={() => setReportType(rt.key)}
@@ -121,8 +123,8 @@ function CreateModal({ open, onClose, onCreate }) {
                       <rt.icon size={20} style={{ color: rt.color }} />
                     </div>
                     <div>
-                      <div className="text-xs font-bold" style={{ color: selected ? rt.color : t.text }}>{rt.label}</div>
-                      <div className="text-[10px] mt-0.5 leading-snug" style={{ color: t.textSecondary }}>{rt.description}</div>
+                      <div className="text-xs font-bold" style={{ color: selected ? rt.color : t.text }}>{tr(rt.labelKey)}</div>
+                      <div className="text-[10px] mt-0.5 leading-snug" style={{ color: t.textSecondary }}>{tr(rt.descKey)}</div>
                     </div>
                   </button>
                 );
@@ -130,23 +132,23 @@ function CreateModal({ open, onClose, onCreate }) {
             </div>
           </div>
           <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Report Name</label>
+            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>{tr('builder.reportName')}</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Daily Production Summary" autoFocus
               className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
               style={{ background: t.modalInputBg, border: `1px solid ${t.border}`, color: t.text }} />
           </div>
           <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>Description (optional)</label>
+            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: t.accent }}>{tr('builder.descriptionOptional')}</label>
             <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Brief description..." rows={2}
               className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none resize-none transition-colors"
               style={{ background: t.modalInputBg, border: `1px solid ${t.border}`, color: t.text }} />
           </div>
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-medium rounded-lg transition-colors" style={{ color: t.textSecondary }}>Cancel</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-medium rounded-lg transition-colors" style={{ color: t.textSecondary }}>{tr('common.cancel')}</button>
             <button type="submit" disabled={!name.trim() || submitting}
               className="px-4 py-2 text-xs font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: t.accent, color: t.btnText }}>
-              {submitting ? 'Creating...' : 'Create Report'}
+              {submitting ? tr('builder.creating') : tr('builder.createReport')}
             </button>
           </div>
         </form>
@@ -178,6 +180,7 @@ export default function ReportBuilderManager() {
   const [showCreate, setShowCreate] = useState(false);
   const [viewMode, setViewMode] = useState('table');
   const t = useTheme();
+  const { t: tr } = useLanguage();
 
   const filtered = useMemo(() => {
     let list = templates;
@@ -222,19 +225,19 @@ export default function ReportBuilderManager() {
   };
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
   const handleDelete = (id) => {
-    setConfirmModal({ open: true, title: 'Delete Report', description: 'Delete this report? This cannot be undone.', confirmText: 'Delete', confirmColor: 'red', onConfirm: () => { deleteTemplate(id); setConfirmModal(m => ({ ...m, open: false })); } });
+    setConfirmModal({ open: true, title: tr('builder.deleteReport'), description: tr('builder.deleteReportConfirm'), confirmText: tr('common.delete'), confirmColor: 'red', onConfirm: () => { deleteTemplate(id); setConfirmModal(m => ({ ...m, open: false })); } });
   };
   const handleClearAll = () => {
-    setConfirmModal({ open: true, title: 'Remove All Reports', description: 'Remove all report templates? This cannot be undone.', confirmText: 'Remove All', confirmColor: 'red', onConfirm: () => { clearAllTemplates(); setConfirmModal(m => ({ ...m, open: false })); } });
+    setConfirmModal({ open: true, title: tr('builder.removeAll'), description: tr('builder.removeAllConfirm'), confirmText: tr('builder.removeAllBtn'), confirmColor: 'red', onConfirm: () => { clearAllTemplates(); setConfirmModal(m => ({ ...m, open: false })); } });
   };
 
   const sc = (status) => {
-    const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
+    const cfg = STATUS_CONFIG_STATIC[status] || STATUS_CONFIG_STATIC.draft;
     return { bg: t.dark ? cfg.darkBg : cfg.lightBg, color: t.dark ? cfg.darkColor : cfg.lightColor };
   };
 
   const tc = (reportType) => {
-    const rt = REPORT_TYPES.find(r => r.key === reportType) || REPORT_TYPES[0];
+    const rt = REPORT_TYPES_STATIC.find(r => r.key === reportType) || REPORT_TYPES_STATIC[0];
     return t.dark ? rt.darkColor : rt.color;
   };
 
@@ -258,13 +261,13 @@ export default function ReportBuilderManager() {
       <div className="max-w-[1400px] mx-auto px-6 md:px-8 lg:px-12 py-6 md:py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-xl font-bold" style={{ color: t.text }}>Report Builder</h1>
-            <p className="text-sm mt-1" style={{ color: t.textSecondary }}>Create and manage report templates</p>
+            <h1 className="text-xl font-bold" style={{ color: t.text }}>{tr('builder.title')}</h1>
+            <p className="text-sm mt-1" style={{ color: t.textSecondary }}>{tr('builder.subtitle')}</p>
           </div>
           <button onClick={() => setShowCreate(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
             style={{ background: t.accent, color: t.btnText, '--tw-ring-color': t.accent, '--tw-ring-offset-color': t.pageBg }}>
-            <Plus size={14} strokeWidth={2} /> New Report
+            <Plus size={14} strokeWidth={2} /> {tr('builder.newReport')}
           </button>
         </div>
 
@@ -275,11 +278,11 @@ export default function ReportBuilderManager() {
           className="flex items-center gap-6 mb-6 px-4 py-2.5 rounded-lg"
           style={{ background: t.surface, border: `1px solid ${t.border}` }}>
           {[
-            { label: 'Total', value: stats.total, color: t.accent },
-            { label: 'Dashboards', value: stats.dashboards, color: t.dark ? '#38bdf8' : '#0284c7' },
-            { label: 'Table Reports', value: stats.tableReports, color: t.dark ? '#fb7185' : '#9f1239' },
-            { label: 'Drafts', value: stats.drafts, color: t.dark ? '#94a3b8' : '#64748b' },
-            { label: 'Released', value: stats.released, color: t.dark ? '#34d399' : '#059669' },
+            { label: tr('builder.total'), value: stats.total, color: t.accent },
+            { label: tr('builder.dashboards'), value: stats.dashboards, color: t.dark ? '#38bdf8' : '#0284c7' },
+            { label: tr('builder.tableReports'), value: stats.tableReports, color: t.dark ? '#fb7185' : '#9f1239' },
+            { label: tr('builder.drafts'), value: stats.drafts, color: t.dark ? '#94a3b8' : '#64748b' },
+            { label: tr('builder.released'), value: stats.released, color: t.dark ? '#34d399' : '#059669' },
           ].map((s, i, arr) => (
             <div key={s.label} className="flex items-center gap-1.5" style={i < arr.length - 1 ? { paddingRight: '1.5rem', borderRight: `1px solid ${t.border}` } : undefined}>
               <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
@@ -293,7 +296,7 @@ export default function ReportBuilderManager() {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: t.textMuted }} />
-              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search reports..."
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tr('builder.searchReports')}
                 className="w-80 pl-10 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-all shadow-sm focus:ring-2 focus:border-transparent"
                 style={{ background: t.inputBg, border: `1px solid ${t.border}`, color: t.text, '--tw-ring-color': t.accentBg }} />
             </div>
@@ -309,7 +312,7 @@ export default function ReportBuilderManager() {
                     }}
                     onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = t.text; }}
                     onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = t.textSecondary; }}
-                  >{s}</button>
+                  >{s === 'all' ? tr('builder.all') : s === 'draft' ? tr('builder.draft') : tr('builder.released')}</button>
                 );
               })}
             </div>
@@ -319,18 +322,18 @@ export default function ReportBuilderManager() {
               <button onClick={handleClearAll}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg transition-colors hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 shadow-sm"
                 style={{ color: t.textSecondary, border: `1px solid ${t.border}`, background: t.surface }}>
-                <Trash2 size={12} /> Clear all
+                <Trash2 size={12} /> {tr('builder.clearAll')}
               </button>
             )}
             <div className="flex items-center rounded-md p-0.5" style={{ background: t.inputBg, border: `1px solid ${t.border}` }}>
               <button onClick={() => setViewMode('table')} className="p-1.5 rounded transition-colors"
                 style={{ background: viewMode === 'table' ? t.accentBg : 'transparent', color: viewMode === 'table' ? t.accent : t.textMuted }}
-                title="List view">
+                title={tr('builder.listView')}>
                 <List size={14} />
               </button>
               <button onClick={() => setViewMode('grid')} className="p-1.5 rounded transition-colors"
                 style={{ background: viewMode === 'grid' ? t.accentBg : 'transparent', color: viewMode === 'grid' ? t.accent : t.textMuted }}
-                title="Grid view">
+                title={tr('builder.gridView')}>
                 <LayoutGrid size={14} />
               </button>
             </div>
@@ -353,16 +356,16 @@ export default function ReportBuilderManager() {
             style={{ background: t.surface, border: `1px solid ${t.border}` }}>
             <FileText size={24} style={{ color: t.textMuted, marginBottom: 12 }} />
             <h3 className="text-sm font-semibold mb-1" style={{ color: t.text }}>
-              {search || statusFilter !== 'all' ? 'No matching reports' : 'No reports yet'}
+              {search || statusFilter !== 'all' ? tr('builder.noMatchingReports') : tr('builder.noReportsYet')}
             </h3>
             <p className="text-xs mb-5 max-w-xs" style={{ color: t.textSecondary }}>
-              {search ? 'Try adjusting your search or filters.' : 'Create your first report template to get started.'}
+              {search ? tr('builder.adjustSearch') : tr('builder.createFirst')}
             </p>
             {!search && statusFilter === 'all' && (
               <button onClick={() => setShowCreate(true)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-semibold text-xs transition-colors"
                 style={{ background: t.accent, color: t.btnText }}>
-                <Plus size={14} /> New Report
+                <Plus size={14} /> {tr('builder.newReport')}
               </button>
             )}
           </div>
@@ -371,13 +374,13 @@ export default function ReportBuilderManager() {
           <div className="rounded-lg overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
             <div className="grid grid-cols-[1.5fr_130px_100px_70px_100px_70px] items-center px-5 py-2.5 text-[10px] uppercase tracking-wider font-semibold"
               style={{ color: t.textMuted, borderBottom: `1px solid ${t.border}`, background: t.dark ? 'rgba(10,15,26,0.5)' : '#f8fafc' }}>
-              <span>Name</span><span>Type</span><span>Status</span><span>Items</span><span>Modified</span><span className="text-right">Actions</span>
+              <span>{tr('builder.name')}</span><span>{tr('builder.type')}</span><span>{tr('builder.status')}</span><span>{tr('builder.items')}</span><span>{tr('builder.modified')}</span><span className="text-right">{tr('common.actions')}</span>
             </div>
             <motion.div variants={containerVariants} initial="hidden" animate="visible">
             {filtered.map((tp, idx) => {
               const { status, reportType, widgetCount } = getReportMeta(tp);
               const s = sc(status);
-              const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
+              const cfg = STATUS_CONFIG_STATIC[status] || STATUS_CONFIG_STATIC.draft;
               const typeColor = tc(reportType);
               return (
                 <motion.div variants={itemVariants} key={tp.id} onClick={() => handleOpen(tp.id)}
@@ -388,37 +391,37 @@ export default function ReportBuilderManager() {
                   {/* Colored left accent */}
                   <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ background: typeColor }} />
                   <div className="min-w-0 pl-2">
-                    <p className="text-[13px] font-semibold truncate" style={{ color: t.text }}>{tp.name || 'Untitled'}</p>
+                    <p className="text-[13px] font-semibold truncate" style={{ color: t.text }}>{tp.name || tr('builder.untitled')}</p>
                     {tp.description && <p className="text-[11px] truncate mt-0.5" style={{ color: t.textMuted }}>{tp.description}</p>}
                   </div>
                   <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded"
                     style={{ color: typeColor, background: `${typeColor}10` }}>
                     {reportType === 'paginated' ? <Table2 size={11} /> : <LayoutGrid size={11} />}
-                    {reportType === 'paginated' ? 'Table Report' : 'Dashboard'}
+                    {reportType === 'paginated' ? tr('builder.tableReport') : tr('builder.dashboard')}
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded"
                     style={{ background: s.bg, color: s.color }}>
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
-                    {cfg.label}
+                    {tr(cfg.labelKey)}
                   </span>
                   <span className="text-[12px] font-medium tabular-nums" style={{ color: t.textSecondary }}>{widgetCount}</span>
-                  <span className="text-[11px]" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at)}</span>
+                  <span className="text-[11px]" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at, tr)}</span>
                   <div className="flex gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => { e.stopPropagation(); updateTemplateStatus(tp.id, status === 'released' ? 'draft' : 'released'); }}
                       className="p-1.5 rounded transition-colors" style={{ color: status === 'released' ? '#059669' : t.textMuted }}
-                      title={status === 'released' ? 'Unrelease' : 'Release'}
+                      title={status === 'released' ? tr('builder.unrelease') : tr('builder.release')}
                       onMouseEnter={(e) => e.currentTarget.style.color = status === 'released' ? '#dc2626' : '#059669'}
                       onMouseLeave={(e) => e.currentTarget.style.color = status === 'released' ? '#059669' : t.textMuted}>
                       <Send size={13} />
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); duplicateTemplate(tp.id); }}
-                      className="p-1.5 rounded transition-colors" style={{ color: t.textMuted }} title="Duplicate"
+                      className="p-1.5 rounded transition-colors" style={{ color: t.textMuted }} title={tr('builder.duplicate')}
                       onMouseEnter={(e) => e.currentTarget.style.color = t.text}
                       onMouseLeave={(e) => e.currentTarget.style.color = t.textMuted}>
                       <Copy size={13} />
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); handleDelete(tp.id); }}
-                      className="p-1.5 rounded transition-colors hover:text-red-500" style={{ color: t.textMuted }} title="Delete">
+                      className="p-1.5 rounded transition-colors hover:text-red-500" style={{ color: t.textMuted }} title={tr('common.delete')}>
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -433,7 +436,7 @@ export default function ReportBuilderManager() {
             {filtered.map((tp) => {
               const { status, reportType, widgetCount } = getReportMeta(tp);
               const s = sc(status);
-              const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
+              const cfg = STATUS_CONFIG_STATIC[status] || STATUS_CONFIG_STATIC.draft;
               const typeColor = tc(reportType);
               return (
                 <motion.div variants={itemVariants} key={tp.id} onClick={() => handleOpen(tp.id)}
@@ -446,11 +449,11 @@ export default function ReportBuilderManager() {
                   <div className="px-4 py-3.5">
                     {/* Title row with status badge */}
                     <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <p className="text-[13px] font-semibold truncate leading-tight" style={{ color: t.text }}>{tp.name || 'Untitled'}</p>
+                      <p className="text-[13px] font-semibold truncate leading-tight" style={{ color: t.text }}>{tp.name || tr('builder.untitled')}</p>
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold flex-shrink-0 px-2 py-0.5 rounded"
                         style={{ background: s.bg, color: s.color }}>
                         <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
-                        {cfg.label}
+                        {tr(cfg.labelKey)}
                       </span>
                     </div>
                     {tp.description && <p className="text-[11px] line-clamp-2 mb-3 leading-relaxed" style={{ color: t.textMuted }}>{tp.description}</p>}
@@ -460,17 +463,17 @@ export default function ReportBuilderManager() {
                       <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded"
                         style={{ color: typeColor, background: `${typeColor}10` }}>
                         {reportType === 'paginated' ? <Table2 size={10} /> : <LayoutGrid size={10} />}
-                        {reportType === 'paginated' ? 'Table Report' : 'Dashboard'}
+                        {reportType === 'paginated' ? tr('builder.tableReport') : tr('builder.dashboard')}
                       </span>
                       <div className="flex items-center gap-2.5">
                         {widgetCount > 0 && (
-                          <span className="text-[10px] font-medium" style={{ color: t.textSecondary }}>{widgetCount} items</span>
+                          <span className="text-[10px] font-medium" style={{ color: t.textSecondary }}>{widgetCount} {tr('builder.items').toLowerCase()}</span>
                         )}
-                        <span className="text-[10px]" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at)}</span>
+                        <span className="text-[10px]" style={{ color: t.textMuted }}>{timeAgo(tp.updated_at, tr)}</span>
                         <button onClick={(e) => { e.stopPropagation(); updateTemplateStatus(tp.id, status === 'released' ? 'draft' : 'released'); }}
                           className="p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
                           style={{ color: status === 'released' ? '#059669' : t.textMuted }}
-                          title={status === 'released' ? 'Unrelease' : 'Release'}>
+                          title={status === 'released' ? tr('builder.unrelease') : tr('builder.release')}>
                           <Send size={12} />
                         </button>
                       </div>
