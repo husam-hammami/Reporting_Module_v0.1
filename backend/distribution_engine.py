@@ -1045,10 +1045,15 @@ def _build_email_html(report_name, from_dt, to_dt, filename):
 
 
 def _send_email(recipients, subject, body_html, attachment_bytes=None, attachment_name=None):
-    """Send HTML email with optional PDF attachment using SMTP config."""
-    from smtp_config import get_smtp_config
+    """Send HTML email with optional PDF attachment using configured method (Resend or SMTP)."""
+    from smtp_config import get_smtp_config, send_email_resend
     cfg = get_smtp_config()
 
+    # ── Resend (default) ──
+    if cfg.get('send_method', 'resend') == 'resend':
+        return send_email_resend(recipients, subject, body_html, attachment_bytes, attachment_name)
+
+    # ── SMTP fallback ──
     if not cfg.get('smtp_server'):
         return {'success': False, 'error': 'No SMTP server configured'}
 

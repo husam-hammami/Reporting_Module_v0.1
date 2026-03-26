@@ -300,14 +300,15 @@ def set_plc_config_route():
         logger.warning("PLC reconnect after config change failed: %s", e)
     return jsonify(get_plc_config()), 200
 
-# SMTP email configuration
+# Email configuration (Resend default + SMTP fallback)
 @app.route('/api/settings/smtp-config', methods=['GET'])
 @login_required
 def get_smtp_config_route():
-    from smtp_config import get_smtp_config
+    from smtp_config import get_smtp_config, RESEND_FROM
     cfg = get_smtp_config()
     if cfg.get('password'):
         cfg['password'] = '********'
+    cfg['resend_from'] = RESEND_FROM
     return jsonify(cfg), 200
 
 @app.route('/api/settings/smtp-config', methods=['POST'])
