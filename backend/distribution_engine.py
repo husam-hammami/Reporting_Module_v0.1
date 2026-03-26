@@ -331,6 +331,64 @@ def _resolve_cell(cell, tag_data):
     return '—'
 
 
+def _resolve_cell_raw(cell, tag_data):
+    """Resolve a single cell to a raw (value, unit, decimals) tuple for Excel output.
+    Returns: (value: float|str|None, unit: str, decimals: int)
+    - value is a raw float for numeric cells (no formatting), str for static, None for missing
+    """
+    if not cell:
+        return (None, '', 1)
+    src = cell.get('sourceType', 'static')
+    decimals = cell.get('decimals', 1) if cell.get('decimals') is not None else 1
+    unit = cell.get('unit', '')
+    if unit == '__checkbox__':
+        unit = ''
+    elif unit == '__custom__':
+        unit = cell.get('customUnit', '')
+
+    def _to_num(val):
+        if val is None:
+            return None
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return str(val)
+
+    if src == 'static':
+        v = cell.get('value', '')
+        try:
+            return (float(v), unit, decimals)
+        except (TypeError, ValueError):
+            return (v, unit, decimals)
+
+    if src == 'tag':
+        raw = tag_data.get(cell.get('tagName', ''))
+        return (_to_num(raw), unit, decimals)
+
+    if src == 'formula':
+        result = _evaluate_formula(cell.get('formula', ''), tag_data)
+        return (_to_num(result), unit, decimals)
+
+    if src == 'group':
+        vals = [float(tag_data.get(t, 0)) for t in (cell.get('groupTags') or []) if tag_data.get(t) is not None]
+        if not vals:
+            return (None, unit, decimals)
+        agg = cell.get('aggregation', 'avg')
+        if agg == 'sum':
+            n = sum(vals)
+        elif agg == 'min':
+            n = min(vals)
+        elif agg == 'max':
+            n = max(vals)
+        elif agg == 'count':
+            n = len(vals)
+        else:
+            n = sum(vals) / len(vals)
+        return (n, unit, decimals)
+
+    return (None, '', 1)
+
+
 # ── Row visibility (mirrors frontend isRowHidden) ────────────────────────────
 
 def _is_row_hidden(row, tag_data):
@@ -950,6 +1008,356 @@ def _html_to_pdf(html_content):
     return buf.getvalue()
 
 
+# ── Excel (XLSX) generation ──────────────────────────────────────────────────
+
+def _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt):
+    """Generate an Excel workbook from a report template and tag data.
+    Returns: bytes (xlsx file content)
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from io import BytesIO
+
+    wb = Workbook()
+    wb.properties.title = report_name
+    wb.properties.creator = "Hercules Reporting Module"
+
+    # Shared styles
+    header_font = Font(name='Calibri', bold=True, color='FFFFFF', size=10)
+    header_fill = PatternFill(start_color='1A2233', end_color='1A2233', fill_type='solid')
+    alt_fill = PatternFill(start_color='F5F8FB', end_color='F5F8FB', fill_type='solid')
+    summary_fill = PatternFill(start_color='DBEAFE', end_color='DBEAFE', fill_type='solid')
+    summary_font = Font(name='Calibri', bold=True, size=10)
+    title_font = Font(name='Calibri', bold=True, size=14)
+    subtitle_font = Font(name='Calibri', size=11, color='666666')
+    kpi_label_font = Font(name='Calibri', size=9, color='888888')
+    kpi_value_font = Font(name='Calibri', bold=True, size=12)
+    thin_border = Border(
+        bottom=Side(style='thin', color='E3E9F0')
+    )
+    header_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    num_align = Alignment(horizontal='right', vertical='center')
+    text_align = Alignment(horizontal='left', vertical='center')
+
+    report_type = layout_config.get('reportType', 'paginated')
+
+    try:
+        if report_type == 'paginated':
+            _xlsx_paginated(wb, layout_config, tag_data, from_dt, to_dt, report_name,
+                            header_font, header_fill, alt_fill, summary_fill, summary_font,
+                            title_font, subtitle_font, kpi_label_font, kpi_value_font,
+                            thin_border, header_align, num_align, text_align)
+        else:
+            _xlsx_dashboard(wb, layout_config, tag_data, from_dt, to_dt, report_name,
+                            header_font, header_fill, alt_fill, title_font, subtitle_font,
+                            kpi_label_font, kpi_value_font, thin_border, num_align, text_align)
+    except Exception as e:
+        logger.error(f"Excel generation failed for '{report_name}': {e}", exc_info=True)
+        raise RuntimeError(f"Excel generation failed: {e}")
+
+    # Auto-fit column widths on all sheets
+    for ws in wb.worksheets:
+        for col_cells in ws.columns:
+            max_len = 0
+            col_letter = get_column_letter(col_cells[0].column)
+            for cell in col_cells:
+                try:
+                    cell_len = len(str(cell.value)) if cell.value is not None else 0
+                    max_len = max(max_len, cell_len)
+                except:
+                    pass
+            ws.column_dimensions[col_letter].width = min(max_len + 3, 40)
+
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def _xlsx_paginated(wb, layout_config, tag_data, from_dt, to_dt, report_name,
+                    header_font, header_fill, alt_fill, summary_fill, summary_font,
+                    title_font, subtitle_font, kpi_label_font, kpi_value_font,
+                    thin_border, header_align, num_align, text_align):
+    """Render paginated (table) report sections to Excel sheets."""
+    from openpyxl.utils import get_column_letter
+
+    ws = wb.active
+    ws.title = report_name[:31]  # Excel sheet name limit
+    row_idx = 1
+
+    sections = layout_config.get('sections', [])
+    period = f"{from_dt.strftime('%Y-%m-%d %H:%M')} — {to_dt.strftime('%Y-%m-%d %H:%M')}" if from_dt and to_dt else ''
+
+    for section in sections:
+        stype = section.get('type', '')
+
+        # ── Header section ──
+        if stype == 'header':
+            title = section.get('title', report_name)
+            ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+            ws.cell(row=row_idx, column=1, value=title).font = title_font
+            row_idx += 1
+
+            subtitle = section.get('subtitle', '')
+            if subtitle:
+                ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+                ws.cell(row=row_idx, column=1, value=subtitle).font = subtitle_font
+                row_idx += 1
+
+            if period and section.get('showDateRange', True):
+                ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+                ws.cell(row=row_idx, column=1, value=period).font = subtitle_font
+                row_idx += 1
+
+            # Status value if configured
+            status_src = section.get('statusSourceType')
+            if status_src:
+                status_cell = {
+                    'sourceType': status_src,
+                    'tagName': section.get('statusTagName', ''),
+                    'formula': section.get('statusFormula', ''),
+                    'groupTags': section.get('statusGroupTags', []),
+                    'aggregation': section.get('statusAggregation', 'avg'),
+                    'value': section.get('statusValue', ''),
+                    'decimals': 1, 'unit': '',
+                }
+                val, _, _ = _resolve_cell_raw(status_cell, tag_data)
+                label = section.get('statusLabel', 'Status')
+                ws.cell(row=row_idx, column=1, value=label).font = kpi_label_font
+                c = ws.cell(row=row_idx, column=2, value=val)
+                if isinstance(val, (int, float)):
+                    c.alignment = num_align
+                row_idx += 1
+
+            row_idx += 1  # Blank row after header
+
+        # ── KPI row section ──
+        elif stype == 'kpi-row':
+            kpis = section.get('kpis', [])
+            for col_i, kpi in enumerate(kpis):
+                col = col_i * 2 + 1
+                ws.cell(row=row_idx, column=col, value=kpi.get('label', '')).font = kpi_label_font
+                val, unit, dec = _resolve_cell_raw(kpi, tag_data)
+                c = ws.cell(row=row_idx, column=col + 1, value=val)
+                if isinstance(val, (int, float)):
+                    c.number_format = f'#,##0.{"0" * dec}'
+                    c.alignment = num_align
+                c.font = kpi_value_font
+            row_idx += 2  # Blank row after KPIs
+
+        # ── Table section ──
+        elif stype == 'table':
+            label = section.get('label', '')
+            if label:
+                ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=max(len(section.get('columns', [])), 1))
+                ws.cell(row=row_idx, column=1, value=label).font = Font(name='Calibri', bold=True, size=11)
+                row_idx += 1
+
+            columns = section.get('columns', [])
+            rows = section.get('rows', [])
+            num_cols = len(columns)
+
+            if num_cols == 0:
+                continue
+
+            # Column headers
+            header_row = row_idx
+            for ci, col in enumerate(columns):
+                hdr_text = col.get('header', f'Col {ci+1}')
+                # Append unit to header if commonly used
+                c = ws.cell(row=row_idx, column=ci + 1, value=hdr_text)
+                c.font = header_font
+                c.fill = header_fill
+                c.alignment = header_align
+                c.border = thin_border
+            row_idx += 1
+
+            # Freeze header row
+            ws.freeze_panes = ws.cell(row=row_idx, column=1)
+
+            # Data rows
+            data_start_row = row_idx
+            visible_row_count = 0
+            for row in rows:
+                if _is_row_hidden(row, tag_data):
+                    continue
+                cells = row.get('cells', [])
+                for ci in range(num_cols):
+                    cell_def = cells[ci] if ci < len(cells) else None
+                    val, unit, dec = _resolve_cell_raw(cell_def, tag_data)
+                    c = ws.cell(row=row_idx, column=ci + 1, value=val)
+                    if isinstance(val, (int, float)):
+                        c.number_format = f'#,##0.{"0" * dec}'
+                        c.alignment = num_align
+                    else:
+                        c.alignment = text_align
+                    c.border = thin_border
+                    # Alternating row color
+                    if visible_row_count % 2 == 1:
+                        c.fill = alt_fill
+                visible_row_count += 1
+                row_idx += 1
+            data_end_row = row_idx - 1
+
+            # Summary row with native Excel formulas
+            if section.get('showSummaryRow') and visible_row_count > 0:
+                for ci, col in enumerate(columns):
+                    sm = col.get('summary', {})
+                    sm_type = sm.get('type', 'none') if sm else 'none'
+                    col_letter = get_column_letter(ci + 1)
+                    c = ws.cell(row=row_idx, column=ci + 1)
+                    c.font = summary_font
+                    c.fill = summary_fill
+                    c.border = thin_border
+
+                    if sm_type == 'label':
+                        c.value = sm.get('label', '')
+                        c.alignment = text_align
+                    elif sm_type == 'sum':
+                        c.value = f'=SUM({col_letter}{data_start_row}:{col_letter}{data_end_row})'
+                        c.alignment = num_align
+                    elif sm_type == 'avg':
+                        c.value = f'=AVERAGE({col_letter}{data_start_row}:{col_letter}{data_end_row})'
+                        c.alignment = num_align
+                    elif sm_type == 'min':
+                        c.value = f'=MIN({col_letter}{data_start_row}:{col_letter}{data_end_row})'
+                        c.alignment = num_align
+                    elif sm_type == 'max':
+                        c.value = f'=MAX({col_letter}{data_start_row}:{col_letter}{data_end_row})'
+                        c.alignment = num_align
+                    elif sm_type == 'count':
+                        c.value = f'=COUNTA({col_letter}{data_start_row}:{col_letter}{data_end_row})'
+                        c.alignment = num_align
+                    elif sm_type == 'formula':
+                        # Can't express as Excel formula — pre-compute
+                        formula_str = sm.get('formula', '')
+                        result = _evaluate_formula(formula_str, tag_data)
+                        c.value = result
+                        c.alignment = num_align
+                    # else: leave empty
+
+                row_idx += 1
+
+            # Auto-filter on data columns
+            if visible_row_count > 0:
+                ws.auto_filter.ref = f"A{header_row}:{get_column_letter(num_cols)}{data_end_row}"
+
+            row_idx += 1  # Blank row between tables
+
+        # Skip signature, text, spacer sections
+        elif stype in ('signature', 'text', 'spacer'):
+            continue
+
+
+def _xlsx_dashboard(wb, layout_config, tag_data, from_dt, to_dt, report_name,
+                    header_font, header_fill, alt_fill, title_font, subtitle_font,
+                    kpi_label_font, kpi_value_font, thin_border, num_align, text_align):
+    """Render dashboard report widgets to an Excel sheet."""
+    ws = wb.active
+    ws.title = "Dashboard Summary"
+    row_idx = 1
+
+    period = f"{from_dt.strftime('%Y-%m-%d %H:%M')} — {to_dt.strftime('%Y-%m-%d %H:%M')}" if from_dt and to_dt else ''
+
+    # Title
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=4)
+    ws.cell(row=1, column=1, value=report_name).font = title_font
+    row_idx = 2
+    if period:
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=4)
+        ws.cell(row=2, column=1, value=period).font = subtitle_font
+        row_idx = 3
+    row_idx += 1  # Blank row
+
+    widgets = layout_config.get('widgets', [])
+
+    for widget in widgets:
+        wtype = widget.get('type', '')
+        config = widget.get('config', {})
+        label = config.get('title', '') or config.get('label', '') or widget.get('name', '')
+
+        if wtype in ('kpi', 'gauge', 'stat'):
+            tag_name = (config.get('dataSource') or {}).get('tagName', '')
+            raw = tag_data.get(tag_name)
+            ws.cell(row=row_idx, column=1, value=label).font = kpi_label_font
+            c = ws.cell(row=row_idx, column=2)
+            try:
+                c.value = float(raw) if raw is not None else None
+                c.number_format = '#,##0.00'
+                c.alignment = num_align
+            except (TypeError, ValueError):
+                c.value = str(raw) if raw else '—'
+            c.font = kpi_value_font
+            unit = config.get('unit', '')
+            if unit:
+                ws.cell(row=row_idx, column=3, value=unit).font = kpi_label_font
+            row_idx += 1
+
+        elif wtype == 'silo':
+            ws.cell(row=row_idx, column=1, value=label).font = Font(name='Calibri', bold=True, size=10)
+            row_idx += 1
+            for sub_label, sub_key in [('Level', 'tagName'), ('Capacity', 'capacityTag'), ('Tons', 'tonsTag')]:
+                tag_name = (config.get('dataSource') or {}).get(sub_key, '') if sub_key == 'tagName' else config.get(sub_key, '')
+                raw = tag_data.get(tag_name)
+                ws.cell(row=row_idx, column=1, value=f'  {sub_label}').font = kpi_label_font
+                c = ws.cell(row=row_idx, column=2)
+                try:
+                    c.value = float(raw) if raw is not None else None
+                    c.number_format = '#,##0.0'
+                    c.alignment = num_align
+                except (TypeError, ValueError):
+                    c.value = str(raw) if raw else '—'
+                row_idx += 1
+            row_idx += 1
+
+        elif wtype in ('chart', 'barchart'):
+            ws.cell(row=row_idx, column=1, value=label).font = Font(name='Calibri', bold=True, size=10)
+            row_idx += 1
+            for series in config.get('series', []):
+                s_label = series.get('label', '')
+                tag_name = (series.get('dataSource') or {}).get('tagName', '')
+                raw = tag_data.get(tag_name)
+                ws.cell(row=row_idx, column=1, value=f'  {s_label}').font = kpi_label_font
+                c = ws.cell(row=row_idx, column=2)
+                try:
+                    c.value = float(raw) if raw is not None else None
+                    c.number_format = '#,##0.00'
+                    c.alignment = num_align
+                except (TypeError, ValueError):
+                    c.value = str(raw) if raw else '—'
+                row_idx += 1
+            row_idx += 1
+
+        elif wtype == 'table':
+            ws.cell(row=row_idx, column=1, value=label).font = Font(name='Calibri', bold=True, size=10)
+            row_idx += 1
+            table_cols = config.get('columns', [])
+            # Headers
+            for ci, col in enumerate(table_cols):
+                c = ws.cell(row=row_idx, column=ci + 1, value=col.get('label', ''))
+                c.font = header_font
+                c.fill = header_fill
+                c.border = thin_border
+            row_idx += 1
+            # Single row of values
+            for ci, col in enumerate(table_cols):
+                src = col.get('sourceType', 'tag')
+                cell_def = {'sourceType': src, 'tagName': col.get('tagName', ''),
+                            'formula': col.get('formula', ''), 'groupTags': col.get('groupTags', []),
+                            'aggregation': col.get('aggregation', 'avg'), 'decimals': 2, 'unit': ''}
+                val, unit, dec = _resolve_cell_raw(cell_def, tag_data)
+                c = ws.cell(row=row_idx, column=ci + 1, value=val)
+                if isinstance(val, (int, float)):
+                    c.number_format = f'#,##0.{"0" * dec}'
+                    c.alignment = num_align
+                c.border = thin_border
+            row_idx += 2
+
+        # Skip text, header, image, spacer, divider widgets
+        elif wtype in ('text', 'header', 'image', 'spacer', 'divider'):
+            continue
+
+
 # ── Email delivery ───────────────────────────────────────────────────────────
 
 def _build_email_html(report_name, from_dt, to_dt, filename):
@@ -1072,9 +1480,13 @@ def _send_email(recipients, subject, body_html, attachments=None):
     msg.add_alternative(body_html, subtype='html')
 
     if attachments:
+        import mimetypes
         for filename, content_bytes in attachments:
-            maintype = 'application'
-            subtype = 'pdf' if filename.endswith('.pdf') else 'octet-stream'
+            mime_type, _ = mimetypes.guess_type(filename)
+            if mime_type:
+                maintype, subtype = mime_type.split('/', 1)
+            else:
+                maintype, subtype = 'application', 'octet-stream'
             msg.add_attachment(
                 content_bytes,
                 maintype=maintype,
@@ -1147,7 +1559,7 @@ def execute_distribution_rule(rule_id):
         # 2. Determine time range (shared across all reports)
         from_dt, to_dt = _time_range_for_schedule(rule['schedule_type'])
         fmt = rule.get('format', 'pdf')
-        ext = 'pdf' if fmt == 'pdf' else 'html'
+        ext = {'pdf': 'pdf', 'html': 'html', 'xlsx': 'xlsx'}.get(fmt, 'pdf')
         timestamp_str = datetime.now().strftime('%Y%m%d_%H%M')
 
         # 3. Generate each report
@@ -1179,12 +1591,14 @@ def execute_distribution_rule(rule_id):
 
             tag_names = extract_all_tags(layout_config)
             tag_data = _fetch_tag_data(tag_names, from_dt, to_dt)
-            html_content = _generate_report_html(report_name, layout_config, tag_data, from_dt, to_dt)
-
-            if fmt == 'pdf':
-                content_bytes = _html_to_pdf(html_content)
+            if fmt == 'xlsx':
+                content_bytes = _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt)
             else:
-                content_bytes = html_content.encode('utf-8')
+                html_content = _generate_report_html(report_name, layout_config, tag_data, from_dt, to_dt)
+                if fmt == 'pdf':
+                    content_bytes = _html_to_pdf(html_content)
+                else:
+                    content_bytes = html_content.encode('utf-8')
 
             safe_name = re.sub(r'[^\w\-]', '_', report_name)
             filename = f"{safe_name}_{timestamp_str}.{ext}"

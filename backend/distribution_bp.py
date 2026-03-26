@@ -160,8 +160,8 @@ def _validate_rule(data):
         errors.append('schedule_time must be in HH:MM format')
 
     fmt = data.get('format', 'pdf')
-    if fmt not in ('pdf', 'html'):
-        errors.append('format must be pdf or html')
+    if fmt not in ('pdf', 'html', 'xlsx'):
+        errors.append('format must be pdf, html, or xlsx')
 
     if errors:
         return None, '; '.join(errors)

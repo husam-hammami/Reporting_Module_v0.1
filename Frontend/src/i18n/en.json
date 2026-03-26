@@ -618,5 +618,6 @@
   "distribution.duplicateEmail": "Email already added",
   "distribution.recipientPlaceholder": "Enter email address...",
   "distribution.addRecipient": "Add",
-  "distribution.recipientHint": "Type an email and press Enter or click Add"
+  "distribution.recipientHint": "Type an email and press Enter or click Add",
+  "distribution.excel": "Excel"
 }

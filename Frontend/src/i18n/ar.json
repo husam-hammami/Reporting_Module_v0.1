@@ -618,5 +618,6 @@
   "distribution.duplicateEmail": "البريد مضاف مسبقاً",
   "distribution.recipientPlaceholder": "أدخل البريد الإلكتروني...",
   "distribution.addRecipient": "إضافة",
-  "distribution.recipientHint": "اكتب البريد واضغط Enter أو انقر إضافة"
+  "distribution.recipientHint": "اكتب البريد واضغط Enter أو انقر إضافة",
+  "distribution.excel": "إكسل"
 }

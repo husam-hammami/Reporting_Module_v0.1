@@ -362,17 +362,21 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
                 })}
               </div>
             </div>
-            <div className="w-28">
+            <div className="w-40">
               <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.format')}</div>
               <div className="flex rounded-lg overflow-hidden" style={{ border: `1.5px solid ${t.border}` }}>
-                {['pdf', 'html'].map(f => (
-                  <button key={f} onClick={() => set('format', f)}
-                    className="flex-1 py-2 text-xs font-bold uppercase transition-all"
+                {[
+                  { value: 'pdf', label: 'PDF' },
+                  { value: 'xlsx', label: tr('distribution.excel') },
+                  { value: 'html', label: 'HTML' },
+                ].map(f => (
+                  <button key={f.value} onClick={() => set('format', f.value)}
+                    className="flex-1 py-2 text-xs font-bold transition-all"
                     style={{
-                      background: form.format === f ? t.accent : 'transparent',
-                      color: form.format === f ? t.btnText : t.textSecondary,
+                      background: form.format === f.value ? t.accent : 'transparent',
+                      color: form.format === f.value ? t.btnText : t.textSecondary,
                     }}>
-                    {f}
+                    {f.label}
                   </button>
                 ))}
               </div>
