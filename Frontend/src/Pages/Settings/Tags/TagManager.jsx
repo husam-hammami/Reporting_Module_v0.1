@@ -381,10 +381,10 @@ const TagManager = () => {
             </button>
             {exportMenuOpen && (
               <div className="absolute right-0 top-full mt-1 bg-white dark:bg-[#131b2d] border border-[#e3e9f0] dark:border-[#1e2d40] rounded-lg shadow-lg z-20 min-w-[140px]">
-                <button onClick={handleExportJSON} className="w-full text-left px-3 py-2 text-[11px] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] rounded-t-lg transition-colors">
+                <button onClick={handleExportJSON} className="w-full text-start px-3 py-2 text-[11px] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] rounded-t-lg transition-colors">
                   {t('tags.exportJson')}
                 </button>
-                <button onClick={handleExportCSV} className="w-full text-left px-3 py-2 text-[11px] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] rounded-b-lg transition-colors">
+                <button onClick={handleExportCSV} className="w-full text-start px-3 py-2 text-[11px] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] rounded-b-lg transition-colors">
                   {t('tags.exportCsv')}
                 </button>
               </div>
@@ -436,15 +436,15 @@ const TagManager = () => {
                   { key: 'display_name', label: t('tags.displayName') },
                   { key: 'source_type', label: t('tags.source') },
                 ].map(col => (
-                  <th key={col.key} onClick={() => handleSort(col.key)} className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide cursor-pointer hover:text-[#3a4a5c] dark:hover:text-[#c1ccd9] select-none transition-colors">
+                  <th key={col.key} onClick={() => handleSort(col.key)} className="px-4 py-2.5 text-start text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide cursor-pointer hover:text-[#3a4a5c] dark:hover:text-[#c1ccd9] select-none transition-colors">
                     {col.label}<SortArrow field={col.key} />
                   </th>
                 ))}
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('tags.addressFormula')}</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('tags.dataType')}</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('common.unit')}</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('tags.value')}</th>
-                <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide w-20">{t('common.actions')}</th>
+                <th className="px-4 py-2.5 text-start text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('tags.addressFormula')}</th>
+                <th className="px-4 py-2.5 text-start text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('tags.dataType')}</th>
+                <th className="px-4 py-2.5 text-start text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('common.unit')}</th>
+                <th className="px-4 py-2.5 text-start text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('tags.value')}</th>
+                <th className="px-4 py-2.5 text-end text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide w-20">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e3e9f0] dark:divide-[#1e2d40]">
@@ -486,7 +486,7 @@ const TagManager = () => {
                             : <span className="text-[#8898aa] italic">Loading…</span>
                       ) : <span className="text-[#8898aa]">—</span>}
                     </td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-4 py-2.5 text-end">
                       <div className="inline-flex items-center gap-1">
                         <button onClick={() => handleEdit(tag)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle dark:hover:bg-[#0f2840] transition-colors" title={t('common.edit')}>
                           <FaEdit size={13} />

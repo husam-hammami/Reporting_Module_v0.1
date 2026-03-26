@@ -153,9 +153,9 @@ export default function UserManagement() {
               <table className="w-full text-[13px]">
                 <thead>
                   <tr className="border-b border-[#e3e9f0] dark:border-[#1e2d40]">
-                    <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase text-[#6b7f94]">{t('users.username')}</th>
-                    <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase text-[#6b7f94]">{t('users.role')}</th>
-                    {isAdmin && <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase text-[#6b7f94]">{t('common.actions')}</th>}
+                    <th className="text-start py-2 px-3 text-[11px] font-semibold uppercase text-[#6b7f94]">{t('users.username')}</th>
+                    <th className="text-start py-2 px-3 text-[11px] font-semibold uppercase text-[#6b7f94]">{t('users.role')}</th>
+                    {isAdmin && <th className="text-start py-2 px-3 text-[11px] font-semibold uppercase text-[#6b7f94]">{t('common.actions')}</th>}
                   </tr>
                 </thead>
                 <tbody>

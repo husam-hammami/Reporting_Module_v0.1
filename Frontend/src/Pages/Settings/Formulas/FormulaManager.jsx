@@ -151,7 +151,7 @@ export default function FormulaManager() {
               <span>{tr('common.name')}</span>
               <span>{tr('formulas.expression')}</span>
               <span>{tr('formulas.liveValue')}</span>
-              <span className="text-right">{tr('common.actions')}</span>
+              <span className="text-end">{tr('common.actions')}</span>
             </div>
             {formulas.map((f) => {
               const liveResult = emulatorOn ? evaluateFormula(f.formula, tagValues) : null;

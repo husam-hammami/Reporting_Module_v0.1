@@ -175,15 +175,15 @@ export default function LicenseActivations() {
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="border-b border-[#e3e9f0] dark:border-[#1e2d40]">
-                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.labelMachine')}</th>
-                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.siteName')}</th>
-                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.licenseName')}</th>
-                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.hostname')}</th>
-                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.status')}</th>
-                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.expiry')}</th>
-                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.lastSeen')}</th>
-                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.info')}</th>
-                  <th className="text-left py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('common.actions')}</th>
+                  <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.labelMachine')}</th>
+                  <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.siteName')}</th>
+                  <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.licenseName')}</th>
+                  <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.hostname')}</th>
+                  <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.status')}</th>
+                  <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.expiry')}</th>
+                  <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.lastSeen')}</th>
+                  <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.info')}</th>
+                  <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
