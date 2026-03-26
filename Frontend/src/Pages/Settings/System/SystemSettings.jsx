@@ -70,11 +70,11 @@ export default function SystemSettings() {
   };
 
   const getLogLineColor = (line) => {
-    if (/\bERROR\b/i.test(line)) return 'text-red-400';
-    if (/\bWARNING\b/i.test(line)) return 'text-amber-400';
-    if (/\bINFO\b/i.test(line)) return 'text-emerald-400';
-    if (/\bDEBUG\b/i.test(line)) return 'text-blue-400';
-    return 'text-[#a0b0c0]';
+    if (/\bERROR\b/i.test(line)) return 'text-red-600 dark:text-red-400';
+    if (/\bWARNING\b/i.test(line)) return 'text-amber-600 dark:text-amber-400';
+    if (/\bINFO\b/i.test(line)) return 'text-emerald-600 dark:text-emerald-400';
+    if (/\bDEBUG\b/i.test(line)) return 'text-blue-600 dark:text-blue-400';
+    return 'text-[#4a5c6e] dark:text-[#a0b0c0]';
   };
 
   useEffect(() => {
@@ -361,10 +361,10 @@ export default function SystemSettings() {
         </div>
 
         {/* Terminal body */}
-        <div className="bg-[#0a0e17] rounded-b-lg overflow-hidden">
-          <div className="h-[320px] overflow-y-auto p-3 font-mono text-[10px] leading-[18px] scrollbar-thin scrollbar-thumb-[#2a3347] scrollbar-track-transparent">
+        <div className="bg-[#f5f8fb] dark:bg-[#0a0e17] rounded-b-lg overflow-hidden">
+          <div className="h-[320px] overflow-y-auto p-3 font-mono text-[10px] leading-[18px] scrollbar-thin scrollbar-thumb-[#c1ccd9] dark:scrollbar-thumb-[#2a3347] scrollbar-track-transparent">
             {logLines.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-[#4a5568]">
+              <div className="flex items-center justify-center h-full text-[#8898aa] dark:text-[#4a5568]">
                 <div className="text-center">
                   <FaTerminal size={20} className="mx-auto mb-2 opacity-30" />
                   <p className="text-[11px]">{t('system.logEmpty')}</p>
@@ -373,8 +373,8 @@ export default function SystemSettings() {
               </div>
             ) : (
               logLines.map((line, i) => (
-                <div key={i} className={`hover:bg-white/[0.03] px-1 rounded ${getLogLineColor(line)}`}>
-                  <span className="text-[#4a5568] select-none me-2">{String(i + 1).padStart(3, ' ')}</span>
+                <div key={i} className={`hover:bg-black/[0.03] dark:hover:bg-white/[0.03] px-1 rounded ${getLogLineColor(line)}`}>
+                  <span className="text-[#b0bec5] dark:text-[#4a5568] select-none me-2">{String(i + 1).padStart(3, ' ')}</span>
                   {line}
                 </div>
               ))
