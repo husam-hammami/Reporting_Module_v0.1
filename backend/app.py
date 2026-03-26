@@ -343,6 +343,74 @@ def delete_emulator_custom_offset_route():
         return jsonify({'error': err or 'Failed to remove custom offset'}), 404
     return jsonify({'status': 'ok', 'message': 'Custom offset removed'}), 200
 
+<<<<<<< Updated upstream
+=======
+@app.route('/api/settings/network-info', methods=['GET'])
+@login_required
+def get_network_info():
+    """Return the host machine's LAN IP and access URL."""
+    import socket
+    port = int(os.environ.get('FLASK_PORT', 5001))
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        ip = "127.0.0.1"
+    return jsonify({
+        "ip": ip,
+        "port": port,
+        "url": f"http://{ip}:{port}"
+    })
+
+
+@app.route('/api/settings/system-logs', methods=['GET'])
+@login_required
+def get_system_logs():
+    """Return recent lines from the Hercules log file."""
+    if current_user.role not in ('admin', 'superadmin'):
+        return jsonify({'error': 'Forbidden'}), 403
+
+    lines_requested = min(int(request.args.get('lines', 200)), 2000)
+    level_filter = request.args.get('level', '').upper()  # INFO, WARNING, ERROR, etc.
+    search = request.args.get('search', '').strip()
+
+    # Determine log file path (same logic as desktop_entry.py)
+    if sys.platform == 'win32':
+        appdata = os.environ.get('APPDATA', os.path.expanduser('~'))
+        log_path = os.path.join(appdata, 'Hercules', 'logs', 'hercules.log')
+    else:
+        log_path = os.path.join(os.path.expanduser('~'), '.Hercules', 'logs', 'hercules.log')
+
+    if not os.path.isfile(log_path):
+        return jsonify({'lines': [], 'logPath': log_path, 'message': 'Log file not found'})
+
+    try:
+        with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+            all_lines = f.readlines()
+
+        # Apply filters
+        filtered = all_lines
+        if level_filter:
+            filtered = [l for l in filtered if level_filter in l]
+        if search:
+            search_lower = search.lower()
+            filtered = [l for l in filtered if search_lower in l.lower()]
+
+        # Return last N lines
+        tail = filtered[-lines_requested:]
+        return jsonify({
+            'lines': [l.rstrip('\n') for l in tail],
+            'totalLines': len(all_lines),
+            'filteredCount': len(filtered),
+            'logPath': log_path,
+        })
+    except Exception as e:
+        logger.error(f"Failed to read log file: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # NOTE: React catch-all route moved to end of file to avoid intercepting API routes
 
 
