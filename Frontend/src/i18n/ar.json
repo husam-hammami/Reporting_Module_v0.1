@@ -609,5 +609,14 @@
   "distribution.rulePaused": "القاعدة متوقفة",
   "distribution.untitledRule": "قاعدة بدون عنوان",
   "distribution.reportDeleted": "محذوف",
-  "distribution.more": "المزيد"
+  "distribution.more": "المزيد",
+  "distribution.selectFolder": "اختيار مجلد",
+  "distribution.parentFolder": "المجلد الأعلى",
+  "distribution.noSubfolders": "لا توجد مجلدات فرعية",
+  "distribution.selectThisFolder": "اختيار هذا المجلد",
+  "distribution.invalidEmail": "بريد إلكتروني غير صالح",
+  "distribution.duplicateEmail": "البريد مضاف مسبقاً",
+  "distribution.recipientPlaceholder": "أدخل البريد الإلكتروني...",
+  "distribution.addRecipient": "إضافة",
+  "distribution.recipientHint": "اكتب البريد واضغط Enter أو انقر إضافة"
 }

@@ -609,5 +609,14 @@
   "distribution.rulePaused": "Rule is paused",
   "distribution.untitledRule": "Untitled Rule",
   "distribution.reportDeleted": "deleted",
-  "distribution.more": "more"
+  "distribution.more": "more",
+  "distribution.selectFolder": "Select Folder",
+  "distribution.parentFolder": "Parent folder",
+  "distribution.noSubfolders": "No subfolders found",
+  "distribution.selectThisFolder": "Select This Folder",
+  "distribution.invalidEmail": "Invalid email address",
+  "distribution.duplicateEmail": "Email already added",
+  "distribution.recipientPlaceholder": "Enter email address...",
+  "distribution.addRecipient": "Add",
+  "distribution.recipientHint": "Type an email and press Enter or click Add"
 }

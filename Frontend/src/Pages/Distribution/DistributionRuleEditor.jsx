@@ -123,6 +123,7 @@ function MultiReportSelect({ selectedIds, onChange, reports, theme: t }) {
 
 /* ── Server folder browser modal ──────────────────────────────────────────── */
 function FolderBrowserModal({ open, onClose, onSelect, theme: t }) {
+  const { t: tr } = useLanguage();
   const [path, setPath] = useState('');
   const [parent, setParent] = useState('');
   const [folders, setFolders] = useState([]);
@@ -145,48 +146,91 @@ function FolderBrowserModal({ open, onClose, onSelect, theme: t }) {
 
   if (!open) return null;
 
+  // Build breadcrumb segments from path
+  const pathSegments = path ? path.replace(/\\/g, '/').split('/').filter(Boolean) : [];
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl shadow-2xl overflow-hidden mx-4"
+      <div className="w-full max-w-lg rounded-xl shadow-2xl overflow-hidden mx-4"
         style={{ background: t.surface, border: `1px solid ${t.border}` }}
         onClick={e => e.stopPropagation()}>
+        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: t.border }}>
-          <span className="text-sm font-bold" style={{ color: t.text }}>Select Folder</span>
+          <div className="flex items-center gap-2">
+            <FolderOpen size={16} style={{ color: t.accent }} />
+            <span className="text-sm font-bold" style={{ color: t.text }}>{tr('distribution.selectFolder')}</span>
+          </div>
           <button onClick={onClose} className="p-1 rounded hover:opacity-70"><X size={16} style={{ color: t.textMuted }} /></button>
         </div>
+
+        {/* Breadcrumb path */}
         {path && (
-          <div className="px-4 py-2 text-xs font-mono truncate" style={{ background: t.surfaceAlt, color: t.textSecondary }}>{path}</div>
+          <div className="px-4 py-2 flex items-center gap-0.5 flex-wrap" style={{ background: t.surfaceAlt, borderBottom: `1px solid ${t.border}` }}>
+            {parent !== '' && (
+              <button onClick={() => browse('')} className="text-[10px] font-semibold px-1.5 py-0.5 rounded hover:opacity-80 transition-colors"
+                style={{ color: t.accent }}>
+                {path.includes('\\') ? 'Drives' : '/'}
+              </button>
+            )}
+            {pathSegments.map((seg, i) => {
+              const segPath = path.includes('\\')
+                ? pathSegments.slice(0, i + 1).join('\\')
+                : '/' + pathSegments.slice(0, i + 1).join('/');
+              const isLast = i === pathSegments.length - 1;
+              return (
+                <span key={i} className="flex items-center gap-0.5">
+                  <ChevronRight size={10} style={{ color: t.textMuted }} />
+                  <button
+                    onClick={() => !isLast && browse(segPath)}
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded transition-colors"
+                    style={{ color: isLast ? t.text : t.accent, cursor: isLast ? 'default' : 'pointer' }}>
+                    {seg}
+                  </button>
+                </span>
+              );
+            })}
+          </div>
         )}
-        <div className="max-h-64 overflow-y-auto">
+
+        {/* Folder list */}
+        <div className="max-h-72 overflow-y-auto">
           {parent !== '' && (
-            <button onClick={() => browse(parent)} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors"
-              style={{ color: t.accent }}
+            <button onClick={() => browse(parent)} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium transition-colors border-b"
+              style={{ color: t.accent, borderColor: t.border }}
               onMouseEnter={e => e.currentTarget.style.background = t.hoverBg}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <ArrowUp size={14} /> ..
+              <ArrowUp size={14} />
+              <span>{tr('distribution.parentFolder')}</span>
             </button>
           )}
           {loading ? (
-            <div className="px-4 py-6 text-center text-xs" style={{ color: t.textMuted }}>Loading...</div>
+            <div className="px-4 py-8 text-center text-xs" style={{ color: t.textMuted }}>{tr('common.loading')}</div>
+          ) : folders.length === 0 ? (
+            <div className="px-4 py-8 text-center text-xs" style={{ color: t.textMuted }}>{tr('distribution.noSubfolders')}</div>
           ) : folders.map(f => (
             <button key={f.path} onClick={() => browse(f.path)}
               className="w-full flex items-center justify-between px-4 py-2.5 text-xs transition-colors"
               style={{ color: t.text }}
               onMouseEnter={e => e.currentTarget.style.background = t.hoverBg}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <span className="flex items-center gap-2"><FolderOpen size={14} style={{ color: t.accent }} /> {f.name}</span>
+              <span className="flex items-center gap-2.5"><FolderOpen size={14} style={{ color: t.accent }} /> {f.name}</span>
               <ChevronRight size={12} style={{ color: t.textMuted }} />
             </button>
           ))}
         </div>
-        <div className="flex justify-end gap-2 px-4 py-3 border-t" style={{ borderColor: t.border }}>
-          <button onClick={onClose} className="px-3 py-1.5 text-xs font-medium rounded-md" style={{ color: t.textSecondary }}>Cancel</button>
-          <button onClick={() => { onSelect(path); onClose(); }}
-            disabled={!path}
-            className="px-4 py-1.5 text-xs font-bold rounded-md transition-colors disabled:opacity-40"
-            style={{ background: t.accent, color: t.btnText }}>
-            Select
-          </button>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: t.border, background: t.surfaceAlt }}>
+          <span className="text-[10px] font-mono truncate max-w-[60%]" style={{ color: t.textMuted }}>{path || '—'}</span>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="px-3 py-1.5 text-xs font-medium rounded-md" style={{ color: t.textSecondary }}>{tr('common.cancel')}</button>
+            <button onClick={() => { onSelect(path); onClose(); }}
+              disabled={!path}
+              className="px-4 py-1.5 text-xs font-bold rounded-md transition-colors disabled:opacity-40"
+              style={{ background: t.accent, color: t.btnText }}>
+              {tr('distribution.selectThisFolder')}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -404,13 +448,23 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
           )}
           {form.schedule_type === 'monthly' && (
             <div className="mt-2">
-              <select value={form.schedule_day_of_month} onChange={e => set('schedule_day_of_month', Number(e.target.value))}
-                className="px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2"
-                style={{ background: t.inputBg, border: `1px solid ${t.border}`, color: t.text }}>
-                {Array.from({ length: 28 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>{tr('distribution.dayOfMonth')} {i + 1}</option>
-                ))}
-              </select>
+              <div className="grid grid-cols-7 gap-1" style={{ maxWidth: 280 }}>
+                {Array.from({ length: 28 }, (_, i) => {
+                  const day = i + 1;
+                  const active = form.schedule_day_of_month === day;
+                  return (
+                    <button key={day} onClick={() => set('schedule_day_of_month', day)}
+                      className="h-8 rounded-md text-[10px] font-bold transition-all"
+                      style={{
+                        background: active ? t.accent : 'transparent',
+                        border: `1.5px solid ${active ? t.accent : t.border}`,
+                        color: active ? t.btnText : t.textSecondary,
+                      }}>
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
