@@ -140,7 +140,7 @@ function Navbar({ isBlueprint = false }) {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 z-50 bg-[#111827] border border-[#1e293b] rounded-xl shadow-2xl min-w-[180px] py-1.5 overflow-hidden"
+                      className={`absolute ${lang === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 z-50 bg-[#111827] border border-[#1e293b] rounded-xl shadow-2xl min-w-[180px] py-1.5 overflow-hidden`}
                     >
                       <div className="px-4 py-3 border-b border-[#1e293b] bg-[#0a0f1a]/50">
                         <p className="text-sm font-bold text-[#f0f4f8]">{auth.username}</p>
