@@ -151,6 +151,10 @@
   "system.logRefresh": "Refresh",
   "system.logDownload": "Download logs",
   "system.logClear": "Clear display",
+  "system.networkAccess": "Network Access",
+  "system.networkAccessDesc": "Share this link with anyone on the same network to access Hercules",
+  "system.networkCopyLink": "Copy Link",
+  "system.networkCopied": "Copied!",
 
   "smtp.title": "SMTP Configuration",
   "smtp.description": "Configure the SMTP server used for sending report emails.",

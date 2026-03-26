@@ -151,6 +151,10 @@
   "system.logRefresh": "تحديث",
   "system.logDownload": "تحميل السجلات",
   "system.logClear": "مسح العرض",
+  "system.networkAccess": "الوصول عبر الشبكة",
+  "system.networkAccessDesc": "شارك هذا الرابط مع أي شخص على نفس الشبكة للوصول إلى Hercules",
+  "system.networkCopyLink": "نسخ الرابط",
+  "system.networkCopied": "تم النسخ!",
 
   "smtp.title": "إعدادات SMTP",
   "smtp.description": "إعداد خادم SMTP المستخدم لإرسال تقارير البريد الإلكتروني.",
