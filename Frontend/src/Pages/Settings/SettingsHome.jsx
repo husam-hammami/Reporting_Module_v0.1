@@ -1,7 +1,7 @@
 import React, { useEffect, useContext } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useLenisScroll } from '../../Hooks/useLenisScroll';
-import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaServer, FaSuperscript, FaEnvelope, FaClock, FaUsers, FaKey, FaImage } from 'react-icons/fa';
+import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaServer, FaSuperscript, FaEnvelope, FaClock, FaUsers, FaKey, FaImage, FaTerminal } from 'react-icons/fa';
 import { AuthContext } from '../../Context/AuthProvider';
 import { useLanguage } from '../../Hooks/useLanguage';
 import '../ReportBuilder/reportBuilderTheme.css';
@@ -24,6 +24,7 @@ const SettingsHome = () => {
     { name: t('settings.exportImport'), icon: FaDownload, link: '/settings/export-import', description: t('settings.desc.exportImport') },
     { name: t('settings.branding'), icon: FaImage, link: '/settings/branding', description: t('settings.desc.branding') },
     { name: t('settings.system'), icon: FaServer, link: '/settings/system', description: t('settings.desc.system') },
+    { name: t('settings.logs'), icon: FaTerminal, link: '/settings/logs', description: t('settings.desc.logs') },
     { name: t('settings.licenses'), icon: FaKey, link: '/settings/license-activations', description: t('settings.desc.licenses'), superadminOnly: true },
   ];
 

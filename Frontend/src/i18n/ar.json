@@ -45,6 +45,7 @@
   "settings.exportImport": "تصدير / استيراد",
   "settings.branding": "العلامة التجارية",
   "settings.system": "النظام",
+  "settings.logs": "سجلات النظام",
   "settings.licenses": "التراخيص",
   "settings.selectSection": "اختر قسماً",
   "settings.selectSectionHint": "اختر تبويباً أعلاه لإدارة العلامات والمجموعات والتعيينات أو إعدادات النظام.",
@@ -58,6 +59,7 @@
   "settings.desc.exportImport": "إعدادات النظام",
   "settings.desc.branding": "شعار العميل والعلامة التجارية",
   "settings.desc.system": "PLC، الوضع والمحاكي",
+  "settings.desc.logs": "سجلات الخادم والأخطاء مباشرة",
   "settings.desc.licenses": "تفعيل تراخيص الأجهزة",
 
   "common.switchToArabic": "التبديل إلى العربية",
@@ -508,5 +510,19 @@
   "builder.justNow": "الآن",
   "builder.mAgo": "د مضت",
   "builder.hAgo": "س مضت",
-  "builder.dAgo": "ي مضت"
+  "builder.dAgo": "ي مضت",
+
+  "logs.title": "سجلات النظام",
+  "logs.subtitle": "سجلات الخادم والأخطاء والتشخيصات في الوقت الفعلي",
+  "logs.connected": "متصل",
+  "logs.disconnected": "غير متصل",
+  "logs.errors": "أخطاء",
+  "logs.warnings": "تحذيرات",
+  "logs.searchPlaceholder": "تصفية السجلات...",
+  "logs.pause": "إيقاف",
+  "logs.resume": "استئناف",
+  "logs.download": "تحميل",
+  "logs.clear": "مسح",
+  "logs.entries": "إدخالات",
+  "logs.empty": "لا توجد سجلات بعد. ستظهر السجلات هنا في الوقت الفعلي."
 }
