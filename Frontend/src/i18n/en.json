@@ -512,5 +512,15 @@
   "builder.justNow": "just now",
   "builder.mAgo": "m ago",
   "builder.hAgo": "h ago",
-  "builder.dAgo": "d ago"
+  "builder.dAgo": "d ago",
+
+  "profile.title": "Profile",
+  "profile.myAccount": "My Account",
+  "profile.userManagement": "User Management",
+  "profile.accountInfo": "Account Information",
+
+  "appSettings.title": "Settings",
+  "appSettings.system": "System",
+  "appSettings.logs": "System Logs",
+  "appSettings.licenses": "Licenses"
 }

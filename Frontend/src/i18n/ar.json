@@ -512,5 +512,15 @@
   "builder.justNow": "الآن",
   "builder.mAgo": "د مضت",
   "builder.hAgo": "س مضت",
-  "builder.dAgo": "ي مضت"
+  "builder.dAgo": "ي مضت",
+
+  "profile.title": "الملف الشخصي",
+  "profile.myAccount": "حسابي",
+  "profile.userManagement": "إدارة المستخدمين",
+  "profile.accountInfo": "معلومات الحساب",
+
+  "appSettings.title": "الإعدادات",
+  "appSettings.system": "النظام",
+  "appSettings.logs": "سجل النظام",
+  "appSettings.licenses": "التراخيص"
 }

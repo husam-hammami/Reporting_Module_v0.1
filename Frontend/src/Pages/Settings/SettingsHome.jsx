@@ -1,7 +1,7 @@
 import React, { useEffect, useContext } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useLenisScroll } from '../../Hooks/useLenisScroll';
-import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaServer, FaSuperscript, FaEnvelope, FaClock, FaUsers, FaKey, FaImage } from 'react-icons/fa';
+import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaSuperscript, FaEnvelope, FaClock, FaImage } from 'react-icons/fa';
 import { AuthContext } from '../../Context/AuthProvider';
 import { useLanguage } from '../../Hooks/useLanguage';
 import '../ReportBuilder/reportBuilderTheme.css';
@@ -14,7 +14,6 @@ const SettingsHome = () => {
   const { t } = useLanguage();
 
   const NAV_ITEMS = [
-    { name: t('settings.users'), icon: FaUsers, link: '/settings/users', description: t('settings.desc.users') },
     { name: t('settings.tags'), icon: FaTags, link: '/settings/tags', description: t('settings.desc.tags') },
     { name: t('settings.tagGroups'), icon: FaLayerGroup, link: '/settings/tag-groups', description: t('settings.desc.tagGroups') },
     { name: t('settings.formulas'), icon: FaSuperscript, link: '/settings/formulas', description: t('settings.desc.formulas') },
@@ -23,19 +22,9 @@ const SettingsHome = () => {
     { name: t('settings.shifts'), icon: FaClock, link: '/settings/shifts', description: t('settings.desc.shifts') },
     { name: t('settings.exportImport'), icon: FaDownload, link: '/settings/export-import', description: t('settings.desc.exportImport') },
     { name: t('settings.branding'), icon: FaImage, link: '/settings/branding', description: t('settings.desc.branding') },
-    { name: t('settings.system'), icon: FaServer, link: '/settings/system', description: t('settings.desc.system') },
-    { name: t('settings.licenses'), icon: FaKey, link: '/settings/license-activations', description: t('settings.desc.licenses'), superadminOnly: true },
   ];
 
-  const filteredNavItems = NAV_ITEMS.filter(item => {
-    if (item.superadminOnly) {
-      return auth?.role === 'superadmin';
-    }
-    if (item.link === '/settings/users') {
-      return auth?.role === 'superadmin' || auth?.role === 'admin' || auth?.role === 'manager';
-    }
-    return true;
-  });
+  const filteredNavItems = NAV_ITEMS;
 
   useEffect(() => {
     if (location.pathname === '/settings') {
