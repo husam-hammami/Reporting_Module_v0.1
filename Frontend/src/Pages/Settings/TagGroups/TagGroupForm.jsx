@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { FaTimes, FaSave, FaGripVertical } from 'react-icons/fa';
+import { useLanguage } from '../../../Hooks/useLanguage';
 
 const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     group_name: '',
     description: '',
@@ -36,13 +38,13 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
     const newErrors = {};
 
     if (!formData.group_name.trim()) {
-      newErrors.group_name = 'Group Name is required';
+      newErrors.group_name = t('tagGroups.groupNameRequired');
     } else {
       const duplicate = existingGroups.find(
         g => g.group_name.toLowerCase() === formData.group_name.toLowerCase().trim() && g.id !== group?.id
       );
       if (duplicate) {
-        newErrors.group_name = 'Group Name already exists';
+        newErrors.group_name = t('tagGroups.groupNameExists');
       }
     }
 
@@ -101,7 +103,7 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
       <div className="bg-white dark:!bg-[#131b2d] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white dark:!bg-[#131b2d] border-b border-gray-200 dark:border-gray-700 p-6 flex justify-between items-center">
           <h3 className="text-2xl font-bold dark:text-gray-100">
-            {group ? 'Edit Tag Group' : 'Create New Tag Group'}
+            {group ? t('tagGroups.editGroup') : t('tagGroups.createNewGroup')}
           </h3>
           <button
             onClick={onCancel}
@@ -115,7 +117,7 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
           {/* Group Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Group Name <span className="text-red-500">*</span>
+              {t('tagGroups.groupName')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -132,7 +134,7 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Description
+              {t('common.description')}
             </label>
             <textarea
               value={formData.description}
@@ -146,7 +148,7 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
           {/* Assigned Tags */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Assigned Tags
+              {t('tagGroups.assignedTags')}
             </label>
 
             {/* Add Tag Dropdown */}
@@ -161,7 +163,7 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
                   }}
                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
                 >
-                  <option value="">Add a tag...</option>
+                  <option value="">{t('tagGroups.addATag')}</option>
                   {availableTagsToAdd.map(tag => (
                     <option key={tag.id} value={tag.tag_name}>
                       {tag.display_name || tag.tag_name} {tag.unit ? `(${tag.unit})` : ''}
@@ -201,12 +203,12 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
                   );
                 })}
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Drag tags to reorder them
+                  {t('tagGroups.dragToReorder')}
                 </p>
               </div>
             ) : (
               <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                No tags assigned. Use the dropdown above to add tags.
+                {t('tagGroups.noTagsAssigned')}
               </p>
             )}
           </div>
@@ -221,7 +223,7 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
                 className="w-4 h-4"
               />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Active (Group is enabled)
+                {t('tagGroups.activeEnabled')}
               </span>
             </label>
           </div>
@@ -233,14 +235,14 @@ const TagGroupForm = ({ group, availableTags, onSave, onCancel }) => {
               onClick={onCancel}
               className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-md"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-brand hover:bg-brand-hover text-white font-medium rounded-md flex items-center gap-2"
             >
               <FaSave />
-              Save Group
+              {t('tagGroups.saveGroup')}
             </button>
           </div>
         </form>

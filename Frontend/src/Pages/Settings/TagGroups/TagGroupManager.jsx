@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLenisScroll } from '../../../Hooks/useLenisScroll';
+import { useLanguage } from '../../../Hooks/useLanguage';
 import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaSearch, FaSpinner, FaChevronDown } from 'react-icons/fa';
 import axios from '../../../API/axios';
 import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
@@ -30,6 +31,7 @@ const FALLBACK_GROUPS = [
 
 const TagGroupManager = () => {
   useLenisScroll();
+  const { t } = useLanguage();
   const [tagGroups, setTagGroups] = useState([]);
   const [tags, setTags] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -261,7 +263,7 @@ const TagGroupManager = () => {
 
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
   const handleDelete = (groupId) => {
-    setConfirmModal({ open: true, title: 'Delete Tag Group', description: 'Are you sure you want to delete this tag group? This action cannot be undone.', confirmText: 'Delete', confirmColor: 'red', onConfirm: async () => {
+    setConfirmModal({ open: true, title: t('tagGroups.deleteGroup'), description: t('tagGroups.deleteGroupConfirm'), confirmText: t('common.delete'), confirmColor: 'red', onConfirm: async () => {
       setConfirmModal(m => ({ ...m, open: false }));
       try { await axios.delete(`/api/tag-groups/${groupId}`); await loadTagGroups(); }
       catch (e) { console.error('Error deleting tag group:', e); }
@@ -304,7 +306,7 @@ const TagGroupManager = () => {
       setTagsDropdownOpen(false);
     } catch (e) {
       console.error('Error saving tag group:', e);
-      alert('Failed to save tag group: ' + (e.response?.data?.message || e.message));
+      alert(t('tagGroups.failedSave') + ': ' + (e.response?.data?.message || e.message));
     }
   };
 
@@ -351,9 +353,9 @@ const TagGroupManager = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Tag Group Management</h2>
+          <h2 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">{t('tagGroups.title')}</h2>
           <p className="text-[11px] text-[#8898aa] mt-0.5">
-            Group related tags together for use in dynamic tables and live monitoring
+            {t('tagGroups.subtitle')}
           </p>
         </div>
         <button
@@ -361,7 +363,7 @@ const TagGroupManager = () => {
           className="bg-brand hover:bg-brand-hover text-white text-[11px] font-medium rounded-lg px-3 py-1.5 flex items-center gap-1.5 transition-colors"
         >
           <FaPlus size={11} />
-          Add Tag Group
+          {t('tagGroups.addGroup')}
         </button>
       </div>
 
@@ -371,7 +373,7 @@ const TagGroupManager = () => {
           <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#8898aa]" size={11} />
           <input
             type="text"
-            placeholder="Search tag groups..."
+            placeholder={t('tagGroups.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#081320] text-[#3a4a5c] dark:text-[#c1ccd9] focus:border-brand focus:ring-1 focus:ring-[#0e74904d] focus:outline-none placeholder:text-[#8898aa] transition-colors"
@@ -384,11 +386,11 @@ const TagGroupManager = () => {
         {loading ? (
           <div className="col-span-full text-center py-8">
             <FaSpinner className="animate-spin mx-auto text-[#8898aa]" size={16} />
-            <p className="mt-2 text-[12px] text-[#8898aa]">Loading tag groups...</p>
+            <p className="mt-2 text-[12px] text-[#8898aa]">{t('tagGroups.loading')}</p>
           </div>
         ) : filteredGroups.length === 0 ? (
           <div className="col-span-full text-center py-8 text-[12px] text-[#8898aa]">
-            {tagGroups.length === 0 ? 'No tag groups created yet. Click "Add Tag Group" to create one.' : 'No tag groups match your search.'}
+            {tagGroups.length === 0 ? t('tagGroups.noGroups') : t('tagGroups.noMatch')}
           </div>
         ) : (
           filteredGroups.map((group) => (
@@ -407,14 +409,14 @@ const TagGroupManager = () => {
                   <button
                     onClick={() => handleEdit(group)}
                     className="p-1.5 rounded-lg text-[#6b7f94] hover:text-brand hover:bg-brand-subtle dark:hover:bg-[#0e74901a] transition-colors"
-                    title="Edit"
+                    title={t('common.edit')}
                   >
                     <FaEdit size={13} />
                   </button>
                   <button
                     onClick={() => handleDelete(group.id)}
                     className="p-1.5 rounded-lg text-[#6b7f94] hover:text-[#dc2626] hover:bg-[#fef2f2] dark:hover:bg-[#dc2626]/10 transition-colors"
-                    title="Delete"
+                    title={t('common.delete')}
                   >
                     <FaTrash size={13} />
                   </button>
@@ -423,7 +425,7 @@ const TagGroupManager = () => {
               
               <div className="mt-2">
                 <p className="text-[11px] text-[#6b7f94]">
-                  Tags: <span className="font-semibold text-[#3a4a5c] dark:text-[#c1ccd9]">{group.tag_count || 0}</span>
+                  {t('tagGroups.tagsLabel')} <span className="font-semibold text-[#3a4a5c] dark:text-[#c1ccd9]">{group.tag_count || 0}</span>
                 </p>
                 {group.tags && group.tags.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
@@ -437,7 +439,7 @@ const TagGroupManager = () => {
                     ))}
                     {group.tags.length > 5 && (
                       <span className="text-[10px] font-semibold rounded px-2 py-0.5 text-[#8898aa]">
-                        +{group.tags.length - 5} more
+                        +{group.tags.length - 5} {t('tagGroups.more')}
                       </span>
                     )}
                   </div>
@@ -455,7 +457,7 @@ const TagGroupManager = () => {
             {/* Modal Header */}
             <div className="bg-white dark:bg-[#081320] border-b border-[#e3e9f0] dark:border-[#1e2d40] px-5 py-3 flex justify-between items-center flex-shrink-0">
               <h3 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">
-                {editingGroup ? 'Edit Tag Group' : 'Create Tag Group'}
+                {editingGroup ? t('tagGroups.editGroup') : t('tagGroups.createGroup')}
               </h3>
               <button
                 onClick={() => {
@@ -474,7 +476,7 @@ const TagGroupManager = () => {
               {/* Group Name */}
               <div>
                 <label className="block text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide mb-1.5">
-                  Group Name <span className="text-[#dc2626]">*</span>
+                  {t('tagGroups.groupName')} <span className="text-[#dc2626]">*</span>
                 </label>
                 <input
                   type="text"
@@ -488,7 +490,7 @@ const TagGroupManager = () => {
               {/* Description */}
               <div>
                 <label className="block text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide mb-1.5">
-                  Description
+                  {t('common.description')}
                 </label>
                 <textarea
                   value={formData.description}
@@ -502,7 +504,7 @@ const TagGroupManager = () => {
               {/* Tags Dropdown */}
               <div className="flex-1 flex flex-col min-h-0">
                 <label className="block text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide mb-1.5 flex-shrink-0">
-                  Tags
+                  {t('tagGroups.tags')}
                 </label>
                 <div className="relative flex-1 flex flex-col min-h-0" ref={tagsDropdownRef}>
                   <button
@@ -512,8 +514,8 @@ const TagGroupManager = () => {
                   >
                     <span>
                       {formData.tag_names.length === 0
-                        ? 'Select tags...'
-                        : `${formData.tag_names.length} tag${formData.tag_names.length !== 1 ? 's' : ''} selected`}
+                        ? t('tagGroups.selectTags')
+                        : `${formData.tag_names.length} ${t('tagGroups.tagsSelected')}`}
                     </span>
                     <FaChevronDown className={`text-[#8898aa] transition-transform ${tagsDropdownOpen ? 'transform rotate-180' : ''}`} size={11} />
                   </button>
@@ -546,7 +548,7 @@ const TagGroupManager = () => {
                           {someTagsSelected && !allTagsSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
                         </div>
                         <span className="text-[12px] font-semibold text-[#3a4a5c] dark:text-[#c1ccd9]">
-                          Select All
+                          {t('tagGroups.selectAll')}
                         </span>
                       </div>
                       
@@ -575,7 +577,7 @@ const TagGroupManager = () => {
                       
                       {activeTags.length === 0 && (
                         <div className="px-4 py-4 text-[12px] text-[#8898aa] text-center">
-                          No active tags available
+                          {t('tagGroups.noActiveTags')}
                         </div>
                       )}
                     </div>
@@ -603,7 +605,7 @@ const TagGroupManager = () => {
                     })}
                     {formData.tag_names.length > 6 && (
                       <span className="text-[10px] font-semibold rounded px-2 py-0.5 text-[#8898aa]">
-                        +{formData.tag_names.length - 6} more
+                        +{formData.tag_names.length - 6} {t('tagGroups.more')}
                       </span>
                     )}
                   </div>
@@ -621,13 +623,13 @@ const TagGroupManager = () => {
                 }}
                 className="border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-[#f5f8fb] dark:hover:bg-[#1e2d40] text-[11px] font-medium rounded-lg px-3 py-1.5 transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleSave}
                 className="bg-brand hover:bg-brand-hover text-white text-[11px] font-medium rounded-lg px-3 py-1.5 transition-colors"
               >
-                Save
+                {t('common.save')}
               </button>
             </div>
           </div>

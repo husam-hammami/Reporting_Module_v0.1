@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Save, Tag, Cpu, Beaker, FlaskConical, Database, Settings2, ToggleLeft, ArrowRightLeft } from 'lucide-react';
 import axios from '../../../API/axios';
 import { DarkModeContext } from '../../../Context/DarkModeProvider';
+import { useLanguage } from '../../../Hooks/useLanguage';
 
 function useTheme() {
   const { mode } = useContext(DarkModeContext);
@@ -78,6 +79,7 @@ const TfCheckbox = ({ checked, onChange, label, accent, border, btnText, textSec
 
 const TagForm = ({ tag, onSave, onCancel }) => {
   const t = useTheme();
+  const { t: tr } = useLanguage();
   const [activeTab, setActiveTab] = useState(TAB_GENERAL);
 
   const [formData, setFormData] = useState({
@@ -160,31 +162,31 @@ const TagForm = ({ tag, onSave, onCancel }) => {
   const validate = () => {
     const newErrors = {};
     if (!formData.tag_name.trim()) {
-      newErrors.tag_name = 'Tag Name is required';
+      newErrors.tag_name = tr('tags.tagNameRequired');
     } else {
       const duplicate = existingTags.find(
         tg => tg.tag_name.toLowerCase() === formData.tag_name.toLowerCase().trim() &&
         (!tag || tg.tag_name !== tag.tag_name)
       );
-      if (duplicate) newErrors.tag_name = 'Tag Name already exists';
+      if (duplicate) newErrors.tag_name = tr('tags.tagNameExists');
     }
     if (formData.source_type === 'PLC' && !formData.plc_address.trim()) {
-      newErrors.plc_address = 'PLC Address is required for PLC tags';
+      newErrors.plc_address = tr('tags.plcAddressRequired');
     } else if (formData.source_type === 'Formula' && !formData.formula.trim()) {
-      newErrors.formula = 'Formula is required for Formula tags';
+      newErrors.formula = tr('tags.formulaRequired');
     } else if (formData.source_type === 'Mapping' && !formData.mapping_name.trim()) {
-      newErrors.mapping_name = 'Mapping Name is required for Mapping tags';
+      newErrors.mapping_name = tr('tags.mappingRequired');
     }
     if (formData.data_type === 'BOOL' && formData.source_type === 'PLC') {
       if (formData.bit_position !== '' && formData.bit_position !== null && formData.bit_position !== undefined) {
         if (formData.bit_position < 0 || formData.bit_position > 7) {
-          newErrors.bit_position = 'Bit Position must be 0-7 for BOOL type';
+          newErrors.bit_position = tr('tags.bitPositionRange');
         }
       }
     }
     if (formData.data_type === 'STRING' && formData.source_type === 'PLC') {
       if (!formData.string_length || formData.string_length < 1) {
-        newErrors.string_length = 'String Length must be at least 1';
+        newErrors.string_length = tr('tags.stringLengthMin');
       }
     }
     setErrors(newErrors);
@@ -212,7 +214,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
 
   const handleTestTag = async () => {
     if (!formData.tag_name || formData.source_type !== 'PLC') {
-      alert('Please enter a tag name and ensure source type is PLC');
+      alert(tr('tags.testTagAlert'));
       return;
     }
     try {
@@ -253,7 +255,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <TfLabel required {...labelProps}>Tag Name</TfLabel>
+          <TfLabel required {...labelProps}>{tr('tags.tagName')}</TfLabel>
           <input
             type="text"
             value={formData.tag_name}
@@ -265,7 +267,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
           <TfErrorMsg msg={errors.tag_name} {...errorProps} />
         </div>
         <div>
-          <TfLabel {...labelProps}>Display Name</TfLabel>
+          <TfLabel {...labelProps}>{tr('tags.displayName')}</TfLabel>
           <input
             type="text"
             value={formData.display_name}
@@ -278,7 +280,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
       </div>
 
       <div>
-        <TfLabel required {...labelProps}>Source Type</TfLabel>
+        <TfLabel required {...labelProps}>{tr('tags.sourceType')}</TfLabel>
         <select
           value={formData.source_type}
           onChange={(e) => handleChange('source_type', e.target.value)}
@@ -293,9 +295,9 @@ const TagForm = ({ tag, onSave, onCancel }) => {
       </div>
 
       {formData.source_type === 'PLC' && (
-        <TfSectionCard title="PLC Configuration" icon={Cpu} {...sectionProps}>
+        <TfSectionCard title={tr('tags.plcConfig')} icon={Cpu} {...sectionProps}>
           <div>
-            <TfLabel required {...labelProps}>PLC Address</TfLabel>
+            <TfLabel required {...labelProps}>{tr('tags.plcAddress')}</TfLabel>
             <input
               type="text"
               value={formData.plc_address}
@@ -305,15 +307,15 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               placeholder="e.g., DB2099.0, DB499.100"
             />
             <TfErrorMsg msg={errors.plc_address} {...errorProps} />
-            <TfHelper {...helperProps}>Format: DB[number].[offset] or DB[number].[offset].[bit] for BOOL</TfHelper>
+            <TfHelper {...helperProps}>{tr('tags.plcAddressHelp')}</TfHelper>
           </div>
         </TfSectionCard>
       )}
 
       {formData.source_type === 'Formula' && (
-        <TfSectionCard title="Formula" icon={FlaskConical} {...sectionProps}>
+        <TfSectionCard title={tr('tags.formula')} icon={FlaskConical} {...sectionProps}>
           <div>
-            <TfLabel required {...labelProps}>Expression</TfLabel>
+            <TfLabel required {...labelProps}>{tr('tags.expression')}</TfLabel>
             <textarea
               value={formData.formula}
               onChange={(e) => handleChange('formula', e.target.value)}
@@ -328,9 +330,9 @@ const TagForm = ({ tag, onSave, onCancel }) => {
       )}
 
       {formData.source_type === 'Mapping' && (
-        <TfSectionCard title="Mapping" icon={ArrowRightLeft} {...sectionProps}>
+        <TfSectionCard title={tr('tags.mapping')} icon={ArrowRightLeft} {...sectionProps}>
           <div>
-            <TfLabel required {...labelProps}>Mapping Name</TfLabel>
+            <TfLabel required {...labelProps}>{tr('tags.mappingName')}</TfLabel>
             <input
               type="text"
               value={formData.mapping_name}
@@ -345,7 +347,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
       )}
 
       <div>
-        <TfLabel {...labelProps}>Description</TfLabel>
+        <TfLabel {...labelProps}>{tr('common.description')}</TfLabel>
         <textarea
           value={formData.description}
           onChange={(e) => handleChange('description', e.target.value)}
@@ -359,7 +361,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
       <TfCheckbox
         checked={formData.is_active}
         onChange={(e) => handleChange('is_active', e.target.checked)}
-        label="Active (Tag is enabled)"
+        label={tr('tags.activeEnabled')}
         {...checkboxProps}
       />
     </div>
@@ -369,7 +371,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <TfLabel required {...labelProps}>Data Type</TfLabel>
+          <TfLabel required {...labelProps}>{tr('tags.dataType')}</TfLabel>
           <select
             value={formData.data_type}
             onChange={(e) => handleChange('data_type', e.target.value)}
@@ -384,7 +386,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
           </select>
         </div>
         <div>
-          <TfLabel {...labelProps}>Unit</TfLabel>
+          <TfLabel {...labelProps}>{tr('common.unit')}</TfLabel>
           <input
             type="text"
             value={formData.unit}
@@ -398,7 +400,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <TfLabel {...labelProps}>Scaling</TfLabel>
+          <TfLabel {...labelProps}>{tr('tags.scaling')}</TfLabel>
           <input
             type="number"
             step="any"
@@ -408,10 +410,10 @@ const TagForm = ({ tag, onSave, onCancel }) => {
             style={inputStyle}
             placeholder="1.0"
           />
-          <TfHelper {...helperProps}>Multiplier applied to raw PLC value</TfHelper>
+          <TfHelper {...helperProps}>{tr('tags.scalingHelp')}</TfHelper>
         </div>
         <div>
-          <TfLabel {...labelProps}>Decimal Places</TfLabel>
+          <TfLabel {...labelProps}>{tr('tags.decimalPlaces')}</TfLabel>
           <input
             type="number"
             min="0"
@@ -421,24 +423,24 @@ const TagForm = ({ tag, onSave, onCancel }) => {
             className={inputCls}
             style={inputStyle}
           />
-          <TfHelper {...helperProps}>Display precision (0–6 digits)</TfHelper>
+          <TfHelper {...helperProps}>{tr('tags.decimalPlacesHelp')}</TfHelper>
         </div>
       </div>
 
       <TfCheckbox
         checked={formData.is_counter}
         onChange={(e) => handleChange('is_counter', e.target.checked)}
-        label="Cumulative Counter / Totalizer"
+        label={tr('tags.counter')}
         {...checkboxProps}
       />
       {formData.is_counter && (
-        <TfHelper {...helperProps}>Counter tags accumulate over time. Reports use delta (last − first) to show change over a period.</TfHelper>
+        <TfHelper {...helperProps}>{tr('tags.counterHelp')}</TfHelper>
       )}
 
       {formData.data_type === 'BOOL' && formData.source_type === 'PLC' && (
-        <TfSectionCard title="BOOL Options" icon={ToggleLeft} {...sectionProps}>
+        <TfSectionCard title={tr('tags.boolOptions')} icon={ToggleLeft} {...sectionProps}>
           <div>
-            <TfLabel {...labelProps}>Bit Position (0-7)</TfLabel>
+            <TfLabel {...labelProps}>{tr('tags.bitPosition')}</TfLabel>
             <input
               type="number"
               min="0"
@@ -462,9 +464,9 @@ const TagForm = ({ tag, onSave, onCancel }) => {
       )}
 
       {formData.data_type === 'STRING' && formData.source_type === 'PLC' && (
-        <TfSectionCard title="STRING Options" icon={Database} {...sectionProps}>
+        <TfSectionCard title={tr('tags.stringOptions')} icon={Database} {...sectionProps}>
           <div>
-            <TfLabel required {...labelProps}>String Length</TfLabel>
+            <TfLabel required {...labelProps}>{tr('tags.stringLength')}</TfLabel>
             <input
               type="number"
               min="1"
@@ -482,14 +484,14 @@ const TagForm = ({ tag, onSave, onCancel }) => {
         <TfCheckbox
           checked={formData.byte_swap}
           onChange={(e) => handleChange('byte_swap', e.target.checked)}
-          label="Byte Swap (Little-endian)"
+          label={tr('tags.byteSwap')}
           {...checkboxProps}
         />
       )}
 
-      <TfSectionCard title="Value Transformation" icon={Beaker} {...sectionProps}>
+      <TfSectionCard title={tr('tags.valueTransformation')} icon={Beaker} {...sectionProps}>
         <div>
-          <TfLabel {...labelProps}>Formula <span className="text-[10px] font-normal normal-case tracking-normal" style={{ color: t.textMuted }}>(optional)</span></TfLabel>
+          <TfLabel {...labelProps}>{tr('tags.formula')} <span className="text-[10px] font-normal normal-case tracking-normal" style={{ color: t.textMuted }}>{tr('tags.optional')}</span></TfLabel>
           <textarea
             value={formData.value_formula}
             onChange={(e) => handleChange('value_formula', e.target.value)}
@@ -507,25 +509,25 @@ const TagForm = ({ tag, onSave, onCancel }) => {
           </TfHelper>
           {formData.value_formula && (
             <div className="mt-2 rounded-lg p-2 text-[10px]" style={{ background: t.accentBg, border: `1px solid ${t.accentBorder}`, color: t.textSecondary }}>
-              <strong>Note:</strong> If formula is provided, it will be used instead of scaling multiplier.
+              <strong>{tr('tags.noteFormula')}</strong>
             </div>
           )}
         </div>
       </TfSectionCard>
 
-      <TfSectionCard title="Bin Activation" icon={Settings2} {...sectionProps}>
+      <TfSectionCard title={tr('tags.binActivation')} icon={Settings2} {...sectionProps}>
         <TfCheckbox
           checked={formData.is_bin_tag}
           onChange={(e) => handleChange('is_bin_tag', e.target.checked)}
-          label="This is a bin tag (requires activation check)"
+          label={tr('tags.binTag')}
           {...checkboxProps}
         />
-        <TfHelper {...helperProps}>Enable if this tag represents a bin ID filtered by activation conditions</TfHelper>
+        <TfHelper {...helperProps}>{tr('tags.binTagHelp')}</TfHelper>
 
         {formData.is_bin_tag && (
           <div className="space-y-3 pt-2" style={{ borderTop: `1px solid ${t.borderSubtle}` }}>
             <div>
-              <TfLabel {...labelProps}>Activation Tag Name</TfLabel>
+              <TfLabel {...labelProps}>{tr('tags.activationTagName')}</TfLabel>
               <input
                 type="text"
                 value={formData.activation_tag_name}
@@ -537,24 +539,24 @@ const TagForm = ({ tag, onSave, onCancel }) => {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <TfLabel {...labelProps}>Condition</TfLabel>
+                <TfLabel {...labelProps}>{tr('tags.condition')}</TfLabel>
                 <select
                   value={formData.activation_condition}
                   onChange={(e) => handleChange('activation_condition', e.target.value)}
                   className={inputCls}
                   style={inputStyle}
                 >
-                  <option value="equals">Equals</option>
-                  <option value="not_equals">Not Equals</option>
-                  <option value="true">Is True</option>
-                  <option value="false">Is False</option>
-                  <option value="greater_than">Greater Than</option>
-                  <option value="less_than">Less Than</option>
+                  <option value="equals">{tr('tags.condEquals')}</option>
+                  <option value="not_equals">{tr('tags.condNotEquals')}</option>
+                  <option value="true">{tr('tags.condTrue')}</option>
+                  <option value="false">{tr('tags.condFalse')}</option>
+                  <option value="greater_than">{tr('tags.condGreater')}</option>
+                  <option value="less_than">{tr('tags.condLess')}</option>
                 </select>
               </div>
               {!['true', 'false'].includes(formData.activation_condition) && (
                 <div>
-                  <TfLabel {...labelProps}>Value</TfLabel>
+                  <TfLabel {...labelProps}>{tr('tags.value')}</TfLabel>
                   <input
                     type="text"
                     value={formData.activation_value}
@@ -589,8 +591,8 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               <Tag size={16} style={{ color: t.accent }} />
             </div>
             <div>
-              <h2 className="text-sm font-bold" style={{ color: t.text }}>{tag ? 'Edit Tag' : 'New Tag'}</h2>
-              <p className="text-[10px] uppercase tracking-wider" style={{ color: t.textMuted }}>Tag Definition</p>
+              <h2 className="text-sm font-bold" style={{ color: t.text }}>{tag ? tr('tags.editTag') : tr('tags.newTag')}</h2>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: t.textMuted }}>{tr('tags.tagDefinition')}</p>
             </div>
           </div>
           <button onClick={onCancel} className="p-1.5 rounded-lg transition-colors hover:opacity-70" style={{ color: t.textSecondary }}>
@@ -601,8 +603,8 @@ const TagForm = ({ tag, onSave, onCancel }) => {
         <div className="px-6 pt-3 pb-0 flex-shrink-0">
           <div className="flex rounded-lg p-0.5" style={{ background: t.inputBg, border: `1px solid ${t.border}` }}>
             {[
-              { id: TAB_GENERAL, label: 'General', icon: Tag, hasError: generalHasErrors },
-              { id: TAB_CONFIG, label: 'Configuration', icon: Settings2, hasError: configHasErrors },
+              { id: TAB_GENERAL, label: tr('tags.general'), icon: Tag, hasError: generalHasErrors },
+              { id: TAB_CONFIG, label: tr('tags.configuration'), icon: Settings2, hasError: configHasErrors },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -639,7 +641,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               >
                 <span className="flex items-center gap-1.5">
                   <Beaker size={12} />
-                  Test Tag
+                  {tr('tags.testTag')}
                 </span>
               </button>
             )}
@@ -651,7 +653,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               className="px-4 py-2 text-xs font-medium rounded-lg transition-colors"
               style={{ color: t.textSecondary }}
             >
-              Cancel
+              {tr('common.cancel')}
             </button>
             <button
               type="submit"
@@ -660,7 +662,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
               style={{ background: t.accent, color: t.btnText }}
             >
               <Save size={12} />
-              {tag ? 'Save Tag' : 'Create Tag'}
+              {tag ? tr('tags.saveTag') : tr('tags.createTag')}
             </button>
           </div>
         </div>
