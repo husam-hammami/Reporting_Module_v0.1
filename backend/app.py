@@ -99,7 +99,7 @@ ALLOWED_ORIGINS = {
 # Initialize SocketIO with credentials support for cookie/session auth
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*",
+    cors_allowed_origins=list(ALLOWED_ORIGINS),
     async_mode="eventlet",
     supports_credentials=True,
 )
@@ -115,29 +115,11 @@ def _normalize_origin(origin):
     return origin.rstrip("/")
 
 
-_PRIVATE_IP_RE = re.compile(
-    r'^https?://(10\.\d{1,3}\.\d{1,3}\.\d{1,3}'
-    r'|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}'
-    r'|192\.168\.\d{1,3}\.\d{1,3})'
-    r'(:\d+)?$'
-)
-
-
-def _is_allowed_origin(origin):
-    """Return True if origin is in the whitelist OR is a private-network IP."""
-    if not origin:
-        return False
-    normalized = _normalize_origin(origin)
-    if normalized in ALLOWED_ORIGINS:
-        return True
-    return bool(_PRIVATE_IP_RE.match(normalized))
-
-
 @app.before_request
 def handle_options_preflight():
     if request.method == "OPTIONS":
         origin = request.headers.get("Origin")
-        if origin and _is_allowed_origin(origin):
+        if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
             from flask import Response
             r = Response("", status=200)
             r.headers["Access-Control-Allow-Origin"] = origin
@@ -156,7 +138,7 @@ def log_request_info():
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get("Origin")
-    if origin and _is_allowed_origin(origin):
+    if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
@@ -168,7 +150,7 @@ def add_cors_headers(response):
 def options_handler(path):
     response = jsonify({})
     origin = request.headers.get("Origin")
-    if origin and _is_allowed_origin(origin):
+    if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
@@ -361,6 +343,8 @@ def delete_emulator_custom_offset_route():
         return jsonify({'error': err or 'Failed to remove custom offset'}), 404
     return jsonify({'status': 'ok', 'message': 'Custom offset removed'}), 200
 
+<<<<<<< Updated upstream
+=======
 @app.route('/api/settings/network-info', methods=['GET'])
 @login_required
 def get_network_info():
@@ -379,6 +363,52 @@ def get_network_info():
         "port": port,
         "url": f"http://{ip}:{port}"
     })
+
+
+@app.route('/api/settings/system-logs', methods=['GET'])
+@login_required
+def get_system_logs():
+    """Return recent lines from the Hercules log file."""
+    if current_user.role not in ('admin', 'superadmin'):
+        return jsonify({'error': 'Forbidden'}), 403
+
+    lines_requested = min(int(request.args.get('lines', 200)), 2000)
+    level_filter = request.args.get('level', '').upper()  # INFO, WARNING, ERROR, etc.
+    search = request.args.get('search', '').strip()
+
+    # Determine log file path (same logic as desktop_entry.py)
+    if sys.platform == 'win32':
+        appdata = os.environ.get('APPDATA', os.path.expanduser('~'))
+        log_path = os.path.join(appdata, 'Hercules', 'logs', 'hercules.log')
+    else:
+        log_path = os.path.join(os.path.expanduser('~'), '.Hercules', 'logs', 'hercules.log')
+
+    if not os.path.isfile(log_path):
+        return jsonify({'lines': [], 'logPath': log_path, 'message': 'Log file not found'})
+
+    try:
+        with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+            all_lines = f.readlines()
+
+        # Apply filters
+        filtered = all_lines
+        if level_filter:
+            filtered = [l for l in filtered if level_filter in l]
+        if search:
+            search_lower = search.lower()
+            filtered = [l for l in filtered if search_lower in l.lower()]
+
+        # Return last N lines
+        tail = filtered[-lines_requested:]
+        return jsonify({
+            'lines': [l.rstrip('\n') for l in tail],
+            'totalLines': len(all_lines),
+            'filteredCount': len(filtered),
+            'logPath': log_path,
+        })
+    except Exception as e:
+        logger.error(f"Failed to read log file: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 # NOTE: React catch-all route moved to end of file to avoid intercepting API routes

@@ -40,7 +40,9 @@
       "Bash(git rm:*)",
       "Bash(rm -rf docs/March)",
       "Bash(cp \"C:/Users/husam/.claude/plans/keen-hatching-coral.md\" \"docs/Desktop_App_Plan_2026-03-18.md\")",
-      "Bash(cat .github/workflows/*.yml)"
+      "Bash(cat .github/workflows/*.yml)",
+      "Bash(find C:/Users/husam/OneDrive/Documents/Reporting_Module_v0.1/frontend/src -type f -name *Engineering* -o -type f -name *Network* -o -type f -name *Access*)",
+      "Bash(npm install:*)"
     ]
   }
 }
