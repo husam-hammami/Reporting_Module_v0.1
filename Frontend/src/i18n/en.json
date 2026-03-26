@@ -619,5 +619,24 @@
   "distribution.recipientPlaceholder": "Enter email address...",
   "distribution.addRecipient": "Add",
   "distribution.recipientHint": "Type an email and press Enter or click Add",
-  "distribution.excel": "Excel"
+  "distribution.excel": "Excel",
+
+  "viewer.dashboardsTitle": "Dashboards",
+  "viewer.dashboardsSubtitle": "Released dashboard reports",
+  "viewer.tableReportsTitle": "Table Reports",
+  "viewer.tableReportsSubtitle": "Released table reports",
+  "viewer.noReleasedReports": "No released reports",
+  "viewer.releaseFromBuilder": "Release a report from the Builder to see it here.",
+  "viewer.noMatchingReports": "No matching reports",
+  "viewer.adjustSearch": "Try adjusting your search.",
+  "viewer.searchReports": "Search reports...",
+  "viewer.sortByName": "Name A→Z",
+  "viewer.sortByNameDesc": "Name Z→A",
+  "viewer.sortByNewest": "Newest first",
+  "viewer.sortByOldest": "Oldest first",
+  "viewer.sortByWidgets": "Most sections",
+  "viewer.widgets": "sections",
+  "viewer.gridView": "Grid view",
+  "viewer.listView": "List view",
+  "viewer.reports": "reports"
 }

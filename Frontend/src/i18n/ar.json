@@ -619,5 +619,24 @@
   "distribution.recipientPlaceholder": "أدخل البريد الإلكتروني...",
   "distribution.addRecipient": "إضافة",
   "distribution.recipientHint": "اكتب البريد واضغط Enter أو انقر إضافة",
-  "distribution.excel": "إكسل"
+  "distribution.excel": "إكسل",
+
+  "viewer.dashboardsTitle": "لوحات المعلومات",
+  "viewer.dashboardsSubtitle": "تقارير لوحات المعلومات المنشورة",
+  "viewer.tableReportsTitle": "التقارير الجدولية",
+  "viewer.tableReportsSubtitle": "التقارير الجدولية المنشورة",
+  "viewer.noReleasedReports": "لا توجد تقارير منشورة",
+  "viewer.releaseFromBuilder": "انشر تقريرًا من المنشئ لرؤيته هنا.",
+  "viewer.noMatchingReports": "لا توجد تقارير مطابقة",
+  "viewer.adjustSearch": "حاول تعديل البحث.",
+  "viewer.searchReports": "بحث في التقارير...",
+  "viewer.sortByName": "الاسم أ→ي",
+  "viewer.sortByNameDesc": "الاسم ي→أ",
+  "viewer.sortByNewest": "الأحدث أولاً",
+  "viewer.sortByOldest": "الأقدم أولاً",
+  "viewer.sortByWidgets": "الأكثر أقسام",
+  "viewer.widgets": "أقسام",
+  "viewer.gridView": "عرض شبكي",
+  "viewer.listView": "عرض قائمة",
+  "viewer.reports": "تقارير"
 }

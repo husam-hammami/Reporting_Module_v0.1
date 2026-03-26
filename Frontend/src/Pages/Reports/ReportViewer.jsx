@@ -9,6 +9,7 @@ import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '../ReportBuilder/widgets/WidgetRenderer';
 import ReportThumbnail from '../ReportBuilder/ReportThumbnail';
+import ReportListingPage from '../../Components/Reports/ReportListingPage';
 import PaginatedReportView from './PaginatedReportViewer';
 import TimePeriodTabs, { VIEWER_TABS } from './TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
@@ -782,10 +783,14 @@ export default function ReportViewer() {
 }
 
 /* ── Named exports for route-specific viewers ─────────────────── */
+import { BarChart2, Table2 } from 'lucide-react';
+import { useLanguage as useLanguageViewer } from '../../Hooks/useLanguage';
+
 export function DashboardViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { templates } = useReportTemplates();
+  const { t: tr } = useLanguageViewer();
 
   const siblingReports = useMemo(() =>
     templates
@@ -799,13 +804,13 @@ export function DashboardViewer() {
 
   if (id) return <SingleReportView reportId={id} onBack={() => navigate('/dashboards')} siblingReports={siblingReports} onSelectReport={(rid) => navigate(`/dashboards/${rid}`)} />;
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-transparent">
-      <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-gray-700 bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm">
-        <h1 className="text-[15px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Dashboards</h1>
-        <p className="text-[11px] text-[#8898aa] mt-0.5">Released dashboard reports</p>
-      </div>
-      <ReportList onSelect={(rid) => navigate(`/dashboards/${rid}`)} filterType="dashboard" />
-    </div>
+    <ReportListingPage
+      title={tr('viewer.dashboardsTitle')}
+      subtitle={tr('viewer.dashboardsSubtitle')}
+      filterType="dashboard"
+      baseRoute="/dashboards"
+      icon={BarChart2}
+    />
   );
 }
 
@@ -813,6 +818,7 @@ export function TableReportViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { templates } = useReportTemplates();
+  const { t: tr } = useLanguageViewer();
 
   const siblingReports = useMemo(() =>
     templates
@@ -826,12 +832,12 @@ export function TableReportViewer() {
 
   if (id) return <SingleReportView reportId={id} onBack={() => navigate('/reports')} siblingReports={siblingReports} onSelectReport={(rid) => navigate(`/reports/${rid}`)} />;
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-transparent">
-      <div className="px-5 py-4 border-b border-[#e3e9f0] dark:border-gray-700 bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm">
-        <h1 className="text-[15px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Table Reports</h1>
-        <p className="text-[11px] text-[#8898aa] mt-0.5">Released table reports</p>
-      </div>
-      <ReportList onSelect={(rid) => navigate(`/reports/${rid}`)} filterType="paginated" />
-    </div>
+    <ReportListingPage
+      title={tr('viewer.tableReportsTitle')}
+      subtitle={tr('viewer.tableReportsSubtitle')}
+      filterType="paginated"
+      baseRoute="/reports"
+      icon={Table2}
+    />
   );
 }
