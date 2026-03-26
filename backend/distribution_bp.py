@@ -47,7 +47,8 @@ def _ensure_table():
                 CREATE TABLE IF NOT EXISTS distribution_rules (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL DEFAULT '',
-                    report_id INTEGER NOT NULL,
+                    report_id INTEGER NOT NULL DEFAULT 0,
+                    report_ids JSONB DEFAULT '[]'::jsonb,
                     delivery_method VARCHAR(20) NOT NULL DEFAULT 'email',
                     recipients JSONB DEFAULT '[]'::jsonb,
                     save_path TEXT DEFAULT '',
@@ -64,6 +65,18 @@ def _ensure_table():
                     updated_at TIMESTAMP DEFAULT NOW()
                 );
             """)
+            # Migration: add report_ids column if missing (existing installs)
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'distribution_rules' AND column_name = 'report_ids'
+            """)
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE distribution_rules ADD COLUMN report_ids JSONB DEFAULT '[]'::jsonb")
+                cursor.execute("""
+                    UPDATE distribution_rules
+                    SET report_ids = jsonb_build_array(report_id)
+                    WHERE (report_ids = '[]'::jsonb OR report_ids IS NULL) AND report_id IS NOT NULL AND report_id > 0
+                """)
             actual_conn.commit()
             _table_ensured = True
     except Exception as e:
@@ -74,14 +87,27 @@ def _validate_rule(data):
     """Validate distribution rule fields. Returns (cleaned_data, error_msg)."""
     errors = []
 
-    report_id = data.get('report_id')
-    if report_id is None or report_id == '':
-        errors.append('report_id is required')
-    else:
+    # Accept report_ids (array) or report_id (single, wrapped to array)
+    report_ids = data.get('report_ids')
+    if report_ids and isinstance(report_ids, list):
         try:
-            report_id = int(report_id)
+            report_ids = [int(rid) for rid in report_ids if rid not in (None, '')]
         except (TypeError, ValueError):
-            errors.append('report_id must be an integer')
+            errors.append('report_ids must be an array of integers')
+            report_ids = []
+        if not report_ids:
+            errors.append('At least one report must be selected')
+    else:
+        report_id = data.get('report_id')
+        if report_id is None or report_id == '':
+            errors.append('At least one report must be selected')
+            report_ids = []
+        else:
+            try:
+                report_ids = [int(report_id)]
+            except (TypeError, ValueError):
+                errors.append('report_id must be an integer')
+                report_ids = []
 
     delivery_method = data.get('delivery_method', 'email')
     if delivery_method not in ('email', 'disk', 'both'):
@@ -142,7 +168,8 @@ def _validate_rule(data):
 
     cleaned = {
         'name': data.get('name', ''),
-        'report_id': int(report_id),
+        'report_ids': report_ids,
+        'report_id': report_ids[0] if report_ids else 0,  # backward compat
         'delivery_method': delivery_method,
         'recipients': recipients,
         'save_path': save_path,
@@ -179,6 +206,15 @@ def _serialize_row(row):
         row['schedule_time'] = row['schedule_time'].strftime('%H:%M')
     if isinstance(row.get('recipients'), str):
         row['recipients'] = json.loads(row['recipients'])
+    if isinstance(row.get('report_ids'), str):
+        row['report_ids'] = json.loads(row['report_ids'])
+    if isinstance(row.get('report_details'), str):
+        row['report_details'] = json.loads(row['report_details'])
+    # Ensure report_ids is always an array
+    if not row.get('report_ids') or row['report_ids'] == []:
+        rid = row.get('report_id')
+        if rid and rid > 0:
+            row['report_ids'] = [rid]
     return row
 
 
@@ -196,10 +232,18 @@ def list_rules():
             cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 SELECT r.*,
-                       t.name AS report_name,
-                       (t.id IS NULL) AS report_missing
+                       COALESCE(
+                         (SELECT jsonb_agg(jsonb_build_object('id', t.id, 'name', t.name))
+                          FROM report_builder_templates t
+                          WHERE t.id IN (SELECT (jsonb_array_elements_text(
+                            CASE WHEN r.report_ids IS NOT NULL AND r.report_ids != '[]'::jsonb
+                                 THEN r.report_ids
+                                 ELSE jsonb_build_array(r.report_id)
+                            END
+                          ))::int)),
+                         '[]'::jsonb
+                       ) AS report_details
                 FROM distribution_rules r
-                LEFT JOIN report_builder_templates t ON t.id = r.report_id
                 ORDER BY r.created_at DESC
             """)
             rows = cursor.fetchall()
@@ -229,13 +273,15 @@ def create_rule():
             cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 INSERT INTO distribution_rules
-                    (name, report_id, delivery_method, recipients, save_path,
+                    (name, report_id, report_ids, delivery_method, recipients, save_path,
                      format, schedule_type, schedule_time, schedule_day_of_week,
                      schedule_day_of_month, enabled)
-                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s::jsonb, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
             """, (
-                cleaned['name'], cleaned['report_id'], cleaned['delivery_method'],
+                cleaned['name'], cleaned['report_id'],
+                json.dumps(cleaned['report_ids']),
+                cleaned['delivery_method'],
                 json.dumps(cleaned['recipients']), cleaned['save_path'],
                 cleaned['format'], cleaned['schedule_type'], cleaned['schedule_time'],
                 cleaned['schedule_day_of_week'], cleaned['schedule_day_of_month'],
@@ -270,7 +316,8 @@ def update_rule(rule_id):
             cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 UPDATE distribution_rules SET
-                    name = %s, report_id = %s, delivery_method = %s,
+                    name = %s, report_id = %s, report_ids = %s::jsonb,
+                    delivery_method = %s,
                     recipients = %s::jsonb, save_path = %s, format = %s,
                     schedule_type = %s, schedule_time = %s,
                     schedule_day_of_week = %s, schedule_day_of_month = %s,
@@ -278,7 +325,9 @@ def update_rule(rule_id):
                 WHERE id = %s
                 RETURNING *
             """, (
-                cleaned['name'], cleaned['report_id'], cleaned['delivery_method'],
+                cleaned['name'], cleaned['report_id'],
+                json.dumps(cleaned['report_ids']),
+                cleaned['delivery_method'],
                 json.dumps(cleaned['recipients']), cleaned['save_path'],
                 cleaned['format'], cleaned['schedule_type'], cleaned['schedule_time'],
                 cleaned['schedule_day_of_week'], cleaned['schedule_day_of_month'],

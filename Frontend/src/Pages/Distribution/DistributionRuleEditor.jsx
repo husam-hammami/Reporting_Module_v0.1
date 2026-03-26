@@ -1,28 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Mail, HardDrive, Layers, Save, Play, FolderOpen, ChevronRight, ArrowUp } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { X, Mail, HardDrive, Layers, Save, Play, FolderOpen, ChevronRight, ArrowUp, Search, Check, ChevronDown } from 'lucide-react';
 import { reportBuilderApi } from '../../API/reportBuilderApi';
 import RecipientInput from '../Settings/ReportDistribution/RecipientInput';
 import { toast } from 'react-toastify';
+import { useLanguage } from '../../Hooks/useLanguage';
 import axios from '../../API/axios';
-
-const SCHEDULE_TYPES = [
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-];
-
-const DELIVERY_OPTIONS = [
-  { value: 'email', label: 'Email', icon: Mail, desc: 'Send via SMTP' },
-  { value: 'disk', label: 'Save to Disk', icon: HardDrive, desc: 'Save to local path' },
-  { value: 'both', label: 'Both', icon: Layers, desc: 'Email + disk save' },
-];
 
 const DAY_PILLS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const EMPTY_RULE = {
   name: '',
-  report_id: '',
+  report_ids: [],
   delivery_method: 'email',
   recipients: [],
   save_path: '',
@@ -34,418 +22,445 @@ const EMPTY_RULE = {
   enabled: true,
 };
 
-function schedulePreview(form) {
+function schedulePreview(form, t) {
   const time = form.schedule_time || '08:00';
-  if (form.schedule_type === 'daily') return `Runs every day at ${time}`;
-  if (form.schedule_type === 'weekly') return `Runs every ${DAY_PILLS[form.schedule_day_of_week ?? 0]} at ${time}`;
+  if (form.schedule_type === 'daily') return `${t('distribution.runsEveryDay')} ${time}`;
+  if (form.schedule_type === 'weekly') return `${t('distribution.runsEvery')} ${DAY_PILLS[form.schedule_day_of_week ?? 0]} ${t('distribution.at')} ${time}`;
   if (form.schedule_type === 'monthly') {
     const d = form.schedule_day_of_month ?? 1;
-    const s = [, 'st', 'nd', 'rd'][d % 10 > 3 ? 0 : (d % 100 - d % 10 !== 10) * (d % 10)] || 'th';
-    return `Runs on the ${d}${s} of every month at ${time}`;
+    return `${t('distribution.runsOnThe')} ${d} ${t('distribution.ofEveryMonth')} ${time}`;
   }
   return '';
 }
 
+/* ── Multi-report selector ─────────────────────────────────────────────────── */
+function MultiReportSelect({ selectedIds, onChange, reports, theme: t }) {
+  const { t: tr } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = reports.filter(r => r.name.toLowerCase().includes(search.toLowerCase()));
+  const selected = reports.filter(r => selectedIds.includes(r.id));
+
+  const toggle = (id) => {
+    onChange(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Selected tags */}
+      <div
+        className="min-h-[42px] px-3 py-2 rounded-lg cursor-pointer flex flex-wrap items-center gap-1.5"
+        style={{ background: t.inputBg, border: `1px solid ${t.border}` }}
+        onClick={() => setOpen(!open)}
+      >
+        {selected.length === 0 && (
+          <span className="text-sm" style={{ color: t.textMuted }}>{tr('distribution.selectReports')}</span>
+        )}
+        {selected.map(r => (
+          <span key={r.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium"
+            style={{ background: t.accentBg, color: t.accent }}>
+            {r.name}
+            <button onClick={(e) => { e.stopPropagation(); toggle(r.id); }}
+              className="hover:opacity-70 ms-0.5">
+              <X size={10} />
+            </button>
+          </span>
+        ))}
+        <ChevronDown size={14} className="ms-auto flex-shrink-0" style={{ color: t.textMuted }} />
+      </div>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg shadow-xl overflow-hidden"
+          style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+          <div className="p-2 border-b" style={{ borderColor: t.border }}>
+            <div className="relative">
+              <Search size={13} className="absolute start-2.5 top-1/2 -translate-y-1/2" style={{ color: t.textMuted }} />
+              <input
+                type="text" value={search} onChange={e => setSearch(e.target.value)}
+                placeholder={tr('distribution.searchReports')}
+                autoFocus
+                className="w-full ps-8 pe-3 py-1.5 rounded-md text-xs focus:outline-none"
+                style={{ background: t.modalInputBg, border: `1px solid ${t.border}`, color: t.text }}
+              />
+            </div>
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-4 text-center text-xs" style={{ color: t.textMuted }}>{tr('distribution.noReportsFound')}</div>
+            ) : (
+              filtered.map(r => {
+                const checked = selectedIds.includes(r.id);
+                return (
+                  <button key={r.id} onClick={() => toggle(r.id)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-start text-xs transition-colors"
+                    style={{ color: checked ? t.accent : t.text }}
+                    onMouseEnter={e => e.currentTarget.style.background = t.hoverBg}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <div className="w-4 h-4 rounded flex-shrink-0 flex items-center justify-center"
+                      style={{ border: `1.5px solid ${checked ? t.accent : t.border}`, background: checked ? t.accentBg : 'transparent' }}>
+                      {checked && <Check size={10} />}
+                    </div>
+                    <span className="font-medium truncate">{r.name}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Server folder browser modal ──────────────────────────────────────────── */
 function FolderBrowserModal({ open, onClose, onSelect, theme: t }) {
-  const [current, setCurrent] = useState('');
+  const [path, setPath] = useState('');
   const [parent, setParent] = useState('');
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  const browse = useCallback(async (path) => {
+  const browse = useCallback(async (p) => {
     setLoading(true);
-    setError(null);
     try {
-      const res = await axios.get('/api/distribution/browse-folders', { params: { path } });
-      const d = res.data;
-      setCurrent(d.current || '');
-      setParent(d.parent || '');
-      setFolders(d.folders || []);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to browse folders');
-    }
-    setLoading(false);
+      const res = await axios.get('/api/distribution/browse-folders', { params: { path: p || undefined } });
+      if (res.data?.status === 'success') {
+        setPath(res.data.current);
+        setParent(res.data.parent ?? '');
+        setFolders(res.data.folders || []);
+      }
+    } catch { toast.error('Failed to browse folders'); }
+    finally { setLoading(false); }
   }, []);
 
-  useEffect(() => {
-    if (open) browse('');
-  }, [open, browse]);
+  useEffect(() => { if (open) browse(''); }, [open, browse]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}>
-      <div className="w-full max-w-lg rounded-xl shadow-2xl overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-        {/* Header */}
-        <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: `1px solid ${t.border}` }}>
-          <h3 className="text-sm font-bold" style={{ color: t.text }}>Browse Server Folders</h3>
-          <button onClick={onClose} className="text-lg leading-none px-1" style={{ color: t.textSecondary }}>&times;</button>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="w-full max-w-md rounded-xl shadow-2xl overflow-hidden mx-4"
+        style={{ background: t.surface, border: `1px solid ${t.border}` }}
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: t.border }}>
+          <span className="text-sm font-bold" style={{ color: t.text }}>Select Folder</span>
+          <button onClick={onClose} className="p-1 rounded hover:opacity-70"><X size={16} style={{ color: t.textMuted }} /></button>
         </div>
-
-        {/* Current path */}
-        <div className="px-5 py-2 flex items-center gap-2" style={{ background: t.modalInputBg, borderBottom: `1px solid ${t.border}` }}>
+        {path && (
+          <div className="px-4 py-2 text-xs font-mono truncate" style={{ background: t.surfaceAlt, color: t.textSecondary }}>{path}</div>
+        )}
+        <div className="max-h-64 overflow-y-auto">
           {parent !== '' && (
-            <button onClick={() => browse(parent)} className="p-1 rounded hover:opacity-70" title="Go up" style={{ color: t.accent }}>
-              <ArrowUp size={14} />
+            <button onClick={() => browse(parent)} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors"
+              style={{ color: t.accent }}
+              onMouseEnter={e => e.currentTarget.style.background = t.hoverBg}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <ArrowUp size={14} /> ..
             </button>
           )}
-          <span className="text-xs font-mono truncate flex-1" style={{ color: t.textSecondary }}>
-            {current || 'Drives'}
-          </span>
-        </div>
-
-        {/* Folder list */}
-        <div className="overflow-y-auto" style={{ maxHeight: '320px', minHeight: '200px' }}>
-          {loading && (
-            <div className="py-8 text-center text-xs" style={{ color: t.textSecondary }}>Loading...</div>
-          )}
-          {error && (
-            <div className="py-8 text-center text-xs text-red-500">{error}</div>
-          )}
-          {!loading && !error && folders.length === 0 && (
-            <div className="py-8 text-center text-xs" style={{ color: t.textSecondary }}>No subfolders</div>
-          )}
-          {!loading && !error && folders.map((f) => (
-            <button
-              key={f.path}
-              onClick={() => browse(f.path)}
-              className="w-full flex items-center gap-2.5 px-5 py-2.5 text-left transition-colors"
+          {loading ? (
+            <div className="px-4 py-6 text-center text-xs" style={{ color: t.textMuted }}>Loading...</div>
+          ) : folders.map(f => (
+            <button key={f.path} onClick={() => browse(f.path)}
+              className="w-full flex items-center justify-between px-4 py-2.5 text-xs transition-colors"
               style={{ color: t.text }}
-              onMouseEnter={e => { e.currentTarget.style.background = t.hoverBg; }}
-              onMouseLeave={e => { e.currentTarget.style.background = ''; }}
-            >
-              <FolderOpen size={15} style={{ color: t.accent, flexShrink: 0 }} />
-              <span className="text-xs font-medium truncate flex-1">{f.name}</span>
-              <ChevronRight size={12} style={{ color: t.textMuted, flexShrink: 0 }} />
+              onMouseEnter={e => e.currentTarget.style.background = t.hoverBg}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <span className="flex items-center gap-2"><FolderOpen size={14} style={{ color: t.accent }} /> {f.name}</span>
+              <ChevronRight size={12} style={{ color: t.textMuted }} />
             </button>
           ))}
         </div>
-
-        {/* Footer */}
-        <div className="px-5 py-3 flex items-center justify-between gap-3" style={{ borderTop: `1px solid ${t.border}` }}>
-          <span className="text-[10px] truncate flex-1" style={{ color: t.textMuted }}>{current || 'Select a folder'}</span>
-          <div className="flex gap-2">
-            <button onClick={onClose}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-              style={{ color: t.textSecondary }}>
-              Cancel
-            </button>
-            <button
-              onClick={() => { if (current) { onSelect(current); onClose(); } }}
-              disabled={!current}
-              className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-40"
-              style={{ background: t.accent, color: t.btnText }}>
-              Select Folder
-            </button>
-          </div>
+        <div className="flex justify-end gap-2 px-4 py-3 border-t" style={{ borderColor: t.border }}>
+          <button onClick={onClose} className="px-3 py-1.5 text-xs font-medium rounded-md" style={{ color: t.textSecondary }}>Cancel</button>
+          <button onClick={() => { onSelect(path); onClose(); }}
+            disabled={!path}
+            className="px-4 py-1.5 text-xs font-bold rounded-md transition-colors disabled:opacity-40"
+            style={{ background: t.accent, color: t.btnText }}>
+            Select
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-
+/* ── Main editor (inside drawer) ──────────────────────────────────────────── */
 export default function DistributionRuleEditor({ rule, theme: t, onSave, onCancel, onRunNow }) {
-  const isEdit = !!rule?.id;
+  const { t: tr } = useLanguage();
   const [form, setForm] = useState({ ...EMPTY_RULE });
   const [reports, setReports] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [folderBrowserOpen, setFolderBrowserOpen] = useState(false);
+  const [browsing, setBrowsing] = useState(false);
 
   useEffect(() => {
-    if (rule && rule.id) {
+    reportBuilderApi.list().then(res => {
+      const list = res.data?.data || res.data || [];
+      setReports(list.map(r => ({ id: r.id, name: r.name })));
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (rule) {
       setForm({
         ...EMPTY_RULE,
         ...rule,
-        recipients: Array.isArray(rule.recipients) ? rule.recipients : [],
-        schedule_day_of_week: rule.schedule_day_of_week ?? 0,
-        schedule_day_of_month: rule.schedule_day_of_month ?? 1,
+        report_ids: rule.report_ids || (rule.report_id ? [rule.report_id] : []),
+        recipients: rule.recipients || [],
       });
     } else {
       setForm({ ...EMPTY_RULE });
     }
   }, [rule]);
 
-  useEffect(() => {
-    reportBuilderApi.list()
-      .then(res => {
-        const data = res.data?.data || res.data || [];
-        setReports(Array.isArray(data) ? data : []);
-      })
-      .catch(() => toast.error('Failed to load reports'));
-  }, []);
+  const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
-  const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.report_id) { toast.error('Please select a report'); return; }
-    if (form.delivery_method !== 'disk' && form.recipients.length === 0) {
-      toast.error('Add at least one recipient email');
-      return;
+  const handleSubmit = async () => {
+    if (!form.report_ids?.length) { toast.error(tr('distribution.selectAtLeastOneReport')); return; }
+    if (form.delivery_method !== 'disk' && (!form.recipients || form.recipients.length === 0)) {
+      toast.error(tr('distribution.addRecipients')); return;
     }
-    if (form.delivery_method !== 'email' && !form.save_path?.trim()) {
-      toast.error('Provide a save path');
-      return;
+    if (form.delivery_method !== 'email' && !form.save_path) {
+      toast.error(tr('distribution.enterSavePath')); return;
     }
     setSaving(true);
-    try { await onSave(form); }
-    finally { setSaving(false); }
+    try {
+      await onSave({ ...form, id: rule?.id });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const sectionStyle = {
-    background: t.surface,
-    border: `1px solid ${t.border}`,
-  };
-
-  const inputStyle = {
-    background: t.modalInputBg,
-    border: `1px solid ${t.border}`,
-    color: t.text,
-  };
+  const sectionClass = "px-5 py-4 border-b";
+  const labelClass = "text-[10px] font-bold uppercase tracking-wider mb-2";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 30 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -30 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-3xl mx-auto"
-    >
-      {/* Back button + title */}
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={onCancel}
-          className="p-2 rounded-lg transition-colors"
-          style={{ color: t.textSecondary }}
-          onMouseEnter={e => { e.currentTarget.style.background = t.hoverBg; e.currentTarget.style.color = t.text; }}
-          onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = t.textSecondary; }}>
-          <ArrowLeft size={18} />
-        </button>
+    <div className="flex flex-col h-full">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-b flex-shrink-0"
+        style={{ borderColor: t.border }}>
         <div>
-          <h2 className="text-lg font-bold" style={{ color: t.text }}>
-            {isEdit ? 'Edit Rule' : 'New Distribution Rule'}
+          <h2 className="text-sm font-bold" style={{ color: t.text }}>
+            {rule ? tr('distribution.editRule') : tr('distribution.newRule')}
           </h2>
-          <p className="text-xs mt-0.5" style={{ color: t.textSecondary }}>
-            {isEdit ? 'Update the rule configuration below.' : 'Configure schedule, delivery, and recipients.'}
-          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {rule && (
+            <button onClick={() => onRunNow(rule.id)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors"
+              style={{ background: t.dark ? 'rgba(34,197,94,0.15)' : 'rgba(22,163,74,0.1)', color: t.dark ? '#34d399' : '#16a34a' }}>
+              <Play size={11} /> {tr('distribution.runNow')}
+            </button>
+          )}
+          <button onClick={onCancel} className="p-1.5 rounded-md transition-colors"
+            style={{ color: t.textMuted }}
+            onMouseEnter={e => e.currentTarget.style.background = t.btnGhostHover}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+            <X size={18} />
+          </button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* 1. Basic Info */}
-        <div className="rounded-xl p-5 space-y-4" style={sectionStyle}>
-          <h3 className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: t.accent }}>Basic Info</h3>
-          <div>
-            <label className="block text-[11px] font-medium mb-1.5" style={{ color: t.textSecondary }}>Rule Name</label>
-            <input type="text" value={form.name} onChange={e => set('name', e.target.value)}
-              placeholder="e.g. Daily Silo Report"
-              className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors"
-              style={{ ...inputStyle, '--tw-ring-color': t.accentBg }} />
-          </div>
-          <div>
-            <label className="block text-[11px] font-medium mb-1.5" style={{ color: t.textSecondary }}>Report *</label>
-            <select
-              value={form.report_id}
-              onChange={e => set('report_id', Number(e.target.value))}
-              className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors appearance-none"
-              style={{ ...inputStyle, '--tw-ring-color': t.accentBg }}>
-              <option value="">Select a report...</option>
-              {reports.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </div>
+      {/* ── Scrollable body ── */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Rule name */}
+        <div className={sectionClass} style={{ borderColor: t.border }}>
+          <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.ruleName')}</div>
+          <input type="text" value={form.name} onChange={e => set('name', e.target.value)}
+            placeholder={tr('distribution.ruleNamePlaceholder')}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2"
+            style={{ background: t.inputBg, border: `1px solid ${t.border}`, color: t.text, '--tw-ring-color': t.accentBg }} />
         </div>
 
-        {/* 2. Delivery */}
-        <div className="rounded-xl p-5 space-y-4" style={sectionStyle}>
-          <h3 className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: t.accent }}>Delivery</h3>
-          <div className="grid grid-cols-3 gap-3">
-            {DELIVERY_OPTIONS.map(opt => {
-              const selected = form.delivery_method === opt.value;
-              return (
-                <button key={opt.value} type="button" onClick={() => set('delivery_method', opt.value)}
-                  className="relative flex flex-col items-center gap-2 p-4 rounded-xl text-center transition-all duration-200"
-                  style={{
-                    border: `2px solid ${selected ? t.accent : t.border}`,
-                    background: selected ? t.accentBg : t.modalInputBg,
-                  }}>
-                  {selected && (
-                    <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: t.accent }}>
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                  )}
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                    style={{ background: `${t.accent}15`, border: `1px solid ${t.accent}25` }}>
-                    <opt.icon size={20} style={{ color: t.accent }} />
-                  </div>
-                  <div className="text-xs font-bold" style={{ color: selected ? t.accent : t.text }}>{opt.label}</div>
-                  <div className="text-[10px]" style={{ color: t.textSecondary }}>{opt.desc}</div>
-                </button>
-              );
-            })}
-          </div>
+        {/* Reports (multi-select) */}
+        <div className={sectionClass} style={{ borderColor: t.border }}>
+          <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.reports')} *</div>
+          <MultiReportSelect
+            selectedIds={form.report_ids}
+            onChange={ids => set('report_ids', ids)}
+            reports={reports}
+            theme={t}
+          />
+        </div>
 
-          {form.delivery_method !== 'disk' && (
-            <div>
-              <label className="block text-[11px] font-medium mb-1.5" style={{ color: t.textSecondary }}>Recipients *</label>
-              <RecipientInput value={form.recipients} onChange={v => set('recipients', v)} />
-            </div>
-          )}
-
-          {form.delivery_method !== 'email' && (
-            <div>
-              <label className="block text-[11px] font-medium mb-1.5" style={{ color: t.textSecondary }}>Save Path (on server) *</label>
+        {/* Delivery + Format (compact row) */}
+        <div className={sectionClass} style={{ borderColor: t.border }}>
+          <div className="flex items-start gap-6">
+            <div className="flex-1">
+              <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.delivery')}</div>
               <div className="flex gap-2">
-                <input type="text" value={form.save_path} onChange={e => set('save_path', e.target.value)}
-                  placeholder="Click Browse to select a folder on the server"
-                  className="flex-1 px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors"
-                  style={{ ...inputStyle, '--tw-ring-color': t.accentBg }} />
-                <button type="button" onClick={() => setFolderBrowserOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap"
-                  style={{ background: t.accent, color: t.btnText }}>
-                  <FolderOpen size={13} /> Browse
-                </button>
+                {[
+                  { value: 'email', label: tr('distribution.email'), icon: Mail },
+                  { value: 'disk', label: tr('distribution.disk'), icon: HardDrive },
+                  { value: 'both', label: tr('distribution.both'), icon: Layers },
+                ].map(opt => {
+                  const active = form.delivery_method === opt.value;
+                  return (
+                    <button key={opt.value} onClick={() => set('delivery_method', opt.value)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all flex-1 justify-center"
+                      style={{
+                        background: active ? t.accentBg : 'transparent',
+                        border: `1.5px solid ${active ? t.accent : t.border}`,
+                        color: active ? t.accent : t.textSecondary,
+                      }}>
+                      <opt.icon size={13} />
+                      {opt.label}
+                    </button>
+                  );
+                })}
               </div>
-              <FolderBrowserModal
-                open={folderBrowserOpen}
-                onClose={() => setFolderBrowserOpen(false)}
-                onSelect={(path) => set('save_path', path)}
-                theme={t}
-              />
             </div>
-          )}
-        </div>
-
-        {/* 3. Format */}
-        <div className="rounded-xl p-5 space-y-4" style={sectionStyle}>
-          <h3 className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: t.accent }}>Format</h3>
-          <div className="flex gap-2">
-            {['pdf', 'html'].map(f => (
-              <button key={f} type="button" onClick={() => set('format', f)}
-                className="px-4 py-2 text-xs font-semibold rounded-lg uppercase transition-all"
-                style={{
-                  background: form.format === f ? t.accent : 'transparent',
-                  color: form.format === f ? t.btnText : t.textSecondary,
-                  border: `1px solid ${form.format === f ? t.accent : t.border}`,
-                }}>
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 4. Schedule */}
-        <div className="rounded-xl p-5 space-y-4" style={sectionStyle}>
-          <h3 className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: t.accent }}>Schedule</h3>
-
-          {/* Type toggles */}
-          <div className="flex gap-2">
-            {SCHEDULE_TYPES.map(s => (
-              <button key={s.value} type="button" onClick={() => set('schedule_type', s.value)}
-                className="px-4 py-2 text-xs font-semibold rounded-lg transition-all"
-                style={{
-                  background: form.schedule_type === s.value ? t.accent : 'transparent',
-                  color: form.schedule_type === s.value ? t.btnText : t.textSecondary,
-                  border: `1px solid ${form.schedule_type === s.value ? t.accent : t.border}`,
-                }}>
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Time */}
-          <div>
-            <label className="block text-[11px] font-medium mb-1.5" style={{ color: t.textSecondary }}>Time</label>
-            <input type="time" value={form.schedule_time} onChange={e => set('schedule_time', e.target.value)}
-              className="w-48 px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors"
-              style={{ ...inputStyle, '--tw-ring-color': t.accentBg }} />
-          </div>
-
-          {/* Day-of-week pills */}
-          {form.schedule_type === 'weekly' && (
-            <div>
-              <label className="block text-[11px] font-medium mb-2" style={{ color: t.textSecondary }}>Day of Week</label>
-              <div className="flex gap-2">
-                {DAY_PILLS.map((d, i) => (
-                  <button key={d} type="button" onClick={() => set('schedule_day_of_week', i)}
-                    className="w-10 h-10 rounded-full text-[11px] font-semibold transition-all"
+            <div className="w-28">
+              <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.format')}</div>
+              <div className="flex rounded-lg overflow-hidden" style={{ border: `1.5px solid ${t.border}` }}>
+                {['pdf', 'html'].map(f => (
+                  <button key={f} onClick={() => set('format', f)}
+                    className="flex-1 py-2 text-xs font-bold uppercase transition-all"
                     style={{
-                      background: form.schedule_day_of_week === i ? t.accent : t.modalInputBg,
-                      color: form.schedule_day_of_week === i ? t.btnText : t.textSecondary,
-                      border: `1px solid ${form.schedule_day_of_week === i ? t.accent : t.border}`,
+                      background: form.format === f ? t.accent : 'transparent',
+                      color: form.format === f ? t.btnText : t.textSecondary,
                     }}>
-                    {d}
+                    {f}
                   </button>
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Conditional: Recipients */}
+          {form.delivery_method !== 'disk' && (
+            <div className="mt-3">
+              <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.recipients')} *</div>
+              <RecipientInput
+                value={form.recipients}
+                onChange={v => set('recipients', v)}
+              />
+            </div>
           )}
 
-          {/* Day-of-month selector */}
+          {/* Conditional: Save path */}
+          {form.delivery_method !== 'email' && (
+            <div className="mt-3">
+              <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.savePath')} *</div>
+              <div className="flex gap-2">
+                <input type="text" value={form.save_path} onChange={e => set('save_path', e.target.value)}
+                  placeholder="C:\Reports"
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-mono focus:outline-none focus:ring-2"
+                  style={{ background: t.inputBg, border: `1px solid ${t.border}`, color: t.text, '--tw-ring-color': t.accentBg }} />
+                <button onClick={() => setBrowsing(true)}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold transition-colors"
+                  style={{ background: t.surfaceAlt, border: `1px solid ${t.border}`, color: t.textSecondary }}>
+                  <FolderOpen size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Schedule (compact) */}
+        <div className={sectionClass} style={{ borderColor: t.border }}>
+          <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.schedule')}</div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex rounded-lg overflow-hidden flex-shrink-0" style={{ border: `1.5px solid ${t.border}` }}>
+              {['daily', 'weekly', 'monthly'].map(s => (
+                <button key={s} onClick={() => set('schedule_type', s)}
+                  className="px-3 py-1.5 text-xs font-semibold capitalize transition-all"
+                  style={{
+                    background: form.schedule_type === s ? t.accent : 'transparent',
+                    color: form.schedule_type === s ? t.btnText : t.textSecondary,
+                  }}>
+                  {tr(`distribution.${s}`)}
+                </button>
+              ))}
+            </div>
+            <input type="time" value={form.schedule_time} onChange={e => set('schedule_time', e.target.value)}
+              className="px-3 py-1.5 rounded-lg text-xs font-mono focus:outline-none focus:ring-2"
+              style={{ background: t.inputBg, border: `1px solid ${t.border}`, color: t.text, '--tw-ring-color': t.accentBg }} />
+          </div>
+
+          {/* Day selectors */}
+          {form.schedule_type === 'weekly' && (
+            <div className="flex gap-1 mt-2">
+              {DAY_PILLS.map((d, i) => (
+                <button key={d} onClick={() => set('schedule_day_of_week', i)}
+                  className="w-9 h-8 rounded-md text-[10px] font-bold transition-all"
+                  style={{
+                    background: form.schedule_day_of_week === i ? t.accent : 'transparent',
+                    border: `1.5px solid ${form.schedule_day_of_week === i ? t.accent : t.border}`,
+                    color: form.schedule_day_of_week === i ? t.btnText : t.textSecondary,
+                  }}>
+                  {d}
+                </button>
+              ))}
+            </div>
+          )}
           {form.schedule_type === 'monthly' && (
-            <div>
-              <label className="block text-[11px] font-medium mb-1.5" style={{ color: t.textSecondary }}>Day of Month</label>
-              <select
-                value={form.schedule_day_of_month}
-                onChange={e => set('schedule_day_of_month', Number(e.target.value))}
-                className="w-48 px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors appearance-none"
-                style={{ ...inputStyle, '--tw-ring-color': t.accentBg }}>
-                {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
-                  <option key={d} value={d}>{d}</option>
+            <div className="mt-2">
+              <select value={form.schedule_day_of_month} onChange={e => set('schedule_day_of_month', Number(e.target.value))}
+                className="px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2"
+                style={{ background: t.inputBg, border: `1px solid ${t.border}`, color: t.text }}>
+                {Array.from({ length: 28 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>{tr('distribution.dayOfMonth')} {i + 1}</option>
                 ))}
               </select>
             </div>
           )}
 
           {/* Preview */}
-          <p className="text-[11px] italic" style={{ color: t.textMuted }}>
-            {schedulePreview(form)}
+          <p className="text-[10px] mt-2 italic" style={{ color: t.textMuted }}>
+            {schedulePreview(form, tr)}
           </p>
         </div>
 
-        {/* 5. Enable/Disable */}
-        <div className="rounded-xl p-5 flex items-center gap-3" style={sectionStyle}>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" checked={form.enabled} onChange={e => set('enabled', e.target.checked)} className="sr-only peer" />
-            <div className="w-9 h-5 rounded-full transition-colors peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-sm"
-              style={{ background: form.enabled ? t.accent : (t.dark ? '#334155' : '#d1d5db') }} />
+        {/* Enable toggle */}
+        <div className="px-5 py-4" style={{ borderColor: t.border }}>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div className="relative">
+              <input type="checkbox" checked={form.enabled} onChange={e => set('enabled', e.target.checked)}
+                className="sr-only peer" />
+              <div className="w-9 h-5 rounded-full transition-colors peer-checked:bg-emerald-500"
+                style={{ background: form.enabled ? undefined : (t.dark ? '#374151' : '#d1d5db') }} />
+              <div className="absolute top-0.5 start-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-4 rtl:peer-checked:-translate-x-4 shadow-sm" />
+            </div>
+            <span className="text-xs font-medium" style={{ color: form.enabled ? (t.dark ? '#34d399' : '#059669') : t.textMuted }}>
+              {form.enabled ? tr('distribution.ruleEnabled') : tr('distribution.rulePaused')}
+            </span>
           </label>
-          <span className="text-xs font-medium" style={{ color: t.textSecondary }}>
-            {form.enabled ? 'Rule is enabled — will run on schedule' : 'Rule is paused — will not run automatically'}
-          </span>
         </div>
+      </div>
 
-        {/* Footer buttons */}
-        <div className="flex items-center justify-between pt-2 pb-4">
-          <div>
-            {isEdit && (
-              <button type="button" onClick={() => onRunNow(rule.id)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors"
-                style={{ color: t.dark ? '#34d399' : '#059669', border: `1px solid ${t.border}`, background: t.surface }}
-                onMouseEnter={e => { e.currentTarget.style.background = t.dark ? 'rgba(16,185,129,0.1)' : '#ecfdf5'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = t.surface; }}>
-                <Play size={13} /> Run Now
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={onCancel}
-              className="px-5 py-2.5 rounded-lg text-xs font-semibold transition-colors"
-              style={{ color: t.textSecondary, background: 'transparent' }}
-              onMouseEnter={e => { e.currentTarget.style.background = t.btnGhostHover; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-              Cancel
-            </button>
-            <button type="submit" disabled={saving}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all hover:brightness-110 shadow-md hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: t.accent, color: t.btnText }}>
-              <Save size={13} />
-              {saving ? 'Saving...' : isEdit ? 'Update Rule' : 'Create Rule'}
-            </button>
-          </div>
-        </div>
-      </form>
-    </motion.div>
+      {/* ── Sticky footer ── */}
+      <div className="flex items-center justify-end gap-2 px-5 py-3 border-t flex-shrink-0"
+        style={{ borderColor: t.border, background: t.surfaceAlt }}>
+        <button onClick={onCancel}
+          className="px-4 py-2 rounded-lg text-xs font-semibold transition-colors"
+          style={{ color: t.textSecondary }}
+          onMouseEnter={e => e.currentTarget.style.background = t.btnGhostHover}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+          {tr('common.cancel')}
+        </button>
+        <button onClick={handleSubmit} disabled={saving}
+          className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+          style={{ background: t.accent, color: t.btnText }}>
+          <Save size={12} />
+          {saving ? tr('common.saving') : tr('distribution.saveRule')}
+        </button>
+      </div>
+
+      <FolderBrowserModal
+        open={browsing}
+        onClose={() => setBrowsing(false)}
+        onSelect={p => set('save_path', p)}
+        theme={t}
+      />
+    </div>
   );
 }

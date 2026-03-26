@@ -85,8 +85,12 @@ def set_smtp_config(data):
         return False
 
 
-def send_email_resend(recipients, subject, body_html, attachment_bytes=None, attachment_name=None):
-    """Send email via Resend API."""
+def send_email_resend(recipients, subject, body_html, attachments=None):
+    """Send email via Resend API.
+
+    Args:
+        attachments: list of (filename, bytes) tuples, or None
+    """
     import resend
     resend.api_key = RESEND_API_KEY
 
@@ -97,12 +101,11 @@ def send_email_resend(recipients, subject, body_html, attachment_bytes=None, att
         "html": body_html,
     }
 
-    if attachment_bytes and attachment_name:
-        import base64 as b64
-        params["attachments"] = [{
-            "filename": attachment_name,
-            "content": list(attachment_bytes),
-        }]
+    if attachments:
+        params["attachments"] = [
+            {"filename": name, "content": list(content)}
+            for name, content in attachments
+        ]
 
     try:
         email = resend.Emails.send(params)

@@ -1044,14 +1044,18 @@ def _build_email_html(report_name, from_dt, to_dt, filename):
 </body></html>"""
 
 
-def _send_email(recipients, subject, body_html, attachment_bytes=None, attachment_name=None):
-    """Send HTML email with optional PDF attachment using configured method (Resend or SMTP)."""
+def _send_email(recipients, subject, body_html, attachments=None):
+    """Send HTML email with optional attachments using configured method (Resend or SMTP).
+
+    Args:
+        attachments: list of (filename, bytes) tuples, or None
+    """
     from smtp_config import get_smtp_config, send_email_resend
     cfg = get_smtp_config()
 
     # ── Resend (default) ──
     if cfg.get('send_method', 'resend') == 'resend':
-        return send_email_resend(recipients, subject, body_html, attachment_bytes, attachment_name)
+        return send_email_resend(recipients, subject, body_html, attachments=attachments)
 
     # ── SMTP fallback ──
     if not cfg.get('smtp_server'):
@@ -1062,21 +1066,21 @@ def _send_email(recipients, subject, body_html, attachment_bytes=None, attachmen
     msg['From'] = cfg.get('from_address') or cfg.get('username', '')
     msg['To'] = ', '.join(recipients)
 
-    # Plain-text fallback for clients that don't render HTML
-    plain_text = (
-        f"Scheduled Report: {attachment_name or 'report'}\n\n"
-        f"Please find the report attached to this email.\n"
-    )
+    # Plain-text fallback
+    plain_text = "Please find the attached report(s).\n"
     msg.set_content(plain_text)
     msg.add_alternative(body_html, subtype='html')
 
-    if attachment_bytes and attachment_name:
-        msg.add_attachment(
-            attachment_bytes,
-            maintype='application',
-            subtype='pdf',
-            filename=attachment_name,
-        )
+    if attachments:
+        for filename, content_bytes in attachments:
+            maintype = 'application'
+            subtype = 'pdf' if filename.endswith('.pdf') else 'octet-stream'
+            msg.add_attachment(
+                content_bytes,
+                maintype=maintype,
+                subtype=subtype,
+                filename=filename,
+            )
 
     port = cfg.get('smtp_port', 465)
     try:
@@ -1127,77 +1131,96 @@ def execute_distribution_rule(rule_id):
         return {'success': False, 'error': f'Rule {rule_id} not found'}
 
     rule = dict(rule)
-    report_id = rule['report_id']
+
+    # Support multi-report: report_ids array, fallback to [report_id]
+    report_ids = rule.get('report_ids')
+    if isinstance(report_ids, str):
+        report_ids = json.loads(report_ids)
+    if not report_ids or report_ids == []:
+        rid = rule.get('report_id')
+        report_ids = [rid] if rid and rid > 0 else []
+
+    if not report_ids:
+        return {'success': False, 'error': 'No reports configured for this rule'}
 
     try:
-        # 2. Load report template
-        with closing(get_conn()) as conn:
-            actual_conn = conn._conn if hasattr(conn, '_conn') else conn
-            cur = actual_conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute(
-                "SELECT id, name, layout_config FROM report_builder_templates WHERE id = %s",
-                (report_id,)
-            )
-            template = cur.fetchone()
-
-        if not template:
-            raise ValueError(f"Report template {report_id} not found (may have been deleted)")
-
-        template = dict(template)
-        report_name = template['name']
-        layout_config = template['layout_config']
-        if isinstance(layout_config, str):
-            layout_config = json.loads(layout_config)
-
-        # 3. Extract tag names from widgets
-        tag_names = extract_all_tags(layout_config)
-
-        # 4. Determine time range
+        # 2. Determine time range (shared across all reports)
         from_dt, to_dt = _time_range_for_schedule(rule['schedule_type'])
-
-        # 5. Fetch tag data
-        tag_data = _fetch_tag_data(tag_names, from_dt, to_dt)
-
-        # 6. Generate HTML
-        html_content = _generate_report_html(report_name, layout_config, tag_data, from_dt, to_dt)
-
-        # 7. Generate PDF if needed
         fmt = rule.get('format', 'pdf')
-        if fmt == 'pdf':
-            content_bytes = _html_to_pdf(html_content)
-            ext = 'pdf'
-        else:
-            content_bytes = html_content.encode('utf-8')
-            ext = 'html'
-
+        ext = 'pdf' if fmt == 'pdf' else 'html'
         timestamp_str = datetime.now().strftime('%Y%m%d_%H%M')
-        safe_name = re.sub(r'[^\w\-]', '_', report_name)
-        filename = f"{safe_name}_{timestamp_str}.{ext}"
 
-        # 8. Deliver
+        # 3. Generate each report
+        attachments = []  # list of (filename, content_bytes)
+        report_names = []
+        skipped = []
+
+        for rid in report_ids:
+            with closing(get_conn()) as conn:
+                actual_conn = conn._conn if hasattr(conn, '_conn') else conn
+                cur = actual_conn.cursor(cursor_factory=RealDictCursor)
+                cur.execute(
+                    "SELECT id, name, layout_config FROM report_builder_templates WHERE id = %s",
+                    (rid,)
+                )
+                template = cur.fetchone()
+
+            if not template:
+                skipped.append(f"Report {rid} not found (deleted?)")
+                logger.warning(f"Distribution rule {rule_id}: report {rid} not found, skipping")
+                continue
+
+            template = dict(template)
+            report_name = template['name']
+            report_names.append(report_name)
+            layout_config = template['layout_config']
+            if isinstance(layout_config, str):
+                layout_config = json.loads(layout_config)
+
+            tag_names = extract_all_tags(layout_config)
+            tag_data = _fetch_tag_data(tag_names, from_dt, to_dt)
+            html_content = _generate_report_html(report_name, layout_config, tag_data, from_dt, to_dt)
+
+            if fmt == 'pdf':
+                content_bytes = _html_to_pdf(html_content)
+            else:
+                content_bytes = html_content.encode('utf-8')
+
+            safe_name = re.sub(r'[^\w\-]', '_', report_name)
+            filename = f"{safe_name}_{timestamp_str}.{ext}"
+            attachments.append((filename, content_bytes))
+
+        if not attachments:
+            raise ValueError(f"All reports missing: {'; '.join(skipped)}")
+
+        # 4. Deliver
         delivery = rule['delivery_method']
         recipients = rule.get('recipients', [])
         if isinstance(recipients, str):
             recipients = json.loads(recipients)
 
-        errors = []
+        errors = list(skipped)  # include skipped reports as warnings
 
         if delivery in ('email', 'both') and recipients:
-            subject = f"Hercules Report: {report_name} — {datetime.now().strftime('%Y-%m-%d')}"
-            email_html = _build_email_html(report_name, from_dt, to_dt, filename)
-            email_result = _send_email(recipients, subject, email_html, content_bytes, filename)
+            names_str = ', '.join(report_names)
+            subject = f"Hercules Report: {names_str} — {datetime.now().strftime('%Y-%m-%d')}"
+            email_html = _build_email_html(names_str, from_dt, to_dt,
+                                           ', '.join(fn for fn, _ in attachments))
+            email_result = _send_email(recipients, subject, email_html, attachments=attachments)
             if not email_result['success']:
                 errors.append(f"Email: {email_result['error']}")
 
         if delivery in ('disk', 'both') and rule.get('save_path'):
-            try:
-                saved_path = _save_to_disk(rule['save_path'], filename, content_bytes)
-                logger.info(f"Report saved to {saved_path}")
-            except Exception as e:
-                errors.append(f"Disk: {str(e)}")
+            for filename, content_bytes in attachments:
+                try:
+                    saved_path = _save_to_disk(rule['save_path'], filename, content_bytes)
+                    logger.info(f"Report saved to {saved_path}")
+                except Exception as e:
+                    errors.append(f"Disk ({filename}): {str(e)}")
 
-        # 9. Update run status
-        success = len(errors) == 0
+        # 5. Update run status
+        real_errors = [e for e in errors if not e.startswith('Report ') or 'not found' not in e]
+        success = len(real_errors) == 0
         status = 'success' if success else 'failed'
         error_msg = '; '.join(errors) if errors else None
 
@@ -1212,7 +1235,7 @@ def execute_distribution_rule(rule_id):
             actual_conn.commit()
 
         if success:
-            return {'success': True, 'message': f'Report "{report_name}" delivered via {delivery}'}
+            return {'success': True, 'message': f'{len(attachments)} report(s) delivered via {delivery}'}
         else:
             return {'success': False, 'error': '; '.join(errors)}
 

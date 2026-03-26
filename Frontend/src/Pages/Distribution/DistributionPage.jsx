@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Send } from 'lucide-react';
+import { Plus, Search, Send, X } from 'lucide-react';
 import { DarkModeContext } from '../../Context/DarkModeProvider';
 import { distributionApi } from '../../API/distributionApi';
 import { toast } from 'react-toastify';
+import { useLanguage } from '../../Hooks/useLanguage';
 import ConfirmationModal from '../../Components/Common/ConfirmationModal';
 import DistributionRuleCard from './DistributionRuleCard';
 import DistributionRuleEditor from './DistributionRuleEditor';
@@ -37,10 +38,12 @@ function useTheme() {
 const FILTER_TABS = ['all', 'active', 'paused'];
 
 export default function DistributionPage() {
-  const t = useTheme();
+  const theme = useTheme();
+  const { t, lang } = useLanguage();
+  const isRTL = lang === 'ar';
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('list');
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -51,13 +54,20 @@ export default function DistributionPage() {
       const res = await distributionApi.listRules();
       setRules(res.data?.data || []);
     } catch {
-      toast.error('Failed to load distribution rules');
+      toast.error(t('distribution.failedLoad'));
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => { loadRules(); }, [loadRules]);
+
+  // Close drawer on Escape
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === 'Escape' && drawerOpen) closeEditor(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [drawerOpen]);
 
   const stats = useMemo(() => {
     const total = rules.length;
@@ -74,7 +84,7 @@ export default function DistributionPage() {
       const q = search.toLowerCase();
       list = list.filter(r =>
         r.name?.toLowerCase().includes(q) ||
-        r.report_name?.toLowerCase().includes(q) ||
+        r.report_details?.some(rd => rd.name?.toLowerCase().includes(q)) ||
         r.recipients?.some(e => e.toLowerCase().includes(q))
       );
     }
@@ -85,40 +95,40 @@ export default function DistributionPage() {
     try {
       if (data.id) {
         await distributionApi.updateRule(data.id, data);
-        toast.success('Rule updated');
+        toast.success(t('distribution.ruleUpdated'));
       } else {
         await distributionApi.createRule(data);
-        toast.success('Rule created');
+        toast.success(t('distribution.ruleCreated'));
       }
-      setView('list');
-      setEditingRule(null);
+      closeEditor();
       loadRules();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to save rule');
+      toast.error(err.response?.data?.message || t('distribution.failedSave'));
     }
   };
 
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', description: '', onConfirm: null, confirmText: '', confirmColor: 'brand' });
   const handleDelete = (id) => {
-    setConfirmModal({ open: true, title: 'Delete Rule', description: 'Delete this distribution rule?', confirmText: 'Delete', confirmColor: 'red', onConfirm: async () => {
+    setConfirmModal({ open: true, title: t('distribution.deleteRule'), description: t('distribution.deleteRuleConfirm'), confirmText: t('common.delete'), confirmColor: 'red', onConfirm: async () => {
       setConfirmModal(m => ({ ...m, open: false }));
-      try { await distributionApi.deleteRule(id); toast.success('Rule deleted'); loadRules(); }
-      catch { toast.error('Failed to delete rule'); }
+      try { await distributionApi.deleteRule(id); toast.success(t('distribution.ruleDeleted')); loadRules(); }
+      catch { toast.error(t('distribution.failedDelete')); }
     }});
   };
 
   const handleToggle = async (rule) => {
     try {
-      const { name, report_id, delivery_method, recipients, save_path, format,
+      const { name, report_ids, report_id, delivery_method, recipients, save_path, format,
               schedule_type, schedule_time, schedule_day_of_week, schedule_day_of_month } = rule;
       await distributionApi.updateRule(rule.id, {
-        name, report_id, delivery_method, recipients, save_path, format,
+        name, report_ids: report_ids || (report_id ? [report_id] : []),
+        delivery_method, recipients, save_path, format,
         schedule_type, schedule_time, schedule_day_of_week, schedule_day_of_month,
         enabled: !rule.enabled,
       });
       loadRules();
     } catch {
-      toast.error('Failed to toggle rule');
+      toast.error(t('distribution.failedToggle'));
     }
   };
 
@@ -126,11 +136,11 @@ export default function DistributionPage() {
     setRunningId(id);
     try {
       const res = await distributionApi.runRule(id);
-      if (res.data?.status === 'success') toast.success(res.data.message || 'Report delivered');
-      else toast.error(res.data?.message || 'Delivery failed');
+      if (res.data?.status === 'success') toast.success(res.data.message || t('distribution.delivered'));
+      else toast.error(res.data?.message || t('distribution.deliveryFailed'));
       loadRules();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Execution failed');
+      toast.error(err.response?.data?.message || t('distribution.executionFailed'));
     } finally {
       setRunningId(null);
     }
@@ -138,12 +148,12 @@ export default function DistributionPage() {
 
   const openEditor = (rule) => {
     setEditingRule(rule || null);
-    setView('editor');
+    setDrawerOpen(true);
   };
 
   const closeEditor = () => {
-    setView('list');
-    setEditingRule(null);
+    setDrawerOpen(false);
+    setTimeout(() => setEditingRule(null), 300);
   };
 
   return (
@@ -152,150 +162,163 @@ export default function DistributionPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
       className="report-builder min-h-[calc(100vh-72px)]"
-      style={{ background: t.pageBg }}
+      style={{ background: theme.pageBg }}
     >
-      <div className="max-w-[1400px] mx-auto px-6 md:px-8 lg:px-12 py-6 md:py-8">
-        <AnimatePresence mode="wait">
-          {view === 'editor' ? (
-            <DistributionRuleEditor
-              key="editor"
-              rule={editingRule}
-              theme={t}
-              onSave={handleSave}
-              onCancel={closeEditor}
-              onRunNow={handleRunNow}
-            />
-          ) : (
+      <div className="px-6 md:px-8 lg:px-12 py-6 md:py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-xl font-bold" style={{ color: theme.text }}>{t('distribution.title')}</h1>
+            <p className="text-sm mt-1" style={{ color: theme.textSecondary }}>{t('distribution.subtitle')}</p>
+          </div>
+          <button onClick={() => openEditor(null)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{ background: theme.accent, color: theme.btnText, '--tw-ring-color': theme.accent, '--tw-ring-offset-color': theme.pageBg }}>
+            <Plus size={14} strokeWidth={2} /> {t('distribution.newRule')}
+          </button>
+        </div>
+
+        {/* Stats bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center gap-6 mb-6 px-4 py-2.5 rounded-lg"
+          style={{ background: theme.surface, border: `1px solid ${theme.border}` }}>
+          {[
+            { label: t('distribution.total'), value: stats.total, color: theme.accent },
+            { label: t('distribution.active'), value: stats.active, color: theme.dark ? '#34d399' : '#059669' },
+            { label: t('distribution.paused'), value: stats.paused, color: theme.dark ? '#94a3b8' : '#64748b' },
+          ].map((s, i, arr) => (
+            <div key={s.label} className="flex items-center gap-1.5"
+              style={i < arr.length - 1 ? { paddingInlineEnd: '1.5rem', borderInlineEnd: `1px solid ${theme.border}` } : undefined}>
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
+              <span className="text-xs font-medium" style={{ color: theme.textMuted }}>{s.label}</span>
+              <span className="text-sm font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
+            </div>
+          ))}
+        </motion.div>
+
+        {/* Search + filter bar */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="relative flex-1 max-w-sm">
+            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: theme.textMuted }} />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder={t('distribution.searchPlaceholder')}
+              className="w-full ps-10 pe-4 py-2.5 rounded-lg text-sm focus:outline-none transition-all shadow-sm focus:ring-2 focus:border-transparent"
+              style={{ background: theme.inputBg, border: `1px solid ${theme.border}`, color: theme.text, '--tw-ring-color': theme.accentBg }} />
+          </div>
+          <div className="flex items-center rounded-lg p-1 shadow-sm" style={{ background: theme.inputBg, border: `1px solid ${theme.border}` }}>
+            {FILTER_TABS.map(s => {
+              const isActive = statusFilter === s;
+              const label = s === 'all' ? t('distribution.all') : s === 'active' ? t('distribution.active') : t('distribution.paused');
+              return (
+                <button key={s} onClick={() => setStatusFilter(s)}
+                  className="px-4 py-1.5 text-xs font-semibold rounded-md transition-all"
+                  style={{
+                    background: isActive ? theme.accentBg : 'transparent',
+                    color: isActive ? theme.accent : theme.textSecondary,
+                  }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          <div className="rounded-lg overflow-hidden" style={{ background: theme.surface, border: `1px solid ${theme.border}` }}>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-4" style={{ borderBottom: `1px solid ${theme.border}` }}>
+                <div className="w-8 h-4 rounded animate-pulse" style={{ background: theme.border }} />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 rounded w-44 animate-pulse" style={{ background: theme.border }} />
+                  <div className="h-2.5 rounded w-28 animate-pulse" style={{ background: theme.surfaceAlt }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center rounded-lg"
+            style={{ background: theme.surface, border: `1px solid ${theme.border}` }}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+              style={{ background: theme.accentBg }}>
+              <Send size={22} style={{ color: theme.accent }} />
+            </div>
+            <h3 className="text-sm font-semibold mb-1" style={{ color: theme.text }}>
+              {search || statusFilter !== 'all' ? t('distribution.noMatching') : t('distribution.noRulesYet')}
+            </h3>
+            <p className="text-xs mb-5 max-w-xs" style={{ color: theme.textSecondary }}>
+              {search ? t('distribution.tryAdjusting') : t('distribution.createFirstHint')}
+            </p>
+            {!search && statusFilter === 'all' && (
+              <button onClick={() => openEditor(null)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-semibold text-xs transition-colors"
+                style={{ background: theme.accent, color: theme.btnText }}>
+                <Plus size={14} /> {t('distribution.createFirstRule')}
+              </button>
+            )}
+          </div>
+        ) : (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05 } } }}
+            className="space-y-2"
+          >
+            <AnimatePresence>
+              {filtered.map(rule => (
+                <DistributionRuleCard
+                  key={rule.id}
+                  rule={rule}
+                  theme={theme}
+                  onToggle={handleToggle}
+                  onEdit={openEditor}
+                  onDelete={handleDelete}
+                  onRunNow={handleRunNow}
+                  running={runningId === rule.id}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </div>
+
+      {/* ── Slide-out Drawer ── */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <>
+            {/* Overlay */}
             <motion.div
-              key="list"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+              onClick={closeEditor}
+            />
+            {/* Drawer panel */}
+            <motion.div
+              initial={{ x: isRTL ? '-100%' : '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: isRTL ? '-100%' : '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className={`fixed top-0 ${isRTL ? 'start-0' : 'end-0'} bottom-0 z-50 w-full sm:w-[560px] shadow-2xl flex flex-col`}
+              style={{ background: theme.surface }}
             >
-              {/* Header */}
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h1 className="text-xl font-bold" style={{ color: t.text }}>Distribution</h1>
-                  <p className="text-sm mt-1" style={{ color: t.textSecondary }}>Scheduled report delivery rules</p>
-                </div>
-                <button onClick={() => openEditor(null)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:brightness-110 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
-                  style={{ background: t.accent, color: t.btnText, '--tw-ring-color': t.accent, '--tw-ring-offset-color': t.pageBg }}>
-                  <Plus size={14} strokeWidth={2} /> New Rule
-                </button>
-              </div>
-
-              {/* Stats bar */}
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="flex items-center gap-6 mb-6 px-4 py-2.5 rounded-lg"
-                style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-                {[
-                  { label: 'Total', value: stats.total, color: t.accent },
-                  { label: 'Active', value: stats.active, color: t.dark ? '#34d399' : '#059669' },
-                  { label: 'Paused', value: stats.paused, color: t.dark ? '#94a3b8' : '#64748b' },
-                ].map((s, i, arr) => (
-                  <div key={s.label} className="flex items-center gap-1.5"
-                    style={i < arr.length - 1 ? { paddingRight: '1.5rem', borderRight: `1px solid ${t.border}` } : undefined}>
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
-                    <span className="text-xs font-medium" style={{ color: t.textMuted }}>{s.label}</span>
-                    <span className="text-sm font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
-                  </div>
-                ))}
-              </motion.div>
-
-              {/* Search + filter bar */}
-              <div className="flex items-center gap-3 mb-6">
-                <div className="relative flex-1 max-w-sm">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: t.textMuted }} />
-                  <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="Search rules..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-all shadow-sm focus:ring-2 focus:border-transparent"
-                    style={{ background: t.inputBg, border: `1px solid ${t.border}`, color: t.text, '--tw-ring-color': t.accentBg }} />
-                </div>
-                <div className="flex items-center rounded-lg p-1 shadow-sm" style={{ background: t.inputBg, border: `1px solid ${t.border}` }}>
-                  {FILTER_TABS.map(s => {
-                    const isActive = statusFilter === s;
-                    return (
-                      <button key={s} onClick={() => setStatusFilter(s)}
-                        className="px-4 py-1.5 text-xs font-semibold rounded-md capitalize transition-all"
-                        style={{
-                          background: isActive ? t.accentBg : 'transparent',
-                          color: isActive ? t.accent : t.textSecondary,
-                        }}
-                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = t.text; }}
-                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = t.textSecondary; }}>
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Content */}
-              {loading ? (
-                <div className="rounded-lg overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-4 px-5 py-4" style={{ borderBottom: `1px solid ${t.border}` }}>
-                      <div className="w-8 h-4 rounded animate-pulse" style={{ background: t.border }} />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-3.5 rounded w-44 animate-pulse" style={{ background: t.border }} />
-                        <div className="h-2.5 rounded w-28 animate-pulse" style={{ background: t.surfaceAlt }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center rounded-lg"
-                  style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                    style={{ background: t.accentBg }}>
-                    <Send size={22} style={{ color: t.accent }} />
-                  </div>
-                  <h3 className="text-sm font-semibold mb-1" style={{ color: t.text }}>
-                    {search || statusFilter !== 'all' ? 'No matching rules' : 'No distribution rules yet'}
-                  </h3>
-                  <p className="text-xs mb-5 max-w-xs" style={{ color: t.textSecondary }}>
-                    {search ? 'Try adjusting your search or filters.' : 'Create your first rule to schedule automated report delivery.'}
-                  </p>
-                  {!search && statusFilter === 'all' && (
-                    <button onClick={() => openEditor(null)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-semibold text-xs transition-colors"
-                      style={{ background: t.accent, color: t.btnText }}>
-                      <Plus size={14} /> Create First Rule
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <motion.div
-                  initial="hidden"
-                  animate="visible"
-                  variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05 } } }}
-                  className="space-y-2"
-                >
-                  <AnimatePresence>
-                    {filtered.map(rule => (
-                      <DistributionRuleCard
-                        key={rule.id}
-                        rule={rule}
-                        theme={t}
-                        onToggle={handleToggle}
-                        onEdit={openEditor}
-                        onDelete={handleDelete}
-                        onRunNow={handleRunNow}
-                        running={runningId === rule.id}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </motion.div>
-              )}
+              <DistributionRuleEditor
+                rule={editingRule}
+                theme={theme}
+                onSave={handleSave}
+                onCancel={closeEditor}
+                onRunNow={handleRunNow}
+              />
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </>
+        )}
+      </AnimatePresence>
+
       <ConfirmationModal isOpen={confirmModal.open} title={confirmModal.title} description={confirmModal.description} onConfirm={confirmModal.onConfirm || (() => {})} onCancel={() => setConfirmModal(m => ({ ...m, open: false }))} confirmText={confirmModal.confirmText} confirmColor={confirmModal.confirmColor} />
     </motion.div>
   );

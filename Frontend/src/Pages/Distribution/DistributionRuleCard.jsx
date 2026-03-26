@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pencil, Trash2, Clock, Mail, HardDrive, AlertTriangle } from 'lucide-react';
+import { useLanguage } from '../../Hooks/useLanguage';
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DELIVERY_ICONS = { email: Mail, disk: HardDrive, both: Mail };
-const DELIVERY_LABELS = { email: 'Email', disk: 'Disk', both: 'Email + Disk' };
 
 function formatSchedule(rule) {
   const time = rule.schedule_time || '08:00';
@@ -12,21 +12,21 @@ function formatSchedule(rule) {
   if (rule.schedule_type === 'weekly') return `${DAY_NAMES[rule.schedule_day_of_week ?? 0]}s at ${time}`;
   if (rule.schedule_type === 'monthly') {
     const d = rule.schedule_day_of_month ?? 1;
-    const suffix = [, 'st', 'nd', 'rd'][d % 10 > 3 ? 0 : (d % 100 - d % 10 !== 10) * (d % 10)] || 'th';
-    return `${d}${suffix} of month at ${time}`;
+    return `${d} of month at ${time}`;
   }
   return rule.schedule_type;
 }
 
-function ordinalSuffix(d) {
-  const s = [, 'st', 'nd', 'rd'][d % 10 > 3 ? 0 : (d % 100 - d % 10 !== 10) * (d % 10)] || 'th';
-  return `${d}${s}`;
-}
-
 export default function DistributionRuleCard({ rule, theme: t, onToggle, onEdit, onDelete, onRunNow, running }) {
   const [hovered, setHovered] = useState(false);
+  const { t: tr } = useLanguage();
   const accentBar = rule.enabled ? (t.dark ? '#34d399' : '#059669') : (t.dark ? '#475569' : '#9ca3af');
   const DeliveryIcon = DELIVERY_ICONS[rule.delivery_method] || Mail;
+
+  // Multi-report details
+  const reportDetails = rule.report_details || [];
+  const reportCount = rule.report_ids?.length || (rule.report_id ? 1 : 0);
+  const missingCount = reportCount - reportDetails.length;
 
   const statusBadge = () => {
     if (!rule.last_run_status) return null;
@@ -61,34 +61,50 @@ export default function DistributionRuleCard({ rule, theme: t, onToggle, onEdit,
       onClick={() => onEdit(rule)}
     >
       {/* Left accent bar */}
-      <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accentBar }} />
+      <div className="absolute start-0 top-0 bottom-0 w-[3px]" style={{ background: accentBar }} />
 
-      <div className="flex items-center gap-4 pl-5 pr-4 py-3.5">
+      <div className="flex items-center gap-4 ps-5 pe-4 py-3.5">
         {/* Toggle */}
         <label className="relative inline-flex items-center cursor-pointer shrink-0" onClick={e => e.stopPropagation()}>
           <input type="checkbox" checked={rule.enabled} onChange={() => onToggle(rule)} className="sr-only peer" />
-          <div className="w-8 h-[18px] rounded-full transition-colors peer peer-checked:after:translate-x-[14px] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[14px] after:w-[14px] after:transition-all after:shadow-sm"
+          <div className="w-8 h-[18px] rounded-full transition-colors peer peer-checked:after:translate-x-[14px] rtl:peer-checked:after:-translate-x-[14px] after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-[14px] after:w-[14px] after:transition-all after:shadow-sm"
             style={{ background: rule.enabled ? t.accent : (t.dark ? '#334155' : '#d1d5db') }} />
         </label>
 
-        {/* Name + Report */}
+        {/* Name + Report pills */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[13px] font-semibold truncate" style={{ color: t.text }}>
-              {rule.name || 'Untitled Rule'}
+              {rule.name || tr('distribution.untitledRule')}
             </span>
-            {rule.report_missing && (
+            {missingCount > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
                 style={{ background: t.dark ? 'rgba(245,158,11,0.12)' : '#fffbeb', color: t.dark ? '#fbbf24' : '#92400e' }}>
                 <AlertTriangle size={10} />
-                Report deleted
+                {missingCount} {tr('distribution.reportDeleted')}
               </span>
             )}
             {statusBadge()}
           </div>
-          <p className="text-[11px] truncate mt-0.5" style={{ color: t.textMuted }}>
-            {rule.report_name || `Report #${rule.report_id}`}
-          </p>
+          {/* Report name pills */}
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            {reportDetails.slice(0, 3).map(rd => (
+              <span key={rd.id} className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium"
+                style={{ background: t.accentBg, color: t.accent }}>
+                {rd.name}
+              </span>
+            ))}
+            {reportDetails.length > 3 && (
+              <span className="text-[10px] font-medium" style={{ color: t.textMuted }}>
+                +{reportDetails.length - 3} {tr('distribution.more')}
+              </span>
+            )}
+            {reportDetails.length === 0 && !missingCount && (
+              <span className="text-[11px]" style={{ color: t.textMuted }}>
+                {rule.report_name || `Report #${rule.report_id}`}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Schedule */}
@@ -103,7 +119,7 @@ export default function DistributionRuleCard({ rule, theme: t, onToggle, onEdit,
         <div className="hidden lg:flex items-center gap-1.5 shrink-0">
           <DeliveryIcon size={12} style={{ color: t.textMuted }} />
           <span className="text-[11px] font-medium" style={{ color: t.textSecondary }}>
-            {DELIVERY_LABELS[rule.delivery_method] || rule.delivery_method}
+            {rule.delivery_method === 'both' ? 'Email + Disk' : rule.delivery_method}
           </span>
         </div>
 
@@ -113,25 +129,25 @@ export default function DistributionRuleCard({ rule, theme: t, onToggle, onEdit,
           {rule.format}
         </span>
 
-        {/* Actions (hover-reveal) */}
+        {/* Actions */}
         <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={e => e.stopPropagation()}>
           <button onClick={() => onRunNow(rule.id)} disabled={running}
-            className="p-1.5 rounded-md transition-colors" title="Run now"
+            className="p-1.5 rounded-md transition-colors" title={tr('distribution.runNow')}
             style={{ color: t.textMuted }}
             onMouseEnter={e => { e.currentTarget.style.color = t.dark ? '#34d399' : '#059669'; e.currentTarget.style.background = t.dark ? 'rgba(16,185,129,0.1)' : '#ecfdf5'; }}
             onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.background = ''; }}>
             <Play size={13} />
           </button>
           <button onClick={() => onEdit(rule)}
-            className="p-1.5 rounded-md transition-colors" title="Edit"
+            className="p-1.5 rounded-md transition-colors" title={tr('distribution.editRule')}
             style={{ color: t.textMuted }}
             onMouseEnter={e => { e.currentTarget.style.color = t.accent; e.currentTarget.style.background = t.accentBg; }}
             onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.background = ''; }}>
             <Pencil size={13} />
           </button>
           <button onClick={() => onDelete(rule.id)}
-            className="p-1.5 rounded-md transition-colors" title="Delete"
+            className="p-1.5 rounded-md transition-colors" title={tr('common.delete')}
             style={{ color: t.textMuted }}
             onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = t.dark ? 'rgba(239,68,68,0.1)' : '#fef2f2'; }}
             onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.background = ''; }}>
