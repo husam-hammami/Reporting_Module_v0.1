@@ -29,6 +29,9 @@ import ShiftsSettings from '../Pages/Settings/Shifts/ShiftsSettings';
 import UserManagement from '../Pages/Settings/Users/UserManagement';
 import LicenseActivations from '../Pages/Settings/LicenseActivations/LicenseActivations';
 import BrandingSettings from '../Pages/Settings/Branding/BrandingSettings';
+import ProfilePage from '../Pages/Profile/ProfilePage';
+import MyAccount from '../Pages/Profile/MyAccount';
+import AppSettingsPage from '../Pages/AppSettings/AppSettingsPage';
 import { useContext } from 'react';
 import { AuthContext } from '../Context/AuthProvider';
 
@@ -221,7 +224,7 @@ const AppRoutes = () => {
             }
           />
 
-          {/* Settings Routes */}
+          {/* Engineering Routes */}
           <Route
             path="settings"
             element={
@@ -236,13 +239,36 @@ const AppRoutes = () => {
             <Route path="formulas" element={<FormulaManager />} />
             <Route path="mappings" element={<MappingManager />} />
             <Route path="export-import" element={<ExportImport />} />
-            <Route path="system" element={<SystemSettings />} />
-            <Route path="logs" element={<SystemLogs />} />
             <Route path="distribution" element={<ReportDistribution />} />
             <Route path="shifts" element={<ShiftsSettings />} />
-            <Route path="users" element={<UserManagement />} />
             <Route path="branding" element={<BrandingSettings />} />
-            <Route path="license-activations" element={<LicenseActivations />} />
+          </Route>
+
+          {/* Profile Routes */}
+          <Route
+            path="profile"
+            element={
+              <ProtectedRoute roles={[Roles.SuperAdmin, Roles.Admin, Roles.Manager, Roles.Operator]}>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<MyAccount />} />
+            <Route path="users" element={<UserManagement />} />
+          </Route>
+
+          {/* App Settings Routes */}
+          <Route
+            path="app-settings"
+            element={
+              <ProtectedRoute roles={[Roles.SuperAdmin, Roles.Admin]}>
+                <AppSettingsPage />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<SystemSettings />} />
+            <Route path="logs" element={<SystemSettings />} />
+            <Route path="licenses" element={<LicenseActivations />} />
           </Route>
         </Route>
 

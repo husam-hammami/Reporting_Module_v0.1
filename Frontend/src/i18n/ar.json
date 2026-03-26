@@ -529,4 +529,14 @@
   "logs.clear": "مسح",
   "logs.entries": "إدخالات",
   "logs.empty": "لا توجد سجلات بعد. ستظهر السجلات هنا في الوقت الفعلي."
+,
+  "profile.title": "الملف الشخصي",
+  "profile.myAccount": "حسابي",
+  "profile.userManagement": "إدارة المستخدمين",
+  "profile.accountInfo": "معلومات الحساب",
+
+  "appSettings.title": "الإعدادات",
+  "appSettings.system": "النظام",
+  "appSettings.logs": "سجل النظام",
+  "appSettings.licenses": "التراخيص"
 }

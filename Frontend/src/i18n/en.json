@@ -529,4 +529,14 @@
   "logs.clear": "Clear",
   "logs.entries": "entries",
   "logs.empty": "No log entries yet. Logs will appear here in real time."
+,
+  "profile.title": "Profile",
+  "profile.myAccount": "My Account",
+  "profile.userManagement": "User Management",
+  "profile.accountInfo": "Account Information",
+
+  "appSettings.title": "Settings",
+  "appSettings.system": "System",
+  "appSettings.logs": "System Logs",
+  "appSettings.licenses": "Licenses"
 }

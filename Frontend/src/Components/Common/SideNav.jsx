@@ -107,30 +107,57 @@ export default function SideNav() {
       </Box>
 
       <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', pb: 3, px: 0.75 }}>
-        <div
-          className="w-full h-12 flex items-center text-[#556677] hover:text-[#f0f4f8] hover:bg-[#1a2233] hover:shadow-[0_0_12px_rgba(34,211,238,0.1)] rounded-lg transition-all duration-300 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#22d3ee]"
-          style={{
-            justifyContent: open ? 'flex-start' : 'center',
-            paddingLeft: open ? (isRTL ? '0px' : '14px') : '0px',
-            paddingRight: open ? (isRTL ? '14px' : '0px') : '0px',
-            gap: open ? '12px' : '0px',
-          }}
-        >
-          <User size={20} className="transition-all duration-300 hover:drop-shadow-[0_0_8px_rgba(240,244,248,0.3)] flex-shrink-0" />
-          {open && <span className="text-[13px] font-medium whitespace-nowrap text-[#8899ab]">{t('nav.profile')}</span>}
-        </div>
-        <div
-          className="w-full h-12 flex items-center text-[#556677] hover:text-[#f0f4f8] hover:bg-[#1a2233] hover:shadow-[0_0_12px_rgba(34,211,238,0.1)] rounded-lg transition-all duration-300 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#22d3ee]"
-          style={{
-            justifyContent: open ? 'flex-start' : 'center',
-            paddingLeft: open ? (isRTL ? '0px' : '14px') : '0px',
-            paddingRight: open ? (isRTL ? '14px' : '0px') : '0px',
-            gap: open ? '12px' : '0px',
-          }}
-        >
-          <Settings size={20} className="transition-all duration-300 hover:drop-shadow-[0_0_8px_rgba(240,244,248,0.3)] flex-shrink-0" />
-          {open && <span className="text-[13px] font-medium whitespace-nowrap text-[#8899ab]">{t('nav.settings')}</span>}
-        </div>
+        {[
+          { to: '/profile', icon: User, label: t('nav.profile') },
+          { to: '/app-settings', icon: Settings, label: t('nav.settings') },
+        ].map((btn) => (
+          <NavLink
+            key={btn.to}
+            to={btn.to}
+            className="block w-full outline-none focus-visible:ring-2 focus-visible:ring-[#22d3ee] rounded-lg"
+          >
+            {({ isActive }) => (
+              <Tooltip
+                title={!open ? <span style={{ fontSize: 12 }}>{btn.label}</span> : ''}
+                placement="right"
+                arrow
+                disableInteractive
+              >
+                <div
+                  className={`relative w-full h-12 flex items-center rounded-lg transition-all duration-300 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#1a2233]'
+                      : 'hover:bg-[#1a2233] hover:shadow-[0_0_12px_rgba(34,211,238,0.1)]'
+                  }`}
+                  style={{
+                    paddingLeft: open ? (isRTL ? '0px' : '14px') : '0px',
+                    paddingRight: open ? (isRTL ? '14px' : '0px') : '0px',
+                    justifyContent: open ? 'flex-start' : 'center',
+                    gap: open ? '12px' : '0px',
+                  }}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNavIndicator"
+                      className={`absolute ${isRTL ? 'right-0 rounded-l-full' : 'left-0 rounded-r-full'} top-2 bottom-2 w-[3px] bg-[#22d3ee] shadow-[0_0_8px_rgba(34,211,238,0.5)]`}
+                    />
+                  )}
+                  <btn.icon
+                    size={20}
+                    className={`transition-all duration-300 flex-shrink-0 ${
+                      isActive ? 'text-[#f0f4f8]' : 'text-[#556677] hover:text-[#f0f4f8]'
+                    }`}
+                  />
+                  {open && (
+                    <span className={`text-[13px] font-medium whitespace-nowrap ${isActive ? 'text-[#f0f4f8]' : 'text-[#8899ab]'}`}>
+                      {btn.label}
+                    </span>
+                  )}
+                </div>
+              </Tooltip>
+            )}
+          </NavLink>
+        ))}
       </Box>
     </Box>
   );
