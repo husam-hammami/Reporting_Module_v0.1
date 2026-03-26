@@ -277,7 +277,7 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
     }
     setSaving(true);
     try {
-      await onSave({ ...form, id: rule?.id });
+      await onSave({ ...form, id: rule?.id, report_id: form.report_ids?.[0] || 0 });
     } finally {
       setSaving(false);
     }

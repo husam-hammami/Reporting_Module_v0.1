@@ -47,7 +47,7 @@ def _ensure_table():
                 CREATE TABLE IF NOT EXISTS distribution_rules (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL DEFAULT '',
-                    report_id INTEGER NOT NULL DEFAULT 0,
+                    report_id INTEGER DEFAULT 0,
                     report_ids JSONB DEFAULT '[]'::jsonb,
                     delivery_method VARCHAR(20) NOT NULL DEFAULT 'email',
                     recipients JSONB DEFAULT '[]'::jsonb,
@@ -77,6 +77,11 @@ def _ensure_table():
                     SET report_ids = jsonb_build_array(report_id)
                     WHERE (report_ids = '[]'::jsonb OR report_ids IS NULL) AND report_id IS NOT NULL AND report_id > 0
                 """)
+            # Migration: relax report_id NOT NULL constraint for existing installs
+            cursor.execute("""
+                ALTER TABLE distribution_rules ALTER COLUMN report_id SET DEFAULT 0;
+                ALTER TABLE distribution_rules ALTER COLUMN report_id DROP NOT NULL;
+            """)
             actual_conn.commit()
             _table_ensured = True
     except Exception as e:
