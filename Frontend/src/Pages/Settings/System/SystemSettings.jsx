@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaServer, FaPlug, FaNetworkWired, FaSave, FaSync } from 'react-icons/fa';
 import { useSystemStatus } from '../../../Context/SystemStatusContext';
 import DemoModeSettings from '../DemoMode/DemoModeSettings';
+import { useLanguage } from '../../../Hooks/useLanguage';
 
 export default function SystemSettings() {
   const { demoMode, plcConfig, loading, toggleDemoMode, updatePlcConfig, fetchStatus } = useSystemStatus();
+  const { t } = useLanguage();
 
   const [ip, setIp] = useState('');
   const [rack, setRack] = useState(0);
@@ -35,7 +37,7 @@ export default function SystemSettings() {
     try {
       await updatePlcConfig(ip, Number(rack), Number(slot));
       dirty.current = false;
-      setPlcMsg({ type: 'ok', text: 'Saved. Backend reconnecting…' });
+      setPlcMsg({ type: 'ok', text: t('system.savedReconnecting') });
       fetchStatus();
     } catch (e) {
       setPlcMsg({ type: 'err', text: e.response?.data?.error || e.message });
@@ -43,7 +45,7 @@ export default function SystemSettings() {
   };
 
   if (loading && demoMode === null) {
-    return <div className="p-6 text-center text-[11px] text-[#8898aa]">Loading system status…</div>;
+    return <div className="p-6 text-center text-[11px] text-[#8898aa]">{t('system.loadingStatus')}</div>;
   }
 
   const isUnknown = demoMode === null;
@@ -59,15 +61,15 @@ export default function SystemSettings() {
               <FaServer className="text-red-600 dark:text-red-400" size={12} />
             </div>
             <div>
-              <h2 className="text-[12px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">Backend Unreachable</h2>
-              <p className="text-[10px] text-[#8898aa]">Check that the backend is running and the API URL is correct.</p>
+              <h2 className="text-[12px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{t('system.backendUnreachable')}</h2>
+              <p className="text-[10px] text-[#8898aa]">{t('system.backendUnreachableDesc')}</p>
             </div>
           </div>
           <button
             onClick={fetchStatus}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium rounded-md bg-red-600 hover:bg-red-700 text-white transition-colors"
           >
-            <FaSync size={9} /> Retry
+            <FaSync size={9} /> {t('common.retry')}
           </button>
         </div>
       )}
@@ -89,10 +91,10 @@ export default function SystemSettings() {
               </div>
               <div>
                 <h2 className="text-[12px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">
-                  Backend Mode — {isDemo ? 'Demo (Emulator)' : 'Production (Real PLC)'}
+                  {t('system.backendMode')} — {isDemo ? t('system.demoEmulator') : t('system.productionPLC')}
                 </h2>
                 <p className="text-[10px] text-[#8898aa]">
-                  {isDemo ? 'PLC reads from software emulator.' : 'PLC reads from real Siemens PLC via Snap7.'}
+                  {isDemo ? t('system.demoDesc') : t('system.productionDesc')}
                 </p>
               </div>
             </div>
@@ -106,7 +108,7 @@ export default function SystemSettings() {
               }`}
             >
               <FaSync size={9} className={toggling ? 'animate-spin' : ''} />
-              {toggling ? 'Switching…' : isDemo ? 'Switch to Production' : 'Switch to Demo'}
+              {toggling ? t('system.switching') : isDemo ? t('system.switchToProduction') : t('system.switchToDemo')}
             </button>
           </div>
 
@@ -114,12 +116,12 @@ export default function SystemSettings() {
           <div className={`px-4 py-3 ${isDemo || isUnknown ? 'opacity-50 pointer-events-none' : ''}`}>
             <div className="flex items-center gap-2 mb-2">
               <FaNetworkWired className="text-brand" size={11} />
-              <h3 className="text-[11px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">PLC Connection</h3>
-              {isDemo && <span className="text-[9px] text-[#8898aa] italic">(applies in Production)</span>}
+              <h3 className="text-[11px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{t('system.plcConnection')}</h3>
+              {isDemo && <span className="text-[9px] text-[#8898aa] italic">{t('system.appliesInProduction')}</span>}
             </div>
             <div className="flex items-end gap-3">
               <div className="flex-1">
-                <label className="block text-[10px] font-medium text-[#6b7f94] mb-1">IP Address</label>
+                <label className="block text-[10px] font-medium text-[#6b7f94] mb-1">{t('system.ipAddress')}</label>
                 <input
                   type="text" value={ip}
                   onChange={(e) => { dirty.current = true; setIp(e.target.value); }}
@@ -129,7 +131,7 @@ export default function SystemSettings() {
                 />
               </div>
               <div className="w-20">
-                <label className="block text-[10px] font-medium text-[#6b7f94] mb-1">Rack</label>
+                <label className="block text-[10px] font-medium text-[#6b7f94] mb-1">{t('system.rack')}</label>
                 <input
                   type="number" value={rack} min={0} max={7}
                   onChange={(e) => { dirty.current = true; setRack(e.target.value); }}
@@ -138,7 +140,7 @@ export default function SystemSettings() {
                 />
               </div>
               <div className="w-20">
-                <label className="block text-[10px] font-medium text-[#6b7f94] mb-1">Slot</label>
+                <label className="block text-[10px] font-medium text-[#6b7f94] mb-1">{t('system.slot')}</label>
                 <input
                   type="number" value={slot} min={0} max={31}
                   onChange={(e) => { dirty.current = true; setSlot(e.target.value); }}
@@ -152,7 +154,7 @@ export default function SystemSettings() {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium rounded-md bg-brand hover:bg-brand-hover text-[#0c1321] transition-colors disabled:opacity-50 whitespace-nowrap"
               >
                 <FaSave size={9} />
-                {saving ? 'Saving…' : 'Save & Reconnect'}
+                {saving ? t('common.saving') : t('system.saveReconnect')}
               </button>
             </div>
             {plcMsg && (
@@ -169,8 +171,8 @@ export default function SystemSettings() {
         <div className="px-4 py-2.5 border-b border-[#e3e9f0] dark:border-[#1e2d40]">
           <div className="flex items-center gap-2">
             <FaPlug className="text-[#8898aa]" size={11} />
-            <h3 className="text-[11px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">Browser-Side Emulator</h3>
-            <span className="text-[9px] text-[#8898aa]">— Client-side sine-wave generator for Report Builder preview</span>
+            <h3 className="text-[11px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{t('system.browserEmulator')}</h3>
+            <span className="text-[9px] text-[#8898aa]">{t('system.browserEmulatorDesc')}</span>
           </div>
         </div>
         <DemoModeSettings />

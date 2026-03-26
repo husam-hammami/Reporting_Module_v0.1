@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { FaClock, FaSave } from 'react-icons/fa';
 import axios from '../../../API/axios';
 import { toast } from 'react-toastify';
+import { useLanguage } from '../../../Hooks/useLanguage';
 
 export default function ShiftsSettings() {
+  const { t } = useLanguage();
   const [shiftCount, setShiftCount] = useState(3);
   const [shifts, setShifts] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -17,7 +19,7 @@ export default function ShiftsSettings() {
         setShifts(d.shifts || []);
         setLoaded(true);
       })
-      .catch(() => toast.error('Failed to load shifts config'));
+      .catch(() => toast.error(t('shifts.failedLoad')));
   }, []);
 
   const handleShiftCountChange = (newCount) => {
@@ -39,9 +41,9 @@ export default function ShiftsSettings() {
     setSaving(true);
     try {
       await axios.post('/api/settings/shifts', { shift_count: shiftCount, shifts });
-      toast.success('Shift schedule saved');
+      toast.success(t('shifts.saved'));
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save shifts');
+      toast.error(err.response?.data?.error || t('shifts.failedSave'));
     } finally {
       setSaving(false);
     }
@@ -57,16 +59,16 @@ export default function ShiftsSettings() {
         <div className="flex items-center gap-2 mb-1">
           <FaClock className="text-brand" size={13} />
           <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#6b7f94] dark:text-[#6b7f94]">
-            Shift Schedule Configuration
+            {t('shifts.title')}
           </h3>
         </div>
         <p className="text-[11px] text-[#8898aa] -mt-4">
-          Define shift schedules used in the Reporting time filter.
+          {t('shifts.description')}
         </p>
 
         {/* Shift count selector */}
         <div>
-          <label className={labelClass}>Number of Shifts</label>
+          <label className={labelClass}>{t('shifts.numberOfShifts')}</label>
           <div className="flex gap-2">
             {[1, 2, 3, 4].map(n => (
               <button key={n} onClick={() => handleShiftCountChange(n)}
@@ -87,17 +89,17 @@ export default function ShiftsSettings() {
           {shifts.map((shift, i) => (
             <div key={i} className="grid grid-cols-3 gap-4 items-end">
               <div>
-                <label className={labelClass}>Shift {i + 1} Name</label>
+                <label className={labelClass}>{t('shifts.shiftName').replace('{n}', i + 1)}</label>
                 <input type="text" value={shift.name} onChange={e => handleShiftChange(i, 'name', e.target.value)}
                   placeholder={`Shift ${i + 1}`} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>Start Time</label>
+                <label className={labelClass}>{t('shifts.startTime')}</label>
                 <input type="time" value={shift.start} onChange={e => handleShiftChange(i, 'start', e.target.value)}
                   className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>End Time</label>
+                <label className={labelClass}>{t('shifts.endTime')}</label>
                 <input type="time" value={shift.end} onChange={e => handleShiftChange(i, 'end', e.target.value)}
                   className={inputClass} />
               </div>
@@ -110,7 +112,7 @@ export default function ShiftsSettings() {
           <button onClick={handleSave} disabled={saving}
             className="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-medium rounded-lg bg-brand hover:bg-brand-hover text-white transition-colors disabled:opacity-50">
             <FaSave size={10} />
-            {saving ? 'Saving...' : 'Save Shifts'}
+            {saving ? t('common.saving') : t('shifts.saveShifts')}
           </button>
         </div>
       </div>

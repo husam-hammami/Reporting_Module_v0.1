@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaEnvelope, FaSave, FaPaperPlane, FaEye, FaEyeSlash, FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import axios from '../../../API/axios';
 import { toast } from 'react-toastify';
+import { useLanguage } from '../../../Hooks/useLanguage';
 
 export default function SmtpSection() {
   const [open, setOpen] = useState(false);
@@ -16,6 +17,7 @@ export default function SmtpSection() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     axios.get('/api/settings/smtp-config')
@@ -29,7 +31,7 @@ export default function SmtpSection() {
         setFromAddress(d.from_address || '');
         setRecipient(d.recipient || '');
       })
-      .catch(() => toast.error('Failed to load SMTP config'));
+      .catch(() => toast.error(t('smtp.failedLoad')));
   }, []);
 
   const handleSave = async () => {
@@ -44,9 +46,9 @@ export default function SmtpSection() {
         from_address: fromAddress,
         recipient,
       });
-      toast.success('SMTP configuration saved');
+      toast.success(t('smtp.saved'));
     } catch {
-      toast.error('Failed to save SMTP configuration');
+      toast.error(t('smtp.failedSave'));
     } finally {
       setSaving(false);
     }
@@ -58,7 +60,7 @@ export default function SmtpSection() {
     try {
       const res = await axios.post('/api/settings/smtp-test', { to_email: recipient || undefined });
       if (res.data?.success) {
-        setTestResult({ ok: true, msg: 'Test email sent successfully' });
+        setTestResult({ ok: true, msg: t('smtp.testSuccess') });
       } else {
         setTestResult({ ok: false, msg: res.data?.error || 'Test failed' });
       }
@@ -82,7 +84,7 @@ export default function SmtpSection() {
         <div className="flex items-center gap-2">
           <FaEnvelope className="text-brand" size={13} />
           <span className="text-[12px] font-semibold uppercase tracking-wider text-[#6b7f94]">
-            SMTP Configuration
+            {t('smtp.title')}
           </span>
         </div>
         {open ? <FaChevronDown size={11} className="text-[#8898aa]" /> : <FaChevronRight size={11} className="text-[#8898aa]" />}
@@ -91,17 +93,17 @@ export default function SmtpSection() {
       {open && (
         <div className="px-5 pb-5 space-y-4">
           <p className="text-[11px] text-[#8898aa]">
-            Configure the SMTP server used for sending report emails.
+            {t('smtp.description')}
           </p>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>SMTP Server</label>
+              <label className={labelClass}>{t('smtp.server')}</label>
               <input type="text" value={smtpServer} onChange={e => setSmtpServer(e.target.value)}
                 placeholder="smtp.gmail.com" className={inputClass} />
             </div>
             <div>
-              <label className={labelClass}>Port</label>
+              <label className={labelClass}>{t('smtp.port')}</label>
               <input type="number" value={smtpPort} onChange={e => setSmtpPort(e.target.value)}
                 placeholder="465" className={inputClass} />
             </div>
@@ -109,18 +111,18 @@ export default function SmtpSection() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Username</label>
+              <label className={labelClass}>{t('smtp.username')}</label>
               <input type="text" value={username} onChange={e => setUsername(e.target.value)}
                 placeholder="user@example.com" className={inputClass} />
             </div>
             <div>
-              <label className={labelClass}>Password</label>
+              <label className={labelClass}>{t('smtp.password')}</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="App password"
+                  placeholder={t('smtp.passwordPlaceholder')}
                   className={inputClass + ' pr-10'}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
@@ -133,12 +135,12 @@ export default function SmtpSection() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>From Address</label>
+              <label className={labelClass}>{t('smtp.fromAddress')}</label>
               <input type="email" value={fromAddress} onChange={e => setFromAddress(e.target.value)}
                 placeholder="noreply@company.com" className={inputClass} />
             </div>
             <div>
-              <label className={labelClass}>Default Recipient</label>
+              <label className={labelClass}>{t('smtp.defaultRecipient')}</label>
               <input type="email" value={recipient} onChange={e => setRecipient(e.target.value)}
                 placeholder="reports@company.com" className={inputClass} />
             </div>
@@ -150,19 +152,19 @@ export default function SmtpSection() {
                 className="sr-only peer" />
               <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-brand rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand"></div>
             </label>
-            <span className="text-[12px] text-[#6b7f94]">Use TLS / SSL</span>
+            <span className="text-[12px] text-[#6b7f94]">{t('smtp.useTls')}</span>
           </div>
 
           <div className="flex items-center gap-3 pt-1">
             <button onClick={handleSave} disabled={saving}
               className="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-medium rounded-lg bg-brand hover:bg-brand-hover text-white transition-colors disabled:opacity-50">
               <FaSave size={10} />
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t('common.saving') : t('common.save')}
             </button>
             <button onClick={handleTest} disabled={testing}
               className="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94] hover:text-[#3a4a5c] hover:bg-[#f5f8fb] dark:hover:bg-[#0d1825] transition-colors disabled:opacity-50">
               <FaPaperPlane size={10} />
-              {testing ? 'Sending...' : 'Test'}
+              {testing ? t('smtp.sending') : t('smtp.test')}
             </button>
             {testResult && (
               <span className={`text-[11px] font-medium ${testResult.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
