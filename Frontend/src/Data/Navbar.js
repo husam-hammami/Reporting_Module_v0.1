@@ -1,40 +1,57 @@
 import { LayoutGrid, BarChart2, Settings, Table2, Send } from 'lucide-react';
 import { Roles } from './Roles';
 
-export const menuItems = [
+export const getMenuItems = (t) => [
   {
-    name: 'Builder',
+    name: t('nav.builder'),
     icon: LayoutGrid,
-    tooltip: 'Design and build reports',
+    tooltip: t('nav.tooltip.builder'),
     link: '/report-builder',
     roles: [Roles.Admin, Roles.Manager],
   },
   {
-    name: 'Dashboards',
+    name: t('nav.dashboards'),
     icon: BarChart2,
-    tooltip: 'View released dashboards',
+    tooltip: t('nav.tooltip.dashboards'),
     link: '/dashboards',
     roles: [Roles.Admin, Roles.Manager, Roles.Operator],
   },
   {
-    name: 'Table Reports',
+    name: t('nav.tableReports'),
     icon: Table2,
-    tooltip: 'View released table reports',
+    tooltip: t('nav.tooltip.tableReports'),
     link: '/reports',
     roles: [Roles.Admin, Roles.Manager, Roles.Operator],
   },
   {
-    name: 'Distribution',
+    name: t('nav.distribution'),
     icon: Send,
-    tooltip: 'Scheduled report delivery',
+    tooltip: t('nav.tooltip.distribution'),
     link: '/distribution',
     roles: [Roles.Admin, Roles.Manager],
   },
   {
-    name: 'Engineering',
+    name: t('nav.engineering'),
     icon: Settings,
-    tooltip: 'Tags, groups, formulas, mappings',
+    tooltip: t('nav.tooltip.engineering'),
     link: '/settings',
     roles: [Roles.Admin, Roles.Manager],
   },
 ];
+
+// Backward-compatible static export (English fallback)
+export const menuItems = getMenuItems((key) => {
+  const fallback = {
+    'nav.builder': 'Builder',
+    'nav.dashboards': 'Dashboards',
+    'nav.tableReports': 'Table Reports',
+    'nav.distribution': 'Distribution',
+    'nav.engineering': 'Engineering',
+    'nav.tooltip.builder': 'Design and build reports',
+    'nav.tooltip.dashboards': 'View released dashboards',
+    'nav.tooltip.tableReports': 'View released table reports',
+    'nav.tooltip.distribution': 'Scheduled report delivery',
+    'nav.tooltip.engineering': 'Tags, groups, formulas, mappings',
+  };
+  return fallback[key] || key;
+});

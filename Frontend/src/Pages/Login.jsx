@@ -13,14 +13,8 @@ import { AuthContext } from '../Context/AuthProvider';
 import LoadingScreen from '../Components/Common/LoadingScreen';
 import { AiOutlineEye, AiOutlineEyeInvisible } from 'react-icons/ai';
 import { Lock, User } from 'lucide-react';
+import { useLanguage } from '../Hooks/useLanguage';
 import HerculesNewLogo from '../Assets/Hercules_New.png';
-
-const validationSchema = Yup.object({
-  username: Yup.string().required('Username is required'),
-  password: Yup.string()
-    .required('Password is required')
-    .min(2, 'Password must be at least 2 characters long'),
-});
 
 function Login() {
   useEffect(() => { document.title = 'Hercules — Login'; }, []);
@@ -28,6 +22,14 @@ function Login() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { setAuth, setAuthLoading } = useContext(AuthContext);
+  const { t, isRTL } = useLanguage();
+
+  const validationSchema = Yup.object({
+    username: Yup.string().required(t('validation.usernameRequired')),
+    password: Yup.string()
+      .required(t('validation.passwordRequired'))
+      .min(2, t('validation.passwordMin')),
+  });
 
   const loginUser = async values => {
     setLoading(true);
@@ -97,10 +99,10 @@ function Login() {
               className="h-14 w-auto mx-auto mb-5 dark:[filter:brightness(0)_invert(1)_brightness(0.85)]"
             />
             <h1 className="text-xl font-bold text-[#0f1729] dark:text-[#e8edf5] tracking-tight">
-              Welcome back
+              {t('login.welcome')}
             </h1>
             <p className="text-[13px] text-[#64748b] dark:text-[#556677] mt-1">
-              Sign in to your control panel
+              {t('login.subtitle')}
             </p>
           </div>
 
@@ -110,18 +112,18 @@ function Login() {
             <form onSubmit={formik.handleSubmit} className="flex flex-col gap-4">
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#64748b] dark:text-[#22d3ee]/50 mb-1.5 block">
-                  Username
+                  {t('login.username')}
                 </label>
                 <div className="relative">
-                  <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#556677]" />
+                  <User size={14} className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#556677]`} />
                   <input
                     type="text"
                     name="username"
                     value={formik.values.username}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
-                    placeholder="Enter username"
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#080d19] border text-[13px] text-[#0f1729] dark:text-[#e8edf5] placeholder:text-[#94a3b8] dark:placeholder:text-[#445566] outline-none transition-all duration-200 ${
+                    placeholder={t('login.usernamePlaceholder')}
+                    className={`w-full ${isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3'} py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#080d19] border text-[13px] text-[#0f1729] dark:text-[#e8edf5] placeholder:text-[#94a3b8] dark:placeholder:text-[#445566] outline-none transition-all duration-200 ${
                       formik.touched.username && formik.errors.username
                         ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
                         : 'border-black/[0.08] dark:border-[#22d3ee]/10 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-ring)] dark:focus:border-[#22d3ee]/40 dark:focus:ring-[#22d3ee]/15'
@@ -135,18 +137,18 @@ function Login() {
 
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#64748b] dark:text-[#22d3ee]/50 mb-1.5 block">
-                  Password
+                  {t('login.password')}
                 </label>
                 <div className="relative">
-                  <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#556677]" />
+                  <Lock size={14} className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#556677]`} />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     value={formik.values.password}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
-                    placeholder="Enter password"
-                    className={`w-full pl-9 pr-10 py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#080d19] border text-[13px] text-[#0f1729] dark:text-[#e8edf5] placeholder:text-[#94a3b8] dark:placeholder:text-[#445566] outline-none transition-all duration-200 ${
+                    placeholder={t('login.passwordPlaceholder')}
+                    className={`w-full ${isRTL ? 'pr-9 pl-10' : 'pl-9 pr-10'} py-2.5 rounded-lg bg-[#f8f9fb] dark:bg-[#080d19] border text-[13px] text-[#0f1729] dark:text-[#e8edf5] placeholder:text-[#94a3b8] dark:placeholder:text-[#445566] outline-none transition-all duration-200 ${
                       formik.touched.password && formik.errors.password
                         ? 'border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-400/20'
                         : 'border-black/[0.08] dark:border-[#22d3ee]/10 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-ring)] dark:focus:border-[#22d3ee]/40 dark:focus:ring-[#22d3ee]/15'
@@ -155,7 +157,7 @@ function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(prev => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b] dark:text-[#556677] dark:hover:text-[#8899ab] transition-colors"
+                    className={`absolute ${isRTL ? 'left-3' : 'right-3'} top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b] dark:text-[#556677] dark:hover:text-[#8899ab] transition-colors`}
                   >
                     {showPassword ? <AiOutlineEyeInvisible size={16} /> : <AiOutlineEye size={16} />}
                   </button>
@@ -169,13 +171,13 @@ function Login() {
                 type="submit"
                 className="w-full mt-2 py-2.5 rounded-lg bg-gradient-to-r from-[var(--brand)] to-[#0284c7] dark:from-[#0e7490] dark:to-[#22d3ee] text-white text-[13px] font-semibold shadow-lg shadow-[var(--brand)]/20 dark:shadow-[#22d3ee]/10 hover:shadow-xl transition-all duration-300 hover:translate-y-[-1px] active:translate-y-0"
               >
-                Sign in
+                {t('login.signIn')}
               </button>
             </form>
           </div>
 
           <p className="text-center text-[10px] text-[#94a3b8] dark:text-[#445566] mt-6 tracking-[0.15em] uppercase font-semibold">
-            Hercules v2 Industrial SCADA
+            {t('login.tagline')}
           </p>
         </div>
       </div>

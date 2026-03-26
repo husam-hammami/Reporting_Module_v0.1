@@ -4,12 +4,14 @@ import Navbar from '../Components/Navbar/Navbar';
 import { Outlet } from 'react-router-dom';
 import { DarkModeContext } from '../Context/DarkModeProvider';
 import { NavbarContext } from '../Context/NavbarContext';
+import { useLanguage } from '../Hooks/useLanguage';
 import { useContext } from 'react';
 
 function Home() {
   const contextValue = useContext(DarkModeContext);
   const { mode } = contextValue || {};
   const { open } = useContext(NavbarContext);
+  const { isRTL } = useLanguage();
 
   const sideWidth = open ? 220 : 60;
 
@@ -29,8 +31,9 @@ function Home() {
           flexGrow: 1,
           p: 0,
           overflow: 'hidden',
-          marginLeft: `${sideWidth}px`,
-          transition: 'margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          marginLeft: isRTL ? 0 : `${sideWidth}px`,
+          marginRight: isRTL ? `${sideWidth}px` : 0,
+          transition: 'margin 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
         className="bg-transparent"
       >
