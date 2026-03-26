@@ -99,7 +99,7 @@ ALLOWED_ORIGINS = {
 # Initialize SocketIO with credentials support for cookie/session auth
 socketio = SocketIO(
     app,
-    cors_allowed_origins=list(ALLOWED_ORIGINS),
+    cors_allowed_origins="*",
     async_mode="eventlet",
     supports_credentials=True,
 )
@@ -115,11 +115,29 @@ def _normalize_origin(origin):
     return origin.rstrip("/")
 
 
+_PRIVATE_IP_RE = re.compile(
+    r'^https?://(10\.\d{1,3}\.\d{1,3}\.\d{1,3}'
+    r'|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}'
+    r'|192\.168\.\d{1,3}\.\d{1,3})'
+    r'(:\d+)?$'
+)
+
+
+def _is_allowed_origin(origin):
+    """Return True if origin is in the whitelist OR is a private-network IP."""
+    if not origin:
+        return False
+    normalized = _normalize_origin(origin)
+    if normalized in ALLOWED_ORIGINS:
+        return True
+    return bool(_PRIVATE_IP_RE.match(normalized))
+
+
 @app.before_request
 def handle_options_preflight():
     if request.method == "OPTIONS":
         origin = request.headers.get("Origin")
-        if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
+        if origin and _is_allowed_origin(origin):
             from flask import Response
             r = Response("", status=200)
             r.headers["Access-Control-Allow-Origin"] = origin
@@ -138,7 +156,7 @@ def log_request_info():
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get("Origin")
-    if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
+    if origin and _is_allowed_origin(origin):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
@@ -150,7 +168,7 @@ def add_cors_headers(response):
 def options_handler(path):
     response = jsonify({})
     origin = request.headers.get("Origin")
-    if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
+    if origin and _is_allowed_origin(origin):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
@@ -342,6 +360,26 @@ def delete_emulator_custom_offset_route():
     if not ok:
         return jsonify({'error': err or 'Failed to remove custom offset'}), 404
     return jsonify({'status': 'ok', 'message': 'Custom offset removed'}), 200
+
+@app.route('/api/settings/network-info', methods=['GET'])
+@login_required
+def get_network_info():
+    """Return the host machine's LAN IP and access URL."""
+    import socket
+    port = int(os.environ.get('FLASK_PORT', 5001))
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        ip = "127.0.0.1"
+    return jsonify({
+        "ip": ip,
+        "port": port,
+        "url": f"http://{ip}:{port}"
+    })
+
 
 # NOTE: React catch-all route moved to end of file to avoid intercepting API routes
 

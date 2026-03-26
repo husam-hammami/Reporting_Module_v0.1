@@ -371,6 +371,31 @@ def check_and_apply_update():
         print("Rolled back to previous version.")
 
 
+def ensure_firewall_rule():
+    """Add Windows Firewall inbound rule for Hercules (idempotent — skips if exists)."""
+    if platform.system() != "Windows":
+        return
+    rule_name = "Hercules Web Access"
+    check = subprocess.run(
+        ["netsh", "advfirewall", "firewall", "show", "rule", f"name={rule_name}"],
+        capture_output=True, text=True
+    )
+    if check.returncode == 0 and rule_name in check.stdout:
+        print(f"Firewall rule '{rule_name}' already exists.")
+        return
+    print(f"Adding firewall rule '{rule_name}' for port {BACKEND_PORT}...")
+    result = subprocess.run(
+        ["netsh", "advfirewall", "firewall", "add", "rule",
+         f"name={rule_name}", "dir=in", "action=allow",
+         "protocol=TCP", f"localport={BACKEND_PORT}"],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        print("Firewall rule added successfully.")
+    else:
+        print(f"Warning: Could not add firewall rule: {result.stderr}")
+
+
 def main():
     machine_id = _machine_id_fallback()
     license_path = os.path.join(BASE_DIR, "license.json")
@@ -445,11 +470,21 @@ def main():
     wait_for_db()
     # Idempotent: creates DB/migrations/default user if missing; skips if already done
     run_setup()
+    ensure_firewall_rule()
     start_backend()
 
     url = f"http://localhost:{BACKEND_PORT}"
     print("System started.")
     print(f"Open {url} in your browser.")
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        lan_ip = s.getsockname()[0]
+        s.close()
+        print(f"LAN access: http://{lan_ip}:{BACKEND_PORT}")
+    except Exception:
+        pass
     webbrowser.open(url)
 
 
