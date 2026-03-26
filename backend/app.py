@@ -4,6 +4,8 @@ import eventlet
 eventlet.monkey_patch()
 import logging
 import sys
+import collections
+import datetime as _dt
 
 # Frozen-exe path resolution (PyInstaller sets sys.frozen)
 if getattr(sys, 'frozen', False):
@@ -103,6 +105,66 @@ socketio = SocketIO(
     async_mode="eventlet",
     supports_credentials=True,
 )
+
+# ── System log ring buffer + SocketIO handler ────────────────────────────────
+LOG_RING_MAX = 2000
+_log_ring = collections.deque(maxlen=LOG_RING_MAX)
+_log_subscribers = 0
+
+
+class _SocketIOLogHandler(logging.Handler):
+    """Forward log records to connected browsers via Socket.IO and keep a ring buffer."""
+
+    def __init__(self, sio):
+        super().__init__()
+        self._sio = sio
+
+    def emit(self, record):
+        try:
+            entry = {
+                'ts': _dt.datetime.utcnow().isoformat(timespec='milliseconds') + 'Z',
+                'level': record.levelname,
+                'module': record.name,
+                'message': record.getMessage(),
+            }
+            _log_ring.append(entry)
+            if _log_subscribers > 0:
+                self._sio.emit('system_log', entry, namespace='/logs')
+        except Exception:
+            pass
+
+
+_sio_log_handler = _SocketIOLogHandler(socketio)
+_sio_log_handler.setLevel(logging.DEBUG)
+_sio_log_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+logging.getLogger().addHandler(_sio_log_handler)
+
+
+@socketio.on('connect', namespace='/logs')
+def _logs_connect():
+    global _log_subscribers
+    _log_subscribers += 1
+    logger.info('Logs viewer connected (subscribers=%d)', _log_subscribers)
+
+
+@socketio.on('disconnect', namespace='/logs')
+def _logs_disconnect():
+    global _log_subscribers
+    _log_subscribers = max(0, _log_subscribers - 1)
+    logger.info('Logs viewer disconnected (subscribers=%d)', _log_subscribers)
+
+
+@app.route('/api/settings/logs/recent', methods=['GET'])
+@login_required
+def get_recent_logs():
+    """Return the last N log entries from the in-memory ring buffer."""
+    n = min(request.args.get('n', 500, type=int), LOG_RING_MAX)
+    level = request.args.get('level', '').upper()
+    logs = list(_log_ring)
+    if level:
+        logs = [e for e in logs if e['level'] == level]
+    return jsonify({'logs': logs[-n:]})
+
 
 # CORS preflight: respond to OPTIONS with 200 + full CORS headers (before any route)
 CORS_ALLOW_HEADERS = "Content-Type, Authorization, ngrok-skip-browser-warning"

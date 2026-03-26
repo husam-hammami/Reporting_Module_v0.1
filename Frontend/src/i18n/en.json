@@ -45,6 +45,7 @@
   "settings.exportImport": "Export / Import",
   "settings.branding": "Branding",
   "settings.system": "System",
+  "settings.logs": "System Logs",
   "settings.licenses": "Licenses",
   "settings.selectSection": "Select a section",
   "settings.selectSectionHint": "Choose a tab above to manage tags, groups, mappings, or system settings.",
@@ -58,6 +59,7 @@
   "settings.desc.exportImport": "System configurations",
   "settings.desc.branding": "Client logo & branding",
   "settings.desc.system": "PLC, mode & emulator",
+  "settings.desc.logs": "Live backend logs & errors",
   "settings.desc.licenses": "Machine license activations",
 
   "common.switchToArabic": "Switch to Arabic",
@@ -493,5 +495,19 @@
   "builder.justNow": "just now",
   "builder.mAgo": "m ago",
   "builder.hAgo": "h ago",
-  "builder.dAgo": "d ago"
+  "builder.dAgo": "d ago",
+
+  "logs.title": "System Logs",
+  "logs.subtitle": "Real-time backend logs, errors, and diagnostics",
+  "logs.connected": "Connected",
+  "logs.disconnected": "Disconnected",
+  "logs.errors": "errors",
+  "logs.warnings": "warnings",
+  "logs.searchPlaceholder": "Filter logs...",
+  "logs.pause": "Pause",
+  "logs.resume": "Resume",
+  "logs.download": "Download",
+  "logs.clear": "Clear",
+  "logs.entries": "entries",
+  "logs.empty": "No log entries yet. Logs will appear here in real time."
 }
