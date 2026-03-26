@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaServer, FaPlug, FaNetworkWired, FaSave, FaSync } from 'react-icons/fa';
+import { FaServer, FaPlug, FaNetworkWired, FaSave, FaSync, FaGlobe, FaCopy, FaCheck } from 'react-icons/fa';
 import { useSystemStatus } from '../../../Context/SystemStatusContext';
 import DemoModeSettings from '../DemoMode/DemoModeSettings';
 import { useLanguage } from '../../../Hooks/useLanguage';
@@ -15,6 +15,22 @@ export default function SystemSettings() {
   const [toggling, setToggling] = useState(false);
   const [plcMsg, setPlcMsg] = useState(null);
   const dirty = useRef(false);
+  const [networkInfo, setNetworkInfo] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings/network-info', { credentials: 'include' })
+      .then(r => r.json())
+      .then(data => setNetworkInfo(data))
+      .catch(() => {});
+  }, []);
+
+  const handleCopyLink = () => {
+    if (!networkInfo) return;
+    navigator.clipboard.writeText(networkInfo.url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     if (plcConfig && !dirty.current) {
@@ -162,6 +178,34 @@ export default function SystemSettings() {
                 {plcMsg.text}
               </p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Network Access ── */}
+      {networkInfo && networkInfo.ip !== '127.0.0.1' && (
+        <div className="bg-white dark:bg-[#131b2d] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40]">
+          <div className="px-4 py-3">
+            <div className="flex items-center gap-2 mb-2.5">
+              <div className="w-7 h-7 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-900/30">
+                <FaGlobe className="text-blue-600 dark:text-blue-400" size={12} />
+              </div>
+              <div>
+                <h3 className="text-[12px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">Network Access</h3>
+                <p className="text-[10px] text-[#8898aa]">Share this link with anyone on the same network to access Hercules</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 px-3 py-2 rounded-md bg-[#f5f8fb] dark:bg-[#0d1825] border border-[#e3e9f0] dark:border-[#1e2d40]">
+                <span className="text-[12px] font-mono text-[#2a3545] dark:text-[#e1e8f0]">{networkInfo.url}</span>
+              </div>
+              <button
+                onClick={handleCopyLink}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-[10px] font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors whitespace-nowrap"
+              >
+                {copied ? <><FaCheck size={9} /> Copied!</> : <><FaCopy size={9} /> Copy Link</>}
+              </button>
+            </div>
           </div>
         </div>
       )}
