@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLenisScroll } from '../../../Hooks/useLenisScroll';
+import { useLanguage } from '../../../Hooks/useLanguage';
 import { useSocket } from '../../../Context/SocketContext';
 import { FaPlus, FaEdit, FaTrash, FaCheck, FaTimes, FaDownload, FaUpload, FaSearch, FaFilter, FaSpinner } from 'react-icons/fa';
 import axios from '../../../API/axios';
@@ -27,6 +28,7 @@ const FALLBACK_TAGS = [
 
 const TagManager = () => {
   useLenisScroll();
+  const { t } = useLanguage();
   const [tags, setTags] = useState([]);
   const [filteredTags, setFilteredTags] = useState([]);
   const [tagValues, setTagValues] = useState({});
@@ -185,7 +187,7 @@ const TagManager = () => {
       window.dispatchEvent(new Event('tagsUpdated'));
       setDeleteConfirm(null);
     } catch (e) {
-      toast.error('Failed to delete tag: ' + (e.response?.data?.message || e.message));
+      toast.error(t('tags.failedDelete') + ': ' + (e.response?.data?.message || e.message));
       setDeleteConfirm(null);
     }
   };
@@ -195,7 +197,7 @@ const TagManager = () => {
       await axios.put(`/api/tags/${tag.tag_name}`, { ...tag, is_active: !tag.is_active });
       await loadTags();
       window.dispatchEvent(new Event('tagsUpdated'));
-    } catch (e) { toast.error('Failed to update tag: ' + (e.response?.data?.message || e.message)); }
+    } catch (e) { toast.error(t('tags.failedUpdate') + ': ' + (e.response?.data?.message || e.message)); }
   };
 
   const handleSave = async (tagData) => {
@@ -206,7 +208,7 @@ const TagManager = () => {
       window.dispatchEvent(new Event('tagsUpdated'));
       setShowForm(false); setEditingTag(null);
     } catch (e) {
-      toast.error('Failed to save tag: ' + (e.response?.data?.message || e.response?.data?.error || e.message));
+      toast.error(t('tags.failedSave') + ': ' + (e.response?.data?.message || e.response?.data?.error || e.message));
     }
   };
 
@@ -223,7 +225,7 @@ const TagManager = () => {
         a.href = url; a.download = `tags_export_${new Date().toISOString().split('T')[0]}.json`;
         a.click(); URL.revokeObjectURL(url);
       }
-    } catch (e) { toast.error('Failed to export: ' + (e.response?.data?.message || e.message)); }
+    } catch (e) { toast.error(t('tags.failedExport') + ': ' + (e.response?.data?.message || e.message)); }
   };
 
   const handleExportCSV = async () => {
@@ -237,7 +239,7 @@ const TagManager = () => {
         a.href = url; a.download = `tags_export_${new Date().toISOString().split('T')[0]}.csv`;
         a.click(); URL.revokeObjectURL(url);
       }
-    } catch (e) { toast.error('Failed to export CSV: ' + (e.response?.data?.message || e.message)); }
+    } catch (e) { toast.error(t('tags.failedExportCsv') + ': ' + (e.response?.data?.message || e.message)); }
   };
 
   const handleImport = async (event) => {
@@ -365,31 +367,31 @@ const TagManager = () => {
       {/* ── Toolbar ── */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">Tag Management</h2>
-          <p className="text-[11px] text-[#8898aa] mt-0.5">Manage PLC tags, formulas, mappings, and manual data sources</p>
+          <h2 className="text-[14px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">{t('tags.title')}</h2>
+          <p className="text-[11px] text-[#8898aa] mt-0.5">{t('tags.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] bg-white dark:bg-[#131b2d] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] cursor-pointer transition-colors">
-            <FaUpload size={11} /> Import
+            <FaUpload size={11} /> {t('tags.import')}
             <input type="file" accept=".json,.csv,.xlsx,.xls" multiple onChange={handleImport} className="hidden" />
           </label>
           <div className="relative">
             <button onClick={() => setExportMenuOpen(!exportMenuOpen)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] bg-white dark:bg-[#131b2d] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] transition-colors">
-              <FaDownload size={11} /> Export
+              <FaDownload size={11} /> {t('tags.export')}
             </button>
             {exportMenuOpen && (
               <div className="absolute right-0 top-full mt-1 bg-white dark:bg-[#131b2d] border border-[#e3e9f0] dark:border-[#1e2d40] rounded-lg shadow-lg z-20 min-w-[140px]">
                 <button onClick={handleExportJSON} className="w-full text-left px-3 py-2 text-[11px] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] rounded-t-lg transition-colors">
-                  Export as JSON
+                  {t('tags.exportJson')}
                 </button>
                 <button onClick={handleExportCSV} className="w-full text-left px-3 py-2 text-[11px] text-[#3a4a5c] dark:text-[#c1ccd9] hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] rounded-b-lg transition-colors">
-                  Export as CSV
+                  {t('tags.exportCsv')}
                 </button>
               </div>
             )}
           </div>
           <button onClick={handleAdd} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg bg-brand hover:bg-brand-hover text-white transition-colors">
-            <FaPlus size={11} /> Add Tag
+            <FaPlus size={11} /> {t('tags.addTag')}
           </button>
         </div>
       </div>
@@ -400,7 +402,7 @@ const TagManager = () => {
           <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8898aa]" size={12} />
           <input
             type="text"
-            placeholder="Search tags..."
+            placeholder={t('tags.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-8 pr-3 py-2 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#131b2d] text-[#3a4a5c] dark:text-[#c1ccd9] placeholder-[#8898aa] focus:outline-none focus:border-brand focus:ring-1 focus:ring-[#0e74904d] transition-colors"
@@ -413,14 +415,14 @@ const TagManager = () => {
             onChange={(e) => setSourceTypeFilter(e.target.value)}
             className="px-3 py-2 text-[12px] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#131b2d] text-[#3a4a5c] dark:text-[#c1ccd9] focus:outline-none focus:border-brand transition-colors"
           >
-            <option value="all">All Types</option>
+            <option value="all">{t('tags.allTypes')}</option>
             <option value="PLC">PLC</option>
             <option value="Formula">Formula</option>
             <option value="Mapping">Mapping</option>
             <option value="Manual">Manual</option>
           </select>
         </div>
-        <span className="text-[11px] text-[#8898aa] ml-auto">{filteredTags.length} tags</span>
+        <span className="text-[11px] text-[#8898aa] ml-auto">{filteredTags.length} {t('tags.tagsCount')}</span>
       </div>
 
       {/* ── Table ── */}
@@ -430,32 +432,32 @@ const TagManager = () => {
             <thead>
               <tr className="bg-[#f5f8fb] dark:bg-[#0d1825] border-b border-[#e3e9f0] dark:border-[#1e2d40]">
                 {[
-                  { key: 'tag_name', label: 'Tag Name' },
-                  { key: 'display_name', label: 'Display Name' },
-                  { key: 'source_type', label: 'Source' },
+                  { key: 'tag_name', label: t('tags.tagName') },
+                  { key: 'display_name', label: t('tags.displayName') },
+                  { key: 'source_type', label: t('tags.source') },
                 ].map(col => (
                   <th key={col.key} onClick={() => handleSort(col.key)} className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide cursor-pointer hover:text-[#3a4a5c] dark:hover:text-[#c1ccd9] select-none transition-colors">
                     {col.label}<SortArrow field={col.key} />
                   </th>
                 ))}
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">Address / Formula</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">Data Type</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">Unit</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">Value</th>
-                <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide w-20">Actions</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('tags.addressFormula')}</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('tags.dataType')}</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('common.unit')}</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide">{t('tags.value')}</th>
+                <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-[#6b7f94] uppercase tracking-wide w-20">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e3e9f0] dark:divide-[#1e2d40]">
               {loading ? (
                 <tr>
                   <td colSpan="8" className="px-4 py-10 text-center text-[#8898aa]">
-                    <FaSpinner className="animate-spin inline mr-2" size={14} />Loading tags...
+                    <FaSpinner className="animate-spin inline mr-2" size={14} />{t('tags.loadingTags')}
                   </td>
                 </tr>
               ) : filteredTags.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="px-4 py-10 text-center text-[#8898aa]">
-                    {tags.length === 0 ? 'No tags yet. Click "Add Tag" to create one.' : 'No tags match your filters.'}
+                    {tags.length === 0 ? t('tags.noTags') : t('tags.noMatch')}
                   </td>
                 </tr>
               ) : (
@@ -480,16 +482,16 @@ const TagManager = () => {
                         tagValues[tag.tag_name] != null
                           ? <span className="text-[#059669] dark:text-[#34d399]">{typeof tagValues[tag.tag_name] === 'number' ? tagValues[tag.tag_name].toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(tagValues[tag.tag_name])}{tag.unit ? ` ${tag.unit}` : ''}</span>
                           : tagValuesError && !tagValuesLoading
-                            ? <span className="text-[#dc2626] italic">Error</span>
+                            ? <span className="text-[#dc2626] italic">{t('tags.error')}</span>
                             : <span className="text-[#8898aa] italic">Loading…</span>
                       ) : <span className="text-[#8898aa]">—</span>}
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="inline-flex items-center gap-1">
-                        <button onClick={() => handleEdit(tag)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle dark:hover:bg-[#0f2840] transition-colors" title="Edit">
+                        <button onClick={() => handleEdit(tag)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle dark:hover:bg-[#0f2840] transition-colors" title={t('common.edit')}>
                           <FaEdit size={13} />
                         </button>
-                        <button onClick={() => handleDelete(tag)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-[#dc2626] hover:bg-[#fef2f2] dark:hover:bg-[#2a1215] transition-colors" title="Delete">
+                        <button onClick={() => handleDelete(tag)} className="p-1.5 rounded-md text-[#6b7f94] hover:text-[#dc2626] hover:bg-[#fef2f2] dark:hover:bg-[#2a1215] transition-colors" title={t('common.delete')}>
                           <FaTrash size={13} />
                         </button>
                       </div>
@@ -506,7 +508,7 @@ const TagManager = () => {
       {filteredTags.length > PAGE_SIZE && (
         <div className="flex items-center justify-between mt-3 px-1">
           <span className="text-[11px] text-[#8898aa]">
-            Showing {start + 1}–{Math.min(start + PAGE_SIZE, filteredTags.length)} of {filteredTags.length}
+            {t('tags.showing')} {start + 1}–{Math.min(start + PAGE_SIZE, filteredTags.length)} {t('tags.of')} {filteredTags.length}
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -514,17 +516,17 @@ const TagManager = () => {
               disabled={page <= 1}
               className="px-2.5 py-1.5 text-[11px] font-medium rounded border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] transition-colors"
             >
-              Previous
+              {t('tags.previous')}
             </button>
             <span className="px-2 text-[11px] text-[#6b7f94]">
-              Page {page} of {totalPages}
+              {t('tags.page')} {page} {t('tags.of')} {totalPages}
             </span>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
               className="px-2.5 py-1.5 text-[11px] font-medium rounded border border-[#e3e9f0] dark:border-[#1e2d40] text-[#3a4a5c] dark:text-[#c1ccd9] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#f5f8fb] dark:hover:bg-[#1a2840] transition-colors"
             >
-              Next
+              {t('tags.next')}
             </button>
           </div>
         </div>
@@ -549,18 +551,18 @@ const TagManager = () => {
               </div>
             </div>
             <div className="text-center mb-5">
-              <h3 className="text-[13px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] mb-1">Delete Tag?</h3>
+              <h3 className="text-[13px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] mb-1">{t('tags.deleteTag')}</h3>
               <p className="text-[11px] text-[#6b7f94]">
-                Are you sure you want to delete <span className="font-medium text-[#2a3545] dark:text-[#e1e8f0]">"{deleteConfirm.displayName}"</span>?
-                <span className="block mt-1.5 text-[#dc2626]">This action cannot be undone.</span>
+                {t('tags.deleteTagConfirm')} <span className="font-medium text-[#2a3545] dark:text-[#e1e8f0]">"{deleteConfirm.displayName}"</span>?
+                <span className="block mt-1.5 text-[#dc2626]">{t('tags.deleteTagWarning')}</span>
               </p>
             </div>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setDeleteConfirm(null)} className="px-3 py-1.5 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94] hover:bg-[#f5f8fb] dark:hover:bg-[#131b2d] transition-colors">
-                Cancel
+                {t('common.cancel')}
               </button>
               <button onClick={confirmDelete} className="px-3 py-1.5 text-[11px] font-medium rounded-lg bg-[#dc2626] hover:bg-[#b91c1c] text-white transition-colors inline-flex items-center gap-1.5">
-                <FaTrash size={10} /> Delete
+                <FaTrash size={10} /> {t('common.delete')}
               </button>
             </div>
           </div>
@@ -570,11 +572,11 @@ const TagManager = () => {
       {/* ── Report Drafts Confirmation ── */}
       <ConfirmationModal
         isOpen={draftConfirm}
-        title="Create Report Drafts"
-        description="Create table report drafts from imported tags? One report will be generated per DB."
+        title={t('tags.createDrafts')}
+        description={t('tags.createDraftsDesc')}
         onConfirm={handleCreateDrafts}
         onCancel={() => setDraftConfirm(false)}
-        confirmText="Create Drafts"
+        confirmText={t('tags.createDraftsBtn')}
         confirmColor="brand"
       />
     </div>
