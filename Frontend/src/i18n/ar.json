@@ -638,5 +638,10 @@
   "viewer.widgets": "أقسام",
   "viewer.gridView": "عرض شبكي",
   "viewer.listView": "عرض قائمة",
-  "viewer.reports": "تقارير"
+  "viewer.reports": "تقارير",
+  "viewer.modified": "التعديل",
+  "viewer.dashboardType": "لوحة معلومات",
+  "viewer.tableType": "تقرير جدولي",
+  "viewer.item": "عنصر",
+  "viewer.items": "عناصر"
 }

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Search, LayoutGrid, List, ChevronDown, Table2, BarChart2, Layers, Clock, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useReportTemplates } from '../../Hooks/useReportBuilder';
-import ReportThumbnail from '../../Pages/ReportBuilder/ReportThumbnail';
 import { DarkModeContext } from '../../Context/DarkModeProvider';
 import { useLanguage } from '../../Hooks/useLanguage';
 import '../../Pages/ReportBuilder/reportBuilderTheme.css';
@@ -126,6 +125,7 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
     ? (t.dark ? '#38bdf8' : '#0284c7')
     : (t.dark ? '#c084fc' : '#9333ea');
 
+  const statusColor = t.dark ? '#34d399' : '#059669';
   const currentSortLabel = SORT_OPTIONS.find(o => o.key === sortBy)?.labelKey || '';
 
   return (
@@ -229,11 +229,19 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
         {loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="rounded-xl overflow-hidden animate-pulse" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-                <div className="h-24" style={{ background: t.surfaceAlt }} />
-                <div className="p-3.5 space-y-2">
-                  <div className="h-3 rounded-full w-3/4" style={{ background: t.surfaceAlt }} />
-                  <div className="h-2.5 rounded-full w-1/2" style={{ background: t.surfaceAlt }} />
+              <div key={i} className="rounded-lg overflow-hidden animate-pulse" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+                <div className="h-[3px]" style={{ background: t.surfaceAlt }} />
+                <div className="px-4 py-3.5 space-y-2.5">
+                  <div className="flex justify-between">
+                    <div className="h-3.5 rounded w-2/3" style={{ background: t.surfaceAlt }} />
+                    <div className="h-3 rounded w-14" style={{ background: t.surfaceAlt }} />
+                  </div>
+                  <div className="h-2.5 rounded w-4/5" style={{ background: t.surfaceAlt }} />
+                  <div className="h-px" style={{ background: t.border }} />
+                  <div className="flex justify-between">
+                    <div className="h-3 rounded w-16" style={{ background: t.surfaceAlt }} />
+                    <div className="h-3 rounded w-12" style={{ background: t.surfaceAlt }} />
+                  </div>
                 </div>
               </div>
             ))}
@@ -255,7 +263,7 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
           </div>
         )}
 
-        {/* Grid view */}
+        {/* ═══ Grid view — Builder-style info cards (no thumbnails) ═══ */}
         {!loading && filtered.length > 0 && viewMode === 'grid' && (
           <motion.div
             variants={containerVariants}
@@ -270,7 +278,7 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
                   key={tp.id}
                   variants={itemVariants}
                   onClick={() => navigate(`${baseRoute}/${tp.id}`)}
-                  className="text-start rounded-xl overflow-hidden transition-all duration-200 group"
+                  className="text-start rounded-lg overflow-hidden transition-all duration-200 group"
                   style={{ background: t.surface, border: `1px solid ${t.border}` }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = t.cardHoverBorder; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = t.border; e.currentTarget.style.boxShadow = 'none'; }}
@@ -278,35 +286,46 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
                   {/* Accent bar */}
                   <div className="h-[3px]" style={{ background: typeColor }} />
 
-                  {/* Compact thumbnail */}
-                  <div className="h-[100px] w-full overflow-hidden" style={{ background: t.surfaceAlt }}>
-                    <ReportThumbnail template={tp} />
-                  </div>
+                  {/* Card content */}
+                  <div className="px-4 py-3.5">
+                    {/* Title + status badge */}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <h3 className="text-[13px] font-semibold truncate" style={{ color: t.text }}>
+                        {tp.name || 'Untitled'}
+                      </h3>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded flex-shrink-0"
+                        style={{ background: `${statusColor}15`, color: statusColor }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusColor }} />
+                        Released
+                      </span>
+                    </div>
 
-                  {/* Info */}
-                  <div className="px-3.5 py-3">
-                    <h3 className="text-[12px] font-semibold truncate mb-0.5 transition-colors"
-                      style={{ color: t.text }}
-                    >
-                      {tp.name || 'Untitled'}
-                    </h3>
-                    {tp.description && (
-                      <p className="text-[10px] line-clamp-1 mb-2" style={{ color: t.textMuted }}>
+                    {/* Description */}
+                    {tp.description ? (
+                      <p className="text-[11px] line-clamp-2 mb-3 leading-relaxed" style={{ color: t.textMuted }}>
                         {tp.description}
                       </p>
+                    ) : (
+                      <div className="mb-3" />
                     )}
-                    <div className="flex items-center gap-2 pt-2" style={{ borderTop: `1px solid ${t.border}` }}>
-                      <span className="inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded"
-                        style={{ background: t.accentBg, color: typeColor }}>
-                        {filterType === 'dashboard' ? <BarChart2 size={9} /> : <Table2 size={9} />}
-                        {filterType === 'dashboard' ? 'Dashboard' : 'Table'}
+
+                    {/* Footer — type + count + time */}
+                    <div className="flex items-center justify-between pt-2.5" style={{ borderTop: `1px solid ${t.border}` }}>
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded"
+                        style={{ color: typeColor, background: `${typeColor}10` }}>
+                        {filterType === 'dashboard' ? <BarChart2 size={10} /> : <Table2 size={10} />}
+                        {filterType === 'dashboard' ? tr('viewer.dashboardType') : tr('viewer.tableType')}
                       </span>
-                      <span className="text-[9px] flex items-center gap-0.5" style={{ color: t.textMuted }}>
-                        <Layers size={9} /> {widgetCount}
-                      </span>
-                      <span className="text-[9px] ms-auto flex items-center gap-0.5" style={{ color: t.textMuted }}>
-                        <Clock size={9} /> {timeAgo(tp.updated_at, tr)}
-                      </span>
+                      <div className="flex items-center gap-2.5">
+                        {widgetCount > 0 && (
+                          <span className="text-[10px] font-medium flex items-center gap-1" style={{ color: t.textSecondary }}>
+                            <Layers size={10} /> {widgetCount} {widgetCount === 1 ? tr('viewer.item') : tr('viewer.items')}
+                          </span>
+                        )}
+                        <span className="text-[10px] flex items-center gap-1" style={{ color: t.textMuted }}>
+                          <Clock size={10} /> {timeAgo(tp.updated_at, tr)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </motion.button>
@@ -315,13 +334,13 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
           </motion.div>
         )}
 
-        {/* List view */}
+        {/* ═══ List view ═══ */}
         {!loading && filtered.length > 0 && viewMode === 'list' && (
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="rounded-xl overflow-hidden"
+            className="rounded-lg overflow-hidden"
             style={{ border: `1px solid ${t.border}` }}
           >
             {/* List header */}
@@ -329,7 +348,7 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
               style={{ background: t.surfaceAlt, color: t.textMuted, borderBottom: `1px solid ${t.border}` }}>
               <span>{tr('common.name')}</span>
               <span className="text-center">{tr('viewer.widgets')}</span>
-              <span className="text-end">{tr('common.modified')}</span>
+              <span className="text-end">{tr('viewer.modified')}</span>
             </div>
             {filtered.map(tp => {
               const { widgetCount } = getReportMeta(tp);

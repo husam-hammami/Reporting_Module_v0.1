@@ -638,5 +638,10 @@
   "viewer.widgets": "sections",
   "viewer.gridView": "Grid view",
   "viewer.listView": "List view",
-  "viewer.reports": "reports"
+  "viewer.reports": "reports",
+  "viewer.modified": "Modified",
+  "viewer.dashboardType": "Dashboard",
+  "viewer.tableType": "Table Report",
+  "viewer.item": "item",
+  "viewer.items": "items"
 }
