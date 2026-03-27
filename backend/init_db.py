@@ -43,6 +43,8 @@ MIGRATION_ORDER = [
     'add_site_and_license_name.sql',
     'create_distribution_rules_table.sql',
     'add_archive_granularity.sql',
+    'create_report_execution_log.sql',
+    'add_must_change_password.sql',
 ]
 
 
@@ -115,10 +117,10 @@ def create_default_admin(host, port, user, password, db_name):
             from werkzeug.security import generate_password_hash
             hashed = generate_password_hash('admin')
             cur.execute(
-                "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
-                ('admin', hashed, 'admin'),
+                "INSERT INTO users (username, password_hash, role, must_change_password) VALUES (%s, %s, %s, %s)",
+                ('admin', hashed, 'admin', True),
             )
-            print('  Created default admin user (admin / admin).')
+            print('  Created default admin user (admin / admin — must change password on first login).')
     except Exception as e:
         print(f'  WARN: Could not create admin: {e}')
 

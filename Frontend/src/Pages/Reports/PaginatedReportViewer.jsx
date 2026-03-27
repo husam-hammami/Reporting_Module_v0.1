@@ -354,6 +354,16 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
           <Download size={12} />
           <span className="text-[10px] font-bold uppercase tracking-wider">{exporting ? 'Exporting...' : 'PDF'}</span>
         </button>
+        <button
+          onClick={() => {
+            const from = timePeriod?.from?.toISOString?.() || '';
+            const to = timePeriod?.to?.toISOString?.() || '';
+            window.open(`/api/report-builder/templates/${reportId}/export?format=xlsx&from=${from}&to=${to}`, '_blank');
+          }}
+          className="rb-btn-ghost flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider"
+        >
+          <Download size={12} /> Excel
+        </button>
         <button onClick={handlePrint} className="rb-btn-ghost flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
           <Printer size={12} /> Print
         </button>

@@ -1041,6 +1041,17 @@ def _html_to_pdf(html_content):
     return buf.getvalue()
 
 
+# ── Public API for report export ──────────────────────────────────────────────
+
+def generate_report_xlsx(report_name, layout_config, from_dt, to_dt):
+    """Public wrapper: generate an Excel report from a template config and date range.
+    Returns: bytes (xlsx file content)
+    """
+    tag_names = extract_all_tags(layout_config)
+    tag_data = _fetch_tag_data(tag_names, from_dt, to_dt)
+    return _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt)
+
+
 # ── Excel (XLSX) generation ──────────────────────────────────────────────────
 
 def _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt):
@@ -1675,9 +1686,26 @@ def execute_distribution_rule(rule_id):
         status = 'success' if success else 'failed'
         error_msg = '; '.join(errors) if errors else None
 
+        file_names_list = [fn for fn, _ in attachments] if attachments else []
+
         with closing(get_conn()) as conn:
             actual_conn = conn._conn if hasattr(conn, '_conn') else conn
             cur = actual_conn.cursor()
+            # Log execution to audit trail
+            try:
+                cur.execute("""
+                    INSERT INTO report_execution_log
+                        (rule_id, report_ids, executed_at, time_range_from, time_range_to,
+                         format, delivery_method, recipients, status, error_message, file_names)
+                    VALUES (%s, %s::jsonb, NOW(), %s, %s, %s, %s, %s::jsonb, %s, %s, %s::jsonb)
+                """, (
+                    rule_id, json.dumps(rule.get('report_ids', [])),
+                    from_dt, to_dt, fmt, delivery,
+                    json.dumps(rule.get('recipients', [])),
+                    status, error_msg, json.dumps(file_names_list),
+                ))
+            except Exception as log_err:
+                logger.warning(f"Failed to log execution: {log_err}")
             cur.execute("""
                 UPDATE distribution_rules
                 SET last_run_at = NOW(), last_run_status = %s, last_run_error = %s
@@ -1692,11 +1720,19 @@ def execute_distribution_rule(rule_id):
 
     except Exception as e:
         logger.error(f"Distribution rule {rule_id} failed: {e}", exc_info=True)
-        # Update status to failed
+        # Update status to failed + log failure
         try:
             with closing(get_conn()) as conn:
                 actual_conn = conn._conn if hasattr(conn, '_conn') else conn
                 cur = actual_conn.cursor()
+                try:
+                    cur.execute("""
+                        INSERT INTO report_execution_log
+                            (rule_id, executed_at, status, error_message)
+                        VALUES (%s, NOW(), 'failed', %s)
+                    """, (rule_id, str(e)))
+                except Exception:
+                    pass
                 cur.execute("""
                     UPDATE distribution_rules
                     SET last_run_at = NOW(), last_run_status = 'failed', last_run_error = %s

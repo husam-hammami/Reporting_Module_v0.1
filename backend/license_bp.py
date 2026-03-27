@@ -6,6 +6,7 @@ managing machine license activations (superadmin only).
 """
 
 import logging
+import os
 from datetime import datetime, date, timedelta
 from functools import wraps
 from flask import Blueprint, jsonify, request
@@ -123,7 +124,10 @@ def register_machine():
 
     except Exception as e:
         logger.error("license/register error: %s", e, exc_info=True)
-        return jsonify({'error': 'Server error', 'detail': str(e)}), 500
+        _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
+        payload = {'error': 'Server error'}
+        if _dev: payload['detail'] = str(e)
+        return jsonify(payload), 500
 
 
 @license_bp.route('/license/status', methods=['GET'])
@@ -155,7 +159,10 @@ def license_status():
             return jsonify({'status': _effective_status(row), 'expiry': expiry_str}), 200
     except Exception as e:
         logger.error("license/status error: %s", e, exc_info=True)
-        return jsonify({'error': 'Server error', 'detail': str(e)}), 500
+        _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
+        payload = {'error': 'Server error'}
+        if _dev: payload['detail'] = str(e)
+        return jsonify(payload), 500
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +197,10 @@ def list_licenses():
             return jsonify(rows), 200
     except Exception as e:
         logger.error("admin/licenses list error: %s", e, exc_info=True)
-        return jsonify({'error': 'Server error', 'detail': str(e)}), 500
+        _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
+        payload = {'error': 'Server error'}
+        if _dev: payload['detail'] = str(e)
+        return jsonify(payload), 500
 
 
 @license_bp.route('/admin/licenses/<int:license_id>', methods=['PATCH'])
@@ -267,7 +277,10 @@ def update_license(license_id):
             return jsonify(row), 200
     except Exception as e:
         logger.error("admin/licenses update error: %s", e, exc_info=True)
-        return jsonify({'error': 'Server error', 'detail': str(e)}), 500
+        _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
+        payload = {'error': 'Server error'}
+        if _dev: payload['detail'] = str(e)
+        return jsonify(payload), 500
 
 
 @license_bp.route('/admin/licenses/<int:license_id>', methods=['DELETE'])
@@ -287,4 +300,7 @@ def delete_license(license_id):
             return jsonify({'status': 'deleted'}), 200
     except Exception as e:
         logger.error("admin/licenses delete error: %s", e, exc_info=True)
-        return jsonify({'error': 'Server error', 'detail': str(e)}), 500
+        _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
+        payload = {'error': 'Server error'}
+        if _dev: payload['detail'] = str(e)
+        return jsonify(payload), 500

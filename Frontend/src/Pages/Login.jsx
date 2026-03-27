@@ -43,7 +43,11 @@ function Login() {
           try { localStorage.setItem(AUTH_TOKEN_KEY, userData.auth_token); } catch (_) {}
         }
         setAuthLoading(false);
-        navigate('/');
+        if (userData?.must_change_password) {
+          navigate('/change-password', { state: { forced: true } });
+        } else {
+          navigate('/');
+        }
       }
     } catch (error) {
       let errorMessage = 'Login failed. Please try again.';
