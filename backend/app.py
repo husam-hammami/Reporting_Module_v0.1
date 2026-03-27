@@ -845,7 +845,7 @@ def login():
 
         with closing(get_db_connection()) as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT id, username, password_hash, role, COALESCE(must_change_password, false) as must_change_password FROM users WHERE username = %s', (username,))
+            cursor.execute('SELECT id, username, password_hash, role FROM users WHERE username = %s', (username,))
             user = cursor.fetchone()
 
             if user and check_password_hash(user['password_hash'], password):
@@ -861,8 +861,7 @@ def login():
                         "id": user['id'],
                         "username": user['username'],
                         "role": user['role'],
-                        "auth_token": auth_token,
-                        "must_change_password": bool(user.get('must_change_password', False))
+                        "auth_token": auth_token
                     }
                 }), 200)
 
@@ -1023,7 +1022,7 @@ def change_own_password():
     password_hash = generate_password_hash(new_password)
     with closing(get_db_connection()) as conn:
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET password_hash=%s, must_change_password=false WHERE id=%s", (password_hash, current_user.id))
+        cursor.execute("UPDATE users SET password_hash=%s WHERE id=%s", (password_hash, current_user.id))
         conn.commit()
     return jsonify({'status': 'password_changed'}), 200
 

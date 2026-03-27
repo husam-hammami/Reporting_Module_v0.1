@@ -117,10 +117,10 @@ def create_default_admin(host, port, user, password, db_name):
             from werkzeug.security import generate_password_hash
             hashed = generate_password_hash('admin')
             cur.execute(
-                "INSERT INTO users (username, password_hash, role, must_change_password) VALUES (%s, %s, %s, %s)",
-                ('admin', hashed, 'admin', True),
+                "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
+                ('admin', hashed, 'admin'),
             )
-            print('  Created default admin user (admin / admin — must change password on first login).')
+            print('  Created default admin user (admin / admin).')
     except Exception as e:
         print(f'  WARN: Could not create admin: {e}')
 
