@@ -12,23 +12,32 @@ jobs:
     defaults:
       run:
         shell: powershell
-        working-directory: C:/Users/Administrator/Desktop/Config_system/V3/Reporting_Module_v0.1/Reporting_Module_v0.1
+        working-directory: D:/Reporting_hercules/Reporting_Module_v0.1
 
     steps:
       - name: Pull latest code
         run: git pull origin main
 
-      - name: Rebuild and restart backend
+      - name: Install dependencies
         run: |
-          docker compose -p reporting_module_v01 build backend
-          docker compose -p reporting_module_v01 up -d backend
-
-      - name: Wait for backend to be healthy
-        run: Start-Sleep -Seconds 10
+          & backend\venv\Scripts\pip.exe install -r backend\requirements.txt
 
       - name: Run DB migrations
         run: |
-          docker compose -p reporting_module_v01 exec -T backend python tools/setup/setup_local_db.py --no-seed
+          & backend\venv\Scripts\python.exe backend\tools\setup\setup_local_db.py --no-seed
 
-      - name: Verify containers
-        run: docker ps
+      - name: Restart backend
+        run: |
+          Get-Process -Name python -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 2
+          Start-Process -FilePath "backend\venv\Scripts\python.exe" -ArgumentList "app.py" -WorkingDirectory "backend" -WindowStyle Hidden
+
+      - name: Verify backend is running
+        run: |
+          Start-Sleep -Seconds 5
+          try {
+            $r = Invoke-WebRequest -Uri http://localhost:5001/api/settings/system-status -UseBasicParsing -TimeoutSec 10
+            Write-Host "Backend is running (status: $($r.StatusCode))"
+          } catch {
+            Write-Host "WARNING: Backend health check failed: $_"
+          }
