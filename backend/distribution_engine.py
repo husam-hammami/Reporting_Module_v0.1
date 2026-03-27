@@ -501,8 +501,8 @@ p.subtitle { font-size: 13px; color: #64748b; margin: 0 0 2px 0; }
 p.period   { font-size: 12px; color: #94a3b8; font-weight: 500; margin: 0 0 4px 0; }
 .header-rule {
   margin-top: 4px;
-  height: 1.5px;
-  background: linear-gradient(90deg, #0f3460, #1a5276, #0f3460);
+  height: 2px;
+  background-color: #1a5276;
 }
 
 /* ── Section label ── */
@@ -521,40 +521,38 @@ p.period   { font-size: 12px; color: #94a3b8; font-weight: 500; margin: 0 0 4px 
   margin: 10px 0 4px 0;
 }
 
-/* ── KPI row (right-aligned inline, matching frontend) ── */
-.kpi-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-.kpi-item { text-align: right; }
-.kpi-item .kpi-label { font-size: 11px; font-weight: 500; color: #64748b; }
-.kpi-item .kpi-value { font-size: 14px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
+/* ── KPI row (table-based for xhtml2pdf compat) ── */
+.kpi-row-table { width: 100%; margin-bottom: 8px; }
+.kpi-row-table td { text-align: right; padding: 2px 8px; }
+.kpi-label { font-size: 10px; font-weight: 500; color: #64748b; }
+.kpi-value { font-size: 13px; font-weight: 700; color: #0f172a; }
 
 /* ── Data tables ── */
 table.data-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
-  word-break: break-word;
   margin: 4px 0 8px 0;
-  font-size: 13px;
+  font-size: 11px;
 }
 table.data-table th {
   padding: 6px 8px;
   font-weight: 700;
-  border: 1px solid #d1d5db;
-  background: #f1f5f9;
-  color: #334155;
+  font-size: 10px;
+  border: 1px solid #94a3b8;
+  background-color: #1e293b;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 table.data-table td {
   padding: 5px 8px;
-  border: 1px solid #e2e8f0;
+  font-size: 11px;
+  border: 1px solid #d1d5db;
+  color: #1e293b;
 }
-table.data-table tbody tr:nth-child(even) { background: #f8fafc; }
-table.data-table .summary-row { font-weight: 700; background: #f1f5f9 !important; }
+table.data-table .alt-row { background-color: #f1f5f9; }
+table.data-table .summary-row { font-weight: 700; background-color: #e0f2fe; }
+table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11px; }
 
 /* ── Text blocks ── */
 .text-block { margin-bottom: 6px; }
@@ -813,11 +811,11 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                 }
                 val = _resolve_cell(cell_data, tag_data)
                 kpi_items.append(
-                    f'<span class="kpi-item"><span class="kpi-label">{_esc(kpi_label)}: </span>'
-                    f'<span class="kpi-value">{_esc(val)}</span></span>'
+                    f'<td><span class="kpi-label">{_esc(kpi_label)}</span><br/>'
+                    f'<span class="kpi-value">{_esc(val)}</span></td>'
                 )
             if kpi_items:
-                body_parts.append(f'<div class="kpi-row">{"".join(kpi_items)}</div>')
+                body_parts.append(f'<table class="kpi-row-table"><tr>{"".join(kpi_items)}</tr></table>')
 
         elif s_type == 'table':
             label = s.get('label', '')
@@ -839,7 +837,7 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                 if _is_row_hidden(row, tag_data):
                     continue
                 cells = row.get('cells', [])
-                stripe = ' style="background:#f8fafc"' if visible_row_idx % 2 == 1 else ''
+                stripe = ' class="alt-row"' if visible_row_idx % 2 == 1 else ''
                 td_parts = []
                 for i, cell in enumerate(cells):
                     align = columns[i].get('align', 'left') if i < len(columns) else 'left'
