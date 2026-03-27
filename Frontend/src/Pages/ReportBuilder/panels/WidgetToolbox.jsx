@@ -58,18 +58,22 @@ function SmallVizIcon({ type }) {
 const COMPONENTS = [
   { section: 'Data', type: 'kpi', label: 'KPI Card' },
   { section: 'Data', type: 'gauge', label: 'Gauge' },
+  { section: 'Data', type: 'stat', label: 'Stat Panel' },
+  { section: 'Data', type: 'status', label: 'Status Indicator' },
+  { section: 'Data', type: 'progress', label: 'Progress Bar' },
   { section: 'Data', type: 'silo', label: 'Silo Visual' },
+  { section: 'Data', type: 'hopper', label: 'Hopper' },
   { section: 'Charts', type: 'chart', label: 'Line Chart' },
   { section: 'Charts', type: 'barchart', label: 'Bar Chart' },
   { section: 'Charts', type: 'piechart', label: 'Pie Chart' },
+  { section: 'Charts', type: 'sparkline', label: 'Sparkline' },
   { section: 'Tables', type: 'table', label: 'Data Table' },
   { section: 'Layout', type: 'text', label: 'Text Block' },
   { section: 'Layout', type: 'image', label: 'Image' },
   { section: 'Layout', type: 'logo', label: 'Client Logo' },
-  { section: 'Layout', type: 'repeat', label: 'Repeat Panel' },
 ];
 
-const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', repeat: 'Repeat' };
+const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', status: 'Status', sparkline: 'Spark', progress: 'Progress', hopper: 'Hopper' };
 
 const SECTIONS = ['Data', 'Charts', 'Tables', 'Layout', 'Tag Groups', 'Widgets'];
 
