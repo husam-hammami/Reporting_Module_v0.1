@@ -176,6 +176,15 @@
   "system.retentionFailed": "सेटिंग्स सेव नहीं हुईं",
   "system.exportHourly": "डिटेल डेटा डाउनलोड (CSV)",
   "system.exportDaily": "दैनिक सारांश डाउनलोड (CSV)",
+  "system.plantType": "प्लांट का प्रकार",
+  "system.plantTypeDesc": "उद्योग-विशिष्ट KPI लोड करने के लिए प्लांट प्रकार चुनें",
+  "system.feedMill": "फीड मिल",
+  "system.flourMill": "आटा मिल",
+  "system.grainSilo": "अनाज साइलो",
+  "system.selected": "चयनित",
+
+  "formulas.title": "फॉर्मूला लाइब्रेरी",
+  "formulas.configured": "कॉन्फ़िगर",
 
   "smtp.title": "ईमेल कॉन्फ़िगरेशन",
   "smtp.herculesCloud": "Hercules क्लाउड ईमेल",

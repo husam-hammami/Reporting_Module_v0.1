@@ -176,6 +176,15 @@
   "system.retentionFailed": "Failed to save settings",
   "system.exportHourly": "Export Detailed Data (CSV)",
   "system.exportDaily": "Export Daily Summaries (CSV)",
+  "system.plantType": "Plant Type",
+  "system.plantTypeDesc": "Select your plant type to load industry-specific KPIs and formulas",
+  "system.feedMill": "Feed Mill",
+  "system.flourMill": "Flour Mill",
+  "system.grainSilo": "Grain Silo",
+  "system.selected": "Selected",
+
+  "formulas.title": "Formula Library",
+  "formulas.configured": "configured",
 
   "smtp.title": "Email Configuration",
   "smtp.herculesCloud": "Hercules Cloud Email",

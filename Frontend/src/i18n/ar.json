@@ -176,6 +176,15 @@
   "system.retentionFailed": "فشل حفظ الإعدادات",
   "system.exportHourly": "تصدير البيانات التفصيلية (CSV)",
   "system.exportDaily": "تصدير الملخصات اليومية (CSV)",
+  "system.plantType": "نوع المصنع",
+  "system.plantTypeDesc": "اختر نوع المصنع لتحميل مؤشرات الأداء الخاصة بالصناعة",
+  "system.feedMill": "مصنع أعلاف",
+  "system.flourMill": "مطحنة دقيق",
+  "system.grainSilo": "صوامع حبوب",
+  "system.selected": "مختار",
+
+  "formulas.title": "مكتبة الصيغ",
+  "formulas.configured": "مكونة",
 
   "smtp.title": "إعدادات البريد الإلكتروني",
   "smtp.herculesCloud": "بريد Hercules السحابي",

@@ -33,6 +33,10 @@ export default function SystemSettings() {
   const [retentionSaving, setRetentionSaving] = useState(false);
   const [retentionMsg, setRetentionMsg] = useState(null);
 
+  // Plant type state
+  const [plantType, setPlantType] = useState(null);
+  const [plantTypeSaving, setPlantTypeSaving] = useState(false);
+
   useEffect(() => {
     axios.get('/api/settings/network-info')
       .then(res => setNetworkInfo(res.data))
@@ -45,7 +49,19 @@ export default function SystemSettings() {
         setRollupEnabled(d.rollupEnabled !== false);
       })
       .catch(() => {});
+    axios.get('/api/plant-config')
+      .then(res => setPlantType(res.data?.plant_type || null))
+      .catch(() => {});
   }, []);
+
+  const handlePlantType = async (type) => {
+    setPlantTypeSaving(true);
+    try {
+      await axios.post('/api/plant-config', { plant_type: type });
+      setPlantType(type);
+    } catch { /* ignore */ }
+    setPlantTypeSaving(false);
+  };
 
   const handleCopyLink = () => {
     if (!networkInfo) return;
@@ -231,6 +247,45 @@ export default function SystemSettings() {
           </div>
         </div>
       )}
+
+      {/* ── Plant Type ── */}
+      <div className="bg-white dark:bg-[#131b2d] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40]">
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-md flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30">
+              <FaServer className="text-emerald-600 dark:text-emerald-400" size={11} />
+            </div>
+            <div>
+              <h3 className="text-[12px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{t('system.plantType')}</h3>
+              <p className="text-[10px] text-[#8898aa]">{t('system.plantTypeDesc')}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { type: 'feed_mill', label: t('system.feedMill'), icon: '🏭' },
+              { type: 'flour_mill', label: t('system.flourMill'), icon: '🌾' },
+              { type: 'grain_silo', label: t('system.grainSilo'), icon: '🏗️' },
+            ].map(opt => (
+              <button
+                key={opt.type}
+                onClick={() => handlePlantType(opt.type)}
+                disabled={plantTypeSaving}
+                className={`px-3 py-3 rounded-lg text-center transition-all ${plantType === opt.type ? 'ring-2 ring-brand' : ''}`}
+                style={{
+                  background: plantType === opt.type ? 'rgba(34,211,238,0.08)' : undefined,
+                  border: `1.5px solid ${plantType === opt.type ? '#22d3ee' : '#e3e9f0'}`,
+                }}
+              >
+                <div className="text-xl mb-1">{opt.icon}</div>
+                <div className="text-[11px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{opt.label}</div>
+                {plantType === opt.type && (
+                  <div className="text-[9px] text-brand font-medium mt-0.5">{t('system.selected')}</div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── Language ── */}
       <div className="bg-white dark:bg-[#131b2d] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40]">

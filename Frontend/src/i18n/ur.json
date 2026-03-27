@@ -176,6 +176,15 @@
   "system.retentionFailed": "ترتیبات محفوظ نہیں ہوئیں",
   "system.exportHourly": "تفصیلی ڈیٹا ڈاؤنلوڈ (CSV)",
   "system.exportDaily": "روزانہ خلاصے ڈاؤنلوڈ (CSV)",
+  "system.plantType": "پلانٹ کی قسم",
+  "system.plantTypeDesc": "صنعت کے مخصوص KPI لوڈ کرنے کے لیے پلانٹ کی قسم منتخب کریں",
+  "system.feedMill": "فیڈ مل",
+  "system.flourMill": "آٹا مل",
+  "system.grainSilo": "اناج سائلو",
+  "system.selected": "منتخب",
+
+  "formulas.title": "فارمولا لائبریری",
+  "formulas.configured": "ترتیب شدہ",
 
   "smtp.title": "ای میل کنفیگریشن",
   "smtp.herculesCloud": "Hercules کلاؤڈ ای میل",
