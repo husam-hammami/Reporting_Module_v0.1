@@ -120,16 +120,18 @@ def test_smtp_connection(to_email=None):
     cfg = get_smtp_config()
 
     if cfg.get("send_method", "resend") == "resend":
-        # Test via Resend
-        recipient = to_email or cfg.get("recipient", "")
-        if not recipient:
-            return {"success": False, "error": "No recipient email address provided"}
-        result = send_email_resend(
-            [recipient],
-            "Test email from Hercules",
-            "<p>This is a test email sent from the Hercules Reporting Module via Hercules Cloud Email.</p>",
-        )
-        return result
+        try:
+            import resend as _resend_check  # noqa: F401
+            recipient = to_email or cfg.get("recipient", "")
+            if not recipient:
+                return {"success": False, "error": "No recipient email address provided"}
+            return send_email_resend(
+                [recipient],
+                "Test email from Hercules",
+                "<p>This is a test email sent from the Hercules Reporting Module via Hercules Cloud Email.</p>",
+            )
+        except ImportError:
+            logger.warning("'resend' package not installed, falling back to SMTP for test")
 
     # Test via SMTP
     recipient = to_email or cfg.get("recipient", "")

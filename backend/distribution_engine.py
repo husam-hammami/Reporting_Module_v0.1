@@ -1464,12 +1464,16 @@ def _send_email(recipients, subject, body_html, attachments=None):
     Args:
         attachments: list of (filename, bytes) tuples, or None
     """
-    from smtp_config import get_smtp_config, send_email_resend
+    from smtp_config import get_smtp_config
     cfg = get_smtp_config()
 
-    # ── Resend (default) ──
+    # ── Resend (default) — falls through to SMTP if the package is missing ──
     if cfg.get('send_method', 'resend') == 'resend':
-        return send_email_resend(recipients, subject, body_html, attachments=attachments)
+        try:
+            from smtp_config import send_email_resend
+            return send_email_resend(recipients, subject, body_html, attachments=attachments)
+        except ImportError:
+            logger.warning("'resend' package not installed, falling back to SMTP")
 
     # ── SMTP fallback ──
     if not cfg.get('smtp_server'):
