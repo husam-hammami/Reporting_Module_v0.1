@@ -12,7 +12,7 @@ jobs:
     defaults:
       run:
         shell: powershell
-        working-directory: C:/Users/Administrator/Desktop/Config_system/V3/Reporting_Module_v0.1/Reporting_Module_v0.1
+        working-directory: D:/Reporting_hercules/Reporting_Module_v0.1
 
     steps:
       - name: Pull latest code
