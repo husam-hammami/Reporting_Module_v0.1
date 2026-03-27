@@ -8,12 +8,14 @@ import logging
 import json
 from datetime import datetime
 from flask import Blueprint, jsonify, request
+from flask_login import login_required
 from contextlib import closing
 from psycopg2.extras import RealDictCursor
 
 logger = logging.getLogger(__name__)
 
 report_builder_bp = Blueprint('report_builder_bp', __name__)
+_table_ensured = False
 
 
 def _get_db_connection():
@@ -32,6 +34,9 @@ def _get_db_connection():
 
 def _ensure_table():
     """Create report_builder_templates table if it doesn't exist."""
+    global _table_ensured
+    if _table_ensured:
+        return
     try:
         get_conn = _get_db_connection()
         with closing(get_conn()) as conn:
@@ -71,6 +76,7 @@ def _ensure_table():
                 WHERE status IN ('published', 'validated');
             """)
             actual_conn.commit()
+            _table_ensured = True
     except Exception as e:
         logger.error(f"Error ensuring report_builder_templates table: {e}")
 
@@ -79,6 +85,7 @@ def _ensure_table():
 # GET /api/report-builder/templates — List all templates
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates', methods=['GET'])
+@login_required
 def list_templates():
     try:
         _ensure_table()
@@ -113,6 +120,7 @@ def list_templates():
 # POST /api/report-builder/templates — Create a template
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates', methods=['POST'])
+@login_required
 def create_template():
     try:
         _ensure_table()
@@ -152,6 +160,7 @@ def create_template():
 # GET /api/report-builder/templates/<id> — Get one template
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates/<int:template_id>', methods=['GET'])
+@login_required
 def get_template(template_id):
     try:
         _ensure_table()
@@ -186,6 +195,7 @@ def get_template(template_id):
 # PUT /api/report-builder/templates/<id> — Update a template
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates/<int:template_id>', methods=['PUT'])
+@login_required
 def update_template(template_id):
     try:
         _ensure_table()
@@ -242,6 +252,7 @@ def update_template(template_id):
 # DELETE /api/report-builder/templates/<id> — Delete a template
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates/<int:template_id>', methods=['DELETE'])
+@login_required
 def delete_template(template_id):
     try:
         _ensure_table()
@@ -266,6 +277,7 @@ def delete_template(template_id):
 # POST /api/report-builder/templates/<id>/duplicate — Duplicate a template
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates/<int:template_id>/duplicate', methods=['POST'])
+@login_required
 def duplicate_template(template_id):
     try:
         _ensure_table()

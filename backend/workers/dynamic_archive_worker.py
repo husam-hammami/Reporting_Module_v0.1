@@ -96,6 +96,23 @@ def dynamic_archive_worker():
                 except Exception as hist_err:
                     logger.warning(f"[Historian] Universal archive failed: {hist_err}", exc_info=True)
 
+            # ── Data Retention: purge old archive rows ──
+            try:
+                retention_days = int(os.environ.get('TAG_ARCHIVE_RETENTION_DAYS', 365))
+                if retention_days > 0:
+                    with closing(get_db_connection()) as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            DELETE FROM tag_history_archive
+                            WHERE archive_hour < NOW() - INTERVAL '%s days'
+                        """, (retention_days,))
+                        purged = cursor.rowcount
+                        conn.commit()
+                        if purged > 0:
+                            logger.info(f"[Retention] Purged {purged} archive rows older than {retention_days} days")
+            except Exception as ret_err:
+                logger.warning(f"[Retention] Archive purge failed: {ret_err}")
+
             # Per-layout archiving (Live Monitor tables) — failures here do not block universal archive
             try:
                 from utils.dynamic_tables import get_active_monitors
