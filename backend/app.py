@@ -494,6 +494,131 @@ def get_system_logs():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/settings/data-retention', methods=['GET'])
+@login_required
+def get_data_retention():
+    """Return current data retention settings."""
+    if current_user.role not in ('admin', 'superadmin'):
+        return jsonify({'error': 'Forbidden'}), 403
+    retention_days = int(os.environ.get('TAG_ARCHIVE_RETENTION_DAYS', 365))
+    rollup_enabled = os.environ.get('TAG_ARCHIVE_ROLLUP', 'true').lower() == 'true'
+
+    # Get archive stats
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE granularity = 'hourly' OR granularity IS NULL) AS hourly_rows,
+                COUNT(*) FILTER (WHERE granularity = 'daily') AS daily_rows,
+                MIN(archive_hour) AS oldest_record,
+                MAX(archive_hour) AS newest_record
+            FROM tag_history_archive
+        """)
+        row = cursor.fetchone()
+        conn.close()
+        stats = {
+            'hourlyRows': row[0] if row else 0,
+            'dailyRows': row[1] if row else 0,
+            'oldestRecord': row[2].isoformat() if row and row[2] else None,
+            'newestRecord': row[3].isoformat() if row and row[3] else None,
+        }
+    except Exception:
+        stats = {'hourlyRows': 0, 'dailyRows': 0, 'oldestRecord': None, 'newestRecord': None}
+
+    return jsonify({
+        'retentionDays': retention_days,
+        'rollupEnabled': rollup_enabled,
+        'stats': stats,
+    })
+
+
+@app.route('/api/settings/data-retention', methods=['POST'])
+@login_required
+def update_data_retention():
+    """Update data retention settings (saved as env vars via system_settings table)."""
+    if current_user.role not in ('admin', 'superadmin'):
+        return jsonify({'error': 'Forbidden'}), 403
+    data = request.get_json(silent=True) or {}
+    retention_days = data.get('retentionDays')
+    rollup_enabled = data.get('rollupEnabled')
+
+    if retention_days is not None:
+        retention_days = max(30, min(3650, int(retention_days)))  # 30 days to 10 years
+        os.environ['TAG_ARCHIVE_RETENTION_DAYS'] = str(retention_days)
+    if rollup_enabled is not None:
+        os.environ['TAG_ARCHIVE_ROLLUP'] = 'true' if rollup_enabled else 'false'
+
+    # Persist to system_settings table so it survives restarts
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS system_settings (
+                key VARCHAR(100) PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        if retention_days is not None:
+            cursor.execute("""
+                INSERT INTO system_settings (key, value) VALUES ('TAG_ARCHIVE_RETENTION_DAYS', %s)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+            """, (str(retention_days),))
+        if rollup_enabled is not None:
+            cursor.execute("""
+                INSERT INTO system_settings (key, value) VALUES ('TAG_ARCHIVE_ROLLUP', %s)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+            """, ('true' if rollup_enabled else 'false',))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.error(f"Failed to persist retention settings: {e}")
+
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/settings/export-archive', methods=['GET'])
+@login_required
+def export_archive_data():
+    """Export archive data as CSV for download before rollup."""
+    if current_user.role not in ('admin', 'superadmin'):
+        return jsonify({'error': 'Forbidden'}), 403
+    import csv
+    from io import StringIO
+
+    granularity = request.args.get('granularity', 'hourly')
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT t.tag_name, a.value, a.value_delta, a.archive_hour, a.granularity
+            FROM tag_history_archive a
+            JOIN tags t ON t.id = a.tag_id
+            WHERE (a.granularity = %s OR a.granularity IS NULL)
+            ORDER BY a.archive_hour, t.tag_name
+        """, (granularity,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Tag Name', 'Value', 'Delta', 'Timestamp', 'Granularity'])
+        for row in rows:
+            writer.writerow([row[0], row[1], row[2], row[3].isoformat() if row[3] else '', row[4] or 'hourly'])
+
+        from flask import Response
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=hercules_archive_{granularity}_{datetime.now().strftime("%Y%m%d")}.csv'}
+        )
+    except Exception as e:
+        logger.error(f"Failed to export archive: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # NOTE: React catch-all route moved to end of file to avoid intercepting API routes
 
 

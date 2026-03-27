@@ -42,6 +42,7 @@ MIGRATION_ORDER = [
     'add_license_machine_info.sql',
     'add_site_and_license_name.sql',
     'create_distribution_rules_table.sql',
+    'add_archive_granularity.sql',
 ]
 
 

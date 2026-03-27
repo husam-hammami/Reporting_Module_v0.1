@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaServer, FaPlug, FaNetworkWired, FaSave, FaSync, FaGlobe, FaCopy, FaCheck, FaLanguage } from 'react-icons/fa';
+import { FaServer, FaPlug, FaNetworkWired, FaSave, FaSync, FaGlobe, FaCopy, FaCheck, FaLanguage, FaDatabase, FaDownload } from 'react-icons/fa';
 import { useSystemStatus } from '../../../Context/SystemStatusContext';
 import DemoModeSettings from '../DemoMode/DemoModeSettings';
 import { useLanguage } from '../../../Hooks/useLanguage';
@@ -26,9 +26,24 @@ export default function SystemSettings() {
   const [networkInfo, setNetworkInfo] = useState(null);
   const [copied, setCopied] = useState(false);
 
+  // Data retention state
+  const [retention, setRetention] = useState(null);
+  const [retentionDays, setRetentionDays] = useState(365);
+  const [rollupEnabled, setRollupEnabled] = useState(true);
+  const [retentionSaving, setRetentionSaving] = useState(false);
+  const [retentionMsg, setRetentionMsg] = useState(null);
+
   useEffect(() => {
     axios.get('/api/settings/network-info')
       .then(res => setNetworkInfo(res.data))
+      .catch(() => {});
+    axios.get('/api/settings/data-retention')
+      .then(res => {
+        const d = res.data;
+        setRetention(d);
+        setRetentionDays(d.retentionDays || 365);
+        setRollupEnabled(d.rollupEnabled !== false);
+      })
       .catch(() => {});
   }, []);
 
@@ -257,6 +272,104 @@ export default function SystemSettings() {
           </div>
         </div>
       </div>
+
+      {/* ── Data Retention ── */}
+      {retention && (
+        <div className="bg-white dark:bg-[#131b2d] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40]">
+          <div className="px-4 py-3">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-md flex items-center justify-center bg-amber-100 dark:bg-amber-900/30">
+                <FaDatabase className="text-amber-600 dark:text-amber-400" size={11} />
+              </div>
+              <div>
+                <h3 className="text-[12px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{t('system.dataRetention')}</h3>
+                <p className="text-[10px] text-[#8898aa]">{t('system.dataRetentionDesc')}</p>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+              <div className="px-3 py-2 rounded-md bg-[#f5f8fb] dark:bg-[#0d1825] border border-[#e3e9f0] dark:border-[#1e2d40]">
+                <p className="text-[9px] text-[#8898aa] uppercase font-medium">{t('system.hourlyRows')}</p>
+                <p className="text-[13px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">{(retention.stats?.hourlyRows || 0).toLocaleString()}</p>
+              </div>
+              <div className="px-3 py-2 rounded-md bg-[#f5f8fb] dark:bg-[#0d1825] border border-[#e3e9f0] dark:border-[#1e2d40]">
+                <p className="text-[9px] text-[#8898aa] uppercase font-medium">{t('system.dailyRows')}</p>
+                <p className="text-[13px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">{(retention.stats?.dailyRows || 0).toLocaleString()}</p>
+              </div>
+              <div className="px-3 py-2 rounded-md bg-[#f5f8fb] dark:bg-[#0d1825] border border-[#e3e9f0] dark:border-[#1e2d40]">
+                <p className="text-[9px] text-[#8898aa] uppercase font-medium">{t('system.oldestRecord')}</p>
+                <p className="text-[11px] font-medium text-[#2a3545] dark:text-[#e1e8f0]">{retention.stats?.oldestRecord ? new Date(retention.stats.oldestRecord).toLocaleDateString() : '—'}</p>
+              </div>
+              <div className="px-3 py-2 rounded-md bg-[#f5f8fb] dark:bg-[#0d1825] border border-[#e3e9f0] dark:border-[#1e2d40]">
+                <p className="text-[9px] text-[#8898aa] uppercase font-medium">{t('system.newestRecord')}</p>
+                <p className="text-[11px] font-medium text-[#2a3545] dark:text-[#e1e8f0]">{retention.stats?.newestRecord ? new Date(retention.stats.newestRecord).toLocaleDateString() : '—'}</p>
+              </div>
+            </div>
+
+            {/* Rollup toggle */}
+            <div className="flex items-center justify-between py-2 mb-2 border-b border-[#e3e9f0] dark:border-[#1e2d40]">
+              <div>
+                <p className="text-[11px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{t('system.rollupEnabled')}</p>
+                <p className="text-[9px] text-[#8898aa]">{t('system.rollupEnabledDesc')}</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={rollupEnabled} onChange={e => setRollupEnabled(e.target.checked)} className="sr-only peer" />
+                <div className="w-9 h-5 rounded-full transition-colors peer-checked:bg-emerald-500" style={{ background: rollupEnabled ? undefined : '#d1d5db' }} />
+                <div className="absolute top-0.5 start-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-4 rtl:peer-checked:-translate-x-4 shadow-sm" />
+              </label>
+            </div>
+
+            {/* Retention days */}
+            <div className="flex items-end gap-3 mb-3">
+              <div className="flex-1">
+                <label className="block text-[10px] font-medium text-[#6b7f94] mb-1">{t('system.retentionDays')}</label>
+                <input
+                  type="number" value={retentionDays} min={30} max={3650}
+                  onChange={e => setRetentionDays(Number(e.target.value))}
+                  className="w-full px-2.5 py-1.5 text-[11px] font-mono rounded-md border border-[#e3e9f0] dark:border-[#1e2d40] bg-[#f5f8fb] dark:bg-[#0d1825] text-[#2a3545] dark:text-[#e1e8f0] focus:outline-none focus:border-brand"
+                />
+                <p className="text-[9px] text-[#8898aa] mt-0.5">{t('system.retentionDaysHint')}</p>
+              </div>
+              <button
+                onClick={async () => {
+                  setRetentionSaving(true);
+                  setRetentionMsg(null);
+                  try {
+                    await axios.post('/api/settings/data-retention', { retentionDays, rollupEnabled });
+                    setRetentionMsg({ type: 'ok', text: t('system.retentionSaved') });
+                  } catch {
+                    setRetentionMsg({ type: 'err', text: t('system.retentionFailed') });
+                  }
+                  setRetentionSaving(false);
+                }}
+                disabled={retentionSaving}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium rounded-md bg-brand hover:bg-brand-hover text-[#0c1321] transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                <FaSave size={9} />
+                {retentionSaving ? t('common.saving') : t('common.save')}
+              </button>
+            </div>
+            {retentionMsg && (
+              <p className={`text-[10px] mb-2 ${retentionMsg.type === 'ok' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                {retentionMsg.text}
+              </p>
+            )}
+
+            {/* Export buttons */}
+            <div className="flex gap-2 pt-2 border-t border-[#e3e9f0] dark:border-[#1e2d40]">
+              <a href="/api/settings/export-archive?granularity=hourly" download
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium rounded-md border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94] hover:bg-[#f5f8fb] dark:hover:bg-[#0d1825] transition-colors">
+                <FaDownload size={9} /> {t('system.exportHourly')}
+              </a>
+              <a href="/api/settings/export-archive?granularity=daily" download
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium rounded-md border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94] hover:bg-[#f5f8fb] dark:hover:bg-[#0d1825] transition-colors">
+                <FaDownload size={9} /> {t('system.exportDaily')}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Browser-Side Emulator ── */}
       <div className="bg-white dark:bg-[#131b2d] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40]">
