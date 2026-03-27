@@ -353,6 +353,10 @@ def _resolve_cell(cell, tag_data):
             n = sum(vals) / len(vals)
         return _fmt(n)
 
+    if src == 'library_formula':
+        result = _resolve_library_formula(cell, tag_data)
+        return _fmt(result)
+
     return '—'
 
 
@@ -411,7 +415,116 @@ def _resolve_cell_raw(cell, tag_data):
             n = sum(vals) / len(vals)
         return (n, unit, decimals)
 
+    if src == 'library_formula':
+        result = _resolve_library_formula(cell, tag_data)
+        return (_to_num(result), unit, decimals)
+
     return (None, '', 1)
+
+
+# ── Library formula resolution (for sourceType='library_formula') ────────────
+
+# Cache to avoid repeated DB queries during a single report generation
+_library_formula_cache = {}
+
+def _resolve_library_formula(cell, tag_data):
+    """Resolve a library_formula cell by fetching formula + assignments from DB.
+    Returns: float value or None.
+    """
+    formula_id = cell.get('formulaId')
+    instance_id = cell.get('instanceId')
+    if not formula_id:
+        return None
+
+    cache_key = (formula_id, instance_id)
+    if cache_key not in _library_formula_cache:
+        try:
+            import sys
+            get_conn = None
+            for mod_name in ('app', '__main__'):
+                mod = sys.modules.get(mod_name)
+                if mod:
+                    get_conn = getattr(mod, 'get_db_connection', None)
+                    if get_conn:
+                        break
+            if not get_conn:
+                return None
+
+            from contextlib import closing
+            from psycopg2.extras import RealDictCursor
+
+            with closing(get_conn()) as conn:
+                cursor = conn.cursor(cursor_factory=RealDictCursor)
+                # Get formula template
+                cursor.execute("SELECT formula, unit, variables FROM formula_library WHERE id = %s", (formula_id,))
+                formula_row = cursor.fetchone()
+                if not formula_row:
+                    _library_formula_cache[cache_key] = None
+                    return None
+
+                # Get variable assignments
+                if instance_id:
+                    cursor.execute("""
+                        SELECT fva.variable_name, t.tag_name, fva.default_value
+                        FROM formula_variable_assignments fva
+                        LEFT JOIN tags t ON t.id = fva.tag_id
+                        WHERE fva.formula_id = %s AND fva.instance_id = %s
+                    """, (formula_id, instance_id))
+                else:
+                    cursor.execute("""
+                        SELECT fva.variable_name, t.tag_name, fva.default_value
+                        FROM formula_variable_assignments fva
+                        LEFT JOIN tags t ON t.id = fva.tag_id
+                        WHERE fva.formula_id = %s AND fva.instance_id IS NULL
+                    """, (formula_id,))
+
+                assignments = {r['variable_name']: r for r in cursor.fetchall()}
+                _library_formula_cache[cache_key] = {
+                    'formula': formula_row['formula'],
+                    'assignments': assignments,
+                }
+        except Exception as e:
+            logger.warning(f"Failed to load library formula {formula_id}: {e}")
+            _library_formula_cache[cache_key] = None
+            return None
+
+    cached = _library_formula_cache.get(cache_key)
+    if not cached:
+        return None
+
+    # Substitute variables with tag values
+    import re as _re
+    expr = cached['formula']
+    for var_name, var_info in cached['assignments'].items():
+        tag_name = var_info.get('tag_name')
+        default = var_info.get('default_value', 0)
+        if tag_name and tag_name in tag_data:
+            val = float(tag_data[tag_name])
+        elif default is not None:
+            val = float(default)
+        else:
+            val = 0.0
+        expr = _re.sub(r'\{' + _re.escape(var_name) + r'\}', str(val), expr)
+
+    return _evaluate_formula(expr, tag_data)
+
+
+def clear_library_formula_cache():
+    """Clear the library formula cache (call before each report generation run)."""
+    global _library_formula_cache
+    _library_formula_cache = {}
+
+
+# ── Public wrapper for Excel export from viewer ──────────────────────────────
+
+def generate_report_xlsx(report_name, layout_config, from_dt, to_dt):
+    """Public API: generate Excel report from template + time range.
+    Used by report_builder_bp.py export endpoint.
+    """
+    clear_library_formula_cache()
+    tag_names = extract_all_tags(layout_config)
+    tag_data = _fetch_tag_data(tag_names, from_dt, to_dt)
+    return _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt)
 
 
 # ── Row visibility (mirrors frontend isRowHidden) ────────────────────────────
@@ -1574,6 +1687,7 @@ def execute_distribution_rule(rule_id):
     PDF/HTML, deliver via email/disk, and update run status in DB.
     """
     get_conn = _get_db_connection()
+    clear_library_formula_cache()
 
     # 1. Load rule from DB
     with closing(get_conn()) as conn:
