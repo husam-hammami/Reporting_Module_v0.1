@@ -25,6 +25,12 @@ jobs:
       - name: Run DB migrations
         run: |
           & backend\venv\Scripts\python.exe backend\tools\setup\setup_local_db.py --no-seed
+        env:
+          DB_HOST: "127.0.0.1"
+          DB_PORT: "5433"
+          POSTGRES_DB: "dynamic_db_hercules"
+          POSTGRES_USER: "postgres"
+          POSTGRES_PASSWORD: "Admin@123"
 
       - name: Restart backend
         run: |
