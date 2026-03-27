@@ -1088,7 +1088,7 @@ def _xlsx_paginated(wb, layout_config, tag_data, from_dt, to_dt, report_name,
     ws.title = report_name[:31]  # Excel sheet name limit
     row_idx = 1
 
-    sections = layout_config.get('sections', [])
+    sections = layout_config.get('paginatedSections', []) or layout_config.get('sections', [])
     period = f"{from_dt.strftime('%Y-%m-%d %H:%M')} — {to_dt.strftime('%Y-%m-%d %H:%M')}" if from_dt and to_dt else ''
 
     for section in sections:
