@@ -430,16 +430,28 @@ def _file_to_base64_data_uri(filepath):
 
 def _get_logo_data_uris():
     """Return (hercules_uri, asm_uri, client_logo_uri) for embedding in HTML reports."""
-    static_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static', 'assets')
+    backend_dir = os.path.abspath(os.path.dirname(__file__))
+    project_root = os.path.dirname(backend_dir)
 
-    # Find logo files (Vite hashes filenames, so glob for the pattern)
+    # Search multiple possible logo directories (Vite dist, static, source assets)
+    search_dirs = [
+        os.path.join(backend_dir, 'static', 'assets'),           # backend/static/assets/
+        os.path.join(project_root, 'Frontend', 'dist', 'assets'),  # Frontend/dist/assets/
+        os.path.join(project_root, 'Frontend', 'src', 'Assets'),   # Frontend/src/Assets/
+    ]
+
     hercules_uri = ''
     asm_uri = ''
-    for fname in os.listdir(static_dir) if os.path.isdir(static_dir) else []:
-        if fname.startswith('Hercules_New') and fname.endswith('.png'):
-            hercules_uri = _file_to_base64_data_uri(os.path.join(static_dir, fname))
-        elif fname.startswith('Asm_Logo') and fname.endswith('.png'):
-            asm_uri = _file_to_base64_data_uri(os.path.join(static_dir, fname))
+    for search_dir in search_dirs:
+        if not os.path.isdir(search_dir):
+            continue
+        for fname in os.listdir(search_dir):
+            if fname.startswith('Hercules_New') and fname.endswith('.png') and not hercules_uri:
+                hercules_uri = _file_to_base64_data_uri(os.path.join(search_dir, fname))
+            elif fname.startswith('Asm_Logo') and fname.endswith('.png') and not asm_uri:
+                asm_uri = _file_to_base64_data_uri(os.path.join(search_dir, fname))
+        if hercules_uri and asm_uri:
+            break  # Found both, stop searching
 
     # Client logo from DB (stored as base64 data URI)
     client_logo_uri = ''
@@ -473,18 +485,9 @@ body {
   print-color-adjust: exact;
 }
 
-/* ── Logo header bar ── */
-.logo-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0;
-  padding: 0 0 2px 0;
-}
-.logo-header img.hercules { height: 44px; width: auto; filter: brightness(0.15); }
-.logo-header .right-logos { display: flex; align-items: center; gap: 14px; }
-.logo-header img.client { height: 40px; width: auto; max-width: 140px; object-fit: contain; }
-.logo-header img.asm { height: 40px; width: auto; object-fit: contain; }
+/* ── Logo header bar (table-based for xhtml2pdf compat) ── */
+.logo-header-table { margin-bottom: 4px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; }
+.logo-header-table img { vertical-align: middle; }
 
 /* ── Report header ── */
 h1.report-title {
@@ -606,19 +609,21 @@ table.data-table .summary-row { font-weight: 700; background: #f1f5f9 !important
 # ── Logo header HTML builder ─────────────────────────────────────────────────
 
 def _build_logo_header_html(hercules_uri, asm_uri, client_logo_uri):
-    """Build the logo header bar matching frontend ReportLogoHeader."""
-    parts = ['<div class="logo-header">']
-    if hercules_uri:
-        parts.append(f'<img class="hercules" src="{hercules_uri}" alt="Hercules" />')
-    else:
-        parts.append('<span></span>')
-    parts.append('<div class="right-logos">')
+    """Build the logo header bar using table layout (xhtml2pdf doesn't support flexbox)."""
+    herc_td = f'<img src="{hercules_uri}" alt="Hercules" style="height:44px;width:auto" />' if hercules_uri else '&nbsp;'
+    right_imgs = ''
     if client_logo_uri:
-        parts.append(f'<img class="client" src="{client_logo_uri}" alt="Client" />')
+        right_imgs += f'<img src="{client_logo_uri}" alt="Client" style="height:40px;width:auto;max-width:140px" /> '
     if asm_uri:
-        parts.append(f'<img class="asm" src="{asm_uri}" alt="ASM" />')
-    parts.append('</div></div>')
-    return '\n'.join(parts)
+        right_imgs += f'<img src="{asm_uri}" alt="ASM" style="height:40px;width:auto" />'
+    right_td = right_imgs or '&nbsp;'
+
+    return f"""<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:4px;border-bottom:1.5px solid #e2e8f0;padding-bottom:4px">
+  <tr>
+    <td style="text-align:left;vertical-align:middle">{herc_td}</td>
+    <td style="text-align:right;vertical-align:middle">{right_td}</td>
+  </tr>
+</table>"""
 
 
 # ── HTML report generation ───────────────────────────────────────────────────
@@ -1366,11 +1371,14 @@ def _build_email_html(report_name, from_dt, to_dt, filename):
     period = f"{from_dt.strftime('%d/%m/%Y, %H:%M')} — {to_dt.strftime('%d/%m/%Y, %H:%M')}"
     generated = datetime.now().strftime('%d/%m/%Y, %H:%M')
 
-    # Logo images for the header
-    hercules_img = f'<img src="{hercules_uri}" alt="Hercules" style="height:40px;width:auto" />' if hercules_uri else ''
-    asm_img = f'<img src="{asm_uri}" alt="ASM" style="height:36px;width:auto" />' if asm_uri else ''
-    client_img = f'<img src="{client_logo_uri}" alt="" style="height:36px;width:auto;max-width:120px;object-fit:contain" />' if client_logo_uri else ''
-    right_logos = f'{client_img}{asm_img}'
+    # Logo images for the header (explicit width+height for Outlook compatibility)
+    hercules_img = f'<img src="{hercules_uri}" alt="Hercules" width="auto" height="36" style="height:36px;width:auto;display:block" />' if hercules_uri else ''
+    asm_img = f'<img src="{asm_uri}" alt="ASM" width="auto" height="32" style="height:32px;width:auto;display:inline-block;vertical-align:middle" />' if asm_uri else ''
+    client_img = f'<img src="{client_logo_uri}" alt="" width="auto" height="32" style="height:32px;width:auto;max-width:100px;display:inline-block;vertical-align:middle" />' if client_logo_uri else ''
+    right_logos = ''
+    if client_img or asm_img:
+        spacer = '&nbsp;&nbsp;' if client_img and asm_img else ''
+        right_logos = f'{client_img}{spacer}{asm_img}'
 
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
