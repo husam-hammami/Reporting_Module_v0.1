@@ -406,8 +406,7 @@ def delete_emulator_custom_offset_route():
         return jsonify({'error': err or 'Failed to remove custom offset'}), 404
     return jsonify({'status': 'ok', 'message': 'Custom offset removed'}), 200
 
-<<<<<<< Updated upstream
-=======
+
 @app.route('/api/settings/network-info', methods=['GET'])
 @login_required
 def get_network_info():
