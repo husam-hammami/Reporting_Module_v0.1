@@ -45,6 +45,7 @@ MIGRATION_ORDER = [
     'add_archive_granularity.sql',
     'create_report_execution_log.sql',
     'add_must_change_password.sql',
+    'create_formula_library.sql',
 ]
 
 
