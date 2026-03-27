@@ -15,8 +15,6 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from asteval import Interpreter
 
-_tag_interp = Interpreter()
-
 logger = logging.getLogger(__name__)
 
 # Log once when bins/materials tables are missing to avoid console spam
@@ -52,7 +50,7 @@ def evaluate_value_formula(formula, raw_value):
         expression = re.sub(r'\bvalue\b', str(raw_value), expression, flags=re.IGNORECASE)
         
         # Evaluate the expression safely via asteval (has all math functions built in)
-        result = _tag_interp(expression)
+        result = Interpreter()(expression)
         
         # Ensure result is a number
         if isinstance(result, (int, float)):

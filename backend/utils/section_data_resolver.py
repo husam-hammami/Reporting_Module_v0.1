@@ -9,8 +9,6 @@ import logging
 import json
 import re
 from asteval import Interpreter
-
-_section_interp = Interpreter()
 from contextlib import closing
 from psycopg2.extras import RealDictCursor
 
@@ -338,12 +336,12 @@ def evaluate_formula(formula, value_or_dict):
                 # Replace tag_name with its value
                 expression = re.sub(r'\b' + escaped_tag + r'\b', str(tag_value), expression)
             # Evaluate the expression safely via asteval
-            result = _section_interp(expression)
+            result = Interpreter()(expression)
             return result if result is not None else value_or_dict
         else:
             # Single value formula
             expression = formula.strip().replace('value', str(value_or_dict))
-            result = _section_interp(expression)
+            result = Interpreter()(expression)
             return result if result is not None else value_or_dict
     except Exception as e:
         logger.warning(f"Formula evaluation error: {e}")

@@ -136,7 +136,7 @@ def dynamic_archive_worker():
                                 'daily'
                             FROM tag_history_archive
                             WHERE (granularity = 'hourly' OR granularity IS NULL)
-                              AND archive_hour < NOW() - INTERVAL '%s days'
+                              AND archive_hour < NOW() - make_interval(days => %s)
                             GROUP BY layout_id, tag_id, DATE_TRUNC('day', archive_hour)
                             ON CONFLICT DO NOTHING
                         """, (retention_days,))
@@ -146,7 +146,7 @@ def dynamic_archive_worker():
                         cursor.execute("""
                             DELETE FROM tag_history_archive
                             WHERE (granularity = 'hourly' OR granularity IS NULL)
-                              AND archive_hour < NOW() - INTERVAL '%s days'
+                              AND archive_hour < NOW() - make_interval(days => %s)
                         """, (retention_days,))
                         purged = cursor.rowcount
                         conn.commit()
@@ -159,7 +159,7 @@ def dynamic_archive_worker():
                         cursor = conn.cursor()
                         cursor.execute("""
                             DELETE FROM tag_history_archive
-                            WHERE archive_hour < NOW() - INTERVAL '%s days'
+                            WHERE archive_hour < NOW() - make_interval(days => %s)
                         """, (retention_days,))
                         purged = cursor.rowcount
                         conn.commit()

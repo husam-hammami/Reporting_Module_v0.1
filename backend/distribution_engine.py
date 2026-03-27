@@ -265,15 +265,10 @@ def _safe_aggregate(fn_name, args_str):
     return '0'
 
 
-# Lazy-init asteval interpreter (safe math expression evaluator)
-_formula_interp = None
-
+# Thread-safe asteval interpreter — create per call to avoid shared state
 def _get_formula_interp():
-    global _formula_interp
-    if _formula_interp is None:
-        from asteval import Interpreter
-        _formula_interp = Interpreter()
-    return _formula_interp
+    from asteval import Interpreter
+    return Interpreter()
 
 
 def _evaluate_formula(formula, tag_data):
@@ -283,10 +278,10 @@ def _evaluate_formula(formula, tag_data):
     try:
         expr = re.sub(r'\{([^}]+)\}', lambda m: str(float(tag_data.get(m.group(1), 0))), formula)
 
-        for fn_name in [('SUM', 'sum'), ('AVG', 'avg'), ('MIN', 'min'), ('MAX', 'max')]:
+        for fn_pattern, fn_safe in [('SUM', 'sum'), ('AVG', 'avg'), ('MIN', 'min'), ('MAX', 'max')]:
             expr = re.sub(
-                rf'\b{fn_name[0]}\s*\(([^)]*)\)',
-                lambda m, f=fn_name[1]: _safe_aggregate(f, m.group(1)),
+                rf'\b{fn_pattern}\s*\(([^)]*)\)',
+                lambda m, f=fn_safe: _safe_aggregate(f, m.group(1)),
                 expr, flags=re.IGNORECASE
             )
         expr = re.sub(r'\bABS\s*\(([^)]*)\)', lambda m: str(abs(float(m.group(1)))), expr, flags=re.IGNORECASE)
