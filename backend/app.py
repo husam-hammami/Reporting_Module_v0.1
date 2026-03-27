@@ -430,7 +430,10 @@ def delete_emulator_custom_offset_route():
 def get_network_info():
     """Return the host machine's LAN IP and access URL."""
     import socket
-    port = int(os.environ.get('FLASK_PORT', 5001))
+    # Use the actual port from the incoming request so it works regardless of
+    # which entry point started the server (dev 5001 vs desktop launcher 5004).
+    req_host = request.host  # e.g. "localhost:5004" or "192.168.23.9:5004"
+    port = int(req_host.split(':')[1]) if ':' in req_host else 80
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
