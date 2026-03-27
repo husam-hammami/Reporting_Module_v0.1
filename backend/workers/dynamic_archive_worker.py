@@ -26,6 +26,21 @@ import pytz
 logger = logging.getLogger(__name__)
 
 
+def _load_retention_settings(get_db_connection):
+    """Load retention settings from system_settings table into env vars."""
+    try:
+        with closing(get_db_connection()) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT key, value FROM system_settings
+                WHERE key IN ('TAG_ARCHIVE_RETENTION_DAYS', 'TAG_ARCHIVE_ROLLUP')
+            """)
+            for row in cursor.fetchall():
+                os.environ[row[0]] = row[1]
+    except Exception:
+        pass  # Table may not exist yet — use env/defaults
+
+
 def dynamic_archive_worker():
     """Dynamic archive worker - archives data every hour for all published layouts"""
 
@@ -96,10 +111,50 @@ def dynamic_archive_worker():
                 except Exception as hist_err:
                     logger.warning(f"[Historian] Universal archive failed: {hist_err}", exc_info=True)
 
-            # ── Data Retention: purge old archive rows ──
+            # ── Data Retention: roll up hourly → daily for old data ──
+            _load_retention_settings(get_db_connection)
             try:
                 retention_days = int(os.environ.get('TAG_ARCHIVE_RETENTION_DAYS', 365))
-                if retention_days > 0:
+                rollup_enabled = os.environ.get('TAG_ARCHIVE_ROLLUP', 'true').lower() == 'true'
+                if retention_days > 0 and rollup_enabled:
+                    with closing(get_db_connection()) as conn:
+                        cursor = conn.cursor()
+
+                        # Step 1: Roll up hourly → daily aggregates
+                        cursor.execute("""
+                            INSERT INTO tag_history_archive
+                                (layout_id, tag_id, value, value_raw, value_delta,
+                                 is_counter, quality_code, archive_hour, granularity)
+                            SELECT
+                                layout_id, tag_id,
+                                AVG(value),
+                                AVG(value_raw),
+                                SUM(value_delta),
+                                bool_or(is_counter),
+                                'GOOD',
+                                DATE_TRUNC('day', archive_hour),
+                                'daily'
+                            FROM tag_history_archive
+                            WHERE (granularity = 'hourly' OR granularity IS NULL)
+                              AND archive_hour < NOW() - INTERVAL '%s days'
+                            GROUP BY layout_id, tag_id, DATE_TRUNC('day', archive_hour)
+                            ON CONFLICT DO NOTHING
+                        """, (retention_days,))
+                        rolled_up = cursor.rowcount
+
+                        # Step 2: Delete the hourly rows that were just rolled up
+                        cursor.execute("""
+                            DELETE FROM tag_history_archive
+                            WHERE (granularity = 'hourly' OR granularity IS NULL)
+                              AND archive_hour < NOW() - INTERVAL '%s days'
+                        """, (retention_days,))
+                        purged = cursor.rowcount
+                        conn.commit()
+
+                        if rolled_up > 0 or purged > 0:
+                            logger.info(f"[Retention] Rolled up {rolled_up} daily aggregates, removed {purged} hourly rows (>{retention_days} days)")
+                elif retention_days > 0 and not rollup_enabled:
+                    # Rollup disabled — just delete old data
                     with closing(get_db_connection()) as conn:
                         cursor = conn.cursor()
                         cursor.execute("""
@@ -109,9 +164,9 @@ def dynamic_archive_worker():
                         purged = cursor.rowcount
                         conn.commit()
                         if purged > 0:
-                            logger.info(f"[Retention] Purged {purged} archive rows older than {retention_days} days")
+                            logger.info(f"[Retention] Purged {purged} archive rows older than {retention_days} days (rollup disabled)")
             except Exception as ret_err:
-                logger.warning(f"[Retention] Archive purge failed: {ret_err}")
+                logger.warning(f"[Retention] Archive rollup/purge failed: {ret_err}")
 
             # Per-layout archiving (Live Monitor tables) — failures here do not block universal archive
             try:
