@@ -455,7 +455,7 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                     <div className="relative mb-2">
                       <Search
                         size={12}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
+                        className="absolute start-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
                         style={{ color: 'var(--rb-text-muted)' }}
                       />
                       <input
@@ -463,7 +463,7 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                         value={tagSearch}
                         onChange={(e) => setTagSearch(e.target.value)}
                         placeholder="Search tags..."
-                        className="rb-input-base w-full pl-6 py-1 text-[10px]"
+                        className="rb-input-base w-full ps-7 py-1 text-[10px]"
                       />
                     </div>
 
@@ -518,9 +518,15 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                                   {groupTags.map((tag) => (
                                     <div
                                       key={tag.tag_name}
-                                      className="flex items-center gap-1.5 px-1.5 py-[3px] rounded cursor-default"
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.dataTransfer.setData('application/report-tag-name', tag.tag_name);
+                                        e.dataTransfer.setData('application/report-tag-unit', tag.unit || '');
+                                        e.dataTransfer.effectAllowed = 'copy';
+                                      }}
+                                      className="flex items-center gap-1.5 px-1.5 py-[3px] rounded cursor-grab active:cursor-grabbing"
                                       style={{ transition: 'background 120ms ease' }}
-                                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-surface)'; }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-bg, var(--rb-surface))'; }}
                                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                                     >
                                       <span

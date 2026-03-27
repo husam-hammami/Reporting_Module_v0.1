@@ -368,6 +368,17 @@
   box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px rgba(91, 155, 213, 0.1);
 }
 
+/* Drop zone feedback when dragging widget/tag over canvas */
+.rb-canvas-drop-active {
+  outline: 2px dashed var(--rb-accent);
+  outline-offset: -4px;
+  transition: outline 0.15s ease, background 0.15s ease;
+}
+.rb-canvas-drop-active .react-grid-layout {
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+
 .report-builder .rb-widget-card-transparent {
   background: transparent;
   border: none;
