@@ -17,6 +17,7 @@ from contextlib import closing
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
+from flask_login import login_required
 from psycopg2.extras import RealDictCursor
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,7 @@ def _report_use_historian():
 
 
 @historian_bp.route("/historian/history", methods=["GET"])
+@login_required
 def get_history():
     """
     Get raw (per-sample) tag history from tag_history.
@@ -130,6 +132,7 @@ def get_history():
 
 
 @historian_bp.route("/historian/archive", methods=["GET"])
+@login_required
 def get_archive():
     """
     Get hourly aggregated tag history from tag_history_archive.
@@ -196,6 +199,7 @@ def get_archive():
 
 
 @historian_bp.route("/historian/by-tags", methods=["GET"])
+@login_required
 def get_by_tags():
     """
     Get historical tag values by tag names (no layout_id required).
@@ -408,6 +412,7 @@ def get_by_tags():
 
 
 @historian_bp.route("/historian/time-series", methods=["GET"])
+@login_required
 def get_time_series():
     """
     Get raw time-series data for chart rendering (array of {t, v} per tag).

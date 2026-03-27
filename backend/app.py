@@ -563,11 +563,11 @@ class PooledConnection:
     def __getattr__(self, name):
         return getattr(self._conn, name)
 
-_DB_NAME = os.getenv('POSTGRES_DB', 'Dynamic_DB_Hercules')
+_DB_NAME = os.getenv('POSTGRES_DB', 'dynamic_db_hercules')
 _DB_USER = os.getenv('POSTGRES_USER', 'postgres')
-_DB_PASS = os.getenv('POSTGRES_PASSWORD', 'Admin@123')
+_DB_PASS = os.getenv('POSTGRES_PASSWORD', '')
 _DB_HOST = os.getenv('DB_HOST', '127.0.0.1')
-_DB_PORT = int(os.getenv('DB_PORT', 5433))
+_DB_PORT = int(os.getenv('DB_PORT', 5434))
 
 try:
     db_pool = psycopg2.pool.ThreadedConnectionPool(

@@ -246,6 +246,36 @@ def _esc(val):
 
 # ── Formula evaluator (mirrors frontend formulaEngine.js) ────────────────────
 
+def _safe_aggregate(fn_name, args_str):
+    """Safely compute aggregate functions without eval()."""
+    try:
+        nums = [float(x.strip()) for x in args_str.split(',') if x.strip()]
+    except (ValueError, TypeError):
+        return '0'
+    if not nums:
+        return '0'
+    if fn_name == 'sum':
+        return str(sum(nums))
+    elif fn_name == 'avg':
+        return str(sum(nums) / len(nums))
+    elif fn_name == 'min':
+        return str(min(nums))
+    elif fn_name == 'max':
+        return str(max(nums))
+    return '0'
+
+
+# Lazy-init asteval interpreter (safe math expression evaluator)
+_formula_interp = None
+
+def _get_formula_interp():
+    global _formula_interp
+    if _formula_interp is None:
+        from asteval import Interpreter
+        _formula_interp = Interpreter()
+    return _formula_interp
+
+
 def _evaluate_formula(formula, tag_data):
     """Evaluate a formula string like '{Tag1} + {Tag2} * 100'. Returns float or None."""
     if not formula or not formula.strip():
@@ -253,11 +283,10 @@ def _evaluate_formula(formula, tag_data):
     try:
         expr = re.sub(r'\{([^}]+)\}', lambda m: str(float(tag_data.get(m.group(1), 0))), formula)
 
-        for fn_name, py_fn in [('SUM', 'sum'), ('AVG', '_avg'), ('MIN', 'min'), ('MAX', 'max')]:
+        for fn_name in [('SUM', 'sum'), ('AVG', 'avg'), ('MIN', 'min'), ('MAX', 'max')]:
             expr = re.sub(
-                rf'\b{fn_name}\s*\(([^)]*)\)', 
-                lambda m, f=py_fn: str(eval(f'{f}([{m.group(1)}])')) if f != '_avg'
-                    else str(sum(float(x) for x in m.group(1).split(',')) / max(len(m.group(1).split(',')), 1)),
+                rf'\b{fn_name[0]}\s*\(([^)]*)\)',
+                lambda m, f=fn_name[1]: _safe_aggregate(f, m.group(1)),
                 expr, flags=re.IGNORECASE
             )
         expr = re.sub(r'\bABS\s*\(([^)]*)\)', lambda m: str(abs(float(m.group(1)))), expr, flags=re.IGNORECASE)
@@ -270,7 +299,8 @@ def _evaluate_formula(formula, tag_data):
         sanitized = re.sub(r'[^0-9+\-*/%().eE\s]', '', expr)
         if not sanitized.strip():
             return None
-        result = eval(sanitized)
+        interp = _get_formula_interp()
+        result = interp(sanitized)
         return float(result) if isinstance(result, (int, float)) and not (isinstance(result, float) and (result != result)) else None
     except Exception:
         return None
