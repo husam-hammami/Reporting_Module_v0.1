@@ -25,16 +25,22 @@ jobs:
       - name: Run DB migrations
         run: |
           & backend\venv\Scripts\python.exe backend\tools\setup\setup_local_db.py --no-seed
+        env:
+          DB_HOST: "127.0.0.1"
+          DB_PORT: "5433"
+          POSTGRES_DB: "dynamic_db_hercules"
+          POSTGRES_USER: "postgres"
+          POSTGRES_PASSWORD: "Admin@123"
 
-      - name: Restart backend
+      - name: Restart backend service
         run: |
-          Get-Process -Name python -ErrorAction SilentlyContinue | Stop-Process -Force
-          Start-Sleep -Seconds 2
-          Start-Process -FilePath "backend\venv\Scripts\python.exe" -ArgumentList "app.py" -WorkingDirectory "backend" -WindowStyle Hidden
+          D:\Reporting_hercules\Reporting_Module_v0.1\nssm.exe restart hercules-backend
+          Start-Sleep -Seconds 5
 
       - name: Verify backend is running
         run: |
-          Start-Sleep -Seconds 5
+          $status = D:\Reporting_hercules\Reporting_Module_v0.1\nssm.exe status hercules-backend
+          Write-Host "Service status: $status"
           try {
             $r = Invoke-WebRequest -Uri http://localhost:5001/api/settings/system-status -UseBasicParsing -TimeoutSec 10
             Write-Host "Backend is running (status: $($r.StatusCode))"
