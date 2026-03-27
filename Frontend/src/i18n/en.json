@@ -64,6 +64,11 @@
 
   "common.switchToArabic": "Switch to Arabic",
   "common.switchToEnglish": "Switch to English",
+  "common.switchLanguage": "Switch language",
+  "settings.language": "Language",
+  "settings.languageDesc": "Toggle between these two languages from the navbar",
+  "settings.primaryLanguage": "Primary Language",
+  "settings.secondaryLanguage": "Secondary Language",
   "common.loading": "Loading...",
   "common.save": "Save",
   "common.cancel": "Cancel",

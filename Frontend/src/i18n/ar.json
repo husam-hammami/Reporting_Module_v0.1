@@ -64,6 +64,11 @@
 
   "common.switchToArabic": "التبديل إلى العربية",
   "common.switchToEnglish": "التبديل إلى الإنجليزية",
+  "common.switchLanguage": "تبديل اللغة",
+  "settings.language": "اللغة",
+  "settings.languageDesc": "التبديل بين هاتين اللغتين من شريط التنقل",
+  "settings.primaryLanguage": "اللغة الأساسية",
+  "settings.secondaryLanguage": "اللغة الثانوية",
   "common.loading": "جاري التحميل...",
   "common.save": "حفظ",
   "common.cancel": "إلغاء",

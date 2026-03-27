@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaServer, FaPlug, FaNetworkWired, FaSave, FaSync, FaGlobe, FaCopy, FaCheck } from 'react-icons/fa';
+import { FaServer, FaPlug, FaNetworkWired, FaSave, FaSync, FaGlobe, FaCopy, FaCheck, FaLanguage } from 'react-icons/fa';
 import { useSystemStatus } from '../../../Context/SystemStatusContext';
 import DemoModeSettings from '../DemoMode/DemoModeSettings';
 import { useLanguage } from '../../../Hooks/useLanguage';
 
+const AVAILABLE_LANGUAGES = [
+  { code: 'en', nativeLabel: 'English' },
+  { code: 'ar', nativeLabel: 'العربية (Arabic)' },
+  { code: 'hi', nativeLabel: 'हिन्दी (Hindi)' },
+  { code: 'ur', nativeLabel: 'اردو (Urdu)' },
+];
+
 export default function SystemSettings() {
   const { demoMode, plcConfig, loading, toggleDemoMode, updatePlcConfig, fetchStatus } = useSystemStatus();
-  const { t } = useLanguage();
+  const { t, langPair, updateLangPair } = useLanguage();
 
   const [ip, setIp] = useState('');
   const [rack, setRack] = useState(0);
@@ -209,6 +216,47 @@ export default function SystemSettings() {
           </div>
         </div>
       )}
+
+      {/* ── Language ── */}
+      <div className="bg-white dark:bg-[#131b2d] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40]">
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-900/30">
+              <FaLanguage className="text-violet-600 dark:text-violet-400" size={13} />
+            </div>
+            <div>
+              <h3 className="text-[12px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{t('settings.language')}</h3>
+              <p className="text-[10px] text-[#8898aa]">{t('settings.languageDesc')}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <label className="block text-[10px] font-medium text-[#6b7f94] mb-1">{t('settings.primaryLanguage')}</label>
+              <select
+                value={langPair?.primary || 'en'}
+                onChange={e => updateLangPair(e.target.value, langPair?.secondary || 'en')}
+                className="w-full px-2.5 py-1.5 text-[11px] rounded-md border border-[#e3e9f0] dark:border-[#1e2d40] bg-[#f5f8fb] dark:bg-[#0d1825] text-[#2a3545] dark:text-[#e1e8f0] focus:outline-none focus:border-brand"
+              >
+                {AVAILABLE_LANGUAGES.map(l => (
+                  <option key={l.code} value={l.code}>{l.nativeLabel}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="block text-[10px] font-medium text-[#6b7f94] mb-1">{t('settings.secondaryLanguage')}</label>
+              <select
+                value={langPair?.secondary || 'ar'}
+                onChange={e => updateLangPair(langPair?.primary || 'en', e.target.value)}
+                className="w-full px-2.5 py-1.5 text-[11px] rounded-md border border-[#e3e9f0] dark:border-[#1e2d40] bg-[#f5f8fb] dark:bg-[#0d1825] text-[#2a3545] dark:text-[#e1e8f0] focus:outline-none focus:border-brand"
+              >
+                {AVAILABLE_LANGUAGES.filter(l => l.code !== (langPair?.primary || 'en')).map(l => (
+                  <option key={l.code} value={l.code}>{l.nativeLabel}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ── Browser-Side Emulator ── */}
       <div className="bg-white dark:bg-[#131b2d] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40]">

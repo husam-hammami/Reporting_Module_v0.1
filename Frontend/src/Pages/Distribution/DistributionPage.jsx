@@ -39,8 +39,7 @@ const FILTER_TABS = ['all', 'active', 'paused'];
 
 export default function DistributionPage() {
   const theme = useTheme();
-  const { t, lang } = useLanguage();
-  const isRTL = lang === 'ar';
+  const { t, isRTL } = useLanguage();
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
