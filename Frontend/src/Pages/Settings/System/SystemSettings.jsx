@@ -3,6 +3,7 @@ import { FaServer, FaPlug, FaNetworkWired, FaSave, FaSync, FaGlobe, FaCopy, FaCh
 import { useSystemStatus } from '../../../Context/SystemStatusContext';
 import DemoModeSettings from '../DemoMode/DemoModeSettings';
 import { useLanguage } from '../../../Hooks/useLanguage';
+import axios from '../../../API/axios';
 
 export default function SystemSettings() {
   const { demoMode, plcConfig, loading, toggleDemoMode, updatePlcConfig, fetchStatus } = useSystemStatus();
@@ -19,9 +20,8 @@ export default function SystemSettings() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetch('/api/settings/network-info', { credentials: 'include' })
-      .then(r => r.json())
-      .then(data => setNetworkInfo(data))
+    axios.get('/api/settings/network-info')
+      .then(res => setNetworkInfo(res.data))
       .catch(() => {});
   }, []);
 
