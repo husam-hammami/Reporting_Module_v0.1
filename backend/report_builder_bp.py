@@ -320,3 +320,55 @@ def duplicate_template(template_id):
     except Exception as e:
         logger.error(f"Error duplicating report builder template: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# GET /api/report-builder/templates/<id>/export — Export report as Excel
+# ---------------------------------------------------------------------------
+@report_builder_bp.route('/report-builder/templates/<int:template_id>/export', methods=['GET'])
+@login_required
+def export_template(template_id):
+    """Export a report template as Excel (.xlsx) with tag data for a given time range."""
+    from datetime import datetime as dt
+    from flask import send_file
+    from io import BytesIO
+    import re as _re
+
+    fmt = request.args.get('format', 'xlsx')
+    from_str = request.args.get('from', '')
+    to_str = request.args.get('to', '')
+
+    try:
+        _ensure_table()
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual_conn = conn._conn if hasattr(conn, '_conn') else conn
+            cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("SELECT name, layout_config FROM report_builder_templates WHERE id = %s", (template_id,))
+            row = cursor.fetchone()
+
+        if not row:
+            return jsonify({'status': 'error', 'message': 'Template not found'}), 404
+
+        report_name = row['name']
+        lc = row['layout_config']
+        layout_config = json.loads(lc) if isinstance(lc, str) else lc
+
+        from_dt = dt.fromisoformat(from_str) if from_str else dt.now().replace(hour=0, minute=0, second=0)
+        to_dt = dt.fromisoformat(to_str) if to_str else dt.now()
+
+        from distribution_engine import generate_report_xlsx
+        xlsx_bytes = generate_report_xlsx(report_name, layout_config, from_dt, to_dt)
+
+        safe_name = _re.sub(r'[^\w\-]', '_', report_name)
+        filename = f"{safe_name}_{dt.now().strftime('%Y%m%d_%H%M')}.xlsx"
+
+        return send_file(
+            BytesIO(xlsx_bytes),
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename,
+        )
+    except Exception as e:
+        logger.error(f"Error exporting template {template_id}: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500

@@ -625,23 +625,25 @@ def export_archive_data():
 # Error handling decorator - include detail in response for debugging (e.g. missing table, wrong DB)
 from functools import wraps
 
+
+def _error_response(message, detail, status_code=500):
+    """Return a JSON error response. Only includes 'detail' in DEV_MODE."""
+    logging.error(f"{message}: {detail}", exc_info=True)
+    payload = {'error': message}
+    if DEV_MODE:
+        payload['detail'] = str(detail)
+    return jsonify(payload), status_code
+
+
 def handle_db_errors(f):
     @wraps(f)
     def wrapper_func(*args, **kwargs):
         try:
             return f(*args, **kwargs)
         except psycopg2.Error as e:
-            logging.error(f"Database error: {e}", exc_info=True)
-            return jsonify({
-                'error': 'A database error occurred.',
-                'detail': str(e)
-            }), 500
+            return _error_response('A database error occurred.', e)
         except Exception as e:
-            logging.error(f"Unexpected error: {e}", exc_info=True)
-            return jsonify({
-                'error': 'An unexpected error occurred.',
-                'detail': str(e)
-            }), 500
+            return _error_response('An unexpected error occurred.', e)
     return wrapper_func
 
 # Role-based access control decorator
@@ -864,7 +866,7 @@ def login():
 
         with closing(get_db_connection()) as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT id, username, password_hash, role FROM users WHERE username = %s', (username,))
+            cursor.execute('SELECT id, username, password_hash, role, COALESCE(must_change_password, false) as must_change_password FROM users WHERE username = %s', (username,))
             user = cursor.fetchone()
 
             if user and check_password_hash(user['password_hash'], password):
@@ -880,7 +882,8 @@ def login():
                         "id": user['id'],
                         "username": user['username'],
                         "role": user['role'],
-                        "auth_token": auth_token
+                        "auth_token": auth_token,
+                        "must_change_password": bool(user.get('must_change_password', False))
                     }
                 }), 200)
 
@@ -1041,7 +1044,7 @@ def change_own_password():
     password_hash = generate_password_hash(new_password)
     with closing(get_db_connection()) as conn:
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET password_hash=%s WHERE id=%s", (password_hash, current_user.id))
+        cursor.execute("UPDATE users SET password_hash=%s, must_change_password=false WHERE id=%s", (password_hash, current_user.id))
         conn.commit()
     return jsonify({'status': 'password_changed'}), 200
 
