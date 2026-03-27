@@ -1083,6 +1083,7 @@ def _xlsx_paginated(wb, layout_config, tag_data, from_dt, to_dt, report_name,
                     thin_border, header_align, num_align, text_align):
     """Render paginated (table) report sections to Excel sheets."""
     from openpyxl.utils import get_column_letter
+    from openpyxl.styles import Font
 
     ws = wb.active
     ws.title = report_name[:31]  # Excel sheet name limit
