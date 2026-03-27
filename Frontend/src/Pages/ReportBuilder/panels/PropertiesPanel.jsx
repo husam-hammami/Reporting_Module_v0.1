@@ -490,7 +490,7 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
         </>
       )}
 
-      {(widgetType === 'kpi' || widgetType === 'stat' || widgetType === 'gauge' || widgetType === 'silo') && (
+      {(widgetType === 'kpi' || widgetType === 'stat' || widgetType === 'gauge' || widgetType === 'silo' || widgetType === 'sparkline' || widgetType === 'progress' || widgetType === 'hopper') && (
         <>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Unit">
@@ -578,6 +578,32 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
           <Toggle label="Show tons" value={config.showTons !== false} onChange={(v) => onUpdate({ showTons: v })} />
           <Toggle label="Show capacity" value={config.showCapacity} onChange={(v) => onUpdate({ showCapacity: v })} />
         </>
+      )}
+
+      {widgetType === 'progress' && (
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Min">
+            <TextInput type="number" value={config.min} onChange={(v) => onUpdate({ min: v })} />
+          </Field>
+          <Field label="Max">
+            <TextInput type="number" value={config.max} onChange={(v) => onUpdate({ max: v })} />
+          </Field>
+        </div>
+      )}
+
+      {widgetType === 'hopper' && (
+        <>
+          <Field label="Capacity tag (optional)">
+            <TagPicker tags={tags} value={config.capacityTag} onChange={(v) => onUpdate({ capacityTag: v })} placeholder="None" />
+          </Field>
+          <Toggle label="Show capacity" value={config.showCapacity} onChange={(v) => onUpdate({ showCapacity: v })} />
+        </>
+      )}
+
+      {widgetType === 'sparkline' && (
+        <Field label="Line color">
+          <ColorInput value={config.color} onChange={(v) => onUpdate({ color: v })} />
+        </Field>
       )}
 
       {widgetType === 'piechart' && (
@@ -1265,8 +1291,8 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
   );
 }
 
-const HAS_DATA_SOURCE = new Set(['kpi', 'gauge', 'stat', 'silo']);
-const HAS_THRESHOLDS = new Set(['kpi', 'gauge', 'stat', 'table', 'silo']);
+const HAS_DATA_SOURCE = new Set(['kpi', 'gauge', 'stat', 'silo', 'status', 'sparkline', 'progress', 'hopper']);
+const HAS_THRESHOLDS = new Set(['kpi', 'gauge', 'stat', 'table', 'silo', 'status', 'progress', 'hopper']);
 const HAS_SERIES = new Set(['chart', 'barchart', 'piechart']);
 const HAS_TABLE_COLUMNS = new Set(['table']);
 
