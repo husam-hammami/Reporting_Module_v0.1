@@ -123,7 +123,7 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
 
   const typeColor = filterType === 'dashboard'
     ? (t.dark ? '#38bdf8' : '#0284c7')
-    : (t.dark ? '#94a3b8' : '#475569');  // slate grey — industrial, professional
+    : (t.dark ? '#f87171' : '#991b1b');  // muted dark red — matches badge
 
   const statusColor = t.dark ? '#34d399' : '#059669';
   const currentSortLabel = SORT_OPTIONS.find(o => o.key === sortBy)?.labelKey || '';

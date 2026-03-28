@@ -62,7 +62,7 @@ const FILTER_TABS = ['all', 'draft', 'released'];
 
 const REPORT_TYPES_STATIC = [
   { key: 'dashboard', labelKey: 'builder.dashboard', icon: LayoutGrid, descKey: 'builder.dashboardDesc', color: '#0369a1', darkColor: '#38bdf8' },
-  { key: 'paginated', labelKey: 'builder.tableReport', icon: Table2, descKey: 'builder.tableReportDesc', color: '#475569', darkColor: '#94a3b8' },
+  { key: 'paginated', labelKey: 'builder.tableReport', icon: Table2, descKey: 'builder.tableReportDesc', color: '#991b1b', darkColor: '#f87171' },
 ];
 
 function CreateModal({ open, onClose, onCreate }) {
@@ -280,7 +280,7 @@ export default function ReportBuilderManager() {
           {[
             { label: tr('builder.total'), value: stats.total, color: t.accent },
             { label: tr('builder.dashboards'), value: stats.dashboards, color: t.dark ? '#38bdf8' : '#0284c7' },
-            { label: tr('builder.tableReports'), value: stats.tableReports, color: t.dark ? '#94a3b8' : '#475569' },
+            { label: tr('builder.tableReports'), value: stats.tableReports, color: t.dark ? '#f87171' : '#991b1b' },
             { label: tr('builder.drafts'), value: stats.drafts, color: t.dark ? '#94a3b8' : '#64748b' },
             { label: tr('builder.released'), value: stats.released, color: t.dark ? '#34d399' : '#059669' },
           ].map((s, i, arr) => (
