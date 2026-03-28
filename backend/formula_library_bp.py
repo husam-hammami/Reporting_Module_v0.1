@@ -7,10 +7,12 @@ Supports plant-type-specific KPIs (feed_mill, flour_mill, grain_silo).
 
 import logging
 import json
+import re
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from contextlib import closing
 from psycopg2.extras import RealDictCursor
+from asteval import Interpreter
 
 logger = logging.getLogger(__name__)
 
@@ -348,6 +350,38 @@ def delete_instance(instance_id):
 
 # ── Variable Assignments ─────────────────────────────────────────────────────
 
+@formula_library_bp.route('/formula-library/all-assignments', methods=['GET'])
+@login_required
+def get_all_assignments():
+    """Bulk load all variable assignments for all formulas (avoids N+1 queries)."""
+    _ensure_table()
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("""
+                SELECT a.formula_id, a.instance_id, a.variable_name, a.tag_id,
+                       a.aggregation, a.default_value,
+                       t.tag_name, t.display_name as tag_display_name
+                FROM formula_variable_assignments a
+                LEFT JOIN tags t ON t.id = a.tag_id
+                ORDER BY a.formula_id, a.instance_id, a.variable_name
+            """)
+            rows = [dict(r) for r in cursor.fetchall()]
+
+        # Group by formula_id
+        grouped = {}
+        for r in rows:
+            fid = r['formula_id']
+            if fid not in grouped:
+                grouped[fid] = []
+            grouped[fid].append(r)
+
+        return jsonify({'data': grouped})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @formula_library_bp.route('/formula-library/<int:formula_id>/assignments', methods=['GET'])
 @login_required
 def get_assignments(formula_id):
@@ -511,7 +545,6 @@ def get_formula_values():
 
 def _evaluate_with_variables(formula, variable_map, tag_values):
     """Evaluate a formula by resolving variables to tag values."""
-    import re
     try:
         expr = formula
         for var_name, var_info in variable_map.items():
@@ -529,9 +562,8 @@ def _evaluate_with_variables(formula, variable_map, tag_values):
         sanitized = re.sub(r'[^0-9+\-*/%().eE\s]', '', expr)
         if not sanitized.strip():
             return None
-        from asteval import Interpreter
         result = Interpreter()(sanitized)
-        if isinstance(result, (int, float)) and not (isinstance(result, float) and result != result):
+        if isinstance(result, (int, float)) and not (isinstance(result, float) and (result != result or result == float('inf') or result == float('-inf'))):
             return round(float(result), 3)
         return None
     except Exception:

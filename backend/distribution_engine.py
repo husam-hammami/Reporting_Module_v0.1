@@ -141,6 +141,71 @@ def extract_all_tags(layout_config):
     # Paginated (Table Report) sections
     tags.update(_extract_paginated_tags(layout_config.get('paginatedSections', [])))
 
+    # Library formula tags — resolve variable assignments to actual tag names
+    tags.update(_extract_library_formula_tags(layout_config))
+
+    return tags
+
+
+def _extract_library_formula_tags(layout_config):
+    """Extract tag names needed by library_formula cells from DB assignments."""
+    tags = set()
+    formula_ids = set()
+
+    # Scan all cells for library_formula sourceType
+    for section in layout_config.get('paginatedSections', []):
+        for row in section.get('rows', []):
+            for cell in row.get('cells', []):
+                if cell and cell.get('sourceType') == 'library_formula' and cell.get('formulaId'):
+                    formula_ids.add((cell['formulaId'], cell.get('instanceId')))
+
+    # Also scan dashboard widgets
+    for widget in layout_config.get('widgets', []):
+        config = widget.get('config', {})
+        ds = config.get('dataSource', {})
+        if ds.get('type') == 'library_formula' and ds.get('formulaId'):
+            formula_ids.add((ds['formulaId'], ds.get('instanceId')))
+
+    if not formula_ids:
+        return tags
+
+    # Query DB for tag names from variable assignments
+    try:
+        import sys
+        get_conn = None
+        for mod_name in ('app', '__main__'):
+            mod = sys.modules.get(mod_name)
+            if mod:
+                get_conn = getattr(mod, 'get_db_connection', None)
+                if get_conn:
+                    break
+        if not get_conn:
+            return tags
+
+        from contextlib import closing
+        from psycopg2.extras import RealDictCursor
+
+        with closing(get_conn()) as conn:
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            for formula_id, instance_id in formula_ids:
+                if instance_id:
+                    cursor.execute("""
+                        SELECT t.tag_name FROM formula_variable_assignments fva
+                        JOIN tags t ON t.id = fva.tag_id
+                        WHERE fva.formula_id = %s AND fva.instance_id = %s AND fva.tag_id IS NOT NULL
+                    """, (formula_id, instance_id))
+                else:
+                    cursor.execute("""
+                        SELECT t.tag_name FROM formula_variable_assignments fva
+                        JOIN tags t ON t.id = fva.tag_id
+                        WHERE fva.formula_id = %s AND fva.instance_id IS NULL AND fva.tag_id IS NOT NULL
+                    """, (formula_id,))
+                for row in cursor.fetchall():
+                    if row['tag_name']:
+                        tags.add(row['tag_name'])
+    except Exception as e:
+        logger.warning(f"Failed to extract library formula tags: {e}")
+
     return tags
 
 
@@ -424,8 +489,14 @@ def _resolve_cell_raw(cell, tag_data):
 
 # ── Library formula resolution (for sourceType='library_formula') ────────────
 
-# Cache to avoid repeated DB queries during a single report generation
-_library_formula_cache = {}
+# Thread-local cache to avoid repeated DB queries during a single report generation
+import threading
+_library_formula_local = threading.local()
+
+def _get_library_cache():
+    if not hasattr(_library_formula_local, 'cache'):
+        _library_formula_local.cache = {}
+    return _library_formula_local.cache
 
 def _resolve_library_formula(cell, tag_data):
     """Resolve a library_formula cell by fetching formula + assignments from DB.
@@ -437,7 +508,7 @@ def _resolve_library_formula(cell, tag_data):
         return None
 
     cache_key = (formula_id, instance_id)
-    if cache_key not in _library_formula_cache:
+    if cache_key not in _get_library_cache():
         try:
             import sys
             get_conn = None
@@ -459,7 +530,7 @@ def _resolve_library_formula(cell, tag_data):
                 cursor.execute("SELECT formula, unit, variables FROM formula_library WHERE id = %s", (formula_id,))
                 formula_row = cursor.fetchone()
                 if not formula_row:
-                    _library_formula_cache[cache_key] = None
+                    _get_library_cache()[cache_key] = None
                     return None
 
                 # Get variable assignments
@@ -479,16 +550,16 @@ def _resolve_library_formula(cell, tag_data):
                     """, (formula_id,))
 
                 assignments = {r['variable_name']: r for r in cursor.fetchall()}
-                _library_formula_cache[cache_key] = {
+                _get_library_cache()[cache_key] = {
                     'formula': formula_row['formula'],
                     'assignments': assignments,
                 }
         except Exception as e:
             logger.warning(f"Failed to load library formula {formula_id}: {e}")
-            _library_formula_cache[cache_key] = None
+            _get_library_cache()[cache_key] = None
             return None
 
-    cached = _library_formula_cache.get(cache_key)
+    cached = _get_library_cache().get(cache_key)
     if not cached:
         return None
 
@@ -511,8 +582,7 @@ def _resolve_library_formula(cell, tag_data):
 
 def clear_library_formula_cache():
     """Clear the library formula cache (call before each report generation run)."""
-    global _library_formula_cache
-    _library_formula_cache = {}
+    _library_formula_local.cache = {}
 
 
 # ── Public wrapper for Excel export from viewer ──────────────────────────────

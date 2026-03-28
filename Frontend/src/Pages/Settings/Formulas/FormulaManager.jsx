@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Edit3, Trash2, FlaskConical, X, Copy, Play, ChevronDown, ChevronRight, Search, Check, AlertCircle, Layers } from 'lucide-react';
+import { Plus, Edit3, Trash2, FlaskConical, X, Copy, Play, ChevronDown, ChevronRight, Search, Check, AlertCircle } from 'lucide-react';
 import FormulaEditor from '../../ReportBuilder/formulas/FormulaEditor';
 import { useAvailableTags } from '../../../Hooks/useReportBuilder';
 import { DarkModeContext } from '../../../Context/DarkModeProvider';
-import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
 import { useLanguage } from '../../../Hooks/useLanguage';
 import axios from '../../../API/axios';
 import { toast } from 'react-toastify';
@@ -263,24 +262,23 @@ export default function FormulaManager() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Load assignments for a formula
-  const loadAssignments = async (formulaId) => {
+  // Bulk load all assignments (single API call instead of N)
+  const loadAllAssignments = useCallback(async () => {
     try {
-      const res = await axios.get(`/api/formula-library/${formulaId}/assignments`);
-      setAssignments(prev => ({ ...prev, [formulaId]: res.data?.data || [] }));
+      const res = await axios.get('/api/formula-library/all-assignments');
+      setAssignments(res.data?.data || {});
     } catch { /* ignore */ }
-  };
+  }, []);
 
-  // Load all assignments on mount
   useEffect(() => {
-    formulas.forEach(f => loadAssignments(f.id));
-  }, [formulas]);
+    if (formulas.length > 0) loadAllAssignments();
+  }, [formulas, loadAllAssignments]);
 
   const saveAssignments = async (formulaId, arr) => {
     try {
       await axios.post(`/api/formula-library/${formulaId}/assignments`, { assignments: arr });
       toast.success('Assignments saved');
-      loadAssignments(formulaId);
+      loadAllAssignments();
     } catch { toast.error('Failed to save assignments'); }
   };
 
@@ -300,6 +298,7 @@ export default function FormulaManager() {
   };
 
   const handleDelete = async (formulaId) => {
+    if (!window.confirm('Delete this formula? This cannot be undone.')) return;
     try {
       await axios.delete(`/api/formula-library/${formulaId}`);
       toast.success('Formula deleted');
