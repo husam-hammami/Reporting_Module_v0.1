@@ -394,7 +394,10 @@ export default function FormulaManager() {
             <AlertCircle size={32} className="mx-auto mb-4" style={{ color: '#f59e0b' }} />
             <h3 className="text-[14px] font-semibold mb-1" style={{ color: t.text }}>No plant type selected</h3>
             <p className="text-[12px] max-w-sm mx-auto mb-4" style={{ color: t.textMuted }}>
-              Go to Settings &gt; System and select your plant type to load industry KPIs.
+              Select your plant type in Settings to load industry KPIs.
+            </p>
+            <p className="text-[11px] font-medium px-3 py-1.5 rounded-md inline-block" style={{ background: t.accentBg, color: t.accent }}>
+              Settings &gt; System &gt; Plant Type
             </p>
           </div>
         )}

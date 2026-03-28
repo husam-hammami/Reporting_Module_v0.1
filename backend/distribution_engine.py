@@ -564,7 +564,6 @@ def _resolve_library_formula(cell, tag_data):
         return None
 
     # Substitute variables with tag values
-    import re as _re
     expr = cached['formula']
     for var_name, var_info in cached['assignments'].items():
         tag_name = var_info.get('tag_name')
@@ -575,7 +574,7 @@ def _resolve_library_formula(cell, tag_data):
             val = float(default)
         else:
             val = 0.0
-        expr = _re.sub(r'\{' + _re.escape(var_name) + r'\}', str(val), expr)
+        expr = re.sub(r'\{' + re.escape(var_name) + r'\}', str(val), expr)
 
     return _evaluate_formula(expr, tag_data)
 
@@ -1217,17 +1216,6 @@ def _html_to_pdf(html_content):
     if result.err:
         raise RuntimeError(f"PDF generation failed with {result.err} error(s)")
     return buf.getvalue()
-
-
-# ── Public API for report export ──────────────────────────────────────────────
-
-def generate_report_xlsx(report_name, layout_config, from_dt, to_dt):
-    """Public wrapper: generate an Excel report from a template config and date range.
-    Returns: bytes (xlsx file content)
-    """
-    tag_names = extract_all_tags(layout_config)
-    tag_data = _fetch_tag_data(tag_names, from_dt, to_dt)
-    return _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt)
 
 
 # ── Excel (XLSX) generation ──────────────────────────────────────────────────

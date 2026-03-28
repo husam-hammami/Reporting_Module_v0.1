@@ -502,8 +502,8 @@ def get_formula_values():
             key = (row['id'], row.get('instance_id'))
             if key != current_key:
                 # Evaluate previous formula
-                if current_formula and variable_map:
-                    val = _evaluate_with_variables(current_formula['formula'], variable_map, tag_values)
+                if current_formula:
+                    val = _evaluate_with_variables(current_formula['formula'], variable_map, tag_values) if variable_map else None
                     results.append({
                         'formula_id': current_formula['id'],
                         'instance_id': current_formula.get('instance_id'),
@@ -511,7 +511,7 @@ def get_formula_values():
                         'name': current_formula['name'],
                         'unit': current_formula['unit'],
                         'value': val,
-                        'configured': all(v.get('tag_name') for v in variable_map.values()),
+                        'configured': len(variable_map) == 0 or all(v.get('tag_name') for v in variable_map.values()),
                     })
                 current_key = key
                 current_formula = dict(row)
@@ -525,8 +525,8 @@ def get_formula_values():
                 }
 
         # Don't forget last formula
-        if current_formula and variable_map:
-            val = _evaluate_with_variables(current_formula['formula'], variable_map, tag_values)
+        if current_formula:
+            val = _evaluate_with_variables(current_formula['formula'], variable_map, tag_values) if variable_map else None
             results.append({
                 'formula_id': current_formula['id'],
                 'instance_id': current_formula.get('instance_id'),
@@ -534,7 +534,7 @@ def get_formula_values():
                 'name': current_formula['name'],
                 'unit': current_formula['unit'],
                 'value': val,
-                'configured': all(v.get('tag_name') for v in variable_map.values()),
+                'configured': len(variable_map) == 0 or all(v.get('tag_name') for v in variable_map.values()),
             })
 
         return jsonify({'data': results})

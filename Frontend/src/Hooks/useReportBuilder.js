@@ -886,23 +886,35 @@ const SEED_FORMULAS = [
 ];
 
 export function useAvailableFormulas() {
-  const [formulas, setFormulas] = useState(() => {
-    try {
-      const saved = localStorage.getItem('system_saved_formulas');
-      if (saved) { const arr = JSON.parse(saved); if (arr.length > 0) return arr; }
-    } catch { /* ignore */ }
-    localStorage.setItem('system_saved_formulas', JSON.stringify(SEED_FORMULAS));
-    return SEED_FORMULAS;
-  });
+  const [formulas, setFormulas] = useState([]);
 
-  const reload = useCallback(() => {
+  const reload = useCallback(async () => {
+    try {
+      // Try DB-backed formula library first
+      const res = await axiosInstance.get('/api/formula-library');
+      const dbFormulas = (res.data?.data || []).map(f => ({
+        id: f.id,
+        name: f.name,
+        formula: f.formula,
+        unit: f.unit || '',
+        description: f.description || '',
+      }));
+      if (dbFormulas.length > 0) {
+        setFormulas(dbFormulas);
+        return;
+      }
+    } catch { /* API not available — fall back to localStorage */ }
+
+    // Fallback: localStorage (legacy support)
     try {
       const saved = localStorage.getItem('system_saved_formulas');
-      if (saved) setFormulas(JSON.parse(saved));
+      if (saved) { const arr = JSON.parse(saved); if (arr.length > 0) { setFormulas(arr); return; } }
     } catch { /* ignore */ }
+    setFormulas(SEED_FORMULAS);
   }, []);
 
   useEffect(() => {
+    reload();
     const handler = () => reload();
     window.addEventListener('formulasUpdated', handler);
     return () => window.removeEventListener('formulasUpdated', handler);
