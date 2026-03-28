@@ -150,13 +150,37 @@ export default function SystemSettings() {
             </button>
           </div>
 
-          {/* PLC Connection — inline within same card */}
+          {/* PLC Connection — protocol-aware */}
           <div className={`px-4 py-3 ${isDemo || isUnknown ? 'opacity-50 pointer-events-none' : ''}`}>
             <div className="flex items-center gap-2 mb-2">
               <FaNetworkWired className="text-brand" size={11} />
               <h3 className="text-[11px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">{t('system.plcConnection')}</h3>
               {isDemo && <span className="text-[9px] text-[#8898aa] italic">{t('system.appliesInProduction')}</span>}
             </div>
+
+            {/* Protocol selector tabs */}
+            <div className="flex rounded-lg overflow-hidden mb-3" style={{ border: '1.5px solid var(--tw-border-opacity, 1)' }}>
+              {[
+                { id: 'S7', label: 'Siemens S7' },
+                { id: 'Modbus', label: 'Modbus TCP' },
+                { id: 'OPC_UA', label: 'OPC UA' },
+              ].map(proto => {
+                const active = (plcConfig?.protocol_type || 'S7') === proto.id;
+                return (
+                  <button key={proto.id}
+                    onClick={() => { dirty.current = true; }}
+                    className={`flex-1 py-1.5 text-[10px] font-semibold transition-all ${
+                      active ? 'bg-brand text-[#0c1321]' : 'text-[#8898aa] hover:bg-[#f5f8fb] dark:hover:bg-[#0d1825]'
+                    }`}
+                    disabled={isDemo || isUnknown}
+                  >
+                    {proto.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* S7 fields (default) */}
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <label className="block text-[10px] font-medium text-[#6b7f94] mb-1">{t('system.ipAddress')}</label>

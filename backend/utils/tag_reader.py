@@ -309,7 +309,7 @@ def read_all_tags(tag_names=None, db_connection_func=None):
                        decimal_places, description, is_active, value_formula
                 FROM tags 
                 WHERE is_active = true 
-                AND source_type = 'PLC'
+                AND source_type IN ('PLC', 'Modbus', 'OPC_UA')
                 AND tag_name IN ({placeholders})
             """
             cursor.execute(query, expanded_tag_names)
@@ -321,7 +321,7 @@ def read_all_tags(tag_names=None, db_connection_func=None):
                        decimal_places, description, is_active, value_formula
                 FROM tags 
                 WHERE is_active = true 
-                AND source_type = 'PLC'
+                AND source_type IN ('PLC', 'Modbus', 'OPC_UA')
             """)
         
         tags = cursor.fetchall()
@@ -407,7 +407,7 @@ def _get_cached_tag_configs(db_connection_func, tag_names=None):
                        string_length, byte_swap, unit, scaling,
                        decimal_places, description, is_active, value_formula
                 FROM tags
-                WHERE is_active = true AND source_type = 'PLC'
+                WHERE is_active = true AND source_type IN ('PLC', 'Modbus', 'OPC_UA')
                 AND tag_name IN ({placeholders})
             """, list(tag_names))
         else:
@@ -417,7 +417,7 @@ def _get_cached_tag_configs(db_connection_func, tag_names=None):
                        string_length, byte_swap, unit, scaling,
                        decimal_places, description, is_active, value_formula
                 FROM tags
-                WHERE is_active = true AND source_type = 'PLC'
+                WHERE is_active = true AND source_type IN ('PLC', 'Modbus', 'OPC_UA')
             """)
         tags = cursor.fetchall()
 
