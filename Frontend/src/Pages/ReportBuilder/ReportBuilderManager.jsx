@@ -62,7 +62,7 @@ const FILTER_TABS = ['all', 'draft', 'released'];
 
 const REPORT_TYPES_STATIC = [
   { key: 'dashboard', labelKey: 'builder.dashboard', icon: LayoutGrid, descKey: 'builder.dashboardDesc', color: '#0369a1', darkColor: '#38bdf8' },
-  { key: 'paginated', labelKey: 'builder.tableReport', icon: Table2, descKey: 'builder.tableReportDesc', color: '#9f1239', darkColor: '#fb7185' },
+  { key: 'paginated', labelKey: 'builder.tableReport', icon: Table2, descKey: 'builder.tableReportDesc', color: '#475569', darkColor: '#94a3b8' },
 ];
 
 function CreateModal({ open, onClose, onCreate }) {
@@ -280,7 +280,7 @@ export default function ReportBuilderManager() {
           {[
             { label: tr('builder.total'), value: stats.total, color: t.accent },
             { label: tr('builder.dashboards'), value: stats.dashboards, color: t.dark ? '#38bdf8' : '#0284c7' },
-            { label: tr('builder.tableReports'), value: stats.tableReports, color: t.dark ? '#fb7185' : '#9f1239' },
+            { label: tr('builder.tableReports'), value: stats.tableReports, color: t.dark ? '#94a3b8' : '#475569' },
             { label: tr('builder.drafts'), value: stats.drafts, color: t.dark ? '#94a3b8' : '#64748b' },
             { label: tr('builder.released'), value: stats.released, color: t.dark ? '#34d399' : '#059669' },
           ].map((s, i, arr) => (
@@ -395,7 +395,10 @@ export default function ReportBuilderManager() {
                     {tp.description && <p className="text-[11px] truncate mt-0.5" style={{ color: t.textMuted }}>{tp.description}</p>}
                   </div>
                   <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded"
-                    style={{ color: typeColor, background: `${typeColor}10` }}>
+                    style={{
+                      color: reportType === 'paginated' ? (t.dark ? '#f87171' : '#991b1b') : typeColor,
+                      background: reportType === 'paginated' ? (t.dark ? 'rgba(248,113,113,0.08)' : 'rgba(153,27,27,0.06)') : `${typeColor}10`,
+                    }}>
                     {reportType === 'paginated' ? <Table2 size={11} /> : <LayoutGrid size={11} />}
                     {reportType === 'paginated' ? tr('builder.tableReport') : tr('builder.dashboard')}
                   </span>
@@ -461,7 +464,10 @@ export default function ReportBuilderManager() {
                     {/* Footer */}
                     <div className="flex items-center justify-between pt-2.5" style={{ borderTop: `1px solid ${t.border}` }}>
                       <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded"
-                        style={{ color: typeColor, background: `${typeColor}10` }}>
+                        style={{
+                          color: reportType === 'paginated' ? (t.dark ? '#f87171' : '#991b1b') : typeColor,
+                          background: reportType === 'paginated' ? (t.dark ? 'rgba(248,113,113,0.08)' : 'rgba(153,27,27,0.06)') : `${typeColor}10`,
+                        }}>
                         {reportType === 'paginated' ? <Table2 size={10} /> : <LayoutGrid size={10} />}
                         {reportType === 'paginated' ? tr('builder.tableReport') : tr('builder.dashboard')}
                       </span>
