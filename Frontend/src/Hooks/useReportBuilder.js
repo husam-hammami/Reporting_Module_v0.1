@@ -892,8 +892,8 @@ export function useAvailableFormulas() {
     try {
       // Try DB-backed formula library + assignments in parallel
       const [libRes, assignRes] = await Promise.all([
-        axiosInstance.get('/api/formula-library'),
-        axiosInstance.get('/api/formula-library/all-assignments').catch(() => ({ data: { data: {} } })),
+        axios.get('/api/formula-library'),
+        axios.get('/api/formula-library/all-assignments').catch(() => ({ data: { data: {} } })),
       ]);
       const allAssignments = assignRes.data?.data || {};
       const dbFormulas = (libRes.data?.data || []).map(f => {
