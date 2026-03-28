@@ -218,14 +218,55 @@ function TagPicker({ tags, value, onChange, placeholder = 'Select tag...' }) {
   );
 }
 
-function FormulaDropdown({ savedFormulas, onSelect }) {
+function FormulaDropdown({ savedFormulas, onSelect, currentLibraryId }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const filtered = useMemo(() => {
-    if (!search.trim()) return savedFormulas;
-    const q = search.toLowerCase();
-    return savedFormulas.filter(f => f.name?.toLowerCase().includes(q) || f.formula?.toLowerCase().includes(q));
+    let list = savedFormulas;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(f => f.name?.toLowerCase().includes(q) || f.formula?.toLowerCase().includes(q) || f.category?.toLowerCase().includes(q));
+    }
+    return list;
   }, [savedFormulas, search]);
+
+  // Group by category for display
+  const grouped = useMemo(() => {
+    const groups = {};
+    filtered.forEach(f => {
+      const cat = f.category || 'custom';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(f);
+    });
+    return groups;
+  }, [filtered]);
+
+  const CATEGORY_LABELS = {
+    dosing: 'Dosing & Weighing', grinding: 'Grinding', mixing: 'Mixing',
+    pelleting: 'Pelleting', general: 'General', production: 'Production',
+    quality: 'Quality', maintenance: 'Maintenance', supply_chain: 'Supply Chain',
+    intake: 'Intake & Outloading', storage: 'Storage', equipment: 'Equipment',
+    custom: 'Custom',
+  };
+
+  const handleSelect = (f) => {
+    if (f.configured === false) {
+      // Show inline warning instead of selecting
+      return;
+    }
+    onSelect({
+      ...f,
+      formula: f.resolvedFormula || f.formula,
+      formulaLibraryId: f.id,
+      formulaLibraryName: f.name,
+    });
+    setOpen(false);
+    setSearch('');
+  };
+
+  const selectedName = currentLibraryId
+    ? savedFormulas.find(f => f.id === currentLibraryId)?.name
+    : null;
 
   return (
     <div className="relative">
@@ -234,37 +275,50 @@ function FormulaDropdown({ savedFormulas, onSelect }) {
         onClick={() => setOpen(!open)}
         className="rb-input-base w-full text-left truncate"
       >
-        <span className="text-[var(--rb-text-muted)]">— Pick a saved formula —</span>
+        {selectedName
+          ? <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" /><span className="text-[var(--rb-text)] font-medium">{selectedName}</span></span>
+          : <span className="text-[var(--rb-text-muted)]">— Pick a KPI or formula —</span>
+        }
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(''); }} />
-          <div className="rb-formula-dropdown absolute z-50 mt-1 w-full" data-wheel-scroll>
-            {savedFormulas.length > 5 && (
-              <div className="p-2 border-b border-[var(--rb-border)]">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search formulas..."
-                  autoFocus
-                  className="rb-input-base w-full py-1.5 text-[11px]"
-                />
-              </div>
-            )}
-            {filtered.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => { onSelect(f); setOpen(false); setSearch(''); }}
-                className="rb-formula-dropdown-item w-full text-left"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[12px] font-semibold text-[var(--rb-text)] truncate">{f.name}</span>
-                  {f.unit && <span className="rb-badge bg-[var(--rb-surface)] text-[var(--rb-text-muted)] flex-shrink-0">{f.unit}</span>}
+          <div className="rb-formula-dropdown absolute z-50 mt-1 w-full max-h-[320px] overflow-y-auto" data-wheel-scroll>
+            <div className="p-2 border-b border-[var(--rb-border)]">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search KPIs and formulas..."
+                autoFocus
+                className="rb-input-base w-full py-1.5 text-[11px]"
+              />
+            </div>
+            {Object.entries(grouped).map(([cat, formulas]) => (
+              <div key={cat}>
+                <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-[var(--rb-text-muted)] bg-[var(--rb-surface)]">
+                  {CATEGORY_LABELS[cat] || cat}
                 </div>
-                <p className="text-[10px] font-mono text-[var(--rb-text-muted)] truncate mt-0.5">{f.formula}</p>
-              </button>
+                {formulas.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => handleSelect(f)}
+                    className={`rb-formula-dropdown-item w-full text-left ${f.configured === false ? 'opacity-50' : ''}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${f.configured !== false ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                      <span className="text-[12px] font-semibold text-[var(--rb-text)] truncate flex-1">{f.name}</span>
+                      {f.unit && <span className="rb-badge bg-[var(--rb-surface)] text-[var(--rb-text-muted)] flex-shrink-0">{f.unit}</span>}
+                    </div>
+                    {f.configured === false ? (
+                      <p className="text-[9px] text-amber-500 mt-0.5 ms-4">Not configured — assign tags in Engineering &gt; Formulas</p>
+                    ) : (
+                      <p className="text-[10px] font-mono text-[var(--rb-text-muted)] truncate mt-0.5 ms-4">{f.resolvedFormula || f.formula}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
             ))}
             {filtered.length === 0 && (
               <div className="px-3 py-4 text-center text-[9px] text-[var(--rb-text-muted)]">No formulas found</div>
@@ -323,11 +377,23 @@ function DataSourceSection({ config, onUpdate, tags, tagValues, groups = [], sav
 
       {ds.type === 'formula' && (
         <>
+          {/* KPI name badge if library formula selected */}
+          {ds.formulaLibraryId && ds.formulaLibraryName && (
+            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-md mb-1" style={{ background: 'rgba(5,150,105,0.08)' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+              <span className="text-[10px] font-medium text-emerald-600">KPI: {ds.formulaLibraryName}</span>
+            </div>
+          )}
           {savedFormulas.length > 0 && (
-            <Field label="Saved formulas">
+            <Field label="KPI Library">
               <FormulaDropdown
                 savedFormulas={savedFormulas}
-                onSelect={(f) => updateDS({ formula: f.formula })}
+                currentLibraryId={ds.formulaLibraryId}
+                onSelect={(f) => updateDS({
+                  formula: f.formula,
+                  formulaLibraryId: f.formulaLibraryId,
+                  formulaLibraryName: f.formulaLibraryName,
+                })}
               />
             </Field>
           )}
@@ -965,16 +1031,18 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
               ) : (
                 <>
                   {savedFormulas.length > 0 && (
-                    <Field label="Saved formulas">
+                    <Field label="KPI Library">
                       <SelectInput
                         value=""
                         onChange={(v) => {
-                          const f = savedFormulas.find(sf => sf.id === v);
-                          if (f) updateSeriesItem(i, { dataSource: { ...s.dataSource, formula: f.formula } });
+                          const f = savedFormulas.find(sf => String(sf.id) === String(v));
+                          if (f && f.configured !== false) {
+                            updateSeriesItem(i, { dataSource: { ...s.dataSource, formula: f.resolvedFormula || f.formula, formulaLibraryId: f.id, formulaLibraryName: f.name } });
+                          }
                         }}
                         options={[
-                          { value: '', label: '— Pick a saved formula —' },
-                          ...savedFormulas.map(f => ({ value: f.id, label: `${f.name}${f.unit ? ` (${f.unit})` : ''}` })),
+                          { value: '', label: '— Pick a KPI or formula —' },
+                          ...savedFormulas.map(f => ({ value: f.id, label: `${f.configured !== false ? '●' : '○'} ${f.name}${f.unit ? ` (${f.unit})` : ''}` })),
                         ]}
                       />
                     </Field>
@@ -1141,16 +1209,26 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                 {col.sourceType === 'formula' && (
                   <>
                     {savedFormulas.length > 0 && (
-                      <Field label="Saved formulas">
+                      <Field label="KPI Library">
                         <SelectInput
                           value=""
                           onChange={(v) => {
-                            const f = savedFormulas.find(sf => sf.id === v);
-                            if (f) updateColumn(i, { formula: f.formula });
+                            const f = savedFormulas.find(sf => String(sf.id) === String(v));
+                            if (f) {
+                              if (f.configured === false) return;
+                              updateColumn(i, {
+                                formula: f.resolvedFormula || f.formula,
+                                formulaLibraryId: f.id,
+                                formulaLibraryName: f.name,
+                              });
+                            }
                           }}
                           options={[
-                            { value: '', label: '— Pick a saved formula —' },
-                            ...savedFormulas.map(f => ({ value: f.id, label: `${f.name}${f.unit ? ` (${f.unit})` : ''}` })),
+                            { value: '', label: '— Pick a KPI or formula —' },
+                            ...savedFormulas.map(f => ({
+                              value: f.id,
+                              label: `${f.configured !== false ? '●' : '○'} ${f.name}${f.unit ? ` (${f.unit})` : ''}${f.configured === false ? ' — not configured' : ''}`,
+                            })),
                           ]}
                         />
                       </Field>

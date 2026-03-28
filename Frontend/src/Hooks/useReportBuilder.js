@@ -890,15 +890,41 @@ export function useAvailableFormulas() {
 
   const reload = useCallback(async () => {
     try {
-      // Try DB-backed formula library first
-      const res = await axiosInstance.get('/api/formula-library');
-      const dbFormulas = (res.data?.data || []).map(f => ({
-        id: f.id,
-        name: f.name,
-        formula: f.formula,
-        unit: f.unit || '',
-        description: f.description || '',
-      }));
+      // Try DB-backed formula library + assignments in parallel
+      const [libRes, assignRes] = await Promise.all([
+        axiosInstance.get('/api/formula-library'),
+        axiosInstance.get('/api/formula-library/all-assignments').catch(() => ({ data: { data: {} } })),
+      ]);
+      const allAssignments = assignRes.data?.data || {};
+      const dbFormulas = (libRes.data?.data || []).map(f => {
+        const fAssignments = allAssignments[f.id] || [];
+        const vars = f.variables || [];
+        const configured = vars.length === 0 || vars.every(v =>
+          fAssignments.some(a => a.variable_name === v.name && a.tag_id)
+        );
+        // Resolve formula: replace {Variable} with {TagName} from assignments
+        let resolvedFormula = f.formula;
+        for (const a of fAssignments) {
+          if (a.tag_name) {
+            resolvedFormula = resolvedFormula.replace(
+              new RegExp(`\\{${a.variable_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}`, 'g'),
+              `{${a.tag_name}}`
+            );
+          }
+        }
+        return {
+          id: f.id,
+          name: f.name,
+          formula: f.formula,
+          resolvedFormula,
+          unit: f.unit || '',
+          description: f.description || '',
+          category: f.category || 'custom',
+          is_builtin: f.is_builtin,
+          configured,
+          variables: vars,
+        };
+      });
       if (dbFormulas.length > 0) {
         setFormulas(dbFormulas);
         return;
@@ -908,9 +934,9 @@ export function useAvailableFormulas() {
     // Fallback: localStorage (legacy support)
     try {
       const saved = localStorage.getItem('system_saved_formulas');
-      if (saved) { const arr = JSON.parse(saved); if (arr.length > 0) { setFormulas(arr); return; } }
+      if (saved) { const arr = JSON.parse(saved); if (arr.length > 0) { setFormulas(arr.map(f => ({ ...f, configured: true, resolvedFormula: f.formula }))); return; } }
     } catch { /* ignore */ }
-    setFormulas(SEED_FORMULAS);
+    setFormulas(SEED_FORMULAS.map(f => ({ ...f, configured: true, resolvedFormula: f.formula })));
   }, []);
 
   useEffect(() => {
