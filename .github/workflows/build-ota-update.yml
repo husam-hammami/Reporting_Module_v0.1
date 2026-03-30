@@ -2,7 +2,7 @@ name: Build OTA Update
 
 on:
   push:
-    branches: [Salalah_Mill_B]
+    branches: [main, Salalah_Mill_B]
 
 permissions:
   contents: write
@@ -15,13 +15,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate version from commit count
+      - name: Extract branch name and generate version
         id: version
         run: |
+          BRANCH="${GITHUB_REF##refs/heads/}"
+          # Sanitize branch name for use in tags (replace / with -)
+          BRANCH_SLUG=$(echo "$BRANCH" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
           COUNT=$(git rev-list --count HEAD)
           VERSION="1.0.${COUNT}"
+          TAG="${BRANCH_SLUG}-v${VERSION}"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "branch_slug=${BRANCH_SLUG}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Generated version: ${VERSION}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Generated: branch=${BRANCH} tag=${TAG}"
 
       - uses: actions/setup-node@v4
         with:
@@ -40,21 +47,27 @@ jobs:
           mkdir -p backend/frontend
           cp -r Frontend/dist backend/frontend/dist
 
+      - name: Write version and branch info
+        run: |
+          echo "${{ steps.version.outputs.version }}" > backend/version.txt
+          echo "${{ steps.version.outputs.branch }}" > backend/release_branch.txt
+
       - name: Create update zip
-        run: zip -r hercules-update-${{ steps.version.outputs.version }}.zip backend/
+        run: zip -r hercules-update-${{ steps.version.outputs.tag }}.zip backend/
 
       - name: Compute SHA-256
         id: hash
         run: |
-          SHA=$(sha256sum hercules-update-${{ steps.version.outputs.version }}.zip | cut -d' ' -f1)
+          SHA=$(sha256sum hercules-update-${{ steps.version.outputs.tag }}.zip | cut -d' ' -f1)
           echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: v${{ steps.version.outputs.version }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "${{ steps.version.outputs.branch }} — v${{ steps.version.outputs.version }}"
           body: |
-            Auto-generated OTA update from Salalah_Mill_B branch.
+            OTA update from **${{ steps.version.outputs.branch }}** branch.
+            Version: `${{ steps.version.outputs.version }}`
             SHA-256: `${{ steps.hash.outputs.sha256 }}`
-          files: hercules-update-${{ steps.version.outputs.version }}.zip
+          files: hercules-update-${{ steps.version.outputs.tag }}.zip

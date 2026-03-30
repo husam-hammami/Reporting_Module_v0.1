@@ -130,8 +130,9 @@ SETUP_SCRIPT = os.path.join(BACKEND_DIR, "tools", "setup", "setup_local_db.py")
 APP_MAIN = os.path.join(BACKEND_DIR, "app.py")
 
 GITHUB_REPO = "husam-hammami/Reporting_Module_v0.1"
-GITHUB_RELEASES_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+GITHUB_RELEASES_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases"
 VERSION_FILE = os.path.join(BASE_DIR, "version.txt")
+BRANCH_FILE = os.path.join(BASE_DIR, "backend", "release_branch.txt")
 
 PG_CTL = os.path.join(PG_BIN, "pg_ctl.exe")
 INITDB = os.path.join(PG_BIN, "initdb.exe")
@@ -295,13 +296,30 @@ def _version_tuple(v):
     return tuple(int(x) for x in v.replace("v", "").split("."))
 
 
+def _get_release_branch():
+    """Read branch name from release_branch.txt (written by CI), else env var or default."""
+    try:
+        with open(BRANCH_FILE, encoding="utf-8") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        pass
+    return os.environ.get("RELEASE_BRANCH", "Salalah_Mill_B")
+
+
+def _branch_slug(branch):
+    return branch.replace("/", "-").lower()
+
+
 def check_and_apply_update():
     local_ver = _get_local_version()
-    print(f"Current version: {local_ver}")
+    branch = _get_release_branch()
+    slug = _branch_slug(branch)
+    prefix = f"{slug}-v"
+    print(f"Current version: {local_ver} (branch: {branch})")
 
     try:
         req = urllib.request.Request(
-            GITHUB_RELEASES_URL,
+            GITHUB_RELEASES_URL + "?per_page=20",
             headers={
                 "User-Agent": "HerculesLauncher/1.0",
                 "Accept": "application/vnd.github+json",
@@ -309,17 +327,37 @@ def check_and_apply_update():
         )
         ctx = _ssl_context()
         with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
-            release = json.loads(resp.read().decode("utf-8"))
+            releases = json.loads(resp.read().decode("utf-8"))
     except Exception as e:
         print(f"Update check skipped (GitHub unreachable): {e}")
         return
 
-    remote_ver = release.get("tag_name", "v0.0.0").lstrip("v")
+    # Find the latest release matching this branch's tag prefix
+    best_release = None
+    best_ver = None
+    for release in releases:
+        tag = release.get("tag_name", "")
+        if not tag.startswith(prefix):
+            continue
+        ver_str = tag[len(prefix):]
+        try:
+            ver = _version_tuple(ver_str)
+        except (ValueError, AttributeError):
+            continue
+        if best_ver is None or ver > best_ver:
+            best_ver = ver
+            best_release = release
+
+    if best_release is None:
+        print(f"No releases found for branch '{branch}'.")
+        return
+
+    remote_ver = best_release["tag_name"][len(prefix):]
     if _version_tuple(remote_ver) <= _version_tuple(local_ver):
         print(f"Already up to date (v{local_ver}).")
         return
 
-    assets = release.get("assets", [])
+    assets = best_release.get("assets", [])
     zip_asset = None
     for a in assets:
         if a.get("name", "").endswith(".zip"):

@@ -28,6 +28,7 @@ import ShiftsSettings from '../Pages/Settings/Shifts/ShiftsSettings';
 import UserManagement from '../Pages/Settings/Users/UserManagement';
 import LicenseActivations from '../Pages/Settings/LicenseActivations/LicenseActivations';
 import BrandingSettings from '../Pages/Settings/Branding/BrandingSettings';
+import SoftwareUpdates from '../Pages/AppSettings/SoftwareUpdates';
 import ProfilePage from '../Pages/Profile/ProfilePage';
 import MyAccount from '../Pages/Profile/MyAccount';
 import AppSettingsPage from '../Pages/AppSettings/AppSettingsPage';
@@ -269,6 +270,7 @@ const AppRoutes = () => {
             <Route index element={<SystemSettings />} />
             <Route path="logs" element={<SystemLogs />} />
             <Route path="licenses" element={<LicenseActivations />} />
+            <Route path="updates" element={<SoftwareUpdates />} />
           </Route>
         </Route>
 

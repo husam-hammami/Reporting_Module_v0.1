@@ -38,6 +38,7 @@ from mappings_bp import mappings_bp
 from license_bp import license_bp
 from branding_bp import branding_bp
 from distribution_bp import distribution_bp
+from updates_bp import updates_bp
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -261,6 +262,7 @@ app.register_blueprint(mappings_bp, url_prefix='/api')
 app.register_blueprint(license_bp, url_prefix='/api')
 app.register_blueprint(branding_bp, url_prefix='/api')
 app.register_blueprint(distribution_bp, url_prefix='/api')
+app.register_blueprint(updates_bp, url_prefix='/api')
 
 # Demo mode: single source of truth for Production vs Demo (emulator)
 @app.route('/api/settings/demo-mode', methods=['GET'])
