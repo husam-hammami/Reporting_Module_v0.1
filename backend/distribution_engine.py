@@ -342,12 +342,21 @@ def _get_formula_interp():
     return Interpreter()
 
 
-def _evaluate_formula(formula, tag_data):
-    """Evaluate a formula string like '{Tag1} + {Tag2} * 100'. Returns float or None."""
+def _evaluate_formula(formula, tag_data, aggregation=None):
+    """Evaluate a formula string like '{Tag1} + {Tag2} * 100'. Returns float or None.
+    If aggregation is set (e.g. 'first', 'delta'), resolves {Tag} to namespaced keys first.
+    """
     if not formula or not formula.strip():
         return None
     try:
-        expr = re.sub(r'\{([^}]+)\}', lambda m: str(float(tag_data.get(m.group(1), 0))), formula)
+        def _resolve_tag(m):
+            tag_name = m.group(1)
+            if aggregation and aggregation != 'last':
+                key = f'{aggregation}::{tag_name}'
+                if key in tag_data:
+                    return str(float(tag_data[key]))
+            return str(float(tag_data.get(tag_name, 0)))
+        expr = re.sub(r'\{([^}]+)\}', _resolve_tag, formula)
 
         for fn_pattern, fn_safe in [('SUM', 'sum'), ('AVG', 'avg'), ('MIN', 'min'), ('MAX', 'max')]:
             expr = re.sub(
@@ -407,7 +416,7 @@ def _resolve_cell(cell, tag_data):
         return _fmt(raw)
 
     if src == 'formula':
-        result = _evaluate_formula(cell.get('formula', ''), tag_data)
+        result = _evaluate_formula(cell.get('formula', ''), tag_data, aggregation=cell.get('aggregation'))
         return _fmt(result)
 
     if src == 'group':
@@ -468,7 +477,7 @@ def _resolve_cell_raw(cell, tag_data):
         return (_to_num(raw), unit, decimals)
 
     if src == 'formula':
-        result = _evaluate_formula(cell.get('formula', ''), tag_data)
+        result = _evaluate_formula(cell.get('formula', ''), tag_data, aggregation=cell.get('aggregation'))
         return (_to_num(result), unit, decimals)
 
     if src == 'group':
