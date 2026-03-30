@@ -131,49 +131,48 @@ jobs:
 
       # ── Step 6: Create OTA update zip (frozen backend for launcher) ──
       - name: Create OTA update zip
-        shell: bash
+        shell: pwsh
         id: ota
         run: |
-          OTA_NAME="Hercules-OTA-${{ steps.version.outputs.tag }}.zip"
+          $OTA_NAME = "Hercules-OTA-${{ steps.version.outputs.tag }}.zip"
           # Launcher extracts to BASE_DIR and expects a backend/ folder.
           # PyInstaller outputs to backend/dist/hercules-backend/ — rename to backend/
-          cd backend/dist
-          if [ -d "hercules-backend" ]; then
-            mv hercules-backend backend
-          else
-            DISTDIR=$(ls -d */ | head -1)
-            mv "$DISTDIR" backend
-          fi
-          zip -r "../../${OTA_NAME}" backend/
-          cd ../..
-          echo "zip=${OTA_NAME}" >> "$GITHUB_OUTPUT"
-          echo "Created OTA zip: ${OTA_NAME}"
+          Set-Location backend/dist
+          if (Test-Path "hercules-backend") {
+            Rename-Item "hercules-backend" "backend"
+          } else {
+            $first = Get-ChildItem -Directory | Select-Object -First 1
+            Rename-Item $first.Name "backend"
+          }
+          Compress-Archive -Path "backend" -DestinationPath "../../$OTA_NAME" -Force
+          Set-Location ../..
+          echo "zip=$OTA_NAME" >> $env:GITHUB_OUTPUT
+          Write-Host "Created OTA zip: $OTA_NAME"
 
       # ── Step 7: Upload installer + OTA to GitHub Release ─────────
-      - name: Find installer exe
-        shell: bash
+      - name: Find and rename installer exe
+        shell: pwsh
         id: installer
         run: |
-          EXE=$(find desktop/dist -name "*.exe" -not -name "*.blockmap" | head -1)
-          if [ -z "$EXE" ]; then
-            echo "ERROR: No installer exe found"
-            ls -la desktop/dist/
+          $exe = Get-ChildItem -Path "desktop/dist" -Filter "*.exe" | Where-Object { $_.Name -notmatch "\.blockmap" } | Select-Object -First 1
+          if (-not $exe) {
+            Write-Error "No installer exe found in desktop/dist/"
+            Get-ChildItem "desktop/dist/"
             exit 1
-          fi
-          BASENAME=$(basename "$EXE")
-          # Rename to include branch and version
-          NEWNAME="Hercules-Setup-${{ steps.version.outputs.tag }}.exe"
-          mv "$EXE" "desktop/dist/$NEWNAME"
-          echo "exe=desktop/dist/$NEWNAME" >> "$GITHUB_OUTPUT"
-          echo "name=$NEWNAME" >> "$GITHUB_OUTPUT"
-          echo "Found installer: $NEWNAME"
+          }
+          $newName = "Hercules-Setup-${{ steps.version.outputs.tag }}.exe"
+          $newPath = "desktop/dist/$newName"
+          Move-Item $exe.FullName $newPath
+          echo "exe=$newPath" >> $env:GITHUB_OUTPUT
+          echo "name=$newName" >> $env:GITHUB_OUTPUT
+          Write-Host "Found installer: $newName"
 
       - name: Compute SHA-256
-        shell: bash
+        shell: pwsh
         id: hash
         run: |
-          SHA=$(sha256sum "${{ steps.installer.outputs.exe }}" | cut -d' ' -f1)
-          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
+          $sha = (Get-FileHash "${{ steps.installer.outputs.exe }}" -Algorithm SHA256).Hash.ToLower()
+          echo "sha256=$sha" >> $env:GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
