@@ -736,15 +736,15 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
   const needsUnit = srcType === 'tag' || srcType === 'formula' || srcType === 'group';
 
   return (
-    <div className="flex flex-col gap-1.5" style={{ minWidth: 0 }}>
+    <div className="flex flex-col gap-1" style={{ minWidth: 0 }}>
       {/* Main row: label + source type + value */}
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0"
-          style={{ color: 'var(--rb-text-muted)', width: 'auto', whiteSpace: 'nowrap' }} title={columnName}>{columnName}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wide flex-shrink-0 px-1.5 py-0.5 rounded"
+          style={{ color: 'var(--rb-accent)', background: 'var(--rb-accent-subtle)', whiteSpace: 'nowrap' }}>{columnName}</span>
 
         <select value={srcType} onChange={handleSourceChange}
           className="rb-input-base text-[11px] py-1 px-2 flex-shrink-0"
-          style={{ color: 'var(--rb-accent)', fontWeight: 600, minWidth: '80px' }}>
+          style={{ color: 'var(--rb-text)', fontWeight: 500, minWidth: '80px' }}>
           <option value="static">Text</option>
           <option value="tag">Tag</option>
           <option value="formula">Formula</option>
@@ -779,7 +779,7 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
           {srcType === 'group' && (
             <div className="flex items-center gap-1.5 w-full min-w-0">
               <select value={cell.aggregation || 'avg'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
-                className="rb-input-base text-[11px] py-1 px-1.5 flex-shrink-0" style={{ width: '72px' }}>
+                className="rb-input-base text-[11px] py-1 px-1.5 flex-shrink-0" style={{ width: '80px' }}>
                 <option value="avg">Avg</option><option value="sum">Sum</option><option value="min">Min</option><option value="max">Max</option><option value="count">Count</option>
               </select>
               <span className="text-[10px] truncate opacity-60" style={{ color: 'var(--rb-text-secondary)' }}>
@@ -792,7 +792,7 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
 
       {/* Options row: Unit + Aggregation — compact single line */}
       {needsUnit && (
-        <div className="flex items-center gap-3 ml-1">
+        <div className="flex items-center gap-4 mt-0.5 pt-1" style={{ borderTop: '1px dashed var(--rb-border)' }}>
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-semibold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Unit:</span>
             <UnitSelector cell={cell} onChange={onChange} className="text-[11px]" />
@@ -1159,9 +1159,9 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
 
                 {/* Expanded: cell editors */}
                 {isExpanded && (
-                  <div className="px-1.5 py-1 flex flex-col gap-1" style={{ background: 'var(--rb-panel)' }}>
+                  <div className="px-2 py-2 flex flex-col gap-2" style={{ background: 'var(--rb-panel)' }}>
                     {/* Row options */}
-                    <div className="flex items-center gap-1.5 pb-0.5" style={{ borderBottom: '1px solid var(--rb-border)' }}>
+                    <div className="flex items-center gap-1.5 pb-1" style={{ borderBottom: '1px solid var(--rb-border)' }}>
                       <label className="flex items-center gap-1 text-[9px]" style={{ color: 'var(--rb-text-muted)' }}>
                         <input type="checkbox" checked={row.hideWhenInactive || false} onChange={(e) => updateRow(ri, { hideWhenInactive: e.target.checked })} className="rounded" style={{ width: 10, height: 10 }} />
                         Auto-hide inactive
@@ -1172,9 +1172,11 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
                         </select>
                       )}
                     </div>
-                    {/* Cell editors — one per column */}
+                    {/* Cell editors — one per column, with visual separation */}
                     {row.cells.map((cell, ci) => (
-                      <InlineCellEditor key={ci} cell={cell} columnName={section.columns[ci]?.header || `Col ${ci + 1}`} tags={tags} savedFormulas={savedFormulas} onChange={(c) => updateCell(ri, ci, c)} />
+                      <div key={ci} className="rounded-md px-2.5 py-2" style={{ background: ci % 2 === 0 ? 'var(--rb-surface)' : 'transparent', border: '1px solid var(--rb-border)' }}>
+                        <InlineCellEditor cell={cell} columnName={section.columns[ci]?.header || `Col ${ci + 1}`} tags={tags} savedFormulas={savedFormulas} onChange={(c) => updateCell(ri, ci, c)} />
+                      </div>
                     ))}
                   </div>
                 )}
