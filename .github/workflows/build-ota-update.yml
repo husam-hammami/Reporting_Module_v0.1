@@ -150,30 +150,29 @@ jobs:
           Write-Host "Created OTA zip: $OTA_NAME"
 
       # ── Step 7: Upload installer + OTA to GitHub Release ─────────
-      - name: Find installer exe
-        shell: bash
+      - name: Find and rename installer exe
+        shell: pwsh
         id: installer
         run: |
-          EXE=$(find desktop/dist -name "*.exe" -not -name "*.blockmap" | head -1)
-          if [ -z "$EXE" ]; then
-            echo "ERROR: No installer exe found"
-            ls -la desktop/dist/
+          $exe = Get-ChildItem -Path "desktop/dist" -Filter "*.exe" | Where-Object { $_.Name -notmatch "\.blockmap" } | Select-Object -First 1
+          if (-not $exe) {
+            Write-Error "No installer exe found in desktop/dist/"
+            Get-ChildItem "desktop/dist/"
             exit 1
-          fi
-          BASENAME=$(basename "$EXE")
-          # Rename to include branch and version
-          NEWNAME="Hercules-Setup-${{ steps.version.outputs.tag }}.exe"
-          mv "$EXE" "desktop/dist/$NEWNAME"
-          echo "exe=desktop/dist/$NEWNAME" >> "$GITHUB_OUTPUT"
-          echo "name=$NEWNAME" >> "$GITHUB_OUTPUT"
-          echo "Found installer: $NEWNAME"
+          }
+          $newName = "Hercules-Setup-${{ steps.version.outputs.tag }}.exe"
+          $newPath = "desktop/dist/$newName"
+          Move-Item $exe.FullName $newPath
+          echo "exe=$newPath" >> $env:GITHUB_OUTPUT
+          echo "name=$newName" >> $env:GITHUB_OUTPUT
+          Write-Host "Found installer: $newName"
 
       - name: Compute SHA-256
-        shell: bash
+        shell: pwsh
         id: hash
         run: |
-          SHA=$(sha256sum "${{ steps.installer.outputs.exe }}" | cut -d' ' -f1)
-          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
+          $sha = (Get-FileHash "${{ steps.installer.outputs.exe }}" -Algorithm SHA256).Hash.ToLower()
+          echo "sha256=$sha" >> $env:GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
