@@ -238,6 +238,8 @@ def run_setup():
     env["DB_HOST"] = "127.0.0.1"
     env["DB_PORT"] = PORT
     env["POSTGRES_DB"] = "dynamic_db_hercules"
+    env["POSTGRES_USER"] = "postgres"
+    env["POSTGRES_PASSWORD"] = ""
     python = get_python()
     subprocess.check_call(
         [python, SETUP_SCRIPT, "--no-seed"],
@@ -275,6 +277,8 @@ def start_backend():
     env["DB_HOST"] = "127.0.0.1"
     env["DB_PORT"] = PORT
     env["POSTGRES_DB"] = "dynamic_db_hercules"
+    env["POSTGRES_USER"] = "postgres"
+    env["POSTGRES_PASSWORD"] = ""
     env["FLASK_PORT"] = BACKEND_PORT
 
     if os.path.exists(BACKEND_EXE):
