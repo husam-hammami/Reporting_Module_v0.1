@@ -13,6 +13,3 @@ cmds = [
   "mkdir -p backend/frontend/dist",
   "cp -r Frontend/dist/* backend/frontend/dist/"
 ]
-
-[start]
-cmd = "cd backend && python tools/setup/setup_local_db.py --no-seed && python app.py"
