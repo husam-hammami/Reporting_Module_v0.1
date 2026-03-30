@@ -1777,19 +1777,24 @@ export default function PaginatedReportBuilder() {
     setHasLoadedOnce(true);
   }, [template, hasLoadedOnce]);
 
-  // Autosave debounce
+  // Autosave debounce — respects the autoSave toggle from the hook
+  const latestSectionsRef = useRef(sections);
+  latestSectionsRef.current = sections;
+
   const triggerSave = useCallback((updatedSections) => {
+    if (!autoSave) return; // respect the toggle
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       if (!template || !templateId) return;
       const lc = typeof template.layout_config === 'string' ? JSON.parse(template.layout_config) : (template.layout_config || {});
       const payload = { layout_config: { ...lc, paginatedSections: updatedSections, reportType: 'paginated', grid: { ...(lc.grid || {}), pageMode: lc.grid?.pageMode || 'a4' } } };
-      // Use the API directly
       import('../../API/reportBuilderApi').then(({ reportBuilderApi }) => {
-        reportBuilderApi.update(templateId, payload).catch(() => {});
+        reportBuilderApi.update(templateId, payload).catch((err) => {
+          console.error('[PaginatedBuilder] autosave failed:', err?.response?.status, err?.message);
+        });
       });
-    }, 2000);
-  }, [template, templateId]);
+    }, 1500);
+  }, [template, templateId, autoSave]);
 
   const updateSections = useCallback((newSections) => {
     setSections(newSections);
@@ -1830,7 +1835,9 @@ export default function PaginatedReportBuilder() {
     const lc = typeof template.layout_config === 'string' ? JSON.parse(template.layout_config) : (template.layout_config || {});
     const payload = { layout_config: { ...lc, paginatedSections: sections, reportType: 'paginated', grid: { ...(lc.grid || {}), pageMode: lc.grid?.pageMode || 'a4' } } };
     import('../../API/reportBuilderApi').then(({ reportBuilderApi }) => {
-      reportBuilderApi.update(templateId, payload).catch(() => {});
+      reportBuilderApi.update(templateId, payload)
+        .then(() => console.log('[PaginatedBuilder] saved OK'))
+        .catch((err) => console.error('[PaginatedBuilder] save failed:', err?.response?.status, err?.message));
     });
     if (reportMeta.name && reportMeta.name !== template.name) {
       import('../../API/reportBuilderApi').then(({ reportBuilderApi }) => {
@@ -1852,7 +1859,7 @@ export default function PaginatedReportBuilder() {
   }, [handleManualSave]);
 
   /* ── Resizable panel width ── */
-  const [panelWidth, setPanelWidth] = useState(420);
+  const [panelWidth, setPanelWidth] = useState(560);
   const resizeRef = useRef(null);
   const handleResizeStart = useCallback((e) => {
     e.preventDefault();
