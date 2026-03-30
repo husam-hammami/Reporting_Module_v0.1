@@ -654,6 +654,8 @@ function CellEditor({ cell, tags, onChange, savedFormulas }) {
 function InlineTagSelect({ tags, value, onChange }) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
+  const btnRef = React.useRef(null);
+  const [dropUp, setDropUp] = React.useState(false);
   const filtered = React.useMemo(() => {
     if (!search.trim()) return tags;
     const q = search.toLowerCase();
@@ -661,9 +663,18 @@ function InlineTagSelect({ tags, value, onChange }) {
   }, [tags, search]);
   const selected = tags.find(t => t.tag_name === value);
 
+  const handleOpen = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setDropUp(spaceBelow < 260);
+    }
+    setOpen(!open);
+  };
+
   return (
     <div className="relative w-full min-w-0">
-      <button type="button" onClick={() => setOpen(!open)}
+      <button ref={btnRef} type="button" onClick={handleOpen}
         className="rb-input-base text-[11px] py-1 px-2 w-full text-left truncate"
         title={selected ? (selected.display_name || selected.tag_name) : ''}>
         {selected ? (selected.display_name || selected.tag_name) : <span style={{ color: 'var(--rb-text-muted)' }}>Select tag...</span>}
@@ -671,18 +682,26 @@ function InlineTagSelect({ tags, value, onChange }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(''); }} />
-          <div className="absolute z-50 mt-1 w-[260px] rb-formula-dropdown overflow-hidden rounded-lg shadow-lg" style={{ left: 0 }}>
+          <div className={`fixed z-50 w-[280px] rb-formula-dropdown overflow-hidden rounded-lg shadow-lg`}
+            style={{
+              ...(btnRef.current ? (() => {
+                const r = btnRef.current.getBoundingClientRect();
+                return dropUp
+                  ? { left: r.left, bottom: window.innerHeight - r.top + 4 }
+                  : { left: r.left, top: r.bottom + 4 };
+              })() : { left: 0 }),
+            }}>
             <div className="p-2 border-b border-[var(--rb-border-subtle)]">
               <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tags..."
                 autoFocus className="rb-input-base w-full py-1.5 px-2.5 text-[11px] rounded-md" />
             </div>
-            <div className="overflow-y-auto max-h-48 py-1">
+            <div className="overflow-y-auto max-h-52 py-1">
               {filtered.length === 0 ? (
                 <p className="px-3 py-3 text-[11px] text-center" style={{ color: 'var(--rb-text-muted)' }}>No tags found</p>
               ) : filtered.map(tag => (
                 <button key={tag.tag_name} type="button"
                   onClick={() => { onChange(tag.tag_name); setOpen(false); setSearch(''); }}
-                  className={`w-full text-left px-3 py-1.5 text-[11px] truncate hover:bg-[var(--rb-accent-subtle)] transition-colors ${value === tag.tag_name ? 'bg-[var(--rb-accent-subtle)] font-semibold' : ''}`}
+                  className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-[var(--rb-accent-subtle)] transition-colors ${value === tag.tag_name ? 'bg-[var(--rb-accent-subtle)] font-semibold' : ''}`}
                   style={{ color: 'var(--rb-text)' }}>
                   {tag.display_name || tag.tag_name}
                 </button>
@@ -714,8 +733,8 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
     <div className="flex flex-col gap-1.5" style={{ minWidth: 0 }}>
       {/* Main row: label + source type + value */}
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide truncate flex-shrink-0"
-          style={{ color: 'var(--rb-text-muted)', width: '52px' }} title={columnName}>{columnName}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0"
+          style={{ color: 'var(--rb-text-muted)', minWidth: '36px', maxWidth: '72px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={columnName}>{columnName}</span>
 
         <select value={srcType} onChange={handleSourceChange}
           className="rb-input-base text-[11px] py-1 px-1.5 flex-shrink-0"
@@ -776,10 +795,10 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <span className="text-[10px] font-semibold" style={{ color: 'var(--rb-text-muted)' }}>Agg:</span>
               <select value={cell.aggregation || 'last'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
-                className="rb-input-base text-[11px] py-0.5 px-1.5" style={{ width: '110px' }}>
+                className="rb-input-base text-[11px] py-0.5 px-2" style={{ minWidth: '140px' }}>
                 <option value="last">Last</option>
                 <option value="first">First (Start)</option>
-                <option value="delta">Δ (End−Start)</option>
+                <option value="delta">Delta (End−Start)</option>
                 <option value="avg">Average</option>
                 <option value="sum">Sum</option>
                 <option value="min">Min</option>
@@ -1106,11 +1125,11 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
             <Plus size={8} /> Add
           </button>
         </div>
-        <div className="flex flex-col gap-0.5 max-h-[400px] overflow-y-auto">
+        <div className="flex flex-col gap-0.5 max-h-[500px] overflow-y-auto">
           {section.rows.map((row, ri) => {
             const isExpanded = expandedRow === ri;
             return (
-              <div key={row.id} className="rounded overflow-hidden" style={{ border: `1px solid ${isExpanded ? 'var(--rb-accent)' : 'var(--rb-border)'}` }}>
+              <div key={row.id} className="rounded" style={{ border: `1px solid ${isExpanded ? 'var(--rb-accent)' : 'var(--rb-border)'}`, overflow: isExpanded ? 'visible' : 'hidden' }}>
                 {/* Row header — click to expand */}
                 <div
                   className="flex items-center gap-1 px-1.5 py-0.5 cursor-pointer select-none"
