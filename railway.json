@@ -2,7 +2,8 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "nixpacksConfigPath": "nixpacks.toml"
+    "nixpacksConfigPath": "nixpacks.toml",
+    "dockerfilePath": ""
   },
   "deploy": {
     "startCommand": "cd backend && python tools/setup/setup_local_db.py --no-seed && python app.py",
