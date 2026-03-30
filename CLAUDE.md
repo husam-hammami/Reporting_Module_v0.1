@@ -172,3 +172,42 @@ DB Port: 5433
 - `workers/historian_worker.py` — Logs PLC data to PostgreSQL at intervals
 - `workers/dynamic_monitor_worker.py` — Pushes live PLC values via SocketIO
 - `workers/dynamic_archive_worker.py` — Archives/compresses old data
+
+## Report Builder — Two Types
+
+### Grid/Dashboard Builder (`ReportBuilderCanvas.jsx`)
+- Drag-and-drop widget-based layout (charts, tables, gauges, KPIs)
+- Uses `useReportCanvas` hook for state, autosave, undo/redo
+- Table widget: per-COLUMN aggregation (all rows in a column share the same aggregation)
+- Properties panel: `panels/PropertiesPanel.jsx`
+- Widget renderer: `widgets/TableWidget.jsx`, `widgets/ChartWidget.jsx`, etc.
+
+### Paginated Report Builder (`PaginatedReportBuilder.jsx`)
+- Section-based A4 layout: header, table, KPI row, text block, spacer, signature
+- Has its OWN autosave (bypasses useReportCanvas hook) — `triggerSave()` with 1.5s debounce
+- Respects the `autoSave` toggle from the hook
+- Table sections: per-CELL aggregation (each cell independently picks tag + aggregation)
+- **Aggregation options**: Last, First (Start), Delta (End−Start), Average, Sum, Min, Max, Count
+- **Use case**: Totalizer reports — same tag with different aggregations per column (Delta for weight, First for start, Last for end)
+
+### Per-Cell Aggregation Architecture
+- **Frontend**: `collectPaginatedTagAggregations()` groups tags by aggregation type → `{ 'last': [tags], 'sum': [tags], 'delta': [tags] }`
+- **Live preview**: Queries `/api/historian/by-tags` with 1-hour rolling window, parallel requests per aggregation group
+- **Namespaced keys**: Non-default aggregations stored as `first::tagName`, `delta::tagName` in tag values map
+- **resolveTagKey()**: Maps cell aggregation to namespaced key, falls back to plain tagName for live mode
+- **Backend** (`distribution_engine.py`): `_fetch_tag_data_multi_agg()` fetches 'last' for all tags, then additional queries per aggregation group
+- **Config preview**: `renderCellConfigBadge()` shows color-coded aggregation badges (Δ=orange, First=purple, etc.)
+
+### Historian Aggregation (`historian_bp.py`)
+- Endpoint: `/api/historian/by-tags?tag_names=...&from=...&to=...&aggregation=...`
+- Supported: `last`, `first`, `avg`, `min`, `max`, `sum`, `delta`, `count`, `auto`
+- `auto` mode: counter tags → `SUM(value_delta)`, others → last value
+- Falls back to `tag_history_archive` when `tag_history` has no data for the range
+
+## UI Patterns — Report Builder
+- CSS variables: `--rb-accent`, `--rb-surface`, `--rb-panel`, `--rb-border`, `--rb-text`, `--rb-text-muted`
+- Input class: `rb-input-base` (shared across all inputs/selects)
+- Minimum font size: `text-[9px]` for labels, `text-[10px]`-`text-[11px]` for inputs
+- `InlineTagSelect`: Searchable dropdown with fixed positioning, auto-flips upward near viewport bottom
+- `UnitSelector`: Predefined units dropdown + custom unit input, accepts className for size override
+- Cell editors wrapped in bordered cards with alternating backgrounds for visual separation
