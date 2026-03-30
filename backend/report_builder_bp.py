@@ -8,12 +8,14 @@ import logging
 import json
 from datetime import datetime
 from flask import Blueprint, jsonify, request
+from flask_login import login_required
 from contextlib import closing
 from psycopg2.extras import RealDictCursor
 
 logger = logging.getLogger(__name__)
 
 report_builder_bp = Blueprint('report_builder_bp', __name__)
+_table_ensured = False
 
 
 def _get_db_connection():
@@ -32,6 +34,9 @@ def _get_db_connection():
 
 def _ensure_table():
     """Create report_builder_templates table if it doesn't exist."""
+    global _table_ensured
+    if _table_ensured:
+        return
     try:
         get_conn = _get_db_connection()
         with closing(get_conn()) as conn:
@@ -71,6 +76,7 @@ def _ensure_table():
                 WHERE status IN ('published', 'validated');
             """)
             actual_conn.commit()
+            _table_ensured = True
     except Exception as e:
         logger.error(f"Error ensuring report_builder_templates table: {e}")
 
@@ -79,6 +85,7 @@ def _ensure_table():
 # GET /api/report-builder/templates — List all templates
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates', methods=['GET'])
+@login_required
 def list_templates():
     try:
         _ensure_table()
@@ -113,6 +120,7 @@ def list_templates():
 # POST /api/report-builder/templates — Create a template
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates', methods=['POST'])
+@login_required
 def create_template():
     try:
         _ensure_table()
@@ -152,6 +160,7 @@ def create_template():
 # GET /api/report-builder/templates/<id> — Get one template
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates/<int:template_id>', methods=['GET'])
+@login_required
 def get_template(template_id):
     try:
         _ensure_table()
@@ -186,6 +195,7 @@ def get_template(template_id):
 # PUT /api/report-builder/templates/<id> — Update a template
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates/<int:template_id>', methods=['PUT'])
+@login_required
 def update_template(template_id):
     try:
         _ensure_table()
@@ -242,6 +252,7 @@ def update_template(template_id):
 # DELETE /api/report-builder/templates/<id> — Delete a template
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates/<int:template_id>', methods=['DELETE'])
+@login_required
 def delete_template(template_id):
     try:
         _ensure_table()
@@ -266,6 +277,7 @@ def delete_template(template_id):
 # POST /api/report-builder/templates/<id>/duplicate — Duplicate a template
 # ---------------------------------------------------------------------------
 @report_builder_bp.route('/report-builder/templates/<int:template_id>/duplicate', methods=['POST'])
+@login_required
 def duplicate_template(template_id):
     try:
         _ensure_table()
@@ -307,4 +319,56 @@ def duplicate_template(template_id):
         return jsonify({'status': 'success', 'data': row}), 201
     except Exception as e:
         logger.error(f"Error duplicating report builder template: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# GET /api/report-builder/templates/<id>/export — Export report as Excel
+# ---------------------------------------------------------------------------
+@report_builder_bp.route('/report-builder/templates/<int:template_id>/export', methods=['GET'])
+@login_required
+def export_template(template_id):
+    """Export a report template as Excel (.xlsx) with tag data for a given time range."""
+    from datetime import datetime as dt
+    from flask import send_file
+    from io import BytesIO
+    import re as _re
+
+    fmt = request.args.get('format', 'xlsx')
+    from_str = request.args.get('from', '')
+    to_str = request.args.get('to', '')
+
+    try:
+        _ensure_table()
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual_conn = conn._conn if hasattr(conn, '_conn') else conn
+            cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("SELECT name, layout_config FROM report_builder_templates WHERE id = %s", (template_id,))
+            row = cursor.fetchone()
+
+        if not row:
+            return jsonify({'status': 'error', 'message': 'Template not found'}), 404
+
+        report_name = row['name']
+        lc = row['layout_config']
+        layout_config = json.loads(lc) if isinstance(lc, str) else lc
+
+        from_dt = dt.fromisoformat(from_str) if from_str else dt.now().replace(hour=0, minute=0, second=0)
+        to_dt = dt.fromisoformat(to_str) if to_str else dt.now()
+
+        from distribution_engine import generate_report_xlsx
+        xlsx_bytes = generate_report_xlsx(report_name, layout_config, from_dt, to_dt)
+
+        safe_name = _re.sub(r'[^\w\-]', '_', report_name)
+        filename = f"{safe_name}_{dt.now().strftime('%Y%m%d_%H%M')}.xlsx"
+
+        return send_file(
+            BytesIO(xlsx_bytes),
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename,
+        )
+    except Exception as e:
+        logger.error(f"Error exporting template {template_id}: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500

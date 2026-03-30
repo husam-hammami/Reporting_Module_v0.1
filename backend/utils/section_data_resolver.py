@@ -8,6 +8,7 @@ Used for storing section-based data in dynamic monitor tables.
 import logging
 import json
 import re
+from asteval import Interpreter
 from contextlib import closing
 from psycopg2.extras import RealDictCursor
 
@@ -334,12 +335,14 @@ def evaluate_formula(formula, value_or_dict):
                 escaped_tag = re.escape(tag_name)
                 # Replace tag_name with its value
                 expression = re.sub(r'\b' + escaped_tag + r'\b', str(tag_value), expression)
-            # Evaluate the expression
-            return eval(expression, {"__builtins__": {}}, {})
+            # Evaluate the expression safely via asteval
+            result = Interpreter()(expression)
+            return result if result is not None else value_or_dict
         else:
             # Single value formula
             expression = formula.strip().replace('value', str(value_or_dict))
-            return eval(expression, {"__builtins__": {}}, {})
+            result = Interpreter()(expression)
+            return result if result is not None else value_or_dict
     except Exception as e:
         logger.warning(f"Formula evaluation error: {e}")
         return value_or_dict

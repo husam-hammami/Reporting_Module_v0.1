@@ -9,6 +9,10 @@ import PieChartWidget from './PieChartWidget';
 import ImageWidget from './ImageWidget';
 import TextWidget from './TextWidget';
 import LogoWidget from './LogoWidget';
+import StatusWidget from './StatusWidget';
+import SparklineWidget from './SparklineWidget';
+import ProgressWidget from './ProgressWidget';
+import HopperWidget from './HopperWidget';
 
 /* ── Error Boundary — catches widget render crashes ── */
 class WidgetErrorBoundary extends React.Component {
@@ -55,6 +59,10 @@ const RENDERERS = {
   image: ImageWidget,
   text: TextWidget,
   logo: LogoWidget,
+  status: StatusWidget,
+  sparkline: SparklineWidget,
+  progress: ProgressWidget,
+  hopper: HopperWidget,
 };
 
 export const CARDLESS_WIDGET_TYPES = new Set(['image', 'text', 'logo']);

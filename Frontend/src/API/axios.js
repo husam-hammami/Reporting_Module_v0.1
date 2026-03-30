@@ -91,10 +91,9 @@ axiosInstance.interceptors.response.use(
 // In dev, probe primary API once so fallback is set before any page runs (connection "always works")
 // Skip probe when user explicitly set VITE_API_URL to a remote (e.g. VPN) so we stay on that server
 if (isDev && primaryURL && primaryURL !== LOCAL_FALLBACK && !isExplicitRemoteUrl) {
-  fetch(`${primaryURL.replace(/\/$/, '')}/api/report-builder/templates`, {
+  fetch(`${primaryURL.replace(/\/$/, '')}/health`, {
     method: 'GET',
     signal: AbortSignal.timeout(15000),
-    credentials: 'include',
   }).catch(() => {
     didTryFallback = true;
     effectiveBaseURL = LOCAL_FALLBACK;

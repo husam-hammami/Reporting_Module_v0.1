@@ -28,8 +28,38 @@ def _decode_key():
     key = _K
     return bytes(b ^ key[i % len(key)] for i, b in enumerate(raw)).decode('utf-8')
 
-RESEND_API_KEY = _decode_key()
+_RESEND_API_KEY_FALLBACK = _decode_key()
 RESEND_FROM = "Hercules Reports <reports@herculesv2.app>"
+
+
+def get_resend_api_key():
+    """Get Resend API key: try system_settings DB first, fall back to hardcoded."""
+    try:
+        import psycopg2
+        db_name = os.environ.get('POSTGRES_DB', 'dynamic_db_hercules')
+        db_user = os.environ.get('POSTGRES_USER', 'postgres')
+        db_pass = os.environ.get('POSTGRES_PASSWORD', '')
+        db_host = os.environ.get('DB_HOST', '127.0.0.1')
+        db_port = int(os.environ.get('DB_PORT', 5434))
+        conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_pass, host=db_host, port=db_port)
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute("SELECT value FROM system_settings WHERE key = 'RESEND_API_KEY'")
+        row = cur.fetchone()
+        if row:
+            cur.close()
+            conn.close()
+            return row[0]
+        # Key not in DB yet — auto-migrate from hardcoded
+        cur.execute("""
+            INSERT INTO system_settings (key, value) VALUES ('RESEND_API_KEY', %s)
+            ON CONFLICT (key) DO NOTHING
+        """, (_RESEND_API_KEY_FALLBACK,))
+        cur.close()
+        conn.close()
+        return _RESEND_API_KEY_FALLBACK
+    except Exception:
+        return _RESEND_API_KEY_FALLBACK
 
 _DEFAULTS = {
     "send_method": "resend",       # "resend" or "smtp"
@@ -92,7 +122,7 @@ def send_email_resend(recipients, subject, body_html, attachments=None):
         attachments: list of (filename, bytes) tuples, or None
     """
     import resend
-    resend.api_key = RESEND_API_KEY
+    resend.api_key = get_resend_api_key()
 
     params = {
         "from": RESEND_FROM,

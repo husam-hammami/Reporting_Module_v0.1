@@ -423,6 +423,21 @@ def browse_folders():
     if not os.path.isdir(requested):
         return jsonify({'status': 'error', 'message': f'Directory not found: {requested}'}), 400
 
+    # Block access to sensitive system directories
+    if os.name == 'nt':
+        _blocked = [
+            os.environ.get('SYSTEMROOT', r'C:\Windows').lower(),
+            os.environ.get('PROGRAMFILES', r'C:\Program Files').lower(),
+            os.environ.get('PROGRAMFILES(X86)', r'C:\Program Files (x86)').lower(),
+        ]
+        req_lower = requested.lower()
+        for blocked in _blocked:
+            if req_lower.startswith(blocked):
+                return jsonify({'status': 'error', 'message': 'Access to this directory is restricted'}), 403
+        # Block AppData directories
+        if '\\appdata\\' in req_lower:
+            return jsonify({'status': 'error', 'message': 'Access to this directory is restricted'}), 403
+
     parent = os.path.dirname(requested)
     if parent == requested:
         parent = ''  # at root
@@ -447,3 +462,44 @@ def browse_folders():
         return jsonify({'status': 'error', 'message': 'Permission denied'}), 403
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# GET /api/distribution/rules/<id>/log — Execution history for a rule
+# ---------------------------------------------------------------------------
+@distribution_bp.route('/distribution/rules/<int:rule_id>/log', methods=['GET'])
+@login_required
+def get_rule_execution_log(rule_id):
+    """Return execution history for a distribution rule."""
+    _ensure_table()
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual_conn = conn._conn if hasattr(conn, '_conn') else conn
+            cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute("""
+                SELECT id, rule_id, report_ids, executed_at, time_range_from, time_range_to,
+                       format, delivery_method, recipients, status, error_message, file_names
+                FROM report_execution_log
+                WHERE rule_id = %s
+                ORDER BY executed_at DESC
+                LIMIT 50
+            """, (rule_id,))
+            rows = cursor.fetchall()
+            for row in rows:
+                if isinstance(row.get('report_ids'), str):
+                    row['report_ids'] = json.loads(row['report_ids'])
+                if isinstance(row.get('recipients'), str):
+                    row['recipients'] = json.loads(row['recipients'])
+                if isinstance(row.get('file_names'), str):
+                    row['file_names'] = json.loads(row['file_names'])
+                if row.get('executed_at'):
+                    row['executed_at'] = row['executed_at'].isoformat()
+                if row.get('time_range_from'):
+                    row['time_range_from'] = row['time_range_from'].isoformat()
+                if row.get('time_range_to'):
+                    row['time_range_to'] = row['time_range_to'].isoformat()
+            return jsonify({'status': 'success', 'data': rows})
+    except Exception as e:
+        logger.error(f"Error fetching execution log: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Failed to fetch execution log'}), 500

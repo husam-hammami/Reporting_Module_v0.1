@@ -36,7 +36,7 @@ export default function ReportBuilderCanvas() {
   const { id } = useParams();
   const navigate = useNavigate();
   const {
-    template, widgets: rawWidgets, loading, saving, dirty, migrated,
+    template, widgets: rawWidgets, loading, saving, dirty,
     autoSave, toggleAutoSave,
     addWidget, addWidgetAt, updateWidget, removeWidget, updateLayout,
     addComputedSignal, saveLayout, updateMeta,
@@ -209,17 +209,79 @@ export default function ReportBuilderCanvas() {
     updateWidget(widgetId, { locked: !widgets.find((w) => w.id === widgetId)?.locked });
   }, [widgets, updateWidget]);
 
-  /* ── Toolbox drag-and-drop onto canvas ─────────────────────── */
+  /* ── Toolbox / Tag drag-and-drop onto canvas ──────────────── */
+
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleCanvasDragOver = useCallback((e) => {
-    if (Array.from(e.dataTransfer?.types || []).includes('application/report-widget-type')) {
+    const types = Array.from(e.dataTransfer?.types || []);
+    if (types.includes('application/report-widget-type') || types.includes('application/report-tag-name')) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'copy';
+      setIsDragOver(true);
     }
   }, []);
 
+  const handleCanvasDragLeave = useCallback(() => setIsDragOver(false), []);
+
+  const _calcGridPos = useCallback((e) => {
+    const scrollEl = canvasScrollRef.current;
+    const gridEl = scrollEl?.querySelector('.react-grid-layout');
+    if (!gridEl) return { x: 0, y: 0 };
+    const rect = gridEl.getBoundingClientRect();
+    const scrollRect = scrollEl?.getBoundingClientRect?.();
+    const scrollTop = scrollEl?.scrollTop ?? 0;
+    const cols = gridCols ?? GRID_COLS_DEFAULT;
+    const rowH = gridRowH ?? GRID_ROW_H_DEFAULT;
+    const colW = (rect.width / zoom - (cols - 1) * GRID_MARGIN[0]) / cols;
+    const relX = Math.max(0, Math.min(rect.width / zoom - 1, (e.clientX - rect.left) / zoom));
+    const gridTopInContent = scrollRect ? rect.top - scrollRect.top + scrollTop : 0;
+    const dropYInContent = scrollRect ? scrollTop + (e.clientY - scrollRect.top) : e.clientY - rect.top;
+    const relY = Math.max(0, (dropYInContent - gridTopInContent) / zoom);
+    return {
+      x: Math.min(cols - 1, Math.floor(relX / (colW + GRID_MARGIN[0]))),
+      y: Math.max(0, Math.floor(relY / (rowH + GRID_MARGIN[1]))),
+    };
+  }, [gridCols, gridRowH, zoom]);
+
   const handleCanvasDrop = useCallback((e) => {
     e.preventDefault();
+    setIsDragOver(false);
+
+    // ── Tag drop (from sidebar tag list) ──
+    const tagName = e.dataTransfer?.getData('application/report-tag-name');
+    if (tagName) {
+      const tagUnit = e.dataTransfer?.getData('application/report-tag-unit') || '';
+      if (selectedId) {
+        const widget = widgets.find(w => w.id === selectedId);
+        if (widget?.type === 'table') {
+          const cols = [...(widget.config?.columns || [])];
+          cols.push({ label: tagName, sourceType: 'tag', tagName, unit: tagUnit });
+          updateWidget(selectedId, { config: { ...widget.config, columns: cols } });
+        } else if (['chart', 'barchart'].includes(widget?.type)) {
+          const series = [...(widget.config?.series || [])];
+          series.push({ label: tagName, dataSource: { tagName } });
+          updateWidget(selectedId, { config: { ...widget.config, series } });
+        } else {
+          updateWidget(selectedId, {
+            config: { ...widget.config, dataSource: { tagName }, unit: tagUnit, title: tagName }
+          });
+        }
+      } else {
+        const { x, y } = _calcGridPos(e);
+        const cat = WIDGET_CATALOG.find(c => c.type === 'kpi');
+        if (cat) {
+          const w = createWidget(cat, 0, 0);
+          w.config = { ...w.config, dataSource: { tagName }, unit: tagUnit, title: tagName };
+          addWidgetAt(w, x, y);
+          setSelectedId(w.id);
+          setShowProperties(true);
+        }
+      }
+      return;
+    }
+
+    // ── Widget type drop (from toolbox) ──
     const widgetType = e.dataTransfer?.getData('application/report-widget-type');
     if (!widgetType) return;
     const cat = WIDGET_CATALOG.find((w) => w.type === widgetType);
@@ -232,22 +294,7 @@ export default function ReportBuilderCanvas() {
       return;
     }
 
-    const rect = gridEl.getBoundingClientRect();
-    const scrollRect = scrollEl?.getBoundingClientRect?.();
-    const scrollTop = scrollEl?.scrollTop ?? 0;
-    const cols = gridCols ?? GRID_COLS_DEFAULT;
-    const rowH = gridRowH ?? GRID_ROW_H_DEFAULT;
-    /* getBoundingClientRect returns scaled dims under transform: scale(), so dividing by zoom corrects naturally */
-    const colW = (rect.width / zoom - (cols - 1) * GRID_MARGIN[0]) / cols;
-
-    const relX = Math.max(0, Math.min(rect.width / zoom - 1, (e.clientX - rect.left) / zoom));
-    const gridTopInContent = scrollRect ? rect.top - scrollRect.top + scrollTop : 0;
-    const dropYInContent = scrollRect ? scrollTop + (e.clientY - scrollRect.top) : e.clientY - rect.top;
-    const relY = Math.max(0, (dropYInContent - gridTopInContent) / zoom);
-
-    const x = Math.min(cols - 1, Math.floor(relX / (colW + GRID_MARGIN[0])));
-    const y = Math.max(0, Math.floor(relY / (rowH + GRID_MARGIN[1])));
-
+    const { x, y } = _calcGridPos(e);
     const w = createWidget(cat, 0, 0);
     addWidgetAt(w, x, y);
     setSelectedId(w.id);
@@ -258,7 +305,7 @@ export default function ReportBuilderCanvas() {
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
       });
     });
-  }, [addWidget, addWidgetAt, gridCols, gridRowH, zoom]);
+  }, [addWidget, addWidgetAt, updateWidget, widgets, selectedId, _calcGridPos]);
 
   /* ── Save / Publish ────────────────────────────────────────── */
 
@@ -376,11 +423,6 @@ export default function ReportBuilderCanvas() {
             <span className="text-xs text-[#fbbf24] inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#fbbf24] animate-pulse" />
               Unsaved changes
-            </span>
-          )}
-          {migrated && (
-            <span className="text-xs text-[#fbbf24] inline-flex items-center gap-1">
-              <AlertCircle size={12} /> Migrated
             </span>
           )}
         </div>
@@ -538,10 +580,11 @@ export default function ReportBuilderCanvas() {
           )}
           <div
             ref={canvasScrollRef}
-            className="absolute inset-0 overflow-y-auto overflow-x-auto rb-canvas-surface rb-canvas-dots"
+            className={`absolute inset-0 overflow-y-auto overflow-x-auto rb-canvas-surface rb-canvas-dots ${isDragOver ? 'rb-canvas-drop-active' : ''}`}
             style={{ background: 'var(--rb-canvas)' }}
             onClick={handleDeselect}
             onDragOver={handleCanvasDragOver}
+            onDragLeave={handleCanvasDragLeave}
             onDrop={handleCanvasDrop}
             onWheelCapture={handleWheelCapture}
           >

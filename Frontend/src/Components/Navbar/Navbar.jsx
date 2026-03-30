@@ -21,7 +21,7 @@ function Navbar({ isBlueprint = false }) {
   const { demoMode, loading: statusLoading } = useSystemStatus();
   const { clientLogo } = useBranding();
   const { mode, setMode } = useContext(DarkModeContext);
-  const { lang, setLang, t } = useLanguage();
+  const { lang, toggleLang, langPair, t, isRTL } = useLanguage();
   const isDark = mode === 'dark';
   const location = useLocation();
 
@@ -101,11 +101,11 @@ function Navbar({ isBlueprint = false }) {
           <div className="h-7 w-px bg-[#1e293b]" />
 
           <button
-            onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
-            className="px-2.5 py-1.5 hover:bg-[#1a2233] rounded-lg transition-colors text-[#8899ab] hover:text-[#f0f4f8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22d3ee] text-xs font-bold tracking-wide"
-            title={lang === 'en' ? t('common.switchToArabic') : t('common.switchToEnglish')}
+            onClick={toggleLang}
+            className="min-w-[36px] px-2.5 py-1.5 hover:bg-[#1a2233] rounded-lg transition-colors text-[#8899ab] hover:text-[#f0f4f8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22d3ee] text-xs font-bold tracking-wide text-center"
+            title={t('common.switchLanguage')}
           >
-            {lang === 'en' ? 'ع' : 'EN'}
+            {{ en: 'EN', ar: 'ع', hi: 'हि', ur: 'UR' }[lang === langPair.primary ? langPair.secondary : langPair.primary]}
           </button>
 
           <button
@@ -140,7 +140,7 @@ function Navbar({ isBlueprint = false }) {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className={`absolute ${lang === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 z-50 bg-[#111827] border border-[#1e293b] rounded-xl shadow-2xl min-w-[180px] py-1.5 overflow-hidden`}
+                      className={`absolute ${isRTL ? 'left-0' : 'right-0'} top-full mt-2 z-50 bg-[#111827] border border-[#1e293b] rounded-xl shadow-2xl min-w-[180px] py-1.5 overflow-hidden`}
                     >
                       <div className="px-4 py-3 border-b border-[#1e293b] bg-[#0a0f1a]/50">
                         <p className="text-sm font-bold text-[#f0f4f8]">{auth.username}</p>

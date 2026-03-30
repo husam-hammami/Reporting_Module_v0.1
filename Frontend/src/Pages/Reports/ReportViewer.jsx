@@ -534,8 +534,18 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
               <button onClick={handleExportPDF} disabled={exporting} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50">
                 <FaFilePdf className="text-[10px]" /> Export PDF
               </button>
-              <button onClick={handleExportPNG} disabled={exporting} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg flex items-center gap-2 disabled:opacity-50">
+              <button onClick={handleExportPNG} disabled={exporting} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50">
                 <FaImage className="text-[10px]" /> Export PNG
+              </button>
+              <button
+                onClick={() => {
+                  const from = timePeriod?.from?.toISOString?.() || '';
+                  const to = timePeriod?.to?.toISOString?.() || '';
+                  window.open(`/api/report-builder/templates/${reportId}/export?format=xlsx&from=${from}&to=${to}`, '_blank');
+                }}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg flex items-center gap-2"
+              >
+                <FaFilePdf className="text-[10px]" /> Export Excel
               </button>
             </div>
           </div>

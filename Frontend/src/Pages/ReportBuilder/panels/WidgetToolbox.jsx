@@ -24,7 +24,10 @@ function VizIcon({ type, isActive }) {
     case 'gauge': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 22a10 10 0 0 1 20 0" stroke={l} strokeWidth="3" strokeLinecap="round" /><path d="M6 22a10 10 0 0 1 5.8-9" stroke={isActive ? '#fbbf24' : '#c4a27a'} strokeWidth="3" strokeLinecap="round" /><path d="M11.8 13a10 10 0 0 1 8.4 0" stroke={isActive ? '#34d399' : '#8aae8a'} strokeWidth="3" strokeLinecap="round" /><path d="M16 21l5-5" stroke={p} strokeWidth="2.2" strokeLinecap="round" /><circle cx="16" cy="21" r="1.6" fill={p} /></svg>;
     case 'stat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="2" /><text x="16" y="21" textAnchor="middle" fill={p} fontSize="12" fontWeight="bold" fontFamily="monospace">42</text></svg>;
     case 'image': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="1.8" /><circle cx="12" cy="13" r="2.5" stroke={p} strokeWidth="1.5" /><path d="M4 22l6-5 4 3 5-6 9 8" stroke={p} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-    case 'repeat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="1.8" /><rect x="18" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="1.8" /><path d="M14 16h4" stroke={p} strokeWidth="1.5" strokeLinecap="round" /><path d="M16 14v4" stroke={p} strokeWidth="1.5" strokeLinecap="round" /></svg>;
+    case 'status': return <svg viewBox="0 0 32 32" className={s} fill="none"><circle cx="16" cy="16" r="9" stroke={m} strokeWidth="2" /><circle cx="16" cy="16" r="5" fill={isActive ? '#10b981' : p} /><circle cx="16" cy="16" r="9" stroke={isActive ? '#10b981' : m} strokeWidth="2" opacity="0.3" /></svg>;
+    case 'sparkline': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M4 20l4-3 4 5 4-8 4 4 4-6 4 3" stroke={p} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /><path d="M4 20l4-3 4 5 4-8 4 4 4-6 4 3v8H4z" fill={l} opacity="0.3" /></svg>;
+    case 'progress': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="12" width="24" height="8" rx="4" stroke={m} strokeWidth="1.8" /><rect x="5" y="13" width="15" height="6" rx="3" fill={p} /></svg>;
+    case 'hopper': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 6h20l-5 20H11z" stroke={m} strokeWidth="1.8" strokeLinejoin="round" /><path d="M8 12h16l-3.5 14h-9z" fill={l} opacity="0.4" /><rect x="13" y="26" width="6" height="2" rx="1" fill={m} /></svg>;
     case 'silo': return <svg viewBox="0 0 32 32" className={s} fill="none"><ellipse cx="16" cy="8" rx="8" ry="3" stroke={m} strokeWidth="1.8" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" stroke={m} strokeWidth="1.8" fill="none" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" fill={isActive ? 'rgba(56,189,248,0.15)' : 'rgba(107,127,148,0.15)'} stroke="none" /><defs><linearGradient id="silo-toolbox-fill" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stopColor={p} /><stop offset="70%" stopColor={p} stopOpacity="0.5" /></linearGradient></defs></svg>;
     case 'piechart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M16 4a12 12 0 0 1 0 24A12 12 0 0 1 16 4z" stroke={m} strokeWidth="2" /><path d="M16 4a12 12 0 0 1 10.4 6L16 16V4z" fill={p} /><path d="M26.4 10A12 12 0 0 1 16 28V16l10.4-6z" fill={l} /></svg>;
     case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="6" y="22" fill={p} fontSize="16" fontWeight="bold" fontFamily="serif">T</text><path d="M18 10h8M18 16h6M18 22h4" stroke={m} strokeWidth="1.6" strokeLinecap="round" /></svg>;
@@ -46,7 +49,10 @@ function SmallVizIcon({ type }) {
     case 'gauge': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 22a10 10 0 0 1 20 0" stroke={l} strokeWidth="3.5" strokeLinecap="round" /><path d="M16 21l5-5" stroke={p} strokeWidth="2.5" strokeLinecap="round" /></svg>;
     case 'stat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="2.5" /><text x="16" y="21" textAnchor="middle" fill={p} fontSize="14" fontWeight="bold">42</text></svg>;
     case 'image': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="2" /><path d="M4 22l6-5 4 3 5-6 9 8" stroke={p} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-    case 'repeat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="2" /><rect x="18" y="8" width="10" height="16" rx="2" stroke={m} strokeWidth="2" /></svg>;
+    case 'status': return <svg viewBox="0 0 32 32" className={s} fill="none"><circle cx="16" cy="16" r="8" stroke={m} strokeWidth="2.5" /><circle cx="16" cy="16" r="4.5" fill={p} /></svg>;
+    case 'sparkline': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M4 20l4-3 4 5 4-8 4 4 4-6 4 3" stroke={p} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+    case 'progress': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="12" width="24" height="8" rx="4" stroke={m} strokeWidth="2.5" /><rect x="5" y="13" width="15" height="6" rx="3" fill={p} /></svg>;
+    case 'hopper': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 6h20l-5 20H11z" stroke={m} strokeWidth="2" strokeLinejoin="round" /></svg>;
     case 'silo': return <svg viewBox="0 0 32 32" className={s} fill="none"><ellipse cx="16" cy="8" rx="8" ry="3" stroke={m} strokeWidth="2" /><path d="M8 8v16c0 1.2 3.6 2 8 2s8-.8 8-2V8" stroke={m} strokeWidth="2" fill="none" /></svg>;
     case 'piechart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M16 4a12 12 0 0 1 0 24A12 12 0 0 1 16 4z" stroke={m} strokeWidth="2" /><path d="M16 4a12 12 0 0 1 10.4 6L16 16V4z" fill={p} /><path d="M26.4 10A12 12 0 0 1 16 28V16l10.4-6z" fill={l} /></svg>;
     case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="8" y="22" fill={p} fontSize="18" fontWeight="bold" fontFamily="serif">T</text></svg>;
@@ -58,18 +64,22 @@ function SmallVizIcon({ type }) {
 const COMPONENTS = [
   { section: 'Data', type: 'kpi', label: 'KPI Card' },
   { section: 'Data', type: 'gauge', label: 'Gauge' },
+  { section: 'Data', type: 'stat', label: 'Stat Panel' },
+  { section: 'Data', type: 'status', label: 'Status Indicator' },
+  { section: 'Data', type: 'progress', label: 'Progress Bar' },
   { section: 'Data', type: 'silo', label: 'Silo Visual' },
+  { section: 'Data', type: 'hopper', label: 'Hopper' },
   { section: 'Charts', type: 'chart', label: 'Line Chart' },
   { section: 'Charts', type: 'barchart', label: 'Bar Chart' },
   { section: 'Charts', type: 'piechart', label: 'Pie Chart' },
+  { section: 'Charts', type: 'sparkline', label: 'Sparkline' },
   { section: 'Tables', type: 'table', label: 'Data Table' },
   { section: 'Layout', type: 'text', label: 'Text Block' },
   { section: 'Layout', type: 'image', label: 'Image' },
   { section: 'Layout', type: 'logo', label: 'Client Logo' },
-  { section: 'Layout', type: 'repeat', label: 'Repeat Panel' },
 ];
 
-const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', repeat: 'Repeat' };
+const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', status: 'Status', sparkline: 'Spark', progress: 'Progress', hopper: 'Hopper' };
 
 const SECTIONS = ['Data', 'Charts', 'Tables', 'Layout', 'Tag Groups', 'Widgets'];
 
@@ -455,7 +465,7 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                     <div className="relative mb-2">
                       <Search
                         size={12}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
+                        className="absolute start-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
                         style={{ color: 'var(--rb-text-muted)' }}
                       />
                       <input
@@ -463,7 +473,7 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                         value={tagSearch}
                         onChange={(e) => setTagSearch(e.target.value)}
                         placeholder="Search tags..."
-                        className="rb-input-base w-full pl-6 py-1 text-[10px]"
+                        className="rb-input-base w-full ps-7 py-1 text-[10px]"
                       />
                     </div>
 
@@ -518,9 +528,15 @@ export default function WidgetToolbox({ onAddWidget, tags = [], groups = [], wid
                                   {groupTags.map((tag) => (
                                     <div
                                       key={tag.tag_name}
-                                      className="flex items-center gap-1.5 px-1.5 py-[3px] rounded cursor-default"
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.dataTransfer.setData('application/report-tag-name', tag.tag_name);
+                                        e.dataTransfer.setData('application/report-tag-unit', tag.unit || '');
+                                        e.dataTransfer.effectAllowed = 'copy';
+                                      }}
+                                      className="flex items-center gap-1.5 px-1.5 py-[3px] rounded cursor-grab active:cursor-grabbing"
                                       style={{ transition: 'background 120ms ease' }}
-                                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-surface)'; }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-bg, var(--rb-surface))'; }}
                                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                                     >
                                       <span

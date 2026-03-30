@@ -13,6 +13,7 @@ from contextlib import closing
 from snap7.util import get_bool
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from asteval import Interpreter
 
 logger = logging.getLogger(__name__)
 
@@ -48,27 +49,8 @@ def evaluate_value_formula(formula, raw_value):
         # Replace 'value' variable with the actual value (case-insensitive)
         expression = re.sub(r'\bvalue\b', str(raw_value), expression, flags=re.IGNORECASE)
         
-        # Support common math functions
-        safe_dict = {
-            "abs": abs,
-            "round": round,
-            "min": min,
-            "max": max,
-            "pow": pow,
-            "sqrt": math.sqrt,
-            "sin": math.sin,
-            "cos": math.cos,
-            "tan": math.tan,
-            "log": math.log,
-            "log10": math.log10,
-            "exp": math.exp,
-            "pi": math.pi,
-            "e": math.e,
-            "__builtins__": {}
-        }
-        
-        # Evaluate the expression safely
-        result = eval(expression, safe_dict)
+        # Evaluate the expression safely via asteval (has all math functions built in)
+        result = Interpreter()(expression)
         
         # Ensure result is a number
         if isinstance(result, (int, float)):

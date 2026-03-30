@@ -12,7 +12,15 @@
 }
 
 *{
-    font-family: 'Inter', 'Noto Sans Arabic', system-ui, -apple-system, sans-serif !important;
+    font-family: 'Inter', 'Noto Sans Arabic', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif !important;
+}
+
+/* Script-specific fonts */
+[lang="ur"] * {
+    font-family: 'Noto Nastaliq Urdu', 'Noto Sans Arabic', system-ui, sans-serif !important;
+}
+[lang="hi"] * {
+    font-family: 'Noto Sans Devanagari', 'Inter', system-ui, sans-serif !important;
 }
 
 @layer base {

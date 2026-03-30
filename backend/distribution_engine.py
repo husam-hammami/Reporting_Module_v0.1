@@ -246,6 +246,31 @@ def _esc(val):
 
 # ── Formula evaluator (mirrors frontend formulaEngine.js) ────────────────────
 
+def _safe_aggregate(fn_name, args_str):
+    """Safely compute aggregate functions without eval()."""
+    try:
+        nums = [float(x.strip()) for x in args_str.split(',') if x.strip()]
+    except (ValueError, TypeError):
+        return '0'
+    if not nums:
+        return '0'
+    if fn_name == 'sum':
+        return str(sum(nums))
+    elif fn_name == 'avg':
+        return str(sum(nums) / len(nums))
+    elif fn_name == 'min':
+        return str(min(nums))
+    elif fn_name == 'max':
+        return str(max(nums))
+    return '0'
+
+
+# Thread-safe asteval interpreter — create per call to avoid shared state
+def _get_formula_interp():
+    from asteval import Interpreter
+    return Interpreter()
+
+
 def _evaluate_formula(formula, tag_data):
     """Evaluate a formula string like '{Tag1} + {Tag2} * 100'. Returns float or None."""
     if not formula or not formula.strip():
@@ -253,11 +278,10 @@ def _evaluate_formula(formula, tag_data):
     try:
         expr = re.sub(r'\{([^}]+)\}', lambda m: str(float(tag_data.get(m.group(1), 0))), formula)
 
-        for fn_name, py_fn in [('SUM', 'sum'), ('AVG', '_avg'), ('MIN', 'min'), ('MAX', 'max')]:
+        for fn_pattern, fn_safe in [('SUM', 'sum'), ('AVG', 'avg'), ('MIN', 'min'), ('MAX', 'max')]:
             expr = re.sub(
-                rf'\b{fn_name}\s*\(([^)]*)\)', 
-                lambda m, f=py_fn: str(eval(f'{f}([{m.group(1)}])')) if f != '_avg'
-                    else str(sum(float(x) for x in m.group(1).split(',')) / max(len(m.group(1).split(',')), 1)),
+                rf'\b{fn_pattern}\s*\(([^)]*)\)',
+                lambda m, f=fn_safe: _safe_aggregate(f, m.group(1)),
                 expr, flags=re.IGNORECASE
             )
         expr = re.sub(r'\bABS\s*\(([^)]*)\)', lambda m: str(abs(float(m.group(1)))), expr, flags=re.IGNORECASE)
@@ -270,7 +294,8 @@ def _evaluate_formula(formula, tag_data):
         sanitized = re.sub(r'[^0-9+\-*/%().eE\s]', '', expr)
         if not sanitized.strip():
             return None
-        result = eval(sanitized)
+        interp = _get_formula_interp()
+        result = interp(sanitized)
         return float(result) if isinstance(result, (int, float)) and not (isinstance(result, float) and (result != result)) else None
     except Exception:
         return None
@@ -1011,6 +1036,17 @@ def _html_to_pdf(html_content):
     return buf.getvalue()
 
 
+# ── Public API for report export ──────────────────────────────────────────────
+
+def generate_report_xlsx(report_name, layout_config, from_dt, to_dt):
+    """Public wrapper: generate an Excel report from a template config and date range.
+    Returns: bytes (xlsx file content)
+    """
+    tag_names = extract_all_tags(layout_config)
+    tag_data = _fetch_tag_data(tag_names, from_dt, to_dt)
+    return _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt)
+
+
 # ── Excel (XLSX) generation ──────────────────────────────────────────────────
 
 def _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt):
@@ -1083,6 +1119,7 @@ def _xlsx_paginated(wb, layout_config, tag_data, from_dt, to_dt, report_name,
                     thin_border, header_align, num_align, text_align):
     """Render paginated (table) report sections to Excel sheets."""
     from openpyxl.utils import get_column_letter
+    from openpyxl.styles import Font
 
     ws = wb.active
     ws.title = report_name[:31]  # Excel sheet name limit
@@ -1648,9 +1685,26 @@ def execute_distribution_rule(rule_id):
         status = 'success' if success else 'failed'
         error_msg = '; '.join(errors) if errors else None
 
+        file_names_list = [fn for fn, _ in attachments] if attachments else []
+
         with closing(get_conn()) as conn:
             actual_conn = conn._conn if hasattr(conn, '_conn') else conn
             cur = actual_conn.cursor()
+            # Log execution to audit trail
+            try:
+                cur.execute("""
+                    INSERT INTO report_execution_log
+                        (rule_id, report_ids, executed_at, time_range_from, time_range_to,
+                         format, delivery_method, recipients, status, error_message, file_names)
+                    VALUES (%s, %s::jsonb, NOW(), %s, %s, %s, %s, %s::jsonb, %s, %s, %s::jsonb)
+                """, (
+                    rule_id, json.dumps(rule.get('report_ids', [])),
+                    from_dt, to_dt, fmt, delivery,
+                    json.dumps(rule.get('recipients', [])),
+                    status, error_msg, json.dumps(file_names_list),
+                ))
+            except Exception as log_err:
+                logger.warning(f"Failed to log execution: {log_err}")
             cur.execute("""
                 UPDATE distribution_rules
                 SET last_run_at = NOW(), last_run_status = %s, last_run_error = %s
@@ -1665,11 +1719,19 @@ def execute_distribution_rule(rule_id):
 
     except Exception as e:
         logger.error(f"Distribution rule {rule_id} failed: {e}", exc_info=True)
-        # Update status to failed
+        # Update status to failed + log failure
         try:
             with closing(get_conn()) as conn:
                 actual_conn = conn._conn if hasattr(conn, '_conn') else conn
                 cur = actual_conn.cursor()
+                try:
+                    cur.execute("""
+                        INSERT INTO report_execution_log
+                            (rule_id, executed_at, status, error_message)
+                        VALUES (%s, NOW(), 'failed', %s)
+                    """, (rule_id, str(e)))
+                except Exception:
+                    pass
                 cur.execute("""
                     UPDATE distribution_rules
                     SET last_run_at = NOW(), last_run_status = 'failed', last_run_error = %s

@@ -494,11 +494,142 @@ def get_system_logs():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/settings/data-retention', methods=['GET'])
+@login_required
+def get_data_retention():
+    """Return current data retention settings."""
+    if current_user.role not in ('admin', 'superadmin'):
+        return jsonify({'error': 'Forbidden'}), 403
+    retention_days = int(os.environ.get('TAG_ARCHIVE_RETENTION_DAYS', 365))
+    rollup_enabled = os.environ.get('TAG_ARCHIVE_ROLLUP', 'true').lower() == 'true'
+
+    # Get archive stats
+    try:
+        with closing(get_db_connection()) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT
+                    COUNT(*) FILTER (WHERE granularity = 'hourly' OR granularity IS NULL) AS hourly_rows,
+                    COUNT(*) FILTER (WHERE granularity = 'daily') AS daily_rows,
+                    MIN(archive_hour) AS oldest_record,
+                    MAX(archive_hour) AS newest_record
+                FROM tag_history_archive
+            """)
+            row = cursor.fetchone()
+        stats = {
+            'hourlyRows': row[0] if row else 0,
+            'dailyRows': row[1] if row else 0,
+            'oldestRecord': row[2].isoformat() if row and row[2] else None,
+            'newestRecord': row[3].isoformat() if row and row[3] else None,
+        }
+    except Exception:
+        stats = {'hourlyRows': 0, 'dailyRows': 0, 'oldestRecord': None, 'newestRecord': None}
+
+    return jsonify({
+        'retentionDays': retention_days,
+        'rollupEnabled': rollup_enabled,
+        'stats': stats,
+    })
+
+
+@app.route('/api/settings/data-retention', methods=['POST'])
+@login_required
+def update_data_retention():
+    """Update data retention settings (saved as env vars via system_settings table)."""
+    if current_user.role not in ('admin', 'superadmin'):
+        return jsonify({'error': 'Forbidden'}), 403
+    data = request.get_json(silent=True) or {}
+    retention_days = data.get('retentionDays')
+    rollup_enabled = data.get('rollupEnabled')
+
+    if retention_days is not None:
+        retention_days = max(30, min(3650, int(retention_days)))  # 30 days to 10 years
+        os.environ['TAG_ARCHIVE_RETENTION_DAYS'] = str(retention_days)
+    if rollup_enabled is not None:
+        os.environ['TAG_ARCHIVE_ROLLUP'] = 'true' if rollup_enabled else 'false'
+
+    # Persist to system_settings table so it survives restarts
+    try:
+        with closing(get_db_connection()) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS system_settings (
+                    key VARCHAR(100) PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            if retention_days is not None:
+                cursor.execute("""
+                    INSERT INTO system_settings (key, value) VALUES ('TAG_ARCHIVE_RETENTION_DAYS', %s)
+                    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+                """, (str(retention_days),))
+            if rollup_enabled is not None:
+                cursor.execute("""
+                    INSERT INTO system_settings (key, value) VALUES ('TAG_ARCHIVE_ROLLUP', %s)
+                    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+                """, ('true' if rollup_enabled else 'false',))
+            conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to persist retention settings: {e}")
+
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/settings/export-archive', methods=['GET'])
+@login_required
+def export_archive_data():
+    """Export archive data as CSV for download before rollup."""
+    if current_user.role not in ('admin', 'superadmin'):
+        return jsonify({'error': 'Forbidden'}), 403
+    import csv
+    from io import StringIO
+
+    granularity = request.args.get('granularity', 'hourly')
+
+    try:
+        with closing(get_db_connection()) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT t.tag_name, a.value, a.value_delta, a.archive_hour, a.granularity
+                FROM tag_history_archive a
+                JOIN tags t ON t.id = a.tag_id
+                WHERE (a.granularity = %s OR a.granularity IS NULL)
+                ORDER BY a.archive_hour, t.tag_name
+            """, (granularity,))
+            rows = cursor.fetchall()
+
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Tag Name', 'Value', 'Delta', 'Timestamp', 'Granularity'])
+        for row in rows:
+            writer.writerow([row[0], row[1], row[2], row[3].isoformat() if row[3] else '', row[4] or 'hourly'])
+
+        from flask import Response
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=hercules_archive_{granularity}_{_dt.datetime.now().strftime("%Y%m%d")}.csv'}
+        )
+    except Exception as e:
+        return _error_response('Failed to export archive data', e)
+
+
 # NOTE: React catch-all route moved to end of file to avoid intercepting API routes
 
 
 # Error handling decorator - include detail in response for debugging (e.g. missing table, wrong DB)
 from functools import wraps
+
+
+def _error_response(message, detail, status_code=500):
+    """Return a JSON error response. Only includes 'detail' in DEV_MODE."""
+    logging.error(f"{message}: {detail}", exc_info=True)
+    payload = {'error': message}
+    if DEV_MODE:
+        payload['detail'] = str(detail)
+    return jsonify(payload), status_code
+
 
 def handle_db_errors(f):
     @wraps(f)
@@ -506,17 +637,9 @@ def handle_db_errors(f):
         try:
             return f(*args, **kwargs)
         except psycopg2.Error as e:
-            logging.error(f"Database error: {e}", exc_info=True)
-            return jsonify({
-                'error': 'A database error occurred.',
-                'detail': str(e)
-            }), 500
+            return _error_response('A database error occurred.', e)
         except Exception as e:
-            logging.error(f"Unexpected error: {e}", exc_info=True)
-            return jsonify({
-                'error': 'An unexpected error occurred.',
-                'detail': str(e)
-            }), 500
+            return _error_response('An unexpected error occurred.', e)
     return wrapper_func
 
 # Role-based access control decorator
@@ -563,11 +686,11 @@ class PooledConnection:
     def __getattr__(self, name):
         return getattr(self._conn, name)
 
-_DB_NAME = os.getenv('POSTGRES_DB', 'Dynamic_DB_Hercules')
+_DB_NAME = os.getenv('POSTGRES_DB', 'dynamic_db_hercules')
 _DB_USER = os.getenv('POSTGRES_USER', 'postgres')
-_DB_PASS = os.getenv('POSTGRES_PASSWORD', 'Admin@123')
+_DB_PASS = os.getenv('POSTGRES_PASSWORD', '')
 _DB_HOST = os.getenv('DB_HOST', '127.0.0.1')
-_DB_PORT = int(os.getenv('DB_PORT', 5433))
+_DB_PORT = int(os.getenv('DB_PORT', 5434))
 
 try:
     db_pool = psycopg2.pool.ThreadedConnectionPool(
