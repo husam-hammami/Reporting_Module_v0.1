@@ -1071,7 +1071,9 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
                     const v = e.target.value;
                     const columns = [...section.columns];
                     columns[i] = { ...columns[i], summary: { ...(columns[i].summary || {}), type: v, enabled: v !== 'none', label: columns[i].summary?.label || '' } };
-                    onChange({ ...section, columns, showSummaryRow: v !== 'none' ? true : section.showSummaryRow });
+                    // Auto-hide summary row when ALL columns are set to None
+                    const anyEnabled = columns.some((c, idx) => idx === i ? v !== 'none' : (c.summary?.type && c.summary.type !== 'none'));
+                    onChange({ ...section, columns, showSummaryRow: anyEnabled });
                   }} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(60px, 18%, 110px)' }} title="Summary row operation">
                     <option value="none">None</option>
                     <option value="label">Label</option>
@@ -1524,7 +1526,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                   );
                 })}
                 {/* Per-column summary row */}
-                {(section.showSummaryRow || section.columns?.some((c) => c.summary?.enabled)) && (
+                {(section.showSummaryRow && (section.summaryFormula || section.columns?.some((c) => c.summary?.type && c.summary.type !== 'none'))) && (
                   <tr className="font-bold bg-[#f1f5f9]">
                     {(section.columns || []).map((col, ci) => {
                       const sm = col.summary || {};
