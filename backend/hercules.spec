@@ -56,6 +56,7 @@ a = Analysis(
         'license_bp',
         'branding_bp',
         'distribution_bp',
+        'updates_bp',
 
         # Workers
         'workers.historian_worker',

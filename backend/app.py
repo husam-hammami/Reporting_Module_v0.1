@@ -38,6 +38,7 @@ from mappings_bp import mappings_bp
 from license_bp import license_bp
 from branding_bp import branding_bp
 from distribution_bp import distribution_bp
+from updates_bp import updates_bp
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -279,6 +280,7 @@ app.register_blueprint(mappings_bp, url_prefix='/api')
 app.register_blueprint(license_bp, url_prefix='/api')
 app.register_blueprint(branding_bp, url_prefix='/api')
 app.register_blueprint(distribution_bp, url_prefix='/api')
+app.register_blueprint(updates_bp, url_prefix='/api')
 
 # Demo mode: single source of truth for Production vs Demo (emulator)
 @app.route('/api/settings/demo-mode', methods=['GET'])
@@ -686,11 +688,11 @@ class PooledConnection:
     def __getattr__(self, name):
         return getattr(self._conn, name)
 
-_DB_NAME = os.getenv('POSTGRES_DB', 'dynamic_db_hercules')
+_DB_NAME = os.getenv('POSTGRES_DB', 'Dynamic_DB_Hercules')
 _DB_USER = os.getenv('POSTGRES_USER', 'postgres')
-_DB_PASS = os.getenv('POSTGRES_PASSWORD', '')
+_DB_PASS = os.getenv('POSTGRES_PASSWORD', 'Admin@123')
 _DB_HOST = os.getenv('DB_HOST', '127.0.0.1')
-_DB_PORT = int(os.getenv('DB_PORT', 5434))
+_DB_PORT = int(os.getenv('DB_PORT', 5433))
 
 try:
     db_pool = psycopg2.pool.ThreadedConnectionPool(

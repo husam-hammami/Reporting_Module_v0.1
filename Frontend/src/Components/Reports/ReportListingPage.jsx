@@ -123,7 +123,7 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
 
   const typeColor = filterType === 'dashboard'
     ? (t.dark ? '#38bdf8' : '#0284c7')
-    : (t.dark ? '#c084fc' : '#9333ea');
+    : (t.dark ? '#f87171' : '#991b1b');  // muted dark red — matches badge
 
   const statusColor = t.dark ? '#34d399' : '#059669';
   const currentSortLabel = SORT_OPTIONS.find(o => o.key === sortBy)?.labelKey || '';
@@ -312,7 +312,10 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
                     {/* Footer — type + count + time */}
                     <div className="flex items-center justify-between pt-2.5" style={{ borderTop: `1px solid ${t.border}` }}>
                       <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded"
-                        style={{ color: typeColor, background: `${typeColor}10` }}>
+                        style={{
+                          color: filterType === 'dashboard' ? typeColor : (t.dark ? '#f87171' : '#991b1b'),
+                          background: filterType === 'dashboard' ? `${typeColor}10` : (t.dark ? 'rgba(248,113,113,0.08)' : 'rgba(153,27,27,0.06)'),
+                        }}>
                         {filterType === 'dashboard' ? <BarChart2 size={10} /> : <Table2 size={10} />}
                         {filterType === 'dashboard' ? tr('viewer.dashboardType') : tr('viewer.tableType')}
                       </span>

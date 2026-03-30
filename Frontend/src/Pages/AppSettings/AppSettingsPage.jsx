@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { FaServer, FaKey, FaTerminal } from 'react-icons/fa';
+import { FaServer, FaKey, FaTerminal, FaSync } from 'react-icons/fa';
 import { AuthContext } from '../../Context/AuthProvider';
 import { useLanguage } from '../../Hooks/useLanguage';
 import { useLenisScroll } from '../../Hooks/useLenisScroll';
@@ -15,6 +15,7 @@ const AppSettingsPage = () => {
     { name: t('appSettings.system'), icon: FaServer, link: '/app-settings' },
     { name: t('appSettings.logs'), icon: FaTerminal, link: '/app-settings/logs' },
     ...(auth?.role === 'superadmin' ? [{ name: t('appSettings.licenses'), icon: FaKey, link: '/app-settings/licenses' }] : []),
+    { name: t('appSettings.updates'), icon: FaSync, link: '/app-settings/updates' },
   ];
 
   const isActive = (path) => location.pathname === path;

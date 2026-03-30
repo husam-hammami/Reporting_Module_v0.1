@@ -10,7 +10,10 @@ import math
 import re
 import time
 from contextlib import closing
-from snap7.util import get_bool
+try:
+    from snap7.util import get_bool
+except ImportError:
+    get_bool = None
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from asteval import Interpreter

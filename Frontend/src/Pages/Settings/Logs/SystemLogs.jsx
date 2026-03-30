@@ -27,7 +27,7 @@ export default function SystemLogs() {
   const { logs, connected, loading, clearLogs } = useSystemLogs();
   const { t } = useLanguage();
 
-  const [levelFilter, setLevelFilter] = useState('ALL');
+  const [levelFilter, setLevelFilter] = useState('WARNING');
   const [search, setSearch] = useState('');
   const [paused, setPaused] = useState(false);
   const scrollRef = useRef(null);
