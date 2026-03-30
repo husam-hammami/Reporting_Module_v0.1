@@ -796,8 +796,10 @@ def _generate_dashboard_html(report_name, widgets, tag_data, from_dt, to_dt):
             data_cells = ''
             for col in cols:
                 col_type = col.get('sourceType', 'tag')
+                col_agg = col.get('aggregation', 'last')
                 if col_type == 'tag':
-                    c_val = tag_data.get(col.get('tagName', ''), '—')
+                    tag_key = f'{col_agg}::{col.get("tagName", "")}' if col_agg and col_agg != 'last' else col.get('tagName', '')
+                    c_val = tag_data.get(tag_key, tag_data.get(col.get('tagName', ''), '—'))
                     if isinstance(c_val, float):
                         c_val = f"{c_val:,.2f}"
                     data_cells += f'<td>{_esc(c_val)}</td>'
@@ -805,7 +807,7 @@ def _generate_dashboard_html(report_name, widgets, tag_data, from_dt, to_dt):
                     vals = [str(tag_data.get(t, '—')) for t in col.get('groupTags', [])]
                     data_cells += f'<td>{_esc(", ".join(vals))}</td>'
                 elif col_type == 'formula':
-                    result = _evaluate_formula(col.get('formula', ''), tag_data)
+                    result = _evaluate_formula(col.get('formula', ''), tag_data, aggregation=col_agg)
                     data_cells += f'<td>{_esc(f"{result:,.2f}" if isinstance(result, float) else (result or "—"))}</td>'
                 else:
                     data_cells += '<td>—</td>'
