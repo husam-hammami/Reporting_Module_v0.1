@@ -10,11 +10,16 @@
   },
   "author": "Hercules",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/husam-hammami/Reporting_Module_v0.1.git"
+  },
   "devDependencies": {
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0"
   },
   "build": {
+    "publish": null,
     "appId": "com.hercules.reporting",
     "productName": "Hercules Reporting Module",
     "win": {
