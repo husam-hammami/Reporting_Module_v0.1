@@ -15,4 +15,4 @@ cmds = [
 ]
 
 [start]
-cmd = "cd backend && python app.py"
+cmd = "cd backend && python tools/setup/setup_local_db.py --no-seed && python app.py"
