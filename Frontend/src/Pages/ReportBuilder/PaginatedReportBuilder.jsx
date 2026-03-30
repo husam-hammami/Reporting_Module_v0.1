@@ -740,16 +740,16 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
       {/* Main row: label + source type + value */}
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0"
-          style={{ color: 'var(--rb-text-muted)', minWidth: '36px', maxWidth: '72px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={columnName}>{columnName}</span>
+          style={{ color: 'var(--rb-text-muted)', width: 'auto', whiteSpace: 'nowrap' }} title={columnName}>{columnName}</span>
 
         <select value={srcType} onChange={handleSourceChange}
-          className="rb-input-base text-[11px] py-1 px-1.5 flex-shrink-0"
-          style={{ color: 'var(--rb-accent)', fontWeight: 600, width: '62px' }}>
+          className="rb-input-base text-[11px] py-1 px-2 flex-shrink-0"
+          style={{ color: 'var(--rb-accent)', fontWeight: 600, minWidth: '80px' }}>
           <option value="static">Text</option>
           <option value="tag">Tag</option>
-          <option value="formula">ƒ(x)</option>
+          <option value="formula">Formula</option>
           <option value="group">Group</option>
-          <option value="mapping">Map</option>
+          <option value="mapping">Mapping</option>
         </select>
 
         <div className="min-w-0 flex items-center flex-1">
@@ -792,7 +792,7 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
 
       {/* Options row: Unit + Aggregation — compact single line */}
       {needsUnit && (
-        <div className="flex items-center gap-3 pl-[52px]" style={{ marginLeft: '2px' }}>
+        <div className="flex items-center gap-3 ml-1">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-semibold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Unit:</span>
             <UnitSelector cell={cell} onChange={onChange} className="text-[11px]" />
