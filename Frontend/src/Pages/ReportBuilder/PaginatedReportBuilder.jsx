@@ -83,6 +83,9 @@ function UnitSelector({ cell, onChange, className = '' }) {
 
 /* ── Resolve cell display label for config mode (shows tag/formula names, not live values) ── */
 const AGG_LABELS = { last: 'Last', first: 'First', delta: 'Δ', avg: 'Avg', sum: 'Sum', min: 'Min', max: 'Max', count: 'Count' };
+const AGG_COLORS = { delta: '#e67e22', first: '#8e44ad', last: '#2c3e50', avg: '#2980b9', sum: '#27ae60', min: '#16a085', max: '#c0392b', count: '#7f8c8d' };
+
+/* Plain-text label (used in row header summaries) */
 function resolveCellConfigLabel(cell) {
   if (!cell) return '—';
   const src = cell.sourceType || 'static';
@@ -90,16 +93,43 @@ function resolveCellConfigLabel(cell) {
   if (src === 'tag') {
     if (!cell.tagName) return '(no tag)';
     const agg = cell.aggregation || 'last';
-    const aggLabel = agg !== 'last' ? `${AGG_LABELS[agg] || agg}·` : '';
-    return `${aggLabel}{${cell.tagName}}`;
+    const aggLabel = agg !== 'last' ? `${AGG_LABELS[agg] || agg} ` : '';
+    return `${aggLabel}${cell.tagName}`;
   }
   if (src === 'formula') return cell.formula ? `ƒ ${cell.formula}` : '(no formula)';
   if (src === 'group') {
     const tags = (cell.groupTags || []).filter(Boolean);
     return tags.length > 0 ? `${(cell.aggregation || 'avg').toUpperCase()}(${tags.length} tags)` : '(no tags)';
   }
-  if (src === 'mapping') return cell.mappingName ? `[Map: ${cell.mappingName}]` : '(no mapping)';
+  if (src === 'mapping') return cell.mappingName ? `Map: ${cell.mappingName}` : '(no mapping)';
   return '—';
+}
+
+/* Rich JSX label for the A4 preview table (compact badges, never wraps ugly) */
+function renderCellConfigBadge(cell) {
+  if (!cell) return <span style={{ color: '#94a3b8' }}>—</span>;
+  const src = cell.sourceType || 'static';
+  if (src === 'static') return <span>{cell.value || <i style={{ color: '#94a3b8' }}>(empty)</i>}</span>;
+  if (src === 'tag') {
+    if (!cell.tagName) return <i style={{ color: '#94a3b8' }}>(no tag)</i>;
+    const agg = cell.aggregation || 'last';
+    const color = AGG_COLORS[agg] || '#2c3e50';
+    return (
+      <span title={`${AGG_LABELS[agg] || agg}: ${cell.tagName}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, maxWidth: '100%' }}>
+        {agg !== 'last' && <span style={{ background: color, color: '#fff', borderRadius: 3, padding: '0 4px', fontSize: '0.7em', fontWeight: 700, lineHeight: '1.5', whiteSpace: 'nowrap', flexShrink: 0 }}>{AGG_LABELS[agg]}</span>}
+        <span style={{ color, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cell.tagName}</span>
+      </span>
+    );
+  }
+  if (src === 'formula') return <span title={cell.formula} style={{ color: '#8e44ad' }}>{cell.formula ? <><b>ƒ</b> {cell.formula}</> : <i style={{ color: '#94a3b8' }}>(no formula)</i>}</span>;
+  if (src === 'group') {
+    const tags = (cell.groupTags || []).filter(Boolean);
+    return tags.length > 0
+      ? <span style={{ color: '#2980b9' }}><b>{(cell.aggregation || 'avg').toUpperCase()}</b>({tags.length} tags)</span>
+      : <i style={{ color: '#94a3b8' }}>(no tags)</i>;
+  }
+  if (src === 'mapping') return cell.mappingName ? <span style={{ color: '#16a085' }}><b>Map:</b> {cell.mappingName}</span> : <i style={{ color: '#94a3b8' }}>(no mapping)</i>;
+  return <span style={{ color: '#94a3b8' }}>—</span>;
 }
 
 /* ── Formula Configure Popup — opens on "Configure" button, shows visual builder + saved formulas ── */
@@ -1519,12 +1549,12 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                         const col = section.columns[ci];
                         const displayValue = isPreviewMode
                           ? renderResolvedValue(resolveCellValue(cell, tagValues, rowContext))
-                          : resolveCellConfigLabel(cell);
+                          : renderCellConfigBadge(cell);
                         return (
                           <td
                             key={ci}
-                            className={`px-2 py-1 border border-[#e2e8f0] ${!isPreviewMode && cell.sourceType && cell.sourceType !== 'static' ? 'text-[#0f3460] italic' : ''}`}
-                            style={{ textAlign: col?.align || 'left', overflow: 'hidden' }}
+                            className={`px-2 py-1 border border-[#e2e8f0] text-[11px]`}
+                            style={{ textAlign: col?.align || 'left', overflow: 'hidden', maxWidth: 0 }}
                           >
                             {displayValue}
                           </td>
