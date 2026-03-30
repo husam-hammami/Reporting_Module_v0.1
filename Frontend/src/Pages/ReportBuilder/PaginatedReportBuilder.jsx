@@ -725,13 +725,34 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
         )}
       </div>
 
-      {/* Row 2: Unit row — spans cols 2–3, aligned structurally (no hardcoded indent) */}
+      {/* Row 2: Unit + Aggregation row — spans cols 2–3 */}
       {needsUnit && (
         <>
           <span /> {/* col 1 spacer */}
           <div style={{ gridColumn: '2 / -1' }} className="flex items-center gap-1.5">
             <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Unit:</span>
             <UnitSelector cell={cell} onChange={onChange} className="text-[7px]" />
+          </div>
+        </>
+      )}
+
+      {/* Row 3: Aggregation selector for Tag and Formula cells */}
+      {(srcType === 'tag' || srcType === 'formula') && (
+        <>
+          <span /> {/* col 1 spacer */}
+          <div style={{ gridColumn: '2 / -1' }} className="flex items-center gap-1.5">
+            <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Agg:</span>
+            <select value={cell.aggregation || 'last'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
+              className="rb-input-base text-[7px] py-0.5 px-1" style={{ maxWidth: '120px' }}>
+              <option value="last">Last Value</option>
+              <option value="first">First (Start)</option>
+              <option value="delta">Delta (End − Start)</option>
+              <option value="avg">Average</option>
+              <option value="sum">Sum</option>
+              <option value="min">Minimum</option>
+              <option value="max">Maximum</option>
+              <option value="count">Count</option>
+            </select>
           </div>
         </>
       )}

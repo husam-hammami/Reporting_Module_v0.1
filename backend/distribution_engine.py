@@ -144,6 +144,64 @@ def extract_all_tags(layout_config):
     return tags
 
 
+def _collect_aggregation_groups(layout_config):
+    """Collect per-tag aggregation types from paginated sections.
+    Returns { aggregation_type: set(tag_names) } so we can fetch each group separately.
+    Tags with no explicit aggregation default to 'last'.
+    """
+    agg_groups = {}  # { 'last': set(), 'first': set(), 'delta': set(), ... }
+
+    def add_tag(tag_name, aggregation):
+        agg = aggregation or 'last'
+        if agg not in agg_groups:
+            agg_groups[agg] = set()
+        agg_groups[agg].add(tag_name)
+
+    for s in (layout_config.get('paginatedSections') or []):
+        s_type = s.get('type', '')
+
+        if s_type == 'kpi-row':
+            for k in (s.get('kpis') or []):
+                if k.get('tagName'):
+                    add_tag(k['tagName'], k.get('aggregation'))
+                if k.get('formula'):
+                    for t in _parse_formula_tags(k['formula']):
+                        add_tag(t, k.get('aggregation'))
+
+        elif s_type == 'table':
+            for row in (s.get('rows') or []):
+                for cell in (row.get('cells') or []):
+                    src = cell.get('sourceType', 'static')
+                    if src == 'tag' and cell.get('tagName'):
+                        add_tag(cell['tagName'], cell.get('aggregation'))
+                    elif src == 'formula' and cell.get('formula'):
+                        for t in _parse_formula_tags(cell['formula']):
+                            add_tag(t, cell.get('aggregation'))
+
+    return agg_groups
+
+
+def _fetch_tag_data_multi_agg(layout_config, tag_names, from_dt, to_dt):
+    """Fetch tag data with per-cell aggregation support.
+    For non-'last' aggregations, keys are namespaced as 'agg::tagName'.
+    Returns a single merged dict.
+    """
+    agg_groups = _collect_aggregation_groups(layout_config)
+
+    # Always fetch 'last' for all tags (default)
+    tag_data = _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last')
+
+    # Fetch additional aggregation groups and namespace the keys
+    for agg, agg_tags in agg_groups.items():
+        if agg == 'last':
+            continue  # already fetched
+        agg_result = _fetch_tag_data(agg_tags, from_dt, to_dt, aggregation=agg)
+        for tag_name, value in agg_result.items():
+            tag_data[f'{agg}::{tag_name}'] = value
+
+    return tag_data
+
+
 # ── Time range helper ────────────────────────────────────────────────────────
 
 def _time_range_for_schedule(schedule_type):
@@ -189,6 +247,19 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
                   AND h."timestamp" >= %s::timestamp
                   AND h."timestamp" <= %s::timestamp
                 ORDER BY h.tag_id, h."timestamp" DESC
+            """, (tag_ids, from_dt, to_dt))
+            for row in cur.fetchall():
+                name = id_to_name.get(row['tag_id'])
+                if name:
+                    result[name] = row['value']
+        elif aggregation == 'first':
+            cur.execute("""
+                SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
+                FROM tag_history h
+                WHERE h.tag_id = ANY(%s)
+                  AND h."timestamp" >= %s::timestamp
+                  AND h."timestamp" <= %s::timestamp
+                ORDER BY h.tag_id, h."timestamp" ASC
             """, (tag_ids, from_dt, to_dt))
             for row in cur.fetchall():
                 name = id_to_name.get(row['tag_id'])
@@ -329,7 +400,10 @@ def _resolve_cell(cell, tag_data):
         return cell.get('value', '')
 
     if src == 'tag':
-        raw = tag_data.get(cell.get('tagName', ''))
+        tag_name = cell.get('tagName', '')
+        agg = cell.get('aggregation', 'last')
+        key = f'{agg}::{tag_name}' if agg and agg != 'last' else tag_name
+        raw = tag_data.get(key)
         return _fmt(raw)
 
     if src == 'formula':
@@ -387,7 +461,10 @@ def _resolve_cell_raw(cell, tag_data):
             return (v, unit, decimals)
 
     if src == 'tag':
-        raw = tag_data.get(cell.get('tagName', ''))
+        tag_name = cell.get('tagName', '')
+        agg = cell.get('aggregation', 'last')
+        key = f'{agg}::{tag_name}' if agg and agg != 'last' else tag_name
+        raw = tag_data.get(key)
         return (_to_num(raw), unit, decimals)
 
     if src == 'formula':
@@ -1043,7 +1120,7 @@ def generate_report_xlsx(report_name, layout_config, from_dt, to_dt):
     Returns: bytes (xlsx file content)
     """
     tag_names = extract_all_tags(layout_config)
-    tag_data = _fetch_tag_data(tag_names, from_dt, to_dt)
+    tag_data = _fetch_tag_data_multi_agg(layout_config, tag_names, from_dt, to_dt)
     return _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt)
 
 
@@ -1633,7 +1710,7 @@ def execute_distribution_rule(rule_id):
                 layout_config = json.loads(layout_config)
 
             tag_names = extract_all_tags(layout_config)
-            tag_data = _fetch_tag_data(tag_names, from_dt, to_dt)
+            tag_data = _fetch_tag_data_multi_agg(layout_config, tag_names, from_dt, to_dt)
             if fmt == 'xlsx':
                 content_bytes = _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt)
             else:
