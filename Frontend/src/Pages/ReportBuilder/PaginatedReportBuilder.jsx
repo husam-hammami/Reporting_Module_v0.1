@@ -82,11 +82,17 @@ function UnitSelector({ cell, onChange, className = '' }) {
 }
 
 /* ── Resolve cell display label for config mode (shows tag/formula names, not live values) ── */
+const AGG_LABELS = { last: 'Last', first: 'First', delta: 'Δ', avg: 'Avg', sum: 'Sum', min: 'Min', max: 'Max', count: 'Count' };
 function resolveCellConfigLabel(cell) {
   if (!cell) return '—';
   const src = cell.sourceType || 'static';
   if (src === 'static') return cell.value || '(empty)';
-  if (src === 'tag') return cell.tagName ? `{${cell.tagName}}` : '(no tag)';
+  if (src === 'tag') {
+    if (!cell.tagName) return '(no tag)';
+    const agg = cell.aggregation || 'last';
+    const aggLabel = agg !== 'last' ? `${AGG_LABELS[agg] || agg}·` : '';
+    return `${aggLabel}{${cell.tagName}}`;
+  }
   if (src === 'formula') return cell.formula ? `ƒ ${cell.formula}` : '(no formula)';
   if (src === 'group') {
     const tags = (cell.groupTags || []).filter(Boolean);
