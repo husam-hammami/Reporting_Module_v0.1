@@ -3,8 +3,10 @@ Hercules Reporting Module — Standalone launcher.
 Starts portable PostgreSQL, runs DB setup on first run, then starts the Flask backend.
 Designed to be compiled to launcher.exe (e.g. PyInstaller) for the installer bundle.
 """
+import ctypes
 import hashlib
 import json
+import logging
 import os
 import platform
 import shutil
@@ -27,17 +29,37 @@ except ImportError:
 
 LICENSE_SERVER_URL = "https://api.herculesv2.app"
 
+_NO_WINDOW = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0x08000000
 
-def pause_before_exit(msg="Press Enter to exit."):
-    """Keep console open so the user can read the message (works when double-clicking EXE)."""
-    try:
-        input(msg)
-    except EOFError:
-        if os.name == "nt":
-            os.system("pause")
-        else:
-            print("(Waiting 15 seconds...)")
-            time.sleep(15)
+
+def _setup_logging():
+    if getattr(sys, "frozen", False):
+        log_dir = os.path.dirname(sys.executable)
+    else:
+        log_dir = os.path.dirname(os.path.abspath(__file__))
+    log_file = os.path.join(log_dir, "launcher.log")
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.INFO,
+        format="%(asctime)s  %(levelname)s  %(message)s",
+    )
+
+_setup_logging()
+log = logging.getLogger("launcher")
+
+
+def _show_error(message, title="Hercules"):
+    """Show a native Windows error dialog."""
+    log.error(message)
+    MB_OK = 0x00000000
+    MB_ICONERROR = 0x00000010
+    ctypes.windll.user32.MessageBoxW(0, message, title, MB_OK | MB_ICONERROR)
+
+
+def _fatal(message, title="Hercules"):
+    """Show error dialog and exit."""
+    _show_error(message, title)
+    sys.exit(1)
 
 
 def _machine_id_fallback():
@@ -113,7 +135,7 @@ def _check_license_online(machine_id):
         with urllib.request.urlopen(req, timeout=8, context=ctx) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except Exception as e:
-        print(f"License server error: {e}")
+        log.warning("License server error: %s", e)
         return None
 
 
@@ -157,10 +179,11 @@ def get_python():
     venv_python = os.path.join(VENV_SCRIPTS, "python.exe")
     if os.path.exists(venv_python):
         return venv_python
-    print("ERROR: No Python found.")
-    print("For installed app: expected bundled Python at:", PYTHON_EMBED_EXE)
-    print("For development: expected venv at:", venv_python)
-    sys.exit(1)
+    _fatal(
+        "No Python found.\n\n"
+        f"For installed app: expected bundled Python at:\n{PYTHON_EMBED_EXE}\n\n"
+        f"For development: expected venv at:\n{venv_python}"
+    )
 
 
 def _using_embed():
@@ -195,6 +218,7 @@ def run(cmd, env=None, cwd=None):
         env=env or os.environ,
         cwd=cwd or BASE_DIR,
         shell=False,
+        creationflags=_NO_WINDOW,
     )
 
 
@@ -203,25 +227,29 @@ def init_db_if_needed():
     pg_version = os.path.join(DATA_DIR, "PG_VERSION")
     if os.path.exists(pg_version):
         return
-    print("Initializing PostgreSQL cluster...")
+    log.info("Initializing PostgreSQL cluster...")
     os.makedirs(DATA_DIR, exist_ok=True)
-    subprocess.check_call([INITDB, "-D", DATA_DIR, "-U", "postgres"], cwd=BASE_DIR)
+    subprocess.check_call(
+        [INITDB, "-D", DATA_DIR, "-U", "postgres"],
+        cwd=BASE_DIR, creationflags=_NO_WINDOW,
+    )
 
 
 def start_postgres():
     """Start portable PostgreSQL on PORT."""
-    print("Starting PostgreSQL...")
+    log.info("Starting PostgreSQL...")
     subprocess.Popen(
         [PG_CTL, "-D", DATA_DIR, "-o", f"-p {PORT}", "start"],
         cwd=BASE_DIR,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        creationflags=_NO_WINDOW,
     )
 
 
 def wait_for_db(timeout_sec=60):
     """Wait until PostgreSQL is accepting connections."""
-    print("Waiting for PostgreSQL...")
+    log.info("Waiting for PostgreSQL...")
     deadline = time.time() + timeout_sec
     while time.time() < deadline:
         result = run([PG_ISREADY, "-h", "127.0.0.1", "-p", PORT, "-d", "postgres"])
@@ -233,16 +261,19 @@ def wait_for_db(timeout_sec=60):
 
 def run_setup():
     """Run setup_local_db.py (create DB, migrations, default user). Uses portable DB port."""
-    print("Running DB setup...")
+    log.info("Running DB setup...")
     env = get_venv_env()
     env["DB_HOST"] = "127.0.0.1"
     env["DB_PORT"] = PORT
     env["POSTGRES_DB"] = "dynamic_db_hercules"
+    env["POSTGRES_USER"] = "postgres"
+    env["POSTGRES_PASSWORD"] = ""
     python = get_python()
     subprocess.check_call(
         [python, SETUP_SCRIPT, "--no-seed"],
         cwd=BASE_DIR,
         env=env,
+        creationflags=_NO_WINDOW,
     )
 
 
@@ -256,34 +287,38 @@ def ensure_pkg_resources():
         cwd=BASE_DIR,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        creationflags=_NO_WINDOW,
     )
     if check.returncode == 0:
         return
-    print("Installing setuptools (required by python-snap7)...")
-    # Use python -m pip so it works for both embed and venv (embed may not have pip.exe in PATH yet)
+    log.info("Installing setuptools (required by python-snap7)...")
     subprocess.check_call(
         [python, "-m", "pip", "install", "setuptools>=59.0,<66"],
         env=env,
         cwd=BASE_DIR,
+        creationflags=_NO_WINDOW,
     )
 
 
 def start_backend():
     """Start Flask backend. Uses frozen exe if available, otherwise falls back to python app.py."""
-    print("Starting backend...")
+    log.info("Starting backend...")
     env = get_venv_env()
     env["DB_HOST"] = "127.0.0.1"
     env["DB_PORT"] = PORT
     env["POSTGRES_DB"] = "dynamic_db_hercules"
+    env["POSTGRES_USER"] = "postgres"
+    env["POSTGRES_PASSWORD"] = ""
     env["FLASK_PORT"] = BACKEND_PORT
 
     if os.path.exists(BACKEND_EXE):
         # Frozen backend (from CI build)
-        print(f"Using frozen backend: {BACKEND_EXE}")
+        log.info("Using frozen backend: %s", BACKEND_EXE)
         subprocess.Popen(
             [BACKEND_EXE],
             cwd=BACKEND_DIR,
             env=env,
+            creationflags=_NO_WINDOW,
         )
     else:
         # Source-based backend (local dev)
@@ -293,6 +328,7 @@ def start_backend():
             [python, APP_MAIN],
             cwd=BACKEND_DIR,
             env=env,
+            creationflags=_NO_WINDOW,
         )
 
 
@@ -327,7 +363,7 @@ def check_and_apply_update():
     branch = _get_release_branch()
     slug = _branch_slug(branch)
     prefix = f"{slug}-v"
-    print(f"Current version: {local_ver} (branch: {branch})")
+    log.info("Current version: %s (branch: %s)", local_ver, branch)
 
     try:
         req = urllib.request.Request(
@@ -341,7 +377,7 @@ def check_and_apply_update():
         with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
             releases = json.loads(resp.read().decode("utf-8"))
     except Exception as e:
-        print(f"Update check skipped (GitHub unreachable): {e}")
+        log.warning("Update check skipped (GitHub unreachable): %s", e)
         return
 
     # Find the latest release matching this branch's tag prefix
@@ -366,7 +402,7 @@ def check_and_apply_update():
 
     remote_ver = best_release["tag_name"][len(prefix):]
     if _version_tuple(remote_ver) <= _version_tuple(local_ver):
-        print(f"Already up to date (v{local_ver}).")
+        log.info("Already up to date (v%s).", local_ver)
         return
 
     assets = best_release.get("assets", [])
@@ -376,15 +412,15 @@ def check_and_apply_update():
             zip_asset = a
             break
     if not zip_asset:
-        print("No zip asset in release — skipping update.")
+        log.info("No zip asset in release — skipping update.")
         return
 
     download_url = zip_asset["browser_download_url"]
-    print(f"Update available: v{local_ver} -> v{remote_ver}")
+    log.info("Update available: v%s -> v%s", local_ver, remote_ver)
 
     tmp = os.path.join(tempfile.gettempdir(), zip_asset["name"])
     try:
-        print("Downloading update...")
+        log.info("Downloading update...")
         req = urllib.request.Request(download_url, headers={"User-Agent": "HerculesLauncher/1.0"})
         with urllib.request.urlopen(req, timeout=120, context=ctx) as resp:
             with open(tmp, "wb") as f:
@@ -394,12 +430,12 @@ def check_and_apply_update():
                         break
                     f.write(chunk)
     except Exception as e:
-        print(f"Download failed: {e}")
+        log.error("Download failed: %s", e)
         return
 
     backup = BACKEND_DIR + "_backup"
     try:
-        print("Applying update...")
+        log.info("Applying update...")
         if os.path.exists(backup):
             shutil.rmtree(backup)
         os.rename(BACKEND_DIR, backup)
@@ -412,13 +448,13 @@ def check_and_apply_update():
 
         with open(VERSION_FILE, "w", encoding="utf-8") as f:
             f.write(remote_ver)
-        print(f"Updated to v{remote_ver}.")
+        log.info("Updated to v%s.", remote_ver)
 
     except Exception as e:
-        print(f"Update failed: {e}")
+        log.error("Update failed: %s", e)
         if os.path.exists(backup) and not os.path.exists(BACKEND_DIR):
             os.rename(backup, BACKEND_DIR)
-        print("Rolled back to previous version.")
+        log.info("Rolled back to previous version.")
 
 
 def ensure_firewall_rule():
@@ -428,30 +464,29 @@ def ensure_firewall_rule():
     rule_name = "Hercules Web Access"
     check = subprocess.run(
         ["netsh", "advfirewall", "firewall", "show", "rule", f"name={rule_name}"],
-        capture_output=True, text=True
+        capture_output=True, text=True, creationflags=_NO_WINDOW,
     )
     if check.returncode == 0 and rule_name in check.stdout:
-        print(f"Firewall rule '{rule_name}' already exists.")
+        log.info("Firewall rule '%s' already exists.", rule_name)
         return
-    print(f"Adding firewall rule '{rule_name}' for port {BACKEND_PORT}...")
+    log.info("Adding firewall rule '%s' for port %s...", rule_name, BACKEND_PORT)
     result = subprocess.run(
         ["netsh", "advfirewall", "firewall", "add", "rule",
          f"name={rule_name}", "dir=in", "action=allow",
          "protocol=TCP", f"localport={BACKEND_PORT}"],
-        capture_output=True, text=True
+        capture_output=True, text=True, creationflags=_NO_WINDOW,
     )
     if result.returncode == 0:
-        print("Firewall rule added successfully.")
+        log.info("Firewall rule added successfully.")
     else:
-        print(f"Warning: Could not add firewall rule: {result.stderr}")
+        log.warning("Could not add firewall rule: %s", result.stderr)
 
 
 def main():
     machine_id = _machine_id_fallback()
     license_path = os.path.join(BASE_DIR, "license.json")
 
-    # --- Hybrid license check: online first, then offline cache ---
-    print("Checking license...")
+    log.info("Checking license...")
     response = _check_license_online(machine_id)
 
     if response is not None:
@@ -467,74 +502,63 @@ def main():
             if expiry_date and expiry_date >= datetime.now().date():
                 with open(license_path, "w", encoding="utf-8") as f:
                     json.dump({"machine_id": machine_id, "expiry": expiry_str}, f, indent=4)
-                print(f"License valid until {expiry_str}")
+                log.info("License valid until %s", expiry_str)
             else:
-                print(f"License expired on {expiry_str}. Contact administrator to extend.")
-                print("Machine ID:", machine_id)
-                pause_before_exit()
-                sys.exit(1)
+                _fatal(
+                    f"License expired on {expiry_str}.\n"
+                    f"Contact administrator to extend.\n\n"
+                    f"Machine ID: {machine_id}"
+                )
 
         elif status == "pending":
-            print("Registration received. Waiting for administrator approval.")
-            print("Machine ID:", machine_id)
-            pause_before_exit()
-            sys.exit(1)
+            _fatal(
+                "Registration received. Waiting for administrator approval.\n\n"
+                f"Machine ID: {machine_id}"
+            )
 
         elif status == "denied":
-            print("Access denied by administrator.")
-            print("Machine ID:", machine_id)
-            pause_before_exit()
-            sys.exit(1)
+            _fatal(
+                "Access denied by administrator.\n\n"
+                f"Machine ID: {machine_id}"
+            )
 
         else:
-            print(f"Unexpected license status: {status}")
-            print("Machine ID:", machine_id)
-            pause_before_exit()
-            sys.exit(1)
+            _fatal(
+                f"Unexpected license status: {status}\n\n"
+                f"Machine ID: {machine_id}"
+            )
     else:
-        # Offline: fall back to cached license.json
         if _verify_license_inline(license_path):
             try:
                 with open(license_path, encoding="utf-8") as f:
                     cached = json.load(f)
-                print(f"Offline mode — cached license valid until {cached.get('expiry', '?')}")
+                log.info("Offline mode — cached license valid until %s", cached.get("expiry", "?"))
             except Exception:
-                print("Offline mode — using cached license.")
+                log.info("Offline mode — using cached license.")
         else:
-            print("Cannot reach license server and no valid cached license.")
-            print("Machine ID:", machine_id)
-            print("Please check your internet connection and try again.")
-            pause_before_exit()
-            sys.exit(1)
+            _fatal(
+                "Cannot reach license server and no valid cached license.\n\n"
+                f"Machine ID: {machine_id}\n\n"
+                "Please check your internet connection and try again."
+            )
 
     check_and_apply_update()
 
     if not os.path.exists(PG_CTL):
-        print(f"Error: PostgreSQL binaries not found at {PG_BIN}")
-        print("Expected folder: psql/bin/ with pg_ctl.exe, initdb.exe, pg_isready.exe")
-        pause_before_exit()
-        sys.exit(1)
+        _fatal(
+            f"PostgreSQL binaries not found at:\n{PG_BIN}\n\n"
+            "Expected folder: psql/bin/ with pg_ctl.exe, initdb.exe, pg_isready.exe"
+        )
 
     init_db_if_needed()
     start_postgres()
     wait_for_db()
-    # Idempotent: creates DB/migrations/default user if missing; skips if already done
     run_setup()
     ensure_firewall_rule()
     start_backend()
 
     url = f"http://localhost:{BACKEND_PORT}"
-    print("System started.")
-    print(f"Open {url} in your browser.")
-    try:
-        import socket
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        lan_ip = s.getsockname()[0]
-        s.close()
-        print(f"LAN access: http://{lan_ip}:{BACKEND_PORT}")
-    except Exception:
-        pass
+    log.info("System started. Opening %s", url)
     webbrowser.open(url)
 
 
@@ -544,6 +568,5 @@ if __name__ == "__main__":
     except SystemExit:
         raise
     except Exception:
-        traceback.print_exc()
-        pause_before_exit()
-        sys.exit(1)
+        msg = traceback.format_exc()
+        _fatal(f"Unexpected error:\n\n{msg}")
