@@ -1777,26 +1777,62 @@ export default function PaginatedReportBuilder() {
     updateMeta({ layout_config: { ...template?.layout_config, grid: { ...(template?.layout_config?.grid || {}), pageMode: next } } });
   }, [pageMode, template, updateMeta]);
 
-  // Collect tag names from all sections (tables, KPIs)
+  // Collect tag names and aggregation groups from all sections
   const tagNames = useMemo(() => collectPaginatedTagNames(sections), [sections]);
+  const tagAggGroups = useMemo(() => collectPaginatedTagAggregations(sections), [sections]);
 
-  // Fetch live tag values for preview (initial + refresh every 15s)
+  // Fetch tag values for preview — uses historian with per-aggregation grouping
   useEffect(() => {
     if (tagNames.length === 0) return;
     const fetchValues = async () => {
       try {
-        const res = await axios.post('/api/tags/get-values', { tag_names: tagNames }, { timeout: 10000 });
-        if (res.data?.status === 'success' && res.data.tag_values) {
-          setLiveTagValues((prev) => ({ ...prev, ...res.data.tag_values }));
+        const aggEntries = Object.entries(tagAggGroups);
+        const hasNonLastAgg = aggEntries.some(([agg]) => agg !== 'last');
+
+        if (hasNonLastAgg) {
+          // Use historian API with 1-hour window for aggregation-aware fetch
+          const now = new Date();
+          const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+          const toISO = now.toISOString();
+          const fromISO = oneHourAgo.toISOString();
+
+          const results = await Promise.all(
+            aggEntries.map(([agg, tags]) =>
+              axios.get('/api/historian/by-tags', {
+                params: { tag_names: tags.join(','), from: fromISO, to: toISO, aggregation: agg },
+                timeout: 10000,
+              }).then((res) => ({ agg, data: res?.data?.tag_values || res?.data?.data || res?.data || {} }))
+                .catch(() => ({ agg, data: {} }))
+            )
+          );
+          const merged = {};
+          for (const { agg, data } of results) {
+            if (!data || typeof data !== 'object') continue;
+            for (const [tagName, value] of Object.entries(data)) {
+              if (agg === 'last') {
+                merged[tagName] = value;
+              } else {
+                merged[`${agg}::${tagName}`] = value;
+                if (!(tagName in merged)) merged[tagName] = value;
+              }
+            }
+          }
+          setLiveTagValues((prev) => ({ ...prev, ...merged }));
+        } else {
+          // Simple fetch — all tags just need latest values
+          const res = await axios.post('/api/tags/get-values', { tag_names: tagNames }, { timeout: 10000 });
+          if (res.data?.status === 'success' && res.data.tag_values) {
+            setLiveTagValues((prev) => ({ ...prev, ...res.data.tag_values }));
+          }
         }
       } catch {
-        // API unavailable (e.g. demo mode); keep previous values or empty
+        // API unavailable — keep previous values
       }
     };
     fetchValues();
     const intervalId = setInterval(fetchValues, 15000);
     return () => clearInterval(intervalId);
-  }, [tagNames.join(',')]);
+  }, [tagNames.join(','), JSON.stringify(tagAggGroups)]);
 
   // Load sections from template
   useEffect(() => {
