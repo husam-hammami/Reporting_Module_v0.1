@@ -52,6 +52,7 @@ function effectiveUnit(cell) {
 
 function UnitSelector({ cell, onChange, className = '' }) {
   const selectValue = PREDEFINED_UNITS.some((u) => u.value === cell.unit) ? cell.unit : '__custom__';
+  const sizeClass = className || 'text-[11px]';
   return (
     <div className="flex items-center gap-1 flex-wrap">
       <select
@@ -60,7 +61,7 @@ function UnitSelector({ cell, onChange, className = '' }) {
           const v = e.target.value;
           onChange({ ...cell, unit: v, ...(v !== '__custom__' ? {} : { customUnit: cell.customUnit ?? cell.unit ?? '' }) });
         }}
-        className={`rb-input-base text-[7px] py-0.5 px-1 flex-shrink-0 ${className}`}
+        className={`rb-input-base ${sizeClass} py-0.5 px-1 flex-shrink-0`}
         title="Unit or display type"
       >
         {PREDEFINED_UNITS.map((u) => (
@@ -73,7 +74,7 @@ function UnitSelector({ cell, onChange, className = '' }) {
           value={cell.unit === '__custom__' ? (cell.customUnit ?? '') : (cell.unit ?? '')}
           onChange={(e) => onChange({ ...cell, unit: '__custom__', customUnit: e.target.value })}
           placeholder="Unit"
-          className="rb-input-base text-[7px] py-0.5 px-1 w-10 flex-shrink-0"
+          className={`rb-input-base ${sizeClass} py-0.5 px-1 w-12 flex-shrink-0`}
         />
       )}
     </div>
@@ -128,7 +129,7 @@ function FormulaConfigPopup({ cell, onChange, tags, savedFormulas, onClose }) {
         <div className="p-3 flex flex-col gap-2 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 44px)' }}>
           {/* Formula input */}
           <div>
-            <label className="text-[8px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-text-muted)' }}>Formula Expression</label>
+            <label className="text-[9px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-text-muted)' }}>Formula Expression</label>
             <input
               type="text"
               value={formula}
@@ -148,14 +149,14 @@ function FormulaConfigPopup({ cell, onChange, tags, savedFormulas, onClose }) {
             ))}
             {['SUM', 'AVG', 'MIN', 'MAX', 'IF', 'ROUND'].map((fn) => (
               <button key={fn} type="button" onClick={() => appendToFormula(`${fn}(`)}
-                className="h-6 px-1.5 rounded text-[8px] font-bold"
+                className="h-6 px-1.5 rounded text-[9px] font-bold"
                 style={{ background: 'var(--rb-accent-subtle)', border: '1px solid var(--rb-border)', color: 'var(--rb-accent)' }}>{fn}</button>
             ))}
           </div>
 
           {/* Insert tag */}
           <div>
-            <label className="text-[8px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-text-muted)' }}>Insert Tag</label>
+            <label className="text-[9px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-text-muted)' }}>Insert Tag</label>
             <input type="text" value={tagSearch} onChange={(e) => setTagSearch(e.target.value)} placeholder="Search tags..." className="rb-input-base text-[9px] py-0.5 px-1.5 w-full mb-1" />
             <div className="max-h-[100px] overflow-y-auto rounded" style={{ border: '1px solid var(--rb-border)' }}>
               {filteredTags.slice(0, 30).map((t) => (
@@ -169,14 +170,14 @@ function FormulaConfigPopup({ cell, onChange, tags, savedFormulas, onClose }) {
 
           {/* Unit */}
           <div className="flex items-center gap-2">
-            <label className="text-[8px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Unit</label>
+            <label className="text-[9px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Unit</label>
             <UnitSelector cell={cell} onChange={onChange} />
           </div>
 
           {/* Saved formulas */}
           {savedFormulas && savedFormulas.length > 0 && (
             <div>
-              <label className="text-[8px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-text-muted)' }}>Or pick a saved formula</label>
+              <label className="text-[9px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-text-muted)' }}>Or pick a saved formula</label>
               <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search saved..." className="rb-input-base text-[9px] py-0.5 px-1.5 w-full mb-1" />
               <div className="max-h-[120px] overflow-y-auto rounded" style={{ border: '1px solid var(--rb-border)' }}>
                 {filteredFormulas.map((f) => (
@@ -184,12 +185,12 @@ function FormulaConfigPopup({ cell, onChange, tags, savedFormulas, onClose }) {
                     className="w-full text-left px-2 py-1 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2" style={{ borderBottom: '1px solid var(--rb-border)' }}>
                     <div className="flex-1 min-w-0">
                       <div className="text-[9px] font-semibold truncate" style={{ color: 'var(--rb-text)' }}>{f.name}</div>
-                      <div className="text-[8px] font-mono truncate" style={{ color: 'var(--rb-text-muted)' }}>{f.formula}</div>
+                      <div className="text-[9px] font-mono truncate" style={{ color: 'var(--rb-text-muted)' }}>{f.formula}</div>
                     </div>
-                    {f.unit && <span className="text-[8px] font-bold px-1 rounded" style={{ background: 'var(--rb-accent-subtle)', color: 'var(--rb-accent)' }}>{f.unit}</span>}
+                    {f.unit && <span className="text-[9px] font-bold px-1 rounded" style={{ background: 'var(--rb-accent-subtle)', color: 'var(--rb-accent)' }}>{f.unit}</span>}
                   </button>
                 ))}
-                {filteredFormulas.length === 0 && <div className="px-2 py-1.5 text-[8px]" style={{ color: 'var(--rb-text-muted)' }}>No matching formulas</div>}
+                {filteredFormulas.length === 0 && <div className="px-2 py-1.5 text-[9px]" style={{ color: 'var(--rb-text-muted)' }}>No matching formulas</div>}
               </div>
             </div>
           )}
@@ -560,7 +561,7 @@ function AddSectionPalette({ onAdd, onClose }) {
             </div>
             <div>
               <div className="text-[9px] font-semibold" style={{ color: 'var(--rb-text)' }}>{s.label}</div>
-              <div className="text-[8px] mt-0.5 leading-snug" style={{ color: 'var(--rb-text-muted)' }}>{s.description}</div>
+              <div className="text-[9px] mt-0.5 leading-snug" style={{ color: 'var(--rb-text-muted)' }}>{s.description}</div>
             </div>
           </button>
         ))}
@@ -607,9 +608,9 @@ function CellEditor({ cell, tags, onChange, savedFormulas }) {
       )}
       {srcType === 'formula' && (
         <div className="flex items-center gap-1">
-          <span className="text-[8px] font-mono truncate flex-1 min-w-0" style={{ color: 'var(--rb-text-secondary)' }}>{cell.formula || '(not set)'}</span>
+          <span className="text-[9px] font-mono truncate flex-1 min-w-0" style={{ color: 'var(--rb-text-secondary)' }}>{cell.formula || '(not set)'}</span>
           <button type="button" onClick={() => setShowFormulaPopup(true)}
-            className="rb-input-base text-[8px] py-0.5 px-2 flex-shrink-0 font-bold"
+            className="rb-input-base text-[9px] py-0.5 px-2 flex-shrink-0 font-bold"
             style={{ color: 'var(--rb-accent)', background: 'var(--rb-accent-subtle)' }}>Configure</button>
           {showFormulaPopup && <FormulaConfigPopup cell={cell} onChange={onChange} tags={tags} savedFormulas={savedFormulas} onClose={() => setShowFormulaPopup(false)} />}
         </div>
@@ -626,7 +627,7 @@ function CellEditor({ cell, tags, onChange, savedFormulas }) {
                 <button type="button" onClick={() => onChange({ ...cell, groupTags: (cell.groupTags || []).filter((_, k) => k !== gi) })} className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20"><X size={9} className="text-red-400" /></button>
               </div>
             ))}
-            <button type="button" onClick={() => onChange({ ...cell, groupTags: [...(cell.groupTags || []), ''] })} className="text-[8px] font-semibold" style={{ color: 'var(--rb-accent)' }}>+ Add tag</button>
+            <button type="button" onClick={() => onChange({ ...cell, groupTags: [...(cell.groupTags || []), ''] })} className="text-[9px] font-semibold" style={{ color: 'var(--rb-accent)' }}>+ Add tag</button>
           </div>
           <div className="flex items-center gap-1">
             <select value={cell.aggregation || 'avg'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })} className="rb-input-base text-[9px] py-0.5 px-1 flex-1">
@@ -649,7 +650,7 @@ function CellEditor({ cell, tags, onChange, savedFormulas }) {
   );
 }
 
-/* ── Compact searchable tag selector for inline use ───────────────── */
+/* ── Searchable tag selector for inline use ───────────────────────── */
 function InlineTagSelect({ tags, value, onChange }) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -663,25 +664,25 @@ function InlineTagSelect({ tags, value, onChange }) {
   return (
     <div className="relative w-full min-w-0">
       <button type="button" onClick={() => setOpen(!open)}
-        className="rb-input-base text-[8px] py-0.5 px-1 w-full text-left truncate"
+        className="rb-input-base text-[11px] py-1 px-2 w-full text-left truncate"
         title={selected ? (selected.display_name || selected.tag_name) : ''}>
         {selected ? (selected.display_name || selected.tag_name) : <span style={{ color: 'var(--rb-text-muted)' }}>Select tag...</span>}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(''); }} />
-          <div className="absolute z-50 mt-0.5 w-[220px] rb-formula-dropdown overflow-hidden" style={{ left: 0 }}>
-            <div className="p-1.5 border-b border-[var(--rb-border-subtle)]">
+          <div className="absolute z-50 mt-1 w-[260px] rb-formula-dropdown overflow-hidden rounded-lg shadow-lg" style={{ left: 0 }}>
+            <div className="p-2 border-b border-[var(--rb-border-subtle)]">
               <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tags..."
-                autoFocus className="rb-input-base w-full py-1 px-2 text-[9px]" />
+                autoFocus className="rb-input-base w-full py-1.5 px-2.5 text-[11px] rounded-md" />
             </div>
-            <div className="overflow-y-auto max-h-36 py-0.5">
+            <div className="overflow-y-auto max-h-48 py-1">
               {filtered.length === 0 ? (
-                <p className="px-2 py-2 text-[8px] text-center" style={{ color: 'var(--rb-text-muted)' }}>No tags found</p>
+                <p className="px-3 py-3 text-[11px] text-center" style={{ color: 'var(--rb-text-muted)' }}>No tags found</p>
               ) : filtered.map(tag => (
                 <button key={tag.tag_name} type="button"
                   onClick={() => { onChange(tag.tag_name); setOpen(false); setSearch(''); }}
-                  className={`w-full text-left px-2 py-1 text-[8px] truncate hover:bg-[var(--rb-accent-subtle)] ${value === tag.tag_name ? 'bg-[var(--rb-accent-subtle)] font-semibold' : ''}`}
+                  className={`w-full text-left px-3 py-1.5 text-[11px] truncate hover:bg-[var(--rb-accent-subtle)] transition-colors ${value === tag.tag_name ? 'bg-[var(--rb-accent-subtle)] font-semibold' : ''}`}
                   style={{ color: 'var(--rb-text)' }}>
                   {tag.display_name || tag.tag_name}
                 </button>
@@ -694,7 +695,7 @@ function InlineTagSelect({ tags, value, onChange }) {
   );
 }
 
-/* ── Inline cell editor for table rows — one cell per line ────────── */
+/* ── Inline cell editor for table rows ────────────────────────────── */
 function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
   const srcType = cell.sourceType || 'static';
   const safeTags = Array.isArray(tags) ? tags : [];
@@ -710,89 +711,84 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
   const needsUnit = srcType === 'tag' || srcType === 'formula' || srcType === 'group';
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '44px clamp(62px, 18%, 90px) 1fr', gap: '3px', minWidth: 0 }}>
+    <div className="flex flex-col gap-1.5" style={{ minWidth: 0 }}>
+      {/* Main row: label + source type + value */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wide truncate flex-shrink-0"
+          style={{ color: 'var(--rb-text-muted)', width: '52px' }} title={columnName}>{columnName}</span>
 
-      {/* Row 1 — Col 1: Column name label */}
-      <span className="text-[7px] font-bold uppercase tracking-wider truncate self-center"
-        style={{ color: 'var(--rb-text-muted)' }} title={columnName}>{columnName}</span>
+        <select value={srcType} onChange={handleSourceChange}
+          className="rb-input-base text-[11px] py-1 px-1.5 flex-shrink-0"
+          style={{ color: 'var(--rb-accent)', fontWeight: 600, width: '62px' }}>
+          <option value="static">Text</option>
+          <option value="tag">Tag</option>
+          <option value="formula">ƒ(x)</option>
+          <option value="group">Group</option>
+          <option value="mapping">Map</option>
+        </select>
 
-      {/* Row 1 — Col 2: Source type dropdown */}
-      <select value={srcType} onChange={handleSourceChange}
-        className="rb-input-base text-[7px] py-0.5 px-1"
-        style={{ color: 'var(--rb-accent)', fontWeight: 600 }}>
-        <option value="static">Text</option>
-        <option value="tag">Tag</option>
-        <option value="formula">ƒ(x)</option>
-        <option value="group">Group</option>
-        <option value="mapping">Map</option>
-      </select>
-
-      {/* Row 1 — Col 3: Value field — fills all remaining space */}
-      <div className="min-w-0 flex items-center">
-        {srcType === 'static' && (
-          <input type="text" value={cell.value || ''} onChange={(e) => onChange({ ...cell, value: e.target.value })}
-            placeholder="Value..." className="rb-input-base text-[8px] py-0.5 px-1 w-full" />
-        )}
-        {srcType === 'tag' && (
-          <InlineTagSelect tags={safeTags} value={cell.tagName || ''} onChange={(v) => onChange({ ...cell, tagName: v })} />
-        )}
-        {srcType === 'formula' && (
-          <>
-            <span className="text-[7px] font-mono truncate flex-1 min-w-0" style={{ color: 'var(--rb-text-secondary)' }}>{cell.formula || '(not set)'}</span>
-            <button type="button" onClick={() => setShowFormulaPopup(true)}
-              className="rb-input-base text-[7px] py-0.5 px-1.5 flex-shrink-0 font-bold"
-              style={{ color: 'var(--rb-accent)', background: 'var(--rb-accent-subtle)' }}>Configure</button>
-            {showFormulaPopup && <FormulaConfigPopup cell={cell} onChange={onChange} tags={tags} savedFormulas={savedFormulas} onClose={() => setShowFormulaPopup(false)} />}
-          </>
-        )}
-        {srcType === 'mapping' && (
-          <select value={cell.mappingName || ''} onChange={(e) => onChange({ ...cell, mappingName: e.target.value })}
-            className="rb-input-base text-[8px] py-0.5 px-1 w-full">
-            <option value="">Select mapping...</option>
-            {(mappings || []).filter((m) => m.is_active !== false).map((m) => <option key={m.id || m.name} value={m.name || m.id || ''}>{m.name || m.id}</option>)}
-          </select>
-        )}
-        {srcType === 'group' && (
-          <div className="flex items-center gap-1.5 w-full min-w-0">
-            <select value={cell.aggregation || 'avg'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
-              className="rb-input-base text-[7px] py-0.5 px-1 flex-shrink-0"
-              style={{ flexBasis: 'clamp(44px, 35%, 80px)' }}>
-              <option value="avg">Avg</option><option value="sum">Sum</option><option value="min">Min</option><option value="max">Max</option><option value="count">Count</option>
+        <div className="min-w-0 flex items-center flex-1">
+          {srcType === 'static' && (
+            <input type="text" value={cell.value || ''} onChange={(e) => onChange({ ...cell, value: e.target.value })}
+              placeholder="Value..." className="rb-input-base text-[11px] py-1 px-2 w-full" />
+          )}
+          {srcType === 'tag' && (
+            <InlineTagSelect tags={safeTags} value={cell.tagName || ''} onChange={(v) => onChange({ ...cell, tagName: v })} />
+          )}
+          {srcType === 'formula' && (
+            <>
+              <span className="text-[10px] font-mono truncate flex-1 min-w-0" style={{ color: 'var(--rb-text-secondary)' }}>{cell.formula || '(not set)'}</span>
+              <button type="button" onClick={() => setShowFormulaPopup(true)}
+                className="rb-input-base text-[10px] py-1 px-2 flex-shrink-0 font-semibold ml-1"
+                style={{ color: 'var(--rb-accent)', background: 'var(--rb-accent-subtle)' }}>Edit</button>
+              {showFormulaPopup && <FormulaConfigPopup cell={cell} onChange={onChange} tags={tags} savedFormulas={savedFormulas} onClose={() => setShowFormulaPopup(false)} />}
+            </>
+          )}
+          {srcType === 'mapping' && (
+            <select value={cell.mappingName || ''} onChange={(e) => onChange({ ...cell, mappingName: e.target.value })}
+              className="rb-input-base text-[11px] py-1 px-2 w-full">
+              <option value="">Select mapping...</option>
+              {(mappings || []).filter((m) => m.is_active !== false).map((m) => <option key={m.id || m.name} value={m.name || m.id || ''}>{m.name || m.id}</option>)}
             </select>
-            <span className="text-[7px] truncate opacity-60" style={{ color: 'var(--rb-text-secondary)' }}>
-              ({(cell.groupTags || []).filter(Boolean).length} tags)
-            </span>
-          </div>
-        )}
+          )}
+          {srcType === 'group' && (
+            <div className="flex items-center gap-1.5 w-full min-w-0">
+              <select value={cell.aggregation || 'avg'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
+                className="rb-input-base text-[11px] py-1 px-1.5 flex-shrink-0" style={{ width: '72px' }}>
+                <option value="avg">Avg</option><option value="sum">Sum</option><option value="min">Min</option><option value="max">Max</option><option value="count">Count</option>
+              </select>
+              <span className="text-[10px] truncate opacity-60" style={{ color: 'var(--rb-text-secondary)' }}>
+                ({(cell.groupTags || []).filter(Boolean).length} tags)
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Row 2: Unit + Aggregation on same line — compact */}
+      {/* Options row: Unit + Aggregation — compact single line */}
       {needsUnit && (
-        <>
-          <span /> {/* col 1 spacer */}
-          <div style={{ gridColumn: '2 / -1' }} className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Unit:</span>
-              <UnitSelector cell={cell} onChange={onChange} className="text-[7px]" />
-            </div>
-            {(srcType === 'tag' || srcType === 'formula') && (
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <span className="text-[7px] font-bold" style={{ color: 'var(--rb-text-muted)' }}>Agg:</span>
-                <select value={cell.aggregation || 'last'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
-                  className="rb-input-base text-[7px] py-0 px-0.5" style={{ maxWidth: '90px' }}>
-                  <option value="last">Last</option>
-                  <option value="first">First (Start)</option>
-                  <option value="delta">Δ (End−Start)</option>
-                  <option value="avg">Average</option>
-                  <option value="sum">Sum</option>
-                  <option value="min">Min</option>
-                  <option value="max">Max</option>
-                  <option value="count">Count</option>
-                </select>
-              </div>
-            )}
+        <div className="flex items-center gap-3 pl-[52px]" style={{ marginLeft: '2px' }}>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-semibold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Unit:</span>
+            <UnitSelector cell={cell} onChange={onChange} className="text-[11px]" />
           </div>
-        </>
+          {(srcType === 'tag' || srcType === 'formula') && (
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className="text-[10px] font-semibold" style={{ color: 'var(--rb-text-muted)' }}>Agg:</span>
+              <select value={cell.aggregation || 'last'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
+                className="rb-input-base text-[11px] py-0.5 px-1.5" style={{ width: '110px' }}>
+                <option value="last">Last</option>
+                <option value="first">First (Start)</option>
+                <option value="delta">Δ (End−Start)</option>
+                <option value="avg">Average</option>
+                <option value="sum">Sum</option>
+                <option value="min">Min</option>
+                <option value="max">Max</option>
+                <option value="count">Count</option>
+              </select>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Row 3+: Group tag list — spans cols 2–3 */}
@@ -803,16 +799,16 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
             {(cell.groupTags || []).map((gt, gi) => (
               <div key={gi} className="flex items-center gap-1">
                 <select value={gt || ''} onChange={(e) => { const next = [...(cell.groupTags || [])]; next[gi] = e.target.value; onChange({ ...cell, groupTags: next }); }}
-                  className="rb-input-base text-[7px] py-0.5 px-1 flex-1 min-w-0">
+                  className="rb-input-base text-[11px] py-0.5 px-1.5 flex-1 min-w-0">
                   <option value="">Select tag...</option>
                   {safeTags.map((t) => <option key={t.tag_name} value={t.tag_name}>{t.display_name || t.tag_name}</option>)}
                 </select>
                 <button type="button" onClick={() => onChange({ ...cell, groupTags: (cell.groupTags || []).filter((_, k) => k !== gi) })}
-                  className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20"><X size={8} className="text-red-400" /></button>
+                  className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20"><X size={10} className="text-red-400" /></button>
               </div>
             ))}
             <button type="button" onClick={() => onChange({ ...cell, groupTags: [...(cell.groupTags || []), ''] })}
-              className="text-[7px] font-semibold" style={{ color: 'var(--rb-accent)' }}>+ Add tag</button>
+              className="text-[10px] font-semibold" style={{ color: 'var(--rb-accent)' }}>+ Add tag</button>
           </div>
         </>
       )}
@@ -824,7 +820,7 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
           <>
             <span />
             <div style={{ gridColumn: '2 / -1' }}>
-              <UnitSelector cell={cell} onChange={onChange} className="text-[7px]" />
+              <UnitSelector cell={cell} onChange={onChange} className="text-[11px]" />
             </div>
           </>
         ) : null;
@@ -842,11 +838,11 @@ function HeaderSectionEditor({ section, tags, onChange, savedFormulas }) {
       {/* Title & Subtitle */}
       <div className="grid grid-cols-2 gap-1.5">
         <div>
-          <label className="text-[8px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-accent)' }}>Title</label>
+          <label className="text-[9px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-accent)' }}>Title</label>
           <input value={section.title} onChange={(e) => onChange({ ...section, title: e.target.value })} className="rb-input-base w-full text-[10px] py-0.5 px-1.5" />
         </div>
         <div>
-          <label className="text-[8px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-accent)' }}>Subtitle</label>
+          <label className="text-[9px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-accent)' }}>Subtitle</label>
           <input value={section.subtitle || ''} onChange={(e) => onChange({ ...section, subtitle: e.target.value })} className="rb-input-base w-full text-[10px] py-0.5 px-1.5" placeholder="Optional" />
         </div>
       </div>
@@ -873,13 +869,13 @@ function HeaderSectionEditor({ section, tags, onChange, savedFormulas }) {
         <button type="button" onClick={() => setStatusOpen((o) => !o)}
           className="w-full flex items-center justify-between px-2 py-1 text-left"
           style={{ background: 'var(--rb-surface)' }}>
-          <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: 'var(--rb-accent)' }}>Status Tag</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--rb-accent)' }}>Status Tag</span>
           {statusOpen ? <ChevronUp size={10} style={{ color: 'var(--rb-text-muted)' }} /> : <ChevronDown size={10} style={{ color: 'var(--rb-text-muted)' }} />}
         </button>
         {statusOpen && (
           <div className="px-2 pb-2 pt-1 flex flex-col gap-1" style={{ background: 'var(--rb-surface)' }}>
             <div className="flex items-center gap-1.5">
-              <label className="text-[8px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Label</label>
+              <label className="text-[9px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Label</label>
               <input value={section.statusLabel ?? 'Status'} onChange={(e) => onChange({ ...section, statusLabel: e.target.value || 'Status' })} className="rb-input-base text-[9px] py-0.5 px-1.5 flex-1" placeholder="Status" />
             </div>
             <CellEditor
@@ -922,14 +918,14 @@ function KpiRowEditor({ section, tags, onChange, savedFormulas }) {
   return (
     <div className="flex flex-col gap-1.5">
       <div>
-        <label className="text-[8px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-accent)' }}>Section Label</label>
+        <label className="text-[9px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-accent)' }}>Section Label</label>
         <input value={section.label || ''} onChange={(e) => onChange({ ...section, label: e.target.value })} className="rb-input-base w-full text-[10px] py-0.5 px-1.5" placeholder="e.g. Summary" />
       </div>
       <div className="flex flex-col gap-1">
         {section.kpis.map((kpi, i) => (
           <div key={kpi.id} className="rounded overflow-hidden" style={{ border: '1px solid var(--rb-border)' }}>
             <div className="flex items-center gap-1.5 px-2 py-1" style={{ background: 'var(--rb-surface)', borderBottom: '1px solid var(--rb-border)' }}>
-              <span className="text-[8px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>KPI {i + 1}</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>KPI {i + 1}</span>
               <input value={kpi.label} onChange={(e) => updateKpi(i, { label: e.target.value })} className="rb-input-base flex-1 text-[9px] py-0.5 px-1.5" placeholder="Label" />
               <button onClick={() => removeKpi(i)} className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0">
                 <Trash2 size={9} className="text-red-400" />
@@ -1022,15 +1018,15 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
     <div className="flex flex-col gap-1.5">
       {/* Table Label */}
       <div>
-        <label className="text-[8px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-accent)' }}>Table Label</label>
+        <label className="text-[9px] font-bold uppercase tracking-wider mb-0.5 block" style={{ color: 'var(--rb-accent)' }}>Table Label</label>
         <input value={section.label || ''} onChange={(e) => onChange({ ...section, label: e.target.value })} className="rb-input-base w-full text-[10px] py-0.5 px-1.5" placeholder="e.g. Production Data" />
       </div>
 
       {/* ── COLUMNS ── */}
       <div>
         <div className="flex items-center justify-between mb-0.5">
-          <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: 'var(--rb-accent)' }}>Columns ({section.columns.length})</span>
-          <button onClick={addColumn} className="flex items-center gap-0.5 text-[8px] font-semibold px-1.5 py-0.5 rounded"
+          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--rb-accent)' }}>Columns ({section.columns.length})</span>
+          <button onClick={addColumn} className="flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded"
             style={{ color: 'var(--rb-accent)', background: 'var(--rb-accent-subtle)' }}>
             <Plus size={8} /> Add
           </button>
@@ -1042,8 +1038,8 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
               <div key={col.id} className="rounded overflow-hidden" style={{ border: '1px solid var(--rb-border)' }}>
                 {/* Main column row */}
                 <div className="flex items-center gap-1 py-0.5 px-1.5" style={{ background: 'var(--rb-surface)' }}>
-                  <span className="text-[7px] font-bold tabular-nums w-3 text-center flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>{i + 1}</span>
-                  <input value={col.header} onChange={(e) => updateColumn(i, { header: e.target.value })} className="rb-input-base text-[8px] py-0.5 px-1 flex-1 min-w-0" placeholder="Name" />
+                  <span className="text-[9px] font-bold tabular-nums w-3 text-center flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>{i + 1}</span>
+                  <input value={col.header} onChange={(e) => updateColumn(i, { header: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0" placeholder="Name" />
                   <div className="flex rounded overflow-hidden flex-shrink-0" style={{ border: '1px solid var(--rb-border)' }}>
                     {['left', 'center', 'right'].map((a) => (
                       <button key={a} onClick={() => updateColumn(i, { align: a })} className="px-1 py-0.5 transition-colors"
@@ -1057,7 +1053,7 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
                     const columns = [...section.columns];
                     columns[i] = { ...columns[i], summary: { ...(columns[i].summary || {}), type: v, enabled: v !== 'none', label: columns[i].summary?.label || '' } };
                     onChange({ ...section, columns, showSummaryRow: v !== 'none' ? true : section.showSummaryRow });
-                  }} className="rb-input-base text-[7px] py-0.5 px-1 flex-shrink-0" style={{ width: 'clamp(54px, 18%, 110px)' }} title="Summary row operation">
+                  }} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(60px, 18%, 110px)' }} title="Summary row operation">
                     <option value="none">None</option>
                     <option value="label">Label</option>
                     <option value="sum">Sum</option>
@@ -1074,25 +1070,25 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
                 {/* Summary detail row — label text + unit for aggregate ops, label text for label type, formula for formula type */}
                 {smType === 'label' && (
                   <div className="flex items-center gap-1.5 px-2 py-0.5" style={{ background: 'var(--rb-accent-subtle)', borderTop: '1px solid var(--rb-border)', borderLeft: '3px solid var(--rb-accent)' }}>
-                    <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Text:</span>
-                    <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[7px] py-0.5 px-1 flex-1 min-w-0" placeholder="Label text" />
+                    <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Text:</span>
+                    <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0" placeholder="Label text" />
                   </div>
                 )}
                 {smType === 'formula' && (
                   <div className="flex items-center gap-1.5 px-2 py-0.5" style={{ background: 'var(--rb-accent-subtle)', borderTop: '1px solid var(--rb-border)', borderLeft: '3px solid var(--rb-accent)' }}>
-                    <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Label:</span>
-                    <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[7px] py-0.5 px-1 flex-shrink-0" style={{ width: 'clamp(48px, 16%, 90px)' }} placeholder="Total" />
-                    <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>ƒ:</span>
-                    <input value={col.summary?.formula || ''} onChange={(e) => updateColumnSummary(i, { formula: e.target.value })} className="rb-input-base text-[7px] py-0.5 px-1 flex-1 min-w-0 font-mono" placeholder="{Tag1} + {Tag2}" />
-                    <input value={col.summary?.unit || ''} onChange={(e) => updateColumnSummary(i, { unit: e.target.value })} className="rb-input-base text-[7px] py-0.5 px-1 flex-shrink-0" style={{ width: 'clamp(32px, 12%, 56px)' }} placeholder="kg" />
+                    <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Label:</span>
+                    <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(52px, 16%, 90px)' }} placeholder="Total" />
+                    <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>ƒ:</span>
+                    <input value={col.summary?.formula || ''} onChange={(e) => updateColumnSummary(i, { formula: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0 font-mono" placeholder="{Tag1} + {Tag2}" />
+                    <input value={col.summary?.unit || ''} onChange={(e) => updateColumnSummary(i, { unit: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(36px, 12%, 60px)' }} placeholder="kg" />
                   </div>
                 )}
                 {(smType === 'sum' || smType === 'avg' || smType === 'min' || smType === 'max' || smType === 'count') && (
                   <div className="flex items-center gap-1.5 px-2 py-0.5" style={{ background: 'var(--rb-accent-subtle)', borderTop: '1px solid var(--rb-border)', borderLeft: '3px solid var(--rb-accent)' }}>
-                    <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Label:</span>
-                    <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[7px] py-0.5 px-1 flex-1 min-w-0" placeholder="Total" />
-                    <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Unit:</span>
-                    <input value={col.summary?.unit || ''} onChange={(e) => updateColumnSummary(i, { unit: e.target.value })} className="rb-input-base text-[7px] py-0.5 px-1 flex-shrink-0" style={{ width: 'clamp(36px, 14%, 64px)' }} placeholder="kg" />
+                    <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Label:</span>
+                    <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0" placeholder="Total" />
+                    <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Unit:</span>
+                    <input value={col.summary?.unit || ''} onChange={(e) => updateColumnSummary(i, { unit: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(40px, 14%, 64px)' }} placeholder="kg" />
                   </div>
                 )}
               </div>
@@ -1104,8 +1100,8 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
       {/* ── ROWS ── */}
       <div>
         <div className="flex items-center justify-between mb-0.5">
-          <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: 'var(--rb-accent)' }}>Rows ({section.rows.length})</span>
-          <button onClick={addRow} className="flex items-center gap-0.5 text-[8px] font-semibold px-1.5 py-0.5 rounded"
+          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--rb-accent)' }}>Rows ({section.rows.length})</span>
+          <button onClick={addRow} className="flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded"
             style={{ color: 'var(--rb-accent)', background: 'var(--rb-accent-subtle)' }}>
             <Plus size={8} /> Add
           </button>
@@ -1121,8 +1117,8 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
                   style={{ background: isExpanded ? 'var(--rb-accent)' : 'var(--rb-surface)' }}
                   onClick={() => setExpandedRow(isExpanded ? -1 : ri)}
                 >
-                  <span className="text-[8px] font-bold tabular-nums w-4 flex-shrink-0" style={{ color: isExpanded ? '#fff' : 'var(--rb-text-muted)' }}>R{ri + 1}</span>
-                  <span className="text-[8px] truncate flex-1 min-w-0" style={{ color: isExpanded ? 'rgba(255,255,255,0.85)' : 'var(--rb-text-secondary)' }}>
+                  <span className="text-[9px] font-bold tabular-nums w-4 flex-shrink-0" style={{ color: isExpanded ? '#fff' : 'var(--rb-text-muted)' }}>R{ri + 1}</span>
+                  <span className="text-[9px] truncate flex-1 min-w-0" style={{ color: isExpanded ? 'rgba(255,255,255,0.85)' : 'var(--rb-text-secondary)' }}>
                     {row.cells.map((c, ci) => `${section.columns[ci]?.header || '?'}=${cellPreview(c)}`).join(' · ')}
                   </span>
                   <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -1139,12 +1135,12 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
                   <div className="px-1.5 py-1 flex flex-col gap-1" style={{ background: 'var(--rb-panel)' }}>
                     {/* Row options */}
                     <div className="flex items-center gap-1.5 pb-0.5" style={{ borderBottom: '1px solid var(--rb-border)' }}>
-                      <label className="flex items-center gap-1 text-[7px]" style={{ color: 'var(--rb-text-muted)' }}>
-                        <input type="checkbox" checked={row.hideWhenInactive || false} onChange={(e) => updateRow(ri, { hideWhenInactive: e.target.checked })} className="rounded" style={{ width: 9, height: 9 }} />
+                      <label className="flex items-center gap-1 text-[9px]" style={{ color: 'var(--rb-text-muted)' }}>
+                        <input type="checkbox" checked={row.hideWhenInactive || false} onChange={(e) => updateRow(ri, { hideWhenInactive: e.target.checked })} className="rounded" style={{ width: 10, height: 10 }} />
                         Auto-hide inactive
                       </label>
                       {row.hideWhenInactive && (
-                        <select value={row.hideReferenceCol ?? 0} onChange={(e) => updateRow(ri, { hideReferenceCol: Number(e.target.value) })} className="rb-input-base text-[7px] py-0 px-1">
+                        <select value={row.hideReferenceCol ?? 0} onChange={(e) => updateRow(ri, { hideReferenceCol: Number(e.target.value) })} className="rb-input-base text-[9px] py-0 px-1.5">
                           {section.columns.map((col, ci) => <option key={ci} value={ci}>{col.header}</option>)}
                         </select>
                       )}
@@ -1197,7 +1193,7 @@ function TextBlockEditor({ section, onChange }) {
 function SpacerEditor({ section, onChange }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-[8px] font-semibold" style={{ color: 'var(--rb-text-muted)' }}>Height:</span>
+      <span className="text-[9px] font-semibold" style={{ color: 'var(--rb-text-muted)' }}>Height:</span>
       <input type="range" min={8} max={80} value={section.height} onChange={(e) => onChange({ ...section, height: Number(e.target.value) })} className="flex-1" />
       <span className="text-[9px] font-mono tabular-nums w-7 text-right" style={{ color: 'var(--rb-text)' }}>{section.height}px</span>
     </div>
@@ -1228,7 +1224,7 @@ function SignatureBlockEditor({ section, onChange }) {
           )}
         </div>
       ))}
-      <button onClick={addField} className="flex items-center gap-1 text-[8px] font-semibold px-1.5 py-0.5 rounded"
+      <button onClick={addField} className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded"
         style={{ color: 'var(--rb-accent)', border: '1px dashed var(--rb-accent)', background: 'var(--rb-accent-subtle)' }}>
         <Plus size={8} /> Add Field
       </button>
@@ -1896,7 +1892,7 @@ export default function PaginatedReportBuilder() {
             style={{ color: 'var(--rb-text)' }}
             placeholder="Report Name"
           />
-          <div className="text-[7px] font-bold uppercase tracking-widest" style={{ color: 'var(--rb-text-muted)' }}>
+          <div className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--rb-text-muted)' }}>
             Paginated Report Builder
           </div>
         </div>
@@ -1904,7 +1900,7 @@ export default function PaginatedReportBuilder() {
           <Tooltip title={autoSave ? "Auto-save ON" : "Auto-save OFF"} placement="bottom" arrow disableInteractive>
             <button
               onClick={toggleAutoSave}
-              className="flex items-center gap-0.5 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider transition-all"
+              className="flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-all"
               style={{
                 background: autoSave ? 'rgba(52,211,153,0.15)' : 'transparent',
                 color: autoSave ? '#34d399' : 'var(--rb-text-secondary)',
@@ -1916,7 +1912,7 @@ export default function PaginatedReportBuilder() {
           <Tooltip title={template?.status === 'released' ? "Click to unrelease" : "Release report"} placement="bottom" arrow disableInteractive>
             <button
               onClick={async () => { const newStatus = template?.status === 'released' ? 'draft' : 'released'; await updateMeta({ status: newStatus }); }}
-              className="flex items-center gap-0.5 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider transition-all"
+              className="flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-all"
               style={{
                 background: template?.status === 'released' ? 'rgba(52,211,153,0.15)' : 'transparent',
                 color: template?.status === 'released' ? '#34d399' : 'var(--rb-text-secondary)',
@@ -1925,13 +1921,13 @@ export default function PaginatedReportBuilder() {
               <Send size={9} /> {template?.status === 'released' ? 'Released' : 'Release'}
             </button>
           </Tooltip>
-          <button onClick={() => setPreviewMode(true)} className="rb-btn-ghost flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wider px-2 py-0.5">
+          <button onClick={() => setPreviewMode(true)} className="rb-btn-ghost flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5">
             <Eye size={9} /> Preview
           </button>
           <button onClick={handleManualSave} className="rb-btn-primary flex items-center gap-0.5 px-2 py-0.5"
             style={{ boxShadow: '0 0 12px var(--rb-accent-glow)' }}>
             <Save size={9} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Save</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider">Save</span>
           </button>
         </div>
       </div>
@@ -1999,7 +1995,7 @@ export default function PaginatedReportBuilder() {
         {/* Right: Live preview (A4 or full) */}
         <div className="flex-1 overflow-auto p-2 relative" style={{ background: '#e5e7eb', maxHeight: 'calc(100vh - 48px)' }}>
           <div className="sticky top-0 z-10 mb-2 flex items-center justify-center pointer-events-none">
-            <span className="text-[8px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full"
+            <span className="text-[9px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full"
               style={{ background: 'rgba(0,0,0,0.55)', color: 'white', backdropFilter: 'blur(8px)' }}>
               {pageMode === 'a4' ? 'A4 Preview — Live' : 'Full width — Live'}
             </span>
