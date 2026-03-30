@@ -1,0 +1,18 @@
+[phases.setup]
+nixPkgs = ["nodejs-20_x", "python39", "gcc"]
+
+[phases.install]
+cmds = [
+  "cd Frontend && npm install",
+  "cd backend && pip install -r requirements-railway.txt"
+]
+
+[phases.build]
+cmds = [
+  "cd Frontend && VITE_API_URL= npx vite build",
+  "mkdir -p backend/frontend/dist",
+  "cp -r Frontend/dist/* backend/frontend/dist/"
+]
+
+[start]
+cmd = "cd backend && python app.py"

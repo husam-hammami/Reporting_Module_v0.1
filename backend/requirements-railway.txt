@@ -1,0 +1,16 @@
+Flask==2.3.2
+Flask-Login==0.6.2
+Flask-SocketIO==5.3.6
+Werkzeug==2.3.6
+psycopg2-binary==2.9.8
+eventlet==0.33.3
+APScheduler
+python-dotenv>=1.0.0
+urllib3==2.0.7
+xhtml2pdf==0.2.16
+reportlab>=4.0.4,<5
+pytz==2023.3
+asteval==0.9.31
+openpyxl==3.1.5
+setuptools==65.5.1
+resend>=2.0.0

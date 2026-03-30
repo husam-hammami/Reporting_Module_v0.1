@@ -9,8 +9,14 @@ Provides:
 
 import logging
 import threading
-import snap7
-from snap7 import types as snap7_types
+try:
+    import snap7
+    from snap7 import types as snap7_types
+    HAS_SNAP7 = True
+except ImportError:
+    snap7 = None
+    snap7_types = None
+    HAS_SNAP7 = False
 
 logger = logging.getLogger(__name__)
 
