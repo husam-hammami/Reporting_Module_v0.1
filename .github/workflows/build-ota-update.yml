@@ -9,17 +9,17 @@ permissions:
 
 jobs:
   build-and-release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Extract branch name and generate version
+        shell: bash
         id: version
         run: |
           BRANCH="${GITHUB_REF##refs/heads/}"
-          # Sanitize branch name for use in tags (replace / with -)
           BRANCH_SLUG=$(echo "$BRANCH" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
           COUNT=$(git rev-list --count HEAD)
           VERSION="1.0.${COUNT}"
@@ -34,7 +34,12 @@ jobs:
         with:
           node-version: 20
 
-      - name: Build frontend for launcher
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Build frontend
+        shell: bash
         run: |
           cd Frontend
           cp .env.launcher .env.production.local
@@ -42,20 +47,39 @@ jobs:
           npm run build
 
       - name: Copy frontend into backend
+        shell: bash
         run: |
           rm -rf backend/frontend/dist
           mkdir -p backend/frontend
           cp -r Frontend/dist backend/frontend/dist
 
       - name: Write version and branch info
+        shell: bash
         run: |
           echo "${{ steps.version.outputs.version }}" > backend/version.txt
           echo "${{ steps.version.outputs.branch }}" > backend/release_branch.txt
 
-      - name: Create update zip
-        run: zip -r hercules-update-${{ steps.version.outputs.tag }}.zip backend/
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build exe with PyInstaller
+        shell: bash
+        run: |
+          cd backend
+          python -m PyInstaller hercules.spec --noconfirm
+
+      - name: Create release zip from frozen exe
+        shell: bash
+        run: |
+          cd backend/dist
+          7z a -r ../../hercules-update-${{ steps.version.outputs.tag }}.zip hercules-backend/
 
       - name: Compute SHA-256
+        shell: bash
         id: hash
         run: |
           SHA=$(sha256sum hercules-update-${{ steps.version.outputs.tag }}.zip | cut -d' ' -f1)
