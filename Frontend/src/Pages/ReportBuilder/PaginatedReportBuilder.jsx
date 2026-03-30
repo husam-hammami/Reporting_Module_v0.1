@@ -649,6 +649,51 @@ function CellEditor({ cell, tags, onChange, savedFormulas }) {
   );
 }
 
+/* ── Compact searchable tag selector for inline use ───────────────── */
+function InlineTagSelect({ tags, value, onChange }) {
+  const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState('');
+  const filtered = React.useMemo(() => {
+    if (!search.trim()) return tags;
+    const q = search.toLowerCase();
+    return tags.filter(t => t.tag_name?.toLowerCase().includes(q) || t.display_name?.toLowerCase().includes(q));
+  }, [tags, search]);
+  const selected = tags.find(t => t.tag_name === value);
+
+  return (
+    <div className="relative w-full min-w-0">
+      <button type="button" onClick={() => setOpen(!open)}
+        className="rb-input-base text-[8px] py-0.5 px-1 w-full text-left truncate"
+        title={selected ? (selected.display_name || selected.tag_name) : ''}>
+        {selected ? (selected.display_name || selected.tag_name) : <span style={{ color: 'var(--rb-text-muted)' }}>Select tag...</span>}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(''); }} />
+          <div className="absolute z-50 mt-0.5 w-[220px] rb-formula-dropdown overflow-hidden" style={{ left: 0 }}>
+            <div className="p-1.5 border-b border-[var(--rb-border-subtle)]">
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tags..."
+                autoFocus className="rb-input-base w-full py-1 px-2 text-[9px]" />
+            </div>
+            <div className="overflow-y-auto max-h-36 py-0.5">
+              {filtered.length === 0 ? (
+                <p className="px-2 py-2 text-[8px] text-center" style={{ color: 'var(--rb-text-muted)' }}>No tags found</p>
+              ) : filtered.map(tag => (
+                <button key={tag.tag_name} type="button"
+                  onClick={() => { onChange(tag.tag_name); setOpen(false); setSearch(''); }}
+                  className={`w-full text-left px-2 py-1 text-[8px] truncate hover:bg-[var(--rb-accent-subtle)] ${value === tag.tag_name ? 'bg-[var(--rb-accent-subtle)] font-semibold' : ''}`}
+                  style={{ color: 'var(--rb-text)' }}>
+                  {tag.display_name || tag.tag_name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ── Inline cell editor for table rows — one cell per line ────────── */
 function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
   const srcType = cell.sourceType || 'static';
@@ -665,7 +710,7 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
   const needsUnit = srcType === 'tag' || srcType === 'formula' || srcType === 'group';
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '44px clamp(62px, 18%, 90px) 1fr', gap: '4px', minWidth: 0 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '44px clamp(62px, 18%, 90px) 1fr', gap: '3px', minWidth: 0 }}>
 
       {/* Row 1 — Col 1: Column name label */}
       <span className="text-[7px] font-bold uppercase tracking-wider truncate self-center"
@@ -689,11 +734,7 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
             placeholder="Value..." className="rb-input-base text-[8px] py-0.5 px-1 w-full" />
         )}
         {srcType === 'tag' && (
-          <select value={cell.tagName || ''} onChange={(e) => onChange({ ...cell, tagName: e.target.value })}
-            className="rb-input-base text-[8px] py-0.5 px-1 w-full">
-            <option value="">Select tag...</option>
-            {safeTags.map((t) => <option key={t.tag_name} value={t.tag_name}>{t.display_name || t.tag_name}</option>)}
-          </select>
+          <InlineTagSelect tags={safeTags} value={cell.tagName || ''} onChange={(v) => onChange({ ...cell, tagName: v })} />
         )}
         {srcType === 'formula' && (
           <>
@@ -725,34 +766,31 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
         )}
       </div>
 
-      {/* Row 2: Unit + Aggregation row — spans cols 2–3 */}
+      {/* Row 2: Unit + Aggregation on same line — compact */}
       {needsUnit && (
         <>
           <span /> {/* col 1 spacer */}
-          <div style={{ gridColumn: '2 / -1' }} className="flex items-center gap-1.5">
-            <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Unit:</span>
-            <UnitSelector cell={cell} onChange={onChange} className="text-[7px]" />
-          </div>
-        </>
-      )}
-
-      {/* Row 3: Aggregation selector for Tag and Formula cells */}
-      {(srcType === 'tag' || srcType === 'formula') && (
-        <>
-          <span /> {/* col 1 spacer */}
-          <div style={{ gridColumn: '2 / -1' }} className="flex items-center gap-1.5">
-            <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Agg:</span>
-            <select value={cell.aggregation || 'last'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
-              className="rb-input-base text-[7px] py-0.5 px-1" style={{ maxWidth: '120px' }}>
-              <option value="last">Last Value</option>
-              <option value="first">First (Start)</option>
-              <option value="delta">Delta (End − Start)</option>
-              <option value="avg">Average</option>
-              <option value="sum">Sum</option>
-              <option value="min">Minimum</option>
-              <option value="max">Maximum</option>
-              <option value="count">Count</option>
-            </select>
+          <div style={{ gridColumn: '2 / -1' }} className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <span className="text-[7px] font-bold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Unit:</span>
+              <UnitSelector cell={cell} onChange={onChange} className="text-[7px]" />
+            </div>
+            {(srcType === 'tag' || srcType === 'formula') && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <span className="text-[7px] font-bold" style={{ color: 'var(--rb-text-muted)' }}>Agg:</span>
+                <select value={cell.aggregation || 'last'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
+                  className="rb-input-base text-[7px] py-0 px-0.5" style={{ maxWidth: '90px' }}>
+                  <option value="last">Last</option>
+                  <option value="first">First (Start)</option>
+                  <option value="delta">Δ (End−Start)</option>
+                  <option value="avg">Average</option>
+                  <option value="sum">Sum</option>
+                  <option value="min">Min</option>
+                  <option value="max">Max</option>
+                  <option value="count">Count</option>
+                </select>
+              </div>
+            )}
           </div>
         </>
       )}
