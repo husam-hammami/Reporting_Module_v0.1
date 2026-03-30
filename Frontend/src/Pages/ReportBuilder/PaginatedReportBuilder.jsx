@@ -1526,7 +1526,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                   );
                 })}
                 {/* Per-column summary row */}
-                {(section.showSummaryRow && (section.summaryFormula || section.columns?.some((c) => c.summary?.type && c.summary.type !== 'none'))) && (
+                {(() => { const hasLegacyFormula = !!section.summaryFormula; const hasPerCol = (section.columns || []).some((c) => c.summary?.type && c.summary.type !== 'none'); return hasLegacyFormula || hasPerCol; })() && (
                   <tr className="font-bold bg-[#f1f5f9]">
                     {(section.columns || []).map((col, ci) => {
                       const sm = col.summary || {};
