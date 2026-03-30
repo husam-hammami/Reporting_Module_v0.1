@@ -112,16 +112,17 @@ def check_for_updates():
         except (ValueError, AttributeError):
             continue
         if latest is None or ver > _version_tuple(latest['version']):
-            # Find the zip asset
-            zip_url = None
+            # Find the installer exe asset
+            download_url = None
             for asset in rel.get('assets', []):
-                if asset.get('name', '').endswith('.zip'):
-                    zip_url = asset['browser_download_url']
+                name = asset.get('name', '')
+                if name.endswith('.exe') and not name.endswith('.blockmap'):
+                    download_url = asset['browser_download_url']
                     break
             latest = {
                 'version': ver_str,
                 'tag': tag,
-                'download_url': zip_url,
+                'download_url': download_url,
                 'release_name': rel.get('name', ''),
                 'published_at': rel.get('published_at', ''),
                 'body': rel.get('body', ''),

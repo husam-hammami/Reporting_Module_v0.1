@@ -126,6 +126,7 @@ else:
 PG_BIN = os.path.join(BASE_DIR, "psql", "bin")
 DATA_DIR = os.path.join(BASE_DIR, "data")
 BACKEND_DIR = os.path.join(BASE_DIR, "backend")
+BACKEND_EXE = os.path.join(BACKEND_DIR, "hercules-backend.exe")
 SETUP_SCRIPT = os.path.join(BACKEND_DIR, "tools", "setup", "setup_local_db.py")
 APP_MAIN = os.path.join(BACKEND_DIR, "app.py")
 
@@ -268,20 +269,31 @@ def ensure_pkg_resources():
 
 
 def start_backend():
-    """Start Flask backend (app.py). Backend uses backend/.env; we override DB_* for portable Postgres."""
-    ensure_pkg_resources()
+    """Start Flask backend. Uses frozen exe if available, otherwise falls back to python app.py."""
     print("Starting backend...")
     env = get_venv_env()
     env["DB_HOST"] = "127.0.0.1"
     env["DB_PORT"] = PORT
     env["POSTGRES_DB"] = "dynamic_db_hercules"
     env["FLASK_PORT"] = BACKEND_PORT
-    python = get_python()
-    subprocess.Popen(
-        [python, APP_MAIN],
-        cwd=BACKEND_DIR,
-        env=env,
-    )
+
+    if os.path.exists(BACKEND_EXE):
+        # Frozen backend (from CI build)
+        print(f"Using frozen backend: {BACKEND_EXE}")
+        subprocess.Popen(
+            [BACKEND_EXE],
+            cwd=BACKEND_DIR,
+            env=env,
+        )
+    else:
+        # Source-based backend (local dev)
+        ensure_pkg_resources()
+        python = get_python()
+        subprocess.Popen(
+            [python, APP_MAIN],
+            cwd=BACKEND_DIR,
+            env=env,
+        )
 
 
 def _get_local_version():

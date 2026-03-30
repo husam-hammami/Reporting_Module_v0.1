@@ -581,7 +581,7 @@
   "updates.latestVersion": "Latest",
   "updates.branch": "Branch",
   "updates.released": "Released",
-  "updates.download": "Download Update",
+  "updates.download": "Download Installer",
 
   "distribution.title": "Distribution",
   "distribution.subtitle": "Scheduled report delivery rules",
