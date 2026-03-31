@@ -3,17 +3,21 @@ Hercules Reporting Module — Standalone launcher.
 Starts portable PostgreSQL, runs DB setup on first run, then starts the Flask backend.
 Designed to be compiled to launcher.exe (e.g. PyInstaller) for the installer bundle.
 """
+import atexit
 import ctypes
+import ctypes.wintypes
 import hashlib
 import json
 import logging
 import os
 import platform
+import signal
 import shutil
 import ssl
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import traceback
 import urllib.request
@@ -29,7 +33,84 @@ except ImportError:
 
 LICENSE_SERVER_URL = "https://api.herculesv2.app"
 
-_NO_WINDOW = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0x08000000
+def _hidden_si():
+    """Return a STARTUPINFO that hides the console window without breaking child processes."""
+    si = subprocess.STARTUPINFO()
+    si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    si.wShowWindow = 0  # SW_HIDE
+    return si
+
+
+# ---------------------------------------------------------------------------
+# Windows Job Object: ensures ALL child processes (postgres, backend, etc.)
+# are killed automatically when the launcher exits — even on force-kill.
+# ---------------------------------------------------------------------------
+_job_handle = None
+
+
+def _create_job_object():
+    """Create a Job Object with KILL_ON_JOB_CLOSE so children die with the launcher."""
+    global _job_handle
+    kernel32 = ctypes.windll.kernel32
+
+    job = kernel32.CreateJobObjectW(None, None)
+    if not job:
+        return
+
+    class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_int64),
+            ("PerJobUserTimeLimit", ctypes.c_int64),
+            ("LimitFlags", ctypes.wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", ctypes.wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", ctypes.wintypes.DWORD),
+            ("SchedulingClass", ctypes.wintypes.DWORD),
+        ]
+
+    class IO_COUNTERS(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_uint64),
+            ("WriteOperationCount", ctypes.c_uint64),
+            ("OtherOperationCount", ctypes.c_uint64),
+            ("ReadTransferCount", ctypes.c_uint64),
+            ("WriteTransferCount", ctypes.c_uint64),
+            ("OtherTransferCount", ctypes.c_uint64),
+        ]
+
+    class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", JOBOBJECT_BASIC_LIMIT_INFORMATION),
+            ("IoInfo", IO_COUNTERS),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    KILL_ON_CLOSE = 0x2000
+    info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+    info.BasicLimitInformation.LimitFlags = KILL_ON_CLOSE
+
+    kernel32.SetInformationJobObject(
+        job, 9,  # JobObjectExtendedLimitInformation
+        ctypes.byref(info), ctypes.sizeof(info),
+    )
+    _job_handle = job
+
+
+def _assign_to_job(proc):
+    """Add a subprocess.Popen process to the job object."""
+    if not _job_handle or not proc:
+        return
+    kernel32 = ctypes.windll.kernel32
+    PROCESS_ALL_ACCESS = 0x1F0FFF
+    handle = kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, proc.pid)
+    if handle:
+        kernel32.AssignProcessToJobObject(_job_handle, handle)
+        kernel32.CloseHandle(handle)
 
 
 def _setup_logging():
@@ -216,8 +297,25 @@ def run(cmd, env=None, cwd=None):
         env=env or os.environ,
         cwd=cwd or BASE_DIR,
         shell=False,
-        creationflags=_NO_WINDOW,
+        startupinfo=_hidden_si(),
     )
+
+
+def run_checked(cmd, label="Command", env=None, cwd=None):
+    """Run a command, capture output, and show a message box on failure."""
+    result = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=env or os.environ,
+        cwd=cwd or BASE_DIR,
+        startupinfo=_hidden_si(),
+    )
+    if result.returncode != 0:
+        output = (result.stdout or b"").decode("utf-8", errors="replace").strip()
+        log.error("%s failed (exit %d):\n%s", label, result.returncode, output)
+        _fatal(f"{label} failed (exit code {result.returncode}):\n\n{output}")
+    return result
 
 
 def init_db_if_needed():
@@ -227,22 +325,23 @@ def init_db_if_needed():
         return
     log.info("Initializing PostgreSQL cluster...")
     os.makedirs(DATA_DIR, exist_ok=True)
-    subprocess.check_call(
+    run_checked(
         [INITDB, "-D", DATA_DIR, "-U", "postgres"],
-        cwd=BASE_DIR, creationflags=_NO_WINDOW,
+        label="PostgreSQL initdb",
     )
 
 
 def start_postgres():
     """Start portable PostgreSQL on PORT."""
     log.info("Starting PostgreSQL...")
-    subprocess.Popen(
+    pg = subprocess.Popen(
         [PG_CTL, "-D", DATA_DIR, "-o", f"-p {PORT}", "start"],
         cwd=BASE_DIR,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        creationflags=_NO_WINDOW,
+        startupinfo=_hidden_si(),
     )
+    _assign_to_job(pg)
 
 
 def wait_for_db(timeout_sec=60):
@@ -265,11 +364,10 @@ def run_setup():
     env["DB_PORT"] = PORT
     env["POSTGRES_DB"] = "dynamic_db_hercules"
     python = get_python()
-    subprocess.check_call(
+    run_checked(
         [python, SETUP_SCRIPT, "--no-seed"],
-        cwd=BASE_DIR,
+        label="DB setup",
         env=env,
-        creationflags=_NO_WINDOW,
     )
 
 
@@ -283,21 +381,20 @@ def ensure_pkg_resources():
         cwd=BASE_DIR,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        creationflags=_NO_WINDOW,
+        startupinfo=_hidden_si(),
     )
     if check.returncode == 0:
         return
     log.info("Installing setuptools (required by python-snap7)...")
-    subprocess.check_call(
+    run_checked(
         [python, "-m", "pip", "install", "setuptools>=59.0,<66"],
+        label="pip install setuptools",
         env=env,
-        cwd=BASE_DIR,
-        creationflags=_NO_WINDOW,
     )
 
 
 def start_backend():
-    """Start Flask backend (app.py). Backend uses backend/.env; we override DB_* for portable Postgres."""
+    """Start Flask backend (app.py). Returns the Popen handle for lifecycle management."""
     ensure_pkg_resources()
     log.info("Starting backend...")
     env = get_venv_env()
@@ -306,12 +403,85 @@ def start_backend():
     env["POSTGRES_DB"] = "dynamic_db_hercules"
     env["FLASK_PORT"] = BACKEND_PORT
     python = get_python()
-    subprocess.Popen(
+    backend_log = os.path.join(BASE_DIR, "backend.log")
+    log.info("Backend output -> %s", backend_log)
+    fh = open(backend_log, "w", encoding="utf-8")
+    proc = subprocess.Popen(
         [python, APP_MAIN],
         cwd=BACKEND_DIR,
         env=env,
-        creationflags=_NO_WINDOW,
+        stdout=fh,
+        stderr=fh,
+        startupinfo=_hidden_si(),
     )
+    _assign_to_job(proc)
+    return proc
+
+
+def kill_previous_instances():
+    """Kill leftover Hercules processes from a previous run (stale backend, postgres)."""
+    import socket
+
+    def _port_in_use(port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex(("127.0.0.1", port)) == 0
+
+    if _port_in_use(int(BACKEND_PORT)):
+        log.info("Port %s in use — killing previous backend...", BACKEND_PORT)
+        subprocess.run(
+            ["taskkill", "/F", "/FI", f"IMAGENAME eq python.exe"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            startupinfo=_hidden_si(),
+        )
+        time.sleep(1)
+
+    result = run([PG_ISREADY, "-h", "127.0.0.1", "-p", PORT, "-d", "postgres"])
+    if result.returncode == 0:
+        log.info("PostgreSQL already running on port %s — stopping it...", PORT)
+        try:
+            subprocess.run(
+                [PG_CTL, "-D", DATA_DIR, "stop", "-m", "fast"],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                timeout=15, startupinfo=_hidden_si(),
+            )
+        except Exception:
+            subprocess.run(
+                ["taskkill", "/F", "/IM", "postgres.exe"],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                startupinfo=_hidden_si(),
+            )
+        time.sleep(1)
+
+
+def stop_postgres():
+    """Gracefully stop PostgreSQL."""
+    log.info("Stopping PostgreSQL...")
+    try:
+        subprocess.run(
+            [PG_CTL, "-D", DATA_DIR, "stop", "-m", "fast"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=30,
+            startupinfo=_hidden_si(),
+        )
+        log.info("PostgreSQL stopped.")
+    except Exception as e:
+        log.warning("PostgreSQL stop failed: %s", e)
+
+
+def shutdown(backend_proc=None):
+    """Clean shutdown: stop backend, then PostgreSQL."""
+    log.info("Shutting down...")
+    if backend_proc and backend_proc.poll() is None:
+        log.info("Terminating backend (pid %d)...", backend_proc.pid)
+        backend_proc.terminate()
+        try:
+            backend_proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            backend_proc.kill()
+        log.info("Backend stopped.")
+    stop_postgres()
+    log.info("Shutdown complete.")
 
 
 def _get_local_version():
@@ -409,7 +579,7 @@ def ensure_firewall_rule():
     rule_name = "Hercules Web Access"
     check = subprocess.run(
         ["netsh", "advfirewall", "firewall", "show", "rule", f"name={rule_name}"],
-        capture_output=True, text=True, creationflags=_NO_WINDOW,
+        capture_output=True, text=True, startupinfo=_hidden_si(),
     )
     if check.returncode == 0 and rule_name in check.stdout:
         log.info("Firewall rule '%s' already exists.", rule_name)
@@ -419,7 +589,7 @@ def ensure_firewall_rule():
         ["netsh", "advfirewall", "firewall", "add", "rule",
          f"name={rule_name}", "dir=in", "action=allow",
          "protocol=TCP", f"localport={BACKEND_PORT}"],
-        capture_output=True, text=True, creationflags=_NO_WINDOW,
+        capture_output=True, text=True, startupinfo=_hidden_si(),
     )
     if result.returncode == 0:
         log.info("Firewall rule added successfully.")
@@ -428,6 +598,9 @@ def ensure_firewall_rule():
 
 
 def main():
+    _create_job_object()
+    log.info("Job object created — child processes will die with launcher.")
+
     machine_id = _machine_id_fallback()
     license_path = os.path.join(BASE_DIR, "license.json")
 
@@ -495,16 +668,35 @@ def main():
             "Expected folder: psql/bin/ with pg_ctl.exe, initdb.exe, pg_isready.exe"
         )
 
+    kill_previous_instances()
     init_db_if_needed()
     start_postgres()
     wait_for_db()
     run_setup()
     ensure_firewall_rule()
-    start_backend()
+    backend_proc = start_backend()
+
+    atexit.register(shutdown, backend_proc)
 
     url = f"http://localhost:{BACKEND_PORT}"
     log.info("System started. Opening %s", url)
     webbrowser.open(url)
+
+    stop_event = threading.Event()
+
+    def _signal_handler(signum, frame):
+        log.info("Received signal %s, initiating shutdown...", signum)
+        stop_event.set()
+
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+
+    log.info("Launcher staying alive (pid %d). Kill this process to stop Hercules.", os.getpid())
+    while not stop_event.is_set():
+        if backend_proc.poll() is not None:
+            log.warning("Backend exited unexpectedly (code %d).", backend_proc.returncode)
+            break
+        stop_event.wait(5)
 
 
 if __name__ == "__main__":
