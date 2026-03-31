@@ -1,10 +1,10 @@
 name: Build Full Installer
 
 on:
-  # Manual trigger from GitHub Actions tab — pick the branch to build
   workflow_dispatch:
-  # Or push a version tag like: git tag release-v1.0.50 && git push --tags
   push:
+    branches:
+      - Salalah_Mill_B
     tags:
       - '*-v*'
 
