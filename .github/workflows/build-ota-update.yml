@@ -71,6 +71,8 @@ jobs:
         run: |
           echo "${{ steps.version.outputs.version }}" > backend/version.txt
           echo "${{ steps.version.outputs.branch }}" > backend/release_branch.txt
+          echo "${{ steps.version.outputs.version }}" > desktop/version.txt
+          echo "${{ steps.version.outputs.branch }}" > desktop/release_branch.txt
 
       # ── Step 2: Build backend exe with PyInstaller ───────────────
       - name: Install Python dependencies

@@ -49,6 +49,14 @@
       {
         "from": "vcredist",
         "to": "vcredist"
+      },
+      {
+        "from": "version.txt",
+        "to": "."
+      },
+      {
+        "from": "release_branch.txt",
+        "to": "."
       }
     ],
     "files": [

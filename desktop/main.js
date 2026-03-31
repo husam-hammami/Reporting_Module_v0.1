@@ -47,6 +47,12 @@ const PG_PORT = 5435;
 const PG_DB = 'dynamic_db_hercules';
 const GRACE_PERIOD_DAYS = 7;
 
+// ─── OTA Update Config ──────────────────────────────────────────────────────
+const GITHUB_REPO = 'husam-hammami/Reporting_Module_v0.1';
+const GITHUB_RELEASES_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
+const VERSION_FILE = path.join(RESOURCES_DIR, 'version.txt');
+const BRANCH_FILE = path.join(RESOURCES_DIR, 'release_branch.txt');
+
 let mainWindow = null;
 let splashWindow = null;
 let wizardWindow = null;
@@ -464,6 +470,233 @@ function stopBackend() {
   backendProcess = null;
 }
 
+// ─── OTA Auto-Update ────────────────────────────────────────────────────────
+function getLocalVersion() {
+  for (const f of [VERSION_FILE, path.join(BACKEND_DIR, 'version.txt')]) {
+    try {
+      if (fs.existsSync(f)) return fs.readFileSync(f, 'utf-8').trim();
+    } catch { /* try next */ }
+  }
+  return '0.0.0';
+}
+
+function getReleaseBranch() {
+  for (const f of [BRANCH_FILE, path.join(BACKEND_DIR, 'release_branch.txt')]) {
+    try {
+      if (fs.existsSync(f)) return fs.readFileSync(f, 'utf-8').trim();
+    } catch { /* try next */ }
+  }
+  return process.env.RELEASE_BRANCH || 'Salalah_Mill_B';
+}
+
+function parseVersion(v) {
+  const m = String(v).match(/(\d+)\.(\d+)\.(\d+)/);
+  return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])] : [0, 0, 0];
+}
+
+function isNewer(remote, local) {
+  const r = parseVersion(remote);
+  const l = parseVersion(local);
+  for (let i = 0; i < 3; i++) {
+    if (r[i] > l[i]) return true;
+    if (r[i] < l[i]) return false;
+  }
+  return false;
+}
+
+function updateSplashStatus(message, percent) {
+  if (!splashWindow || splashWindow.isDestroyed()) return;
+  const safeMsg = message.replace(/'/g, "\\'");
+  splashWindow.webContents.executeJavaScript(
+    `document.getElementById('status').textContent='${safeMsg}';`
+  ).catch(() => {});
+  if (typeof percent === 'number') {
+    splashWindow.webContents.executeJavaScript(
+      `document.getElementById('progress-bar').style.display='block';` +
+      `document.getElementById('progress-fill').style.width='${Math.round(percent)}%';`
+    ).catch(() => {});
+  } else {
+    splashWindow.webContents.executeJavaScript(
+      `document.getElementById('progress-bar').style.display='none';`
+    ).catch(() => {});
+  }
+}
+
+function httpsGetJSON(url) {
+  const https = require('https');
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, {
+      headers: { 'User-Agent': 'HerculesDesktop/1.0', 'Accept': 'application/vnd.github+json' },
+      timeout: 15000,
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch { reject(new Error('Invalid JSON from GitHub')); }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+  });
+}
+
+function downloadFile(url, dest, onProgress) {
+  const https = require('https');
+  return new Promise((resolve, reject) => {
+    const follow = (u) => {
+      https.get(u, { headers: { 'User-Agent': 'HerculesDesktop/1.0' }, timeout: 120000 }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          follow(res.headers.location);
+          return;
+        }
+        if (res.statusCode !== 200) {
+          reject(new Error(`Download failed: HTTP ${res.statusCode}`));
+          return;
+        }
+        const total = parseInt(res.headers['content-length'] || '0', 10);
+        let downloaded = 0;
+        const file = fs.createWriteStream(dest);
+        res.on('data', (chunk) => {
+          downloaded += chunk.length;
+          file.write(chunk);
+          if (total > 0 && onProgress) onProgress((downloaded / total) * 100);
+        });
+        res.on('end', () => { file.end(); resolve(); });
+        res.on('error', (e) => { file.end(); reject(e); });
+      }).on('error', reject).on('timeout', function() { this.destroy(); reject(new Error('Download timeout')); });
+    };
+    follow(url);
+  });
+}
+
+function killExistingBackend() {
+  try {
+    execSync('taskkill /IM hercules-backend.exe /F', { stdio: 'pipe', timeout: 10000 });
+    console.log('[OTA] Killed existing hercules-backend.exe processes');
+  } catch { /* none running */ }
+}
+
+async function checkAndApplyUpdate() {
+  const localVer = getLocalVersion();
+  const branch = getReleaseBranch();
+  const slug = branch.replace(/\//g, '-').toLowerCase();
+  const prefix = slug + '-v';
+
+  console.log(`[OTA] Current version: ${localVer}, branch: ${branch} (${slug})`);
+  updateSplashStatus('Checking for updates...');
+
+  let releases;
+  try {
+    releases = await httpsGetJSON(`${GITHUB_RELEASES_URL}?per_page=20`);
+  } catch (err) {
+    console.warn('[OTA] Cannot reach GitHub (offline?):', err.message);
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+
+  if (!Array.isArray(releases)) {
+    console.warn('[OTA] Unexpected releases response');
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+
+  // Find the latest release matching our branch
+  let bestRelease = null;
+  let bestVersion = localVer;
+  for (const rel of releases) {
+    if (!rel.tag_name || !rel.tag_name.startsWith(prefix)) continue;
+    const ver = rel.tag_name.substring(prefix.length);
+    if (isNewer(ver, bestVersion)) {
+      bestVersion = ver;
+      bestRelease = rel;
+    }
+  }
+
+  if (!bestRelease) {
+    console.log('[OTA] Already up to date.');
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+
+  // Find the .zip OTA asset
+  const zipAsset = (bestRelease.assets || []).find(a => a.name.endsWith('.zip'));
+  if (!zipAsset) {
+    console.warn('[OTA] No .zip asset found in release', bestRelease.tag_name);
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+
+  console.log(`[OTA] Update available: ${localVer} → ${bestVersion}`);
+  updateSplashStatus(`Downloading update v${bestVersion}...`, 0);
+
+  const tmpZip = path.join(os.tmpdir(), zipAsset.name);
+  try {
+    await downloadFile(zipAsset.browser_download_url, tmpZip, (pct) => {
+      updateSplashStatus(`Downloading update v${bestVersion}... ${Math.round(pct)}%`, pct);
+    });
+  } catch (err) {
+    console.error('[OTA] Download failed:', err.message);
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+
+  updateSplashStatus('Installing update...');
+
+  // Kill any running backend before replacing files
+  killExistingBackend();
+
+  const backupDir = BACKEND_DIR + '_backup';
+  try {
+    // Remove old backup if exists
+    if (fs.existsSync(backupDir)) {
+      fs.rmSync(backupDir, { recursive: true, force: true });
+    }
+
+    // Backup current backend
+    if (fs.existsSync(BACKEND_DIR)) {
+      fs.renameSync(BACKEND_DIR, backupDir);
+      console.log('[OTA] Backed up current backend');
+    }
+
+    // Extract zip — the zip contains a backend/ folder at root
+    execSync(
+      `powershell -NoProfile -Command "Expand-Archive -Path '${tmpZip}' -DestinationPath '${RESOURCES_DIR}' -Force"`,
+      { stdio: 'pipe', timeout: 120000 }
+    );
+    console.log('[OTA] Extracted update');
+
+    // Verify extraction worked
+    if (!fs.existsSync(BACKEND_EXE)) {
+      throw new Error('Backend exe not found after extraction');
+    }
+
+    // Write new version
+    fs.writeFileSync(VERSION_FILE, bestVersion, 'utf-8');
+    console.log(`[OTA] Updated version file to ${bestVersion}`);
+
+    // Clean up backup and temp zip
+    if (fs.existsSync(backupDir)) {
+      fs.rmSync(backupDir, { recursive: true, force: true });
+    }
+    try { fs.unlinkSync(tmpZip); } catch { /* ignore */ }
+
+    console.log(`[OTA] Successfully updated to v${bestVersion}`);
+    updateSplashStatus(`Updated to v${bestVersion}!`);
+    return bestVersion;
+
+  } catch (err) {
+    console.error('[OTA] Install failed, rolling back:', err.message);
+    // Rollback: restore backup
+    if (!fs.existsSync(BACKEND_DIR) && fs.existsSync(backupDir)) {
+      try { fs.renameSync(backupDir, BACKEND_DIR); } catch { /* critical failure */ }
+    }
+    try { fs.unlinkSync(tmpZip); } catch { /* ignore */ }
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+}
+
 // ─── Windows ─────────────────────────────────────────────────────────────────
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
@@ -666,6 +899,15 @@ app.on('ready', async () => {
 
     // 3. Show splash
     createSplashWindow();
+
+    // 3.5. OTA auto-update (before starting backend — no locked files)
+    try {
+      const updatedVer = await checkAndApplyUpdate();
+      if (updatedVer) console.log(`[Electron] Updated to v${updatedVer}`);
+    } catch (err) {
+      console.warn('[Electron] OTA check failed (continuing):', err.message);
+    }
+    updateSplashStatus('Starting services...');
 
     // 4. Port checks
     const pgFree = await isPortFree(PG_PORT);

@@ -47,8 +47,11 @@
 <body>
   <div class="card">
     <h1>Hercules Reporting Module</h1>
-    <p>Starting services...</p>
+    <p id="status">Starting services...</p>
     <div class="spinner"></div>
+    <div id="progress-bar" style="display:none; width:80%; height:4px; background:#1e2d40; border-radius:2px; margin:16px auto 0;">
+      <div id="progress-fill" style="height:100%; width:0%; background:#3b82f6; border-radius:2px; transition:width 0.3s;"></div>
+    </div>
   </div>
 </body>
 </html>
