@@ -725,7 +725,7 @@ async function checkAndApplyUpdate() {
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 420, height: 320,
-    frame: false, transparent: true, alwaysOnTop: true, resizable: false, closable: false,
+    frame: false, transparent: true, alwaysOnTop: true, resizable: false,
     webPreferences: { nodeIntegration: false, contextIsolation: true },
   });
   splashWindow.loadFile(path.join(__dirname, 'splash.html'));
