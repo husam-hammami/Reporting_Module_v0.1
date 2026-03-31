@@ -127,6 +127,7 @@ def create_template():
         data = request.get_json(silent=True) or {}
         name = data.get('name', 'Untitled Report')
         description = data.get('description', '')
+        status = data.get('status', 'draft')
         layout_config = data.get('layout_config', {
             'widgets': [],
             'grid': {'cols': 12, 'rowHeight': 60}
@@ -137,11 +138,11 @@ def create_template():
             actual_conn = conn._conn if hasattr(conn, '_conn') else conn
             cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
-                INSERT INTO report_builder_templates (name, description, layout_config)
-                VALUES (%s, %s, %s::jsonb)
+                INSERT INTO report_builder_templates (name, description, layout_config, status)
+                VALUES (%s, %s, %s::jsonb, %s)
                 RETURNING id, name, description, thumbnail, is_active, is_default, status,
                           layout_config, created_at, updated_at
-            """, (name, description, json.dumps(layout_config)))
+            """, (name, description, json.dumps(layout_config), status))
             row = dict(cursor.fetchone())
             actual_conn.commit()
 

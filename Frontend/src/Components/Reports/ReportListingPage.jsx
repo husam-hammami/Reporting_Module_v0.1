@@ -90,7 +90,7 @@ export default function ReportListingPage({ title, subtitle, filterType, baseRou
       const matchesType = filterType === 'dashboard'
         ? reportType !== 'paginated'
         : reportType === 'paginated';
-      return matchesType && tp.status === 'released';
+      return matchesType;
     });
 
     if (search.trim()) {
