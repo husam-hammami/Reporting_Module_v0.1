@@ -1755,6 +1755,37 @@ def execute_distribution_rule(rule_id):
             subject = f"Hercules Report: {names_str} — {datetime.now().strftime('%Y-%m-%d')}"
             email_html = _build_email_html(names_str, from_dt, to_dt,
                                            ', '.join(fn for fn, _ in attachments))
+
+            # ── AI Summary injection (Phase 1) ──────────────────────────
+            if rule.get('include_ai_summary'):
+                try:
+                    all_tag_data = {}
+                    for rid in report_ids:
+                        with closing(get_conn()) as conn2:
+                            actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
+                            cur2 = actual2.cursor(cursor_factory=RealDictCursor)
+                            cur2.execute("SELECT layout_config FROM report_builder_templates WHERE id = %s", (rid,))
+                            tpl = cur2.fetchone()
+                            if tpl:
+                                lc = tpl['layout_config']
+                                if isinstance(lc, str):
+                                    lc = json.loads(lc)
+                                tags = extract_all_tags(lc)
+                                td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
+                                all_tag_data.update(td)
+
+                    summary = _generate_ai_summary(
+                        report_names=report_names,
+                        tag_data=all_tag_data,
+                        from_dt=from_dt,
+                        to_dt=to_dt
+                    )
+                    if summary:
+                        email_html = _prepend_summary_to_email(summary, email_html)
+                except Exception as e:
+                    logger.warning("AI summary generation failed, sending without: %s", e)
+            # ── End AI Summary ───────────────────────────────────────────
+
             email_result = _send_email(recipients, subject, email_html, attachments=attachments)
             if not email_result['success']:
                 errors.append(f"Email: {email_result['error']}")
@@ -1829,3 +1860,209 @@ def execute_distribution_rule(rule_id):
         except Exception:
             pass
         return {'success': False, 'error': str(e)}
+
+
+# ── AI Summary helpers (Phase 1) ─────────────────────────────────────────────
+
+# Daily rate limit for AI calls
+_ai_call_count = 0
+_ai_call_date = None
+_AI_DAILY_CAP = 200
+
+
+def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
+    """
+    Generate AI summary for distribution email.
+    Args:
+        report_names: list of report name strings
+        tag_data: dict {tag_name_or_namespaced: value} — combined from all reports
+        from_dt, to_dt: datetime range
+    Returns: summary text string or None
+    """
+    global _ai_call_count, _ai_call_date
+
+    # Rate limit check
+    today = datetime.now().date()
+    if _ai_call_date != today:
+        _ai_call_count = 0
+        _ai_call_date = today
+    if _ai_call_count >= _AI_DAILY_CAP:
+        logger.warning("AI daily rate limit reached (%d calls)", _AI_DAILY_CAP)
+        return None
+
+    # Load all config from DB
+    get_conn = _get_db_connection()
+    ai_config = {}
+
+    try:
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor(cursor_factory=RealDictCursor)
+
+            cur.execute("SELECT key, value FROM hercules_ai_config")
+            for row in cur.fetchall():
+                val = row['value'] if isinstance(row['value'], dict) else json.loads(row['value'])
+                ai_config[row['key']] = val.get('value', val)
+
+            provider = ai_config.get('ai_provider', 'cloud')
+            if provider == 'cloud' and not ai_config.get('llm_api_key'):
+                logger.warning("No LLM API key configured, skipping AI summary")
+                return None
+
+            # Load tracked profiles for tags in tag_data
+            # Strip namespace prefixes for lookup
+            raw_tags = set()
+            for k in tag_data:
+                if '::' in k:
+                    raw_tags.add(k.split('::', 1)[1])
+                else:
+                    raw_tags.add(k)
+
+            tag_list = list(raw_tags)
+            if not tag_list:
+                return None
+
+            cur.execute("""
+                SELECT tag_name, label, tag_type, line_name
+                FROM hercules_ai_tag_profiles
+                WHERE tag_name = ANY(%s) AND is_tracked = true
+            """, (tag_list,))
+            profile_map = {r['tag_name']: r for r in cur.fetchall()}
+            actual.commit()
+
+    except Exception as e:
+        logger.warning("Failed to load AI config/profiles: %s", e)
+        return None
+
+    # Tag significance filter (max 30 tags to LLM)
+    data_rows = []
+    for key, value in tag_data.items():
+        tag_name = key.split('::', 1)[1] if '::' in key else key
+        prof = profile_map.get(tag_name, {})
+        if not prof:
+            continue
+        data_rows.append({
+            'label': prof.get('label') or tag_name,
+            'tag_type': prof.get('tag_type', 'unknown'),
+            'value': value,
+            'line': prof.get('line_name', ''),
+            'tag_name': tag_name,
+        })
+
+    if not data_rows:
+        return None
+
+    if len(data_rows) > 30:
+        # Prioritize: counters first, then rate by abs value, booleans at 0, rest by abs delta
+        counters = [r for r in data_rows if r['tag_type'] == 'counter']
+        rates = sorted(
+            [r for r in data_rows if r['tag_type'] == 'rate'],
+            key=lambda r: abs(float(r['value'])) if _is_number(r['value']) else 0,
+            reverse=True
+        )
+        booleans_zero = [r for r in data_rows if r['tag_type'] == 'boolean' and _is_zero(r['value'])]
+        rest = [r for r in data_rows if r not in counters and r not in rates and r not in booleans_zero]
+        if rest:
+            values = [float(r['value']) for r in rest if _is_number(r['value'])]
+            if values:
+                mean_val = sum(values) / len(values)
+                rest.sort(key=lambda r: abs(float(r['value']) - mean_val) if _is_number(r['value']) else 0, reverse=True)
+
+        data_rows = (counters + rates + booleans_zero + rest)[:30]
+
+    # Build structured table
+    lines = []
+    for r in data_rows:
+        lines.append(f"{r['label']} | {r['tag_type']} | {r['value']} | {r['line']}")
+    structured_data = '\n'.join(lines)
+
+    names_str = ', '.join(report_names) if isinstance(report_names, list) else str(report_names)
+    time_from = from_dt.strftime('%Y-%m-%d %H:%M')
+    time_to = to_dt.strftime('%Y-%m-%d %H:%M')
+
+    prompt = f"""You summarize production data for plant managers. Be extremely concise.
+
+Report: {names_str}
+Period: {time_from} to {time_to}
+
+Data (Label | Type | Value | Line):
+{structured_data}
+
+Output format — use EXACTLY this structure:
+**{names_str}** — {{one-line verdict: running normally / reduced output / line down / no data}}
+
+• **Production**: {{key totals with values, or "No data recorded"}}
+• **Status**: {{equipment on/off states, only if notable}}
+• **Alerts**: {{zero counters, unusual values — or "None"}}
+
+Rules:
+- Maximum 4 bullet points. No bullet longer than 15 words.
+- Only cite numbers from the data above. Never calculate or infer.
+- N/A values mean no data was recorded — say "no data", don't speculate why.
+- Skip any bullet that has nothing useful to report.
+- No paragraphs. No filler. No recommendations."""
+
+    try:
+        import ai_provider
+        result = ai_provider.generate(prompt, ai_config)
+        if result:
+            _ai_call_count += 1
+        return result
+    except Exception as e:
+        logger.warning("AI summary API call failed: %s", e)
+        return None
+
+
+def _is_number(val):
+    try:
+        float(val)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _is_zero(val):
+    try:
+        return float(val) == 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _format_summary_html(summary):
+    """Convert AI summary markdown (bold + bullets) to email-safe HTML."""
+    import re
+    # Bold
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_escape(summary))
+    # Bullet lines
+    lines = text.split('\n')
+    out = []
+    for line in lines:
+        line = line.strip()
+        if line.startswith('• ') or line.startswith('&bull; '):
+            content = line.lstrip('• ').lstrip('&bull; ')
+            out.append(f'<div style="padding-left:12px;margin:2px 0;">• {content}</div>')
+        elif line:
+            out.append(f'<div style="margin:2px 0;">{line}</div>')
+    return ''.join(out)
+
+
+def _prepend_summary_to_email(summary, email_html):
+    """Insert AI summary block after <body> in the email HTML."""
+    formatted = _format_summary_html(summary)
+    summary_block = (
+        '<div style="background:#f0f9ff;border-left:4px solid #0284c7;'
+        'padding:16px 20px;margin:0 0 24px;border-radius:6px;">'
+        '<div style="font-size:13px;font-weight:600;color:#0369a1;margin-bottom:8px;">'
+        'Hercules AI Summary</div>'
+        f'<div style="font-size:14px;color:#1e293b;line-height:1.5;">{formatted}</div>'
+        '</div>'
+    )
+    # Insert after first <body...> tag
+    idx = email_html.lower().find('<body')
+    if idx >= 0:
+        # Find the closing > of the <body> tag
+        close = email_html.find('>', idx)
+        if close >= 0:
+            return email_html[:close + 1] + summary_block + email_html[close + 1:]
+    # Fallback: prepend
+    return summary_block + email_html

@@ -57,6 +57,10 @@ a = Analysis(
         'branding_bp',
         'distribution_bp',
         'updates_bp',
+        'hercules_ai_bp',
+        'ai_provider',
+        'anthropic',
+        'openai',
 
         # Workers
         'workers.historian_worker',
