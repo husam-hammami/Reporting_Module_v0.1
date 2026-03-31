@@ -351,9 +351,15 @@ Full implementation:
 2. Load API key + model from `hercules_ai_config`
 3. Load tracked profiles for tags in `tag_data` from `hercules_ai_tag_profiles`
 4. Strip aggregation namespace prefixes (`'first::tagName'` → `'tagName'`)
-5. Build structured data table for prompt
-6. Call Claude API with 10-second timeout
-7. On failure → return None (never block email delivery)
+5. **Tag significance filter (max 30 tags to LLM):** If report has >30 tracked tags, prioritize:
+   - All `counter` tags (production totals — always included)
+   - `rate` tags sorted by absolute value descending
+   - `boolean` tags that are 0 (possible downtime indicators)
+   - Remaining tags by absolute delta from mean (most unusual first)
+   - Cap at 30 rows in the prompt. This prevents token overflow on large reports (200+ tags) and produces better summaries by focusing on what matters.
+6. Build structured data table for prompt from filtered tags
+7. Call Claude API with 10-second timeout
+8. On failure → return None (never block email delivery)
 
 **`_prepend_summary_to_email()`** inserts a styled HTML block after `<body>`:
 ```html
@@ -948,6 +954,16 @@ LIMIT 1
 | GET | `/hercules-ai/alerts/unread-count` | `{"count": 5}` for bell badge |
 | GET | `/hercules-ai/alert-rules` | List all 4 rules with config |
 | PUT | `/hercules-ai/alert-rules/<int:id>` | Update: `{is_enabled, config, recipients}` |
+
+#### Performance Note: Index Coverage for Phase 2 Queries
+
+The Phase 2 detection queries JOIN `hercules_ai_tag_profiles` → `tags` → `tag_history_archive` with filters on `archive_hour`, `tag_type`, `is_tracked`, and `layout_id`. The existing composite index on `tag_history_archive(layout_id, tag_id, archive_hour)` covers the archive side. The `idx_hai_profiles_tracked` index covers the profile filter. As the archive grows (months/years of data), the 24-hour window filter on `archive_hour` keeps query scope bounded. However, if a plant has 500+ tags and years of hourly data, consider adding a partial index:
+```sql
+CREATE INDEX IF NOT EXISTS idx_archive_recent_universal
+ON tag_history_archive(tag_id, archive_hour DESC)
+WHERE layout_id IS NULL AND archive_hour > NOW() - INTERVAL '30 days';
+```
+This is optional — only add if query times exceed 1 second on the target hardware. Monitor with `EXPLAIN ANALYZE` after deployment.
 
 #### Worker Registration in `app.py` (~line 1120)
 
