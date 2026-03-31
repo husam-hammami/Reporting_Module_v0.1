@@ -309,6 +309,14 @@ def _get_local_version():
 
 
 def _version_tuple(v):
+    """Parse version string like '1.0.42' into tuple. Strips any branch prefix safely."""
+    import re
+    # Strip everything up to and including the last 'v' before the version numbers
+    # Handles: "1.0.42", "v1.0.42", "salalah_mill_b-v1.0.42", "main-v1.0.42"
+    m = re.search(r'(\d+\.\d+\.\d+)', v)
+    if m:
+        return tuple(int(x) for x in m.group(1).split("."))
+    # Fallback: try the old way
     return tuple(int(x) for x in v.replace("v", "").split("."))
 
 
