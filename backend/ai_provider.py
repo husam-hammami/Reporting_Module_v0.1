@@ -8,17 +8,23 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-try:
-    import anthropic
-    _HAS_ANTHROPIC = True
-except ImportError:
-    _HAS_ANTHROPIC = False
 
-try:
-    import openai
-    _HAS_OPENAI = True
-except ImportError:
-    _HAS_OPENAI = False
+def _get_anthropic():
+    """Lazy import — picks up package even if installed after app start."""
+    try:
+        import anthropic
+        return anthropic
+    except ImportError:
+        return None
+
+
+def _get_openai():
+    """Lazy import — picks up package even if installed after app start."""
+    try:
+        import openai
+        return openai
+    except ImportError:
+        return None
 
 
 # ── Cloud model options ──────────────────────────────────────────────────────
@@ -42,7 +48,8 @@ def generate(prompt, config, timeout=None):
 
 def _generate_cloud(prompt, config, timeout):
     """Call Claude API."""
-    if not _HAS_ANTHROPIC:
+    anthropic = _get_anthropic()
+    if not anthropic:
         logger.error("anthropic package not installed")
         return None
     api_key = config.get('llm_api_key', '')
@@ -68,7 +75,8 @@ def _generate_local(prompt, config, timeout):
     model = config.get('local_model', '')
 
     # Try openai package first (cleaner)
-    if _HAS_OPENAI:
+    openai = _get_openai()
+    if openai:
         try:
             client = openai.OpenAI(base_url=base_url, api_key="not-needed", timeout=timeout)
             response = client.chat.completions.create(
@@ -120,7 +128,8 @@ def test_connection(config):
         api_key = config.get('llm_api_key', '')
         if not api_key:
             return {"ok": False, "message": "No API key configured", "model": None}
-        if not _HAS_ANTHROPIC:
+        anthropic = _get_anthropic()
+        if not anthropic:
             return {"ok": False, "message": "anthropic package not installed", "model": None}
         try:
             client = anthropic.Anthropic(api_key=api_key, timeout=10)

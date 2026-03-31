@@ -224,8 +224,8 @@ def _classify_tag(tag_name, meta, label=''):
             return 'setpoint', 0.70
         return 'analog', 0.65
 
-    # ID / selector / recipe
-    if re.search(r'\bid\b|\bbin\b|\brecipe\b|\bproduct\b|\bgrade\b', text):
+    # ID / selector / recipe / destination
+    if re.search(r'(?:_|^)id(?:_|$|\d)|_id\b|\bid_|\bbin\b|\brecipe\b|\bproduct\b|\bgrade\b|dest|selector|sender', text):
         return 'id_selector', 0.70
 
     return 'unknown', 0.30
