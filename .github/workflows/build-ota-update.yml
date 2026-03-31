@@ -23,7 +23,15 @@ jobs:
         shell: bash
         id: version
         run: |
-          BRANCH="${GITHUB_REF##refs/heads/}"
+          # Handle both branch pushes (refs/heads/...) and tag pushes (refs/tags/...)
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            # Tag push: extract branch name from tag (e.g. salalah_mill_b-v1.0.42 -> Salalah_Mill_B)
+            TAG_NAME="${GITHUB_REF##refs/tags/}"
+            BRANCH_SLUG=$(echo "$TAG_NAME" | sed 's/-v[0-9].*//')
+            BRANCH="$BRANCH_SLUG"
+          else
+            BRANCH="${GITHUB_REF##refs/heads/}"
+          fi
           BRANCH_SLUG=$(echo "$BRANCH" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
           COUNT=$(git rev-list --count HEAD)
           VERSION="1.0.${COUNT}"
