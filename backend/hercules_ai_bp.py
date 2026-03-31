@@ -19,8 +19,73 @@ logger = logging.getLogger(__name__)
 
 hercules_ai_bp = Blueprint('hercules_ai_bp', __name__)
 
-# ── Scan lock ────────────────────────────────────────────────────────────────
+# ── Scan lock & init flag ───────────────────────────────────────────────────
 _scan_in_progress = False
+_tables_ensured = False
+
+
+def _ensure_tables():
+    """Create Hercules AI tables if they don't exist (safe to call repeatedly)."""
+    global _tables_ensured
+    if _tables_ensured:
+        return
+    try:
+        get_conn = _get_db_connection()
+        conn = get_conn()
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS hercules_ai_tag_profiles (
+                    id SERIAL PRIMARY KEY,
+                    tag_name VARCHAR(255) NOT NULL UNIQUE,
+                    label VARCHAR(255) DEFAULT '',
+                    tag_type VARCHAR(50) DEFAULT 'unknown',
+                    line_name VARCHAR(100) DEFAULT '',
+                    category VARCHAR(100) DEFAULT '',
+                    source VARCHAR(20) DEFAULT 'auto',
+                    is_tracked BOOLEAN DEFAULT true,
+                    is_reviewed BOOLEAN DEFAULT false,
+                    confidence REAL DEFAULT 0.0,
+                    evidence JSONB DEFAULT '{}',
+                    user_notes TEXT DEFAULT '',
+                    data_status VARCHAR(20) DEFAULT 'unknown',
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS hercules_ai_config (
+                    id SERIAL PRIMARY KEY,
+                    key VARCHAR(100) UNIQUE NOT NULL,
+                    value JSONB NOT NULL DEFAULT '{}',
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_hai_profiles_line ON hercules_ai_tag_profiles(line_name)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_hai_profiles_reviewed ON hercules_ai_tag_profiles(is_reviewed)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_hai_profiles_tracked ON hercules_ai_tag_profiles(is_tracked)")
+            # Triggers — ignore if already exist
+            for tbl in ('hercules_ai_tag_profiles', 'hercules_ai_config'):
+                try:
+                    cur.execute(f"""
+                        CREATE TRIGGER update_{tbl.replace('.','_')}_modtime
+                            BEFORE UPDATE ON {tbl}
+                            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
+                    """)
+                except Exception:
+                    pass  # trigger already exists
+            # distribution column
+            cur.execute("ALTER TABLE distribution_rules ADD COLUMN IF NOT EXISTS include_ai_summary BOOLEAN DEFAULT false")
+        conn.close()
+        _tables_ensured = True
+        logger.info("Hercules AI tables ensured.")
+    except Exception as e:
+        logger.warning("Could not ensure AI tables (will retry next request): %s", e)
+
+
+@hercules_ai_bp.before_request
+def _before_request():
+    _ensure_tables()
 
 
 def _get_db_connection():
