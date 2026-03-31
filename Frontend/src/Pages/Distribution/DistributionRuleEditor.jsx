@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Mail, HardDrive, Layers, Save, Play, FolderOpen, ChevronRight, ArrowUp, Search, Check, ChevronDown } from 'lucide-react';
 import { reportBuilderApi } from '../../API/reportBuilderApi';
+import { herculesAIApi } from '../../API/herculesAIApi';
 import RecipientInput from '../Settings/ReportDistribution/RecipientInput';
 import { toast } from 'react-toastify';
 import { useLanguage } from '../../Hooks/useLanguage';
@@ -20,6 +21,7 @@ const EMPTY_RULE = {
   schedule_day_of_week: 0,
   schedule_day_of_month: 1,
   enabled: true,
+  include_ai_summary: false,
 };
 
 function schedulePreview(form, t) {
@@ -244,11 +246,15 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
   const [reports, setReports] = useState([]);
   const [saving, setSaving] = useState(false);
   const [browsing, setBrowsing] = useState(false);
+  const [aiSetupComplete, setAiSetupComplete] = useState(false);
 
   useEffect(() => {
     reportBuilderApi.list().then(res => {
       const list = res.data?.data || res.data || [];
       setReports(list.map(r => ({ id: r.id, name: r.name })));
+    }).catch(() => {});
+    herculesAIApi.getStatus().then(res => {
+      setAiSetupComplete(!!res.data?.setup_completed);
     }).catch(() => {});
   }, []);
 
@@ -380,6 +386,26 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* AI Summary toggle */}
+            <div className="w-48">
+              <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.includeAISummary')}</div>
+              <button
+                onClick={() => aiSetupComplete && set('include_ai_summary', !form.include_ai_summary)}
+                disabled={!aiSetupComplete}
+                className="flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all w-full"
+                style={{
+                  background: form.include_ai_summary ? t.accent : t.inputBg,
+                  color: form.include_ai_summary ? t.btnText : t.textSecondary,
+                  border: `1.5px solid ${form.include_ai_summary ? t.accent : t.border}`,
+                  opacity: aiSetupComplete ? 1 : 0.5,
+                  cursor: aiSetupComplete ? 'pointer' : 'not-allowed',
+                }}
+                title={!aiSetupComplete ? tr('distribution.aiSummaryDisabledHint') : ''}
+              >
+                {form.include_ai_summary ? 'On' : 'Off'}
+              </button>
             </div>
           </div>
 

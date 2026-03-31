@@ -1751,6 +1751,37 @@ def execute_distribution_rule(rule_id):
             subject = f"Hercules Report: {names_str} — {datetime.now().strftime('%Y-%m-%d')}"
             email_html = _build_email_html(names_str, from_dt, to_dt,
                                            ', '.join(fn for fn, _ in attachments))
+
+            # ── AI Summary injection (Phase 1) ──────────────────────────
+            if rule.get('include_ai_summary'):
+                try:
+                    all_tag_data = {}
+                    for rid in report_ids:
+                        with closing(get_conn()) as conn2:
+                            actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
+                            cur2 = actual2.cursor(cursor_factory=RealDictCursor)
+                            cur2.execute("SELECT layout_config FROM report_builder_templates WHERE id = %s", (rid,))
+                            tpl = cur2.fetchone()
+                            if tpl:
+                                lc = tpl['layout_config']
+                                if isinstance(lc, str):
+                                    lc = json.loads(lc)
+                                tags = extract_all_tags(lc)
+                                td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
+                                all_tag_data.update(td)
+
+                    summary = _generate_ai_summary(
+                        report_names=report_names,
+                        tag_data=all_tag_data,
+                        from_dt=from_dt,
+                        to_dt=to_dt
+                    )
+                    if summary:
+                        email_html = _prepend_summary_to_email(summary, email_html)
+                except Exception as e:
+                    logger.warning("AI summary generation failed, sending without: %s", e)
+            # ── End AI Summary ───────────────────────────────────────────
+
             email_result = _send_email(recipients, subject, email_html, attachments=attachments)
             if not email_result['success']:
                 errors.append(f"Email: {email_result['error']}")
@@ -1825,3 +1856,198 @@ def execute_distribution_rule(rule_id):
         except Exception:
             pass
         return {'success': False, 'error': str(e)}
+
+
+# ── AI Summary helpers (Phase 1) ─────────────────────────────────────────────
+
+# Daily rate limit for AI calls
+_ai_call_count = 0
+_ai_call_date = None
+_AI_DAILY_CAP = 200
+
+
+def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
+    """
+    Generate AI summary for distribution email.
+    Args:
+        report_names: list of report name strings
+        tag_data: dict {tag_name_or_namespaced: value} — combined from all reports
+        from_dt, to_dt: datetime range
+    Returns: summary text string or None
+    """
+    global _ai_call_count, _ai_call_date
+
+    try:
+        import anthropic
+    except ImportError:
+        logger.warning("anthropic package not installed, skipping AI summary")
+        return None
+
+    # Rate limit check
+    today = datetime.now().date()
+    if _ai_call_date != today:
+        _ai_call_count = 0
+        _ai_call_date = today
+    if _ai_call_count >= _AI_DAILY_CAP:
+        logger.warning("AI daily rate limit reached (%d calls)", _AI_DAILY_CAP)
+        return None
+
+    # Load API key + model from config
+    get_conn = _get_db_connection()
+    api_key = ''
+    model = 'claude-haiku-4-5-20251001'
+
+    try:
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor(cursor_factory=RealDictCursor)
+
+            cur.execute("SELECT key, value FROM hercules_ai_config WHERE key IN ('llm_api_key', 'llm_model')")
+            for row in cur.fetchall():
+                val = row['value'] if isinstance(row['value'], dict) else json.loads(row['value'])
+                if row['key'] == 'llm_api_key':
+                    api_key = val.get('value', '')
+                elif row['key'] == 'llm_model':
+                    model = val.get('value', model)
+
+            if not api_key:
+                logger.warning("No LLM API key configured, skipping AI summary")
+                return None
+
+            # Load tracked profiles for tags in tag_data
+            # Strip namespace prefixes for lookup
+            raw_tags = set()
+            for k in tag_data:
+                if '::' in k:
+                    raw_tags.add(k.split('::', 1)[1])
+                else:
+                    raw_tags.add(k)
+
+            tag_list = list(raw_tags)
+            if not tag_list:
+                return None
+
+            cur.execute("""
+                SELECT tag_name, label, tag_type, line_name
+                FROM hercules_ai_tag_profiles
+                WHERE tag_name = ANY(%s) AND is_tracked = true
+            """, (tag_list,))
+            profile_map = {r['tag_name']: r for r in cur.fetchall()}
+            actual.commit()
+
+    except Exception as e:
+        logger.warning("Failed to load AI config/profiles: %s", e)
+        return None
+
+    # Tag significance filter (max 30 tags to LLM)
+    data_rows = []
+    for key, value in tag_data.items():
+        tag_name = key.split('::', 1)[1] if '::' in key else key
+        prof = profile_map.get(tag_name, {})
+        if not prof:
+            continue
+        data_rows.append({
+            'label': prof.get('label') or tag_name,
+            'tag_type': prof.get('tag_type', 'unknown'),
+            'value': value,
+            'line': prof.get('line_name', ''),
+            'tag_name': tag_name,
+        })
+
+    if not data_rows:
+        return None
+
+    if len(data_rows) > 30:
+        # Prioritize: counters first, then rate by abs value, booleans at 0, rest by abs delta
+        counters = [r for r in data_rows if r['tag_type'] == 'counter']
+        rates = sorted(
+            [r for r in data_rows if r['tag_type'] == 'rate'],
+            key=lambda r: abs(float(r['value'])) if _is_number(r['value']) else 0,
+            reverse=True
+        )
+        booleans_zero = [r for r in data_rows if r['tag_type'] == 'boolean' and _is_zero(r['value'])]
+        rest = [r for r in data_rows if r not in counters and r not in rates and r not in booleans_zero]
+        if rest:
+            values = [float(r['value']) for r in rest if _is_number(r['value'])]
+            if values:
+                mean_val = sum(values) / len(values)
+                rest.sort(key=lambda r: abs(float(r['value']) - mean_val) if _is_number(r['value']) else 0, reverse=True)
+
+        data_rows = (counters + rates + booleans_zero + rest)[:30]
+
+    # Build structured table
+    lines = []
+    for r in data_rows:
+        lines.append(f"{r['label']} | {r['tag_type']} | {r['value']} | {r['line']}")
+    structured_data = '\n'.join(lines)
+
+    names_str = ', '.join(report_names) if isinstance(report_names, list) else str(report_names)
+    time_from = from_dt.strftime('%Y-%m-%d %H:%M')
+    time_to = to_dt.strftime('%Y-%m-%d %H:%M')
+
+    prompt = f"""You are a production report summarizer for a manufacturing plant.
+Given the following data from the "{names_str}" report(s) covering {time_from} to {time_to}:
+
+{structured_data}
+
+Each row shows: Tag Label | Type | Value | Line
+
+Write a 2-4 sentence summary for plant managers.
+Rules:
+- ONLY reference numbers that appear in the data above. Never calculate or infer new numbers.
+- Lead with the most important production metric (largest total, key output).
+- Mention at most 2 anomalies (values that are zero when expected, unusually high or low).
+- Use simple language. No technical jargon.
+- If a "counter" type shows zero during what should be a production period, mention it as possible downtime.
+- Maximum 120 words.
+- Do not use markdown formatting. Plain text only."""
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model=model,
+            max_tokens=300,
+            messages=[{'role': 'user', 'content': prompt}],
+            timeout=10.0,
+        )
+        _ai_call_count += 1
+        return response.content[0].text
+    except Exception as e:
+        logger.warning("AI summary API call failed: %s", e)
+        return None
+
+
+def _is_number(val):
+    try:
+        float(val)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _is_zero(val):
+    try:
+        return float(val) == 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _prepend_summary_to_email(summary, email_html):
+    """Insert AI summary block after <body> in the email HTML."""
+    summary_block = (
+        '<div style="background:#f0f9ff;border-left:4px solid #0284c7;'
+        'padding:16px 20px;margin:0 0 24px;border-radius:6px;">'
+        '<div style="font-size:13px;font-weight:600;color:#0369a1;margin-bottom:8px;">'
+        'Hercules AI Summary</div>'
+        f'<div style="font-size:14px;color:#1e293b;line-height:1.6;">{html_escape(summary)}</div>'
+        '</div>'
+    )
+    # Insert after first <body...> tag
+    idx = email_html.lower().find('<body')
+    if idx >= 0:
+        # Find the closing > of the <body> tag
+        close = email_html.find('>', idx)
+        if close >= 0:
+            return email_html[:close + 1] + summary_block + email_html[close + 1:]
+    # Fallback: prepend
+    return summary_block + email_html

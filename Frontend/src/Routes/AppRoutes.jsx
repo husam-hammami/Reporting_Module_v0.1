@@ -33,6 +33,7 @@ import ProfilePage from '../Pages/Profile/ProfilePage';
 import MyAccount from '../Pages/Profile/MyAccount';
 import AppSettingsPage from '../Pages/AppSettings/AppSettingsPage';
 import SystemLogs from '../Pages/Settings/Logs/SystemLogs';
+import HerculesAISetup from '../Pages/HerculesAI/HerculesAISetup';
 import { useContext } from 'react';
 import { AuthContext } from '../Context/AuthProvider';
 
@@ -187,6 +188,16 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute roles={[Roles.Admin, Roles.Manager]}>
                 <DistributionPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Hercules AI */}
+          <Route
+            path="hercules-ai"
+            element={
+              <ProtectedRoute roles={[Roles.Admin]}>
+                <HerculesAISetup />
               </ProtectedRoute>
             }
           />

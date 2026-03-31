@@ -1,12 +1,13 @@
 import { Box, Tooltip } from '@mui/material';
 import { getMenuItems } from '../../Data/Navbar';
 import { NavbarContext } from '../../Context/NavbarContext';
-import { useContext } from 'react';
-import { NavLink } from 'react-router-dom';
+import { useContext, useState, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../Context/AuthProvider';
 import { useLanguage } from '../../Hooks/useLanguage';
 import { User, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
+import axios from '../../API/axios';
 import '../../Pages/ReportBuilder/reportBuilderTheme.css';
 
 export default function SideNav() {
@@ -14,6 +15,8 @@ export default function SideNav() {
   const authContext = useContext(AuthContext);
   const auth = authContext?.auth;
   const { t, isRTL } = useLanguage();
+  const location = useLocation();
+  const [badgeCounts, setBadgeCounts] = useState({});
 
   const sideWidth = open ? 220 : 60;
   const items = getMenuItems(t);
@@ -24,6 +27,16 @@ export default function SideNav() {
     else acc.push(item);
     return acc;
   }, []);
+
+  // Fetch badge counts on mount + route change
+  useEffect(() => {
+    const badgeItems = uniqueMenuItems.filter(i => i.badgeEndpoint);
+    badgeItems.forEach(item => {
+      axios.get(item.badgeEndpoint)
+        .then(res => setBadgeCounts(prev => ({ ...prev, [item.link]: res.data[item.badgeKey] || 0 })))
+        .catch(() => {});
+    });
+  }, [location.pathname]);
 
   return (
     <Box
@@ -81,14 +94,22 @@ export default function SideNav() {
                         className={`absolute ${isRTL ? 'right-0 rounded-l-full' : 'left-0 rounded-r-full'} top-2 bottom-2 w-[3px] bg-[#22d3ee] shadow-[0_0_8px_rgba(34,211,238,0.5)]`}
                       />
                     )}
-                    <item.icon
-                      size={22}
-                      className={`transition-all duration-300 flex-shrink-0 ${
-                        isActive
-                          ? 'text-[#f0f4f8]'
-                          : 'text-[#556677] hover:text-[#f0f4f8]'
-                      }`}
-                    />
+                    <div className="relative flex-shrink-0">
+                      <item.icon
+                        size={22}
+                        className={`transition-all duration-300 ${
+                          isActive
+                            ? 'text-[#f0f4f8]'
+                            : 'text-[#556677] hover:text-[#f0f4f8]'
+                        }`}
+                      />
+                      {item.badgeEndpoint && badgeCounts[item.link] > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] flex items-center justify-center
+                                        text-[9px] font-bold bg-red-500 text-white rounded-full px-0.5">
+                          {badgeCounts[item.link]}
+                        </span>
+                      )}
+                    </div>
                     {open && (
                       <span
                         className={`text-[13px] font-medium whitespace-nowrap overflow-hidden transition-all duration-200 ${
