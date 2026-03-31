@@ -777,12 +777,34 @@ def _run_startup_migrations():
     ]
 
     try:
+        # Step 0: Create database if it doesn't exist (connect to 'postgres' system DB)
+        try:
+            sys_conn = psycopg2.connect(
+                dbname='postgres', user=_DB_USER, password=_DB_PASS,
+                host=_DB_HOST, port=_DB_PORT, connect_timeout=10
+            )
+            sys_conn.autocommit = True
+            sys_cur = sys_conn.cursor()
+            sys_cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (_DB_NAME,))
+            if not sys_cur.fetchone():
+                sys_cur.execute(f'CREATE DATABASE "{_DB_NAME}"')
+                logger.info(f"Created database: {_DB_NAME}")
+            sys_cur.close()
+            sys_conn.close()
+        except Exception as e:
+            logger.debug(f"Database creation check: {e}")
+
+        # Step 1: Connect to the app database and run migrations
         conn = psycopg2.connect(
             dbname=_DB_NAME, user=_DB_USER, password=_DB_PASS,
             host=_DB_HOST, port=_DB_PORT, connect_timeout=10
         )
         conn.autocommit = True
         cur = conn.cursor()
+
+        # Step 2: Create default admin user if users table exists but no admin
+        # (this runs after migrations create the users table)
+
         for filename in migration_order:
             filepath = os.path.join(migrations_dir, filename)
             if not os.path.isfile(filepath):
@@ -795,6 +817,18 @@ def _run_startup_migrations():
             except Exception as e:
                 # "already exists" errors are expected and safe
                 logger.debug(f"Migration skip: {filename} ({str(e)[:80]})")
+        # Step 3: Ensure default admin user exists
+        try:
+            cur.execute("SELECT 1 FROM users WHERE username = 'admin'")
+            if not cur.fetchone():
+                cur.execute(
+                    "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
+                    ('admin', '$2b$12$LJ3m4ys3Lk0TSwMBQWJxaeflIOwnGGkahJCsOvn/F9JDOaFf1liGu', 'admin')
+                )
+                logger.info("Created default admin user (admin/admin)")
+        except Exception as e:
+            logger.debug(f"Admin user check: {e}")
+
         cur.close()
         conn.close()
         logger.info("Startup migrations complete.")
