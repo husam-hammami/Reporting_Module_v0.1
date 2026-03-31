@@ -32,6 +32,8 @@ a = Analysis(
         ('frontend/dist', 'frontend/dist'),
         ('config', 'config'),
         ('migrations', 'migrations'),
+        ('version.txt', '.'),
+        ('release_branch.txt', '.'),
     ],
     hiddenimports=[
         # eventlet (all hubs must be importable — eventlet probes them at init)

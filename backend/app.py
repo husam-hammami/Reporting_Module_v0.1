@@ -737,6 +737,76 @@ def get_db_connection():
     return conn
 
 
+# ─── Run migrations via Python (fallback when psql.exe is unavailable) ────────
+def _run_startup_migrations():
+    """Run all SQL migration files through psycopg2 on app startup."""
+    migrations_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'migrations')
+    # Also check PyInstaller _internal path
+    if not os.path.isdir(migrations_dir):
+        internal = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_internal', 'migrations')
+        if os.path.isdir(internal):
+            migrations_dir = internal
+    if not os.path.isdir(migrations_dir):
+        return
+
+    migration_order = [
+        'create_tags_tables.sql',
+        'create_users_table.sql',
+        'create_bins_and_materials_tables.sql',
+        'create_report_builder_tables.sql',
+        'create_tag_history_tables.sql',
+        'create_kpi_engine_tables.sql',
+        'add_is_counter_to_tags.sql',
+        'add_bin_activation_fields.sql',
+        'add_value_formula_field.sql',
+        'add_layout_config_field.sql',
+        'add_line_running_tag_fields.sql',
+        'add_dynamic_monitoring_tables.sql',
+        'alter_tag_history_nullable_layout.sql',
+        'create_licenses_table.sql',
+        'create_mappings_table.sql',
+        'add_tag_history_archive_unique_universal.sql',
+        'add_license_machine_info.sql',
+        'add_site_and_license_name.sql',
+        'create_distribution_rules_table.sql',
+        'add_archive_granularity.sql',
+        'create_report_execution_log.sql',
+        'add_must_change_password.sql',
+        'create_hercules_ai_tables.sql',
+        'add_ai_summary_to_distribution.sql',
+    ]
+
+    try:
+        conn = psycopg2.connect(
+            dbname=_DB_NAME, user=_DB_USER, password=_DB_PASS,
+            host=_DB_HOST, port=_DB_PORT, connect_timeout=10
+        )
+        conn.autocommit = True
+        cur = conn.cursor()
+        for filename in migration_order:
+            filepath = os.path.join(migrations_dir, filename)
+            if not os.path.isfile(filepath):
+                continue
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    sql = f.read()
+                cur.execute(sql)
+                logger.info(f"Migration OK: {filename}")
+            except Exception as e:
+                # "already exists" errors are expected and safe
+                logger.debug(f"Migration skip: {filename} ({str(e)[:80]})")
+        cur.close()
+        conn.close()
+        logger.info("Startup migrations complete.")
+    except Exception as e:
+        logger.warning(f"Startup migrations failed (non-blocking): {e}")
+
+try:
+    _run_startup_migrations()
+except Exception:
+    pass
+
+
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)

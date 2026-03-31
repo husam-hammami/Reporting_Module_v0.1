@@ -44,7 +44,8 @@ def _get_release_branch():
             return f.read().strip()
     except FileNotFoundError:
         pass
-    return os.environ.get('RELEASE_BRANCH', 'main')
+    default = 'Salalah_Mill_B' if os.environ.get('HERCULES_DESKTOP') else 'main'
+    return os.environ.get('RELEASE_BRANCH', default)
 
 
 def _branch_slug(branch):
