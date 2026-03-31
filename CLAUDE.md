@@ -95,6 +95,9 @@ DB Port: 5433
 - Has its own PostgreSQL database (Railway addon)
 - No PLC connection (snap7 excluded via `requirements-railway.txt`)
 - Start command runs DB setup then app: `python tools/setup/setup_local_db.py --no-seed && python app.py`
+- **TWO requirements files** — BOTH must be updated when adding Python packages:
+  - `backend/requirements.txt` — desktop/PyInstaller builds
+  - `backend/requirements-railway.txt` — Railway Docker builds (excludes snap7)
 
 ## CI/CD — GitHub Actions
 
@@ -135,6 +138,19 @@ DB Port: 5433
 - Output: `hercules-backend/` folder with `hercules-backend.exe`
 - Bundles: frontend/dist, config/, migrations/, snap7.dll
 - All blueprints and workers listed in hiddenimports
+- **When adding a new blueprint or Python dependency**: add to `hiddenimports` in `hercules.spec`
+
+## Adding New Features — Checklist
+
+When adding a new feature that touches backend + frontend + database:
+
+1. **Database migration**: Add SQL file in `backend/migrations/`, append to `MIGRATION_ORDER` in `init_db.py`
+2. **Auto-create tables**: New blueprints must create their own tables via `before_request` hook (existing DBs won't re-run `init_db.py`)
+3. **Requirements**: Add Python packages to BOTH `requirements.txt` AND `requirements-railway.txt`
+4. **PyInstaller**: Add new modules to `hiddenimports` in `backend/hercules.spec`
+5. **Blueprint registration**: Register in `app.py` with `url_prefix='/api'`
+6. **i18n**: Add translation keys to ALL 4 language files (`en.json`, `ar.json`, `hi.json`, `ur.json`)
+7. **Routes**: Add route in `Frontend/src/Routes/AppRoutes.jsx`, nav item in `Frontend/src/Data/Navbar.js`
 
 ## Key Directories
 ```
@@ -167,6 +183,7 @@ DB Port: 5433
 - `branding_bp` — Client branding (logo, name, colors)
 - `distribution_bp` — Scheduled report email distribution
 - `updates_bp` — Software update check (GitHub Releases API)
+- `hercules_ai_bp` — AI tag profiling, classification, config, and summary preview
 
 ## Workers (background threads)
 - `workers/historian_worker.py` — Logs PLC data to PostgreSQL at intervals
@@ -203,6 +220,30 @@ DB Port: 5433
 - Supported: `last`, `first`, `avg`, `min`, `max`, `sum`, `delta`, `count`, `auto`
 - `auto` mode: counter tags → `SUM(value_delta)`, others → last value
 - Falls back to `tag_history_archive` when `tag_history` has no data for the range
+
+## Hercules AI (Phase 1)
+
+### Architecture
+- `backend/ai_provider.py` — Dual provider abstraction (Cloud Claude API + Local LM Studio)
+- `backend/hercules_ai_bp.py` — Blueprint: scan, profiles, config, preview, test-connection
+- `Frontend/src/Pages/HerculesAI/HerculesAISetup.jsx` — Setup page (scan → review → complete)
+- `Frontend/src/API/herculesAIApi.js` — API wrapper
+
+### AI Provider
+- Cloud: Anthropic Claude API via `anthropic` SDK (Opus/Sonnet/Haiku)
+- Local: LM Studio via `openai` SDK (OpenAI-compatible API at localhost:1234)
+- Lazy imports in `ai_provider.py` — packages resolved at call time, not import time
+- Config stored in `hercules_ai_config` table (key-value JSONB)
+- API key stored redacted in API responses (only hint + boolean), raw key used internally
+
+### Tag Classification
+- Rule-based: metadata first (unit, data_type, is_counter), then name/label keyword fallback
+- Types: counter, rate, boolean, percentage, analog, setpoint, id_selector, unknown
+- User corrections (source='user') are never overwritten by re-scans (UPSERT with WHERE clause)
+
+### AI Summary in Distribution Emails
+- `distribution_engine.py` calls `_generate_ai_summary()` between email build and send
+- 30-tag significance filter, 200 calls/day rate limit, graceful timeout (never blocks email)
 
 ## UI Patterns — Report Builder
 - CSS variables: `--rb-accent`, `--rb-surface`, `--rb-panel`, `--rb-border`, `--rb-text`, `--rb-text-muted`
