@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaServer, FaPlug, FaNetworkWired, FaSave, FaSync, FaGlobe, FaCopy, FaCheck, FaLanguage, FaDatabase, FaDownload } from 'react-icons/fa';
+import { FaServer, FaPlug, FaNetworkWired, FaSave, FaSync, FaGlobe, FaCopy, FaCheck, FaLanguage, FaDatabase, FaDownload, FaInfoCircle } from 'react-icons/fa';
 import { useSystemStatus } from '../../../Context/SystemStatusContext';
 import DemoModeSettings from '../DemoMode/DemoModeSettings';
 import { useLanguage } from '../../../Hooks/useLanguage';
@@ -33,6 +33,9 @@ export default function SystemSettings() {
   const [retentionSaving, setRetentionSaving] = useState(false);
   const [retentionMsg, setRetentionMsg] = useState(null);
 
+  // Version info
+  const [versionInfo, setVersionInfo] = useState(null);
+
   useEffect(() => {
     axios.get('/api/settings/network-info')
       .then(res => setNetworkInfo(res.data))
@@ -44,6 +47,9 @@ export default function SystemSettings() {
         setRetentionDays(d.retentionDays || 365);
         setRollupEnabled(d.rollupEnabled !== false);
       })
+      .catch(() => {});
+    axios.get('/api/settings/version')
+      .then(res => setVersionInfo(res.data))
       .catch(() => {});
   }, []);
 
@@ -362,6 +368,28 @@ export default function SystemSettings() {
         </div>
         <DemoModeSettings />
       </div>
+
+      {/* ── Version Info ── */}
+      {versionInfo && (
+        <div className="bg-white dark:bg-[#131b2d] rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40]">
+          <div className="px-4 py-2.5 border-b border-[#e3e9f0] dark:border-[#1e2d40]">
+            <div className="flex items-center gap-2">
+              <FaInfoCircle className="text-[#8898aa]" size={11} />
+              <h3 className="text-[11px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">Version</h3>
+            </div>
+          </div>
+          <div className="px-4 py-3 flex items-center gap-6">
+            <div>
+              <span className="text-[10px] text-[#8898aa]">Current Version</span>
+              <p className="text-[12px] font-semibold text-[#2a3545] dark:text-[#e1e8f0]">v{versionInfo.version}</p>
+            </div>
+            <div>
+              <span className="text-[10px] text-[#8898aa]">Branch</span>
+              <p className="text-[12px] font-medium text-[#6b7f94] dark:text-[#8898aa]">{versionInfo.branch}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

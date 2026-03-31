@@ -3,7 +3,6 @@ Hercules Reporting Module — Standalone launcher.
 Starts portable PostgreSQL, runs DB setup on first run, then starts the Flask backend.
 Designed to be compiled to launcher.exe (e.g. PyInstaller) for the installer bundle.
 """
-import atexit
 import ctypes
 import ctypes.wintypes
 import hashlib
@@ -11,13 +10,11 @@ import json
 import logging
 import os
 import platform
-import signal
 import shutil
 import ssl
 import subprocess
 import sys
 import tempfile
-import threading
 import time
 import traceback
 import urllib.request
@@ -59,76 +56,18 @@ def _hidden_si():
     return si
 
 
-# ---------------------------------------------------------------------------
-# Windows Job Object: ensures ALL child processes (postgres, backend, etc.)
-# are killed automatically when the launcher exits — even on force-kill.
-# ---------------------------------------------------------------------------
-_job_handle = None
-
-
-def _create_job_object():
-    """Create a Job Object with KILL_ON_JOB_CLOSE so children die with the launcher."""
-    global _job_handle
-    kernel32 = ctypes.windll.kernel32
-
-    job = kernel32.CreateJobObjectW(None, None)
-    if not job:
-        return
-
-    class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
-        _fields_ = [
-            ("PerProcessUserTimeLimit", ctypes.c_int64),
-            ("PerJobUserTimeLimit", ctypes.c_int64),
-            ("LimitFlags", ctypes.wintypes.DWORD),
-            ("MinimumWorkingSetSize", ctypes.c_size_t),
-            ("MaximumWorkingSetSize", ctypes.c_size_t),
-            ("ActiveProcessLimit", ctypes.wintypes.DWORD),
-            ("Affinity", ctypes.c_size_t),
-            ("PriorityClass", ctypes.wintypes.DWORD),
-            ("SchedulingClass", ctypes.wintypes.DWORD),
-        ]
-
-    class IO_COUNTERS(ctypes.Structure):
-        _fields_ = [
-            ("ReadOperationCount", ctypes.c_uint64),
-            ("WriteOperationCount", ctypes.c_uint64),
-            ("OtherOperationCount", ctypes.c_uint64),
-            ("ReadTransferCount", ctypes.c_uint64),
-            ("WriteTransferCount", ctypes.c_uint64),
-            ("OtherTransferCount", ctypes.c_uint64),
-        ]
-
-    class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
-        _fields_ = [
-            ("BasicLimitInformation", JOBOBJECT_BASIC_LIMIT_INFORMATION),
-            ("IoInfo", IO_COUNTERS),
-            ("ProcessMemoryLimit", ctypes.c_size_t),
-            ("JobMemoryLimit", ctypes.c_size_t),
-            ("PeakProcessMemoryUsed", ctypes.c_size_t),
-            ("PeakJobMemoryUsed", ctypes.c_size_t),
-        ]
-
-    KILL_ON_CLOSE = 0x2000
-    info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
-    info.BasicLimitInformation.LimitFlags = KILL_ON_CLOSE
-
-    kernel32.SetInformationJobObject(
-        job, 9,  # JobObjectExtendedLimitInformation
-        ctypes.byref(info), ctypes.sizeof(info),
-    )
-    _job_handle = job
-
-
-def _assign_to_job(proc):
-    """Add a subprocess.Popen process to the job object."""
-    if not _job_handle or not proc:
-        return
-    kernel32 = ctypes.windll.kernel32
-    PROCESS_ALL_ACCESS = 0x1F0FFF
-    handle = kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, proc.pid)
-    if handle:
-        kernel32.AssignProcessToJobObject(_job_handle, handle)
+def _is_pid_alive(pid):
+    """Check whether a Windows process with the given PID is still running."""
+    try:
+        kernel32 = ctypes.windll.kernel32
+        SYNCHRONIZE = 0x00100000
+        handle = kernel32.OpenProcess(SYNCHRONIZE, False, int(pid))
+        if not handle:
+            return False
         kernel32.CloseHandle(handle)
+        return True
+    except Exception:
+        return False
 
 
 def _setup_logging():
@@ -317,6 +256,21 @@ def _hidden_kwargs():
     return dict(startupinfo=_hidden_si())
 
 
+def _pg_kwargs():
+    """Return kwargs for PostgreSQL commands (initdb, pg_ctl).
+
+    PostgreSQL needs CREATE_NEW_CONSOLE so its child process postgres --boot
+    gets a real console for Windows signal handling.  Without it, postgres
+    crashes with 0xC0000005 on some machines.
+
+    IMPORTANT: Do NOT add startupinfo/SW_HIDE here — combining
+    STARTF_USESHOWWINDOW with CREATE_NEW_CONSOLE breaks postgres --boot
+    on some Windows machines.  The console window flashes briefly (only
+    during first-run initdb) but this is the only reliable approach.
+    """
+    return dict(creationflags=subprocess.CREATE_NEW_CONSOLE)
+
+
 def run(cmd, env=None, cwd=None, hide=True):
     """Run command, return CompletedProcess with stdout/stderr bytes."""
     kwargs = dict(
@@ -354,26 +308,58 @@ def init_db_if_needed():
     pg_version = os.path.join(DATA_DIR, "PG_VERSION")
     if os.path.exists(pg_version):
         return
+    if os.path.exists(DATA_DIR):
+        log.info("Removing incomplete data directory from a previous failed init...")
+        shutil.rmtree(DATA_DIR, ignore_errors=True)
     log.info("Initializing PostgreSQL cluster...")
-    os.makedirs(DATA_DIR, exist_ok=True)
-    run_checked(
-        [INITDB, "-D", DATA_DIR, "-U", "postgres",
-         "--encoding=UTF8", "--locale=C"],
-        label="PostgreSQL initdb",
+    kwargs = dict(
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=BASE_DIR,
+        **_pg_kwargs(),
     )
+    result = subprocess.run(
+        [INITDB, "-D", DATA_DIR, "-U", "postgres"],
+        **kwargs,
+    )
+    if result.returncode != 0:
+        output = (result.stdout or b"").decode("utf-8", errors="replace").strip()
+        log.error("PostgreSQL initdb failed (exit %d):\n%s", result.returncode, output)
+        _fatal(f"PostgreSQL initdb failed (exit code {result.returncode}):\n\n{output}")
+
+
+def _clean_stale_postmaster_pid():
+    """Remove stale postmaster.pid left by an unclean PostgreSQL shutdown."""
+    pid_file = os.path.join(DATA_DIR, "postmaster.pid")
+    if not os.path.exists(pid_file):
+        return
+    try:
+        with open(pid_file, encoding="utf-8") as f:
+            first_line = f.readline().strip()
+        pid = int(first_line)
+        if _is_pid_alive(pid):
+            log.info("postmaster.pid (pid %d) is still alive — skipping removal.", pid)
+            return
+        log.info("Removing stale postmaster.pid (pid %d is dead).", pid)
+        os.remove(pid_file)
+    except (ValueError, OSError) as e:
+        log.warning("Could not clean postmaster.pid: %s — removing it.", e)
+        try:
+            os.remove(pid_file)
+        except OSError:
+            pass
 
 
 def start_postgres():
     """Start portable PostgreSQL on PORT."""
     log.info("Starting PostgreSQL...")
-    pg = subprocess.Popen(
+    subprocess.Popen(
         [PG_CTL, "-D", DATA_DIR, "-o", f"-p {PORT}", "start"],
         cwd=BASE_DIR,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        startupinfo=_hidden_si(),
+        **_pg_kwargs(),
     )
-    _assign_to_job(pg)
 
 
 def wait_for_db(timeout_sec=60):
@@ -464,7 +450,6 @@ def start_backend():
             stderr=fh,
             startupinfo=_hidden_si(),
         )
-    _assign_to_job(proc)
     return proc
 
 
@@ -492,7 +477,7 @@ def kill_previous_instances():
             subprocess.run(
                 [PG_CTL, "-D", DATA_DIR, "stop", "-m", "fast"],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                timeout=15, **_hidden_kwargs(),
+                timeout=15, **_pg_kwargs(),
             )
         except Exception:
             subprocess.run(
@@ -503,35 +488,11 @@ def kill_previous_instances():
         time.sleep(1)
 
 
-def stop_postgres():
-    """Gracefully stop PostgreSQL."""
-    log.info("Stopping PostgreSQL...")
-    try:
-        subprocess.run(
-            [PG_CTL, "-D", DATA_DIR, "stop", "-m", "fast"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            timeout=30,
-            **_hidden_kwargs(),
-        )
-        log.info("PostgreSQL stopped.")
-    except Exception as e:
-        log.warning("PostgreSQL stop failed: %s", e)
-
-
-def shutdown(backend_proc=None):
-    """Clean shutdown: stop backend, then PostgreSQL."""
-    log.info("Shutting down...")
-    if backend_proc and backend_proc.poll() is None:
-        log.info("Terminating backend (pid %d)...", backend_proc.pid)
-        backend_proc.terminate()
-        try:
-            backend_proc.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            backend_proc.kill()
-        log.info("Backend stopped.")
-    stop_postgres()
-    log.info("Shutdown complete.")
+def _backend_already_running():
+    """Return True if the backend is already responding on its port."""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("127.0.0.1", int(BACKEND_PORT))) == 0
 
 
 def _get_local_version():
@@ -560,7 +521,35 @@ def _branch_slug(branch):
     return branch.replace("/", "-").lower()
 
 
+def _show_info(message, title="Hercules"):
+    """Show a native Windows info dialog (non-blocking would need threading, but OK for brief messages)."""
+    log.info(message)
+    MB_OK = 0x00000000
+    MB_ICONINFORMATION = 0x00000040
+    ctypes.windll.user32.MessageBoxW(0, message, title, MB_OK | MB_ICONINFORMATION)
+
+
+def _kill_running_backend():
+    """Stop the currently running backend process so a new version can start."""
+    log.info("Stopping old backend for update...")
+    subprocess.run(
+        ["taskkill", "/F", "/FI", f"IMAGENAME eq python.exe"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        startupinfo=_hidden_si(),
+    )
+    subprocess.run(
+        ["taskkill", "/F", "/FI", f"IMAGENAME eq hercules-backend.exe"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        startupinfo=_hidden_si(),
+    )
+    time.sleep(2)
+
+
 def check_and_apply_update():
+    """Check GitHub for updates, download and apply if available.
+
+    Returns the new version string if an update was applied, or None.
+    """
     local_ver = _get_local_version()
     branch = _get_release_branch()
     slug = _branch_slug(branch)
@@ -580,9 +569,8 @@ def check_and_apply_update():
             releases = json.loads(resp.read().decode("utf-8"))
     except Exception as e:
         log.warning("Update check skipped (GitHub unreachable): %s", e)
-        return
+        return None
 
-    # Find the latest release matching this branch's tag prefix
     best_release = None
     best_ver = None
     for release in releases:
@@ -600,12 +588,12 @@ def check_and_apply_update():
 
     if best_release is None:
         log.info("No releases found for branch '%s'.", branch)
-        return
+        return None
 
     remote_ver = best_release["tag_name"][len(prefix):]
     if _version_tuple(remote_ver) <= _version_tuple(local_ver):
         log.info("Already up to date (v%s).", local_ver)
-        return
+        return None
 
     assets = best_release.get("assets", [])
     zip_asset = None
@@ -615,7 +603,7 @@ def check_and_apply_update():
             break
     if not zip_asset:
         log.info("No zip asset in release — skipping update.")
-        return
+        return None
 
     download_url = zip_asset["browser_download_url"]
     log.info("Update available: v%s -> v%s", local_ver, remote_ver)
@@ -633,7 +621,10 @@ def check_and_apply_update():
                     f.write(chunk)
     except Exception as e:
         log.error("Download failed: %s", e)
-        return
+        return None
+
+    if _backend_already_running():
+        _kill_running_backend()
 
     backup = BACKEND_DIR + "_backup"
     try:
@@ -651,12 +642,14 @@ def check_and_apply_update():
         with open(VERSION_FILE, "w", encoding="utf-8") as f:
             f.write(remote_ver)
         log.info("Updated to v%s.", remote_ver)
+        return remote_ver
 
     except Exception as e:
         log.error("Update failed: %s", e)
         if os.path.exists(backup) and not os.path.exists(BACKEND_DIR):
             os.rename(backup, BACKEND_DIR)
         log.info("Rolled back to previous version.")
+        return None
 
 
 def ensure_firewall_rule():
@@ -685,8 +678,7 @@ def ensure_firewall_rule():
 
 
 def main():
-    _create_job_object()
-    log.info("Job object created — child processes will die with launcher.")
+    log.info("Launcher started (pid %d).", os.getpid())
 
     machine_id = _machine_id_fallback()
     license_path = os.path.join(BASE_DIR, "license.json")
@@ -747,7 +739,21 @@ def main():
                 "Please check your internet connection and try again."
             )
 
-    check_and_apply_update()
+    updated_ver = check_and_apply_update()
+
+    url = f"http://localhost:{BACKEND_PORT}"
+
+    if updated_ver:
+        _show_info(
+            f"Hercules updated to v{updated_ver}.\n"
+            "Restarting services with the new version..."
+        )
+
+    if _backend_already_running() and not updated_ver:
+        log.info("Backend already running on port %s — opening browser only.", BACKEND_PORT)
+        webbrowser.open(url)
+        log.info("Launcher exiting (services already running in background).")
+        return
 
     if not os.path.exists(PG_CTL):
         _fatal(
@@ -755,35 +761,24 @@ def main():
             "Expected folder: psql/bin/ with pg_ctl.exe, initdb.exe, pg_isready.exe"
         )
 
-    kill_previous_instances()
+    if not updated_ver:
+        kill_previous_instances()
+    _clean_stale_postmaster_pid()
     init_db_if_needed()
-    start_postgres()
-    wait_for_db()
+
+    result = run([PG_ISREADY, "-h", "127.0.0.1", "-p", PORT, "-d", "postgres"])
+    pg_running = result.returncode == 0 and (result.stdout or b"").strip().endswith(b"accepting connections")
+    if not pg_running:
+        start_postgres()
+        wait_for_db()
+
     run_setup()
     ensure_firewall_rule()
-    backend_proc = start_backend()
+    start_backend()
 
-    atexit.register(shutdown, backend_proc)
-
-    url = f"http://localhost:{BACKEND_PORT}"
     log.info("System started. Opening %s", url)
     webbrowser.open(url)
-
-    stop_event = threading.Event()
-
-    def _signal_handler(signum, frame):
-        log.info("Received signal %s, initiating shutdown...", signum)
-        stop_event.set()
-
-    signal.signal(signal.SIGINT, _signal_handler)
-    signal.signal(signal.SIGTERM, _signal_handler)
-
-    log.info("Launcher staying alive (pid %d). Kill this process to stop Hercules.", os.getpid())
-    while not stop_event.is_set():
-        if backend_proc.poll() is not None:
-            log.warning("Backend exited unexpectedly (code %d).", backend_proc.returncode)
-            break
-        stop_event.wait(5)
+    log.info("Launcher exiting — PostgreSQL and backend continue in background.")
 
 
 if __name__ == "__main__":

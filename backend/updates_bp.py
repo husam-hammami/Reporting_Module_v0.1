@@ -80,6 +80,15 @@ def _fetch_releases():
         return json.loads(resp.read().decode('utf-8'))
 
 
+@updates_bp.route('/settings/version', methods=['GET'])
+def get_version():
+    """Return the current app version and branch (lightweight, no GitHub call)."""
+    return jsonify({
+        'version': _get_local_version(),
+        'branch': _get_release_branch(),
+    }), 200
+
+
 @updates_bp.route('/settings/updates/check', methods=['GET'])
 @login_required
 def check_for_updates():
