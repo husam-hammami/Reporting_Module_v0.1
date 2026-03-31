@@ -4,7 +4,7 @@
 
 Hercules needs an AI layer ("Hercules AI") that generates smart report summaries, detects downtime, benchmarks production rates, and balances line output. This plan covers the complete Phase 1: setup page + email summaries + distribution toggle — shipped together so users get immediate value.
 
-**User journey:** Admin scans reports → reviews tags → marks complete → next distribution email includes an AI summary. Complete cycle, immediate ROI.
+**User journey:** Admin scans reports -> reviews tags -> marks complete -> next distribution email includes an AI summary. Complete cycle, immediate ROI.
 
 ---
 
@@ -15,6 +15,175 @@ Hercules needs an AI layer ("Hercules AI") that generates smart report summaries
 3. Toggle on Distribution Rules — "Include AI Summary: On/Off"
 4. Post-setup confirmation — show what Hercules AI learned
 5. New-report notification — sidebar badge when unscanned reports exist
+6. **Dual AI provider support — Cloud (Claude API) or Local (LM Studio)**
+
+---
+
+## AI Provider Architecture
+
+### Dual Provider Design
+
+Hercules AI supports two AI backends. The admin chooses one during setup. Both use the same prompt templates and the same abstraction layer — only the HTTP call differs.
+
+| | Cloud (Claude API) | Local (LM Studio) |
+|---|---|---|
+| **Default model** | `claude-opus-4-6` | Qwen2.5 32B Q4_K_M |
+| **Fallback models** | Sonnet 4.6, Haiku 4.5 | Llama 3.1 32B, any 32B+ |
+| **Speed** | ~1-3 sec per call | ~10-20 sec per call (CPU) |
+| **Cost** | ~$109/year (Opus, 10 calls/day) | $0 (electricity only) |
+| **Data privacy** | Data leaves local network | 100% on-premises |
+| **Quality** | Best (frontier model) | Good (adequate for summaries) |
+| **Requirements** | API key + internet | LM Studio running + 24GB free RAM |
+
+### Cost Breakdown — Cloud Models
+
+Per call (~1K input tokens, ~200 output tokens):
+
+| Model | Per Call | 10 calls/day | Per Year |
+|---|---|---|---|
+| Claude Opus 4.6 | ~$0.030 | $0.30 | **$109** |
+| Claude Sonnet 4.6 | ~$0.006 | $0.06 | **$22** |
+| Claude Haiku 4.5 | ~$0.002 | $0.02 | **$7** |
+
+### Local Model Requirements
+
+**Minimum server specs for 32B Q4:**
+- RAM: 24 GB free (model) + existing workload
+- CPU: 16+ cores recommended (32-core EPYC ideal)
+- Disk: ~20 GB for model file
+- Software: LM Studio with local server enabled (port 1234)
+
+**Why 32B and not 8B:**
+- Setup page feeds 100-200+ tags with labels, types, values, line assignments
+- Model must understand tag relationships and provide intelligent classification feedback
+- 8B models lose coherence with large structured inputs
+- 32B is the sweet spot: fits in RAM, adequate reasoning, acceptable speed on CPU
+
+**Expected local performance (32-core AMD EPYC 9374F, 128GB RAM, CPU-only):**
+- Email summary (120 words): ~10-20 seconds
+- Tag scan analysis (128 tags): ~30-60 seconds
+- Preview summary: ~10-20 seconds
+- All calls are async/background — user sees a spinner, never blocks UI
+
+### Provider Abstraction Layer (`backend/ai_provider.py`)
+
+Single module that wraps both providers behind one interface:
+
+```python
+"""
+AI Provider abstraction — routes LLM calls to Cloud (Claude API) or Local (LM Studio).
+Provider is selected via hercules_ai_config.ai_provider ('cloud' or 'local').
+"""
+
+import logging
+import requests
+
+logger = logging.getLogger(__name__)
+
+try:
+    import anthropic
+    _HAS_ANTHROPIC = True
+except ImportError:
+    _HAS_ANTHROPIC = False
+
+try:
+    import openai
+    _HAS_OPENAI = True
+except ImportError:
+    _HAS_OPENAI = False
+
+
+def generate(prompt, config, timeout=30):
+    provider = config.get('ai_provider', 'cloud')
+    if provider == 'local':
+        return _generate_local(prompt, config, timeout)
+    else:
+        return _generate_cloud(prompt, config, timeout)
+
+
+def _generate_cloud(prompt, config, timeout):
+    if not _HAS_ANTHROPIC:
+        logger.error("anthropic package not installed")
+        return None
+    api_key = config.get('llm_api_key', '')
+    if not api_key:
+        logger.warning("No Claude API key configured")
+        return None
+    model = config.get('llm_model', 'claude-opus-4-6')
+    try:
+        client = anthropic.Anthropic(api_key=api_key, timeout=timeout)
+        response = client.messages.create(
+            model=model, max_tokens=500,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.content[0].text
+    except Exception as e:
+        logger.warning("Claude API call failed: %s", e)
+        return None
+
+
+def _generate_local(prompt, config, timeout):
+    base_url = config.get('local_server_url', 'http://localhost:1234/v1')
+    model = config.get('local_model', '')
+    if _HAS_OPENAI:
+        try:
+            client = openai.OpenAI(base_url=base_url, api_key="not-needed", timeout=timeout)
+            response = client.chat.completions.create(
+                model=model or "local-model",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=500
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.warning("Local LM Studio call failed: %s", e)
+            return None
+    try:
+        resp = requests.post(
+            f"{base_url}/chat/completions",
+            json={"model": model or "local-model",
+                  "messages": [{"role": "user", "content": prompt}],
+                  "max_tokens": 500},
+            timeout=timeout
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+    except Exception as e:
+        logger.warning("Local LM Studio call failed: %s", e)
+        return None
+
+
+def test_connection(config):
+    provider = config.get('ai_provider', 'cloud')
+    if provider == 'local':
+        base_url = config.get('local_server_url', 'http://localhost:1234/v1')
+        try:
+            resp = requests.get(f"{base_url}/models", timeout=5)
+            resp.raise_for_status()
+            models = resp.json().get("data", [])
+            if models:
+                return {"ok": True, "message": "Connected to LM Studio", "model": models[0].get("id", "unknown")}
+            return {"ok": True, "message": "Connected but no model loaded", "model": None}
+        except requests.ConnectionError:
+            return {"ok": False, "message": "Cannot reach LM Studio. Is it running?", "model": None}
+        except Exception as e:
+            return {"ok": False, "message": str(e), "model": None}
+    else:
+        api_key = config.get('llm_api_key', '')
+        if not api_key:
+            return {"ok": False, "message": "No API key configured", "model": None}
+        if not _HAS_ANTHROPIC:
+            return {"ok": False, "message": "anthropic package not installed", "model": None}
+        try:
+            client = anthropic.Anthropic(api_key=api_key, timeout=10)
+            client.messages.create(
+                model=config.get('llm_model', 'claude-opus-4-6'),
+                max_tokens=10,
+                messages=[{"role": "user", "content": "Say OK"}]
+            )
+            return {"ok": True, "message": "Connected to Claude API", "model": config.get('llm_model', 'claude-opus-4-6')}
+        except Exception as e:
+            return {"ok": False, "message": str(e), "model": None}
+```
 
 ---
 
@@ -37,31 +206,14 @@ Hercules needs an AI layer ("Hercules AI") that generates smart report summaries
 "Hercules AI learns your plant from your reports. Review its understanding so it can summarize reports, detect downtime, and track performance."
 
 ### Post-Setup Confirmation Card
-After "Mark Setup Complete", Zone 1 transforms into a summary:
-```
-✓ Hercules AI is active
-Tracking 128 tags across 4 lines:
-  Mill A — 32 tags (24 production totals, 5 flow rates, 3 on/off)
-  Mill B — 28 tags (18 production totals, 6 flow rates, 4 measurements)
-  FCL — 18 tags (8 production totals, 4 flow rates, 6 measurements)
-  Pasta — 12 tags (3 production totals, 3 flow rates, 6 selectors)
-
-Enable "Include AI Summary" on your distribution rules to start receiving insights.
-```
+After "Mark Setup Complete", Zone 1 transforms into a summary showing provider, model, and tag counts per line.
 
 ### New-Report Badge
 - Backend: `GET /hercules-ai/status` returns `unseen_reports_count` by comparing `report_builder_templates.updated_at` against `last_scan_at`
 - Frontend: sidebar nav item shows a small number badge when `unseen_reports_count > 0`
-- Setup page top bar shows: "2 new reports since last scan. [Scan Now]"
 
-### Preview Summary (before any distribution runs)
-After setup complete, a "Preview Summary" button appears. Calls a new endpoint that:
-1. Picks the most recent report template with tracked tags
-2. Fetches last 24h of historian data for those tags
-3. Generates a sample AI summary
-4. Displays it in a card on the setup page
-
-This proves the system works without waiting for the next scheduled distribution.
+### Preview Summary
+After setup complete, a "Preview Summary" button calls an endpoint that picks the most recent report template, fetches last 24h of historian data, generates a sample AI summary, and displays it in a card.
 
 ---
 
@@ -99,7 +251,6 @@ CREATE INDEX IF NOT EXISTS idx_hai_profiles_line ON hercules_ai_tag_profiles(lin
 CREATE INDEX IF NOT EXISTS idx_hai_profiles_reviewed ON hercules_ai_tag_profiles(is_reviewed);
 CREATE INDEX IF NOT EXISTS idx_hai_profiles_tracked ON hercules_ai_tag_profiles(is_tracked);
 
--- Reuse trigger from create_tags_tables.sql
 CREATE TRIGGER update_hai_profiles_modtime
     BEFORE UPDATE ON hercules_ai_tag_profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -118,22 +269,18 @@ ALTER TABLE distribution_rules
 Both added to `MIGRATION_ORDER` in `backend/init_db.py`.
 
 Config keys (inserted on first load):
-- `setup_completed` → `{"value": false}`
-- `last_scan_at` → `{"value": null}`
-- `production_value_per_ton` → `{"value": 0, "currency": "USD"}`
-- `llm_api_key` → `{"value": ""}` (entered by admin on setup page)
-- `llm_model` → `{"value": "claude-haiku-4-5-20251001"}`
-
-GET `/hercules-ai/config` returns flattened: `{"setup_completed": false, "llm_api_key": "", ...}`
-PUT `/hercules-ai/config` accepts: `{"llm_api_key": "sk-ant-..."}` — stored in DB, not in code.
+- `setup_completed` -> `{"value": false}`
+- `last_scan_at` -> `{"value": null}`
+- `production_value_per_ton` -> `{"value": 0, "currency": "USD"}`
+- `ai_provider` -> `{"value": "cloud"}`
+- `llm_api_key` -> `{"value": ""}`
+- `llm_model` -> `{"value": "claude-opus-4-6"}`
+- `local_server_url` -> `{"value": "http://localhost:1234/v1"}`
+- `local_model` -> `{"value": ""}`
 
 ### 3. Blueprint: `backend/hercules_ai_bp.py`
 
-Uses `_get_db_connection()` from `report_builder_bp.py` pattern (checks both `'app'` and `'__main__'`).
-All routes with `@login_required`.
-Scan protected with `_scan_in_progress` flag + try/finally (409 if running).
-
-**Routes:**
+Uses `_get_db_connection()` pattern. All routes with `@login_required`. Scan protected with `_scan_in_progress` flag.
 
 | Method | Route | Purpose |
 |--------|-------|---------|
@@ -143,108 +290,45 @@ Scan protected with `_scan_in_progress` flag + try/finally (409 if running).
 | PUT | `/hercules-ai/profiles/<int:id>` | Update single profile by ID |
 | GET | `/hercules-ai/config` | Get global config (flattened) |
 | PUT | `/hercules-ai/config` | Update config entries |
-| GET | `/hercules-ai/status` | Status: setup_completed, tags counts, last_scan_at, unseen_reports_count |
-| POST | `/hercules-ai/preview-summary` | Generate a sample AI summary from most recent report data |
+| GET | `/hercules-ai/status` | Status: setup_completed, counts, last_scan_at, unseen_reports_count |
+| POST | `/hercules-ai/preview-summary` | Generate sample AI summary from most recent report data |
+| POST | `/hercules-ai/test-connection` | Test AI provider connectivity + return detected model |
 
 ### 4. Scanner Logic (`POST /hercules-ai/scan`)
 
-**Step 1 — Extract tags using existing code:**
-- Import `extract_all_tags` from `distribution_engine.py` (DO NOT reimplement)
-- Handles: tag cells, formula tags, group tags, mapping cells, silo widgets, series, summaries
+1. Extract tags via `extract_all_tags` from `distribution_engine.py` (DO NOT reimplement)
+2. Extract labels/context: walk paginatedSections, KPI rows, headers, widgets
+3. Load tag metadata from `tags` table
+4. Classify (rule-based): counter/rate/boolean/percentage/analog/setpoint/id_selector/unknown
+5. Check data availability via JOIN on tag_history_archive (last 30 days)
+6. Handle multi-report tags: store all in `evidence.reports[]`
+7. Mark orphaned profiles: `data_status='deleted'`, `is_tracked=false`
+8. UPSERT with user-correction protection (`WHERE source = 'auto'`)
+9. Error handling per template
+10. Update `last_scan_at`
 
-**Step 2 — Extract labels/context (enrichment layer):**
-- Walk `paginatedSections[]`: pair static ID cells with tag cells for label mapping
-- Walk KPI rows: `kpi.label` → `kpi.tagName`
-- Walk headers: `statusLabel` → `statusTagName`
-- Walk widgets: `config.title` → `dataSource.tagName`
-- Derive `line_name`: header `title` (priority) → template `name` (fallback)
-- Derive `category`: section `label` field
-- Store all report appearances in `evidence.reports[]`
+### 5. Preview Summary (`POST /hercules-ai/preview-summary`)
 
-**Step 3 — Load tag metadata:**
-- Query `tags`: tag_name, display_name, unit, data_type, is_counter, is_active, source_type
-
-**Step 4 — Classify (rule-based):**
-- `is_counter=true` + unit in (kg, t, ton, lb) → `counter` 0.95
-- `is_counter=true` → `counter` 0.85
-- `data_type=BOOL` → `boolean` 0.90
-- unit `%` → `percentage` 0.85
-- unit in (t/h, kg/h, l/min, m3/h) → `rate` 0.90
-- unit in (°C, °F, K) → `analog` 0.90
-- unit in (bar, psi, kPa, mbar) → `analog` 0.90
-- unit in (rpm, A, V, kW, kWh) → `analog` 0.80-0.85
-- tag name contains "selected"/"running"/"emptying" + BOOL → `boolean` 0.80
-- tag name contains "id"/"bin" at word boundary → `id_selector` 0.70
-- Else → `unknown` 0.30
-
-**Step 5 — Data availability (JOIN through tags):**
-```sql
-SELECT t.tag_name, COUNT(a.id) as reading_count
-FROM tags t LEFT JOIN tag_history_archive a ON a.tag_id = t.id
-  AND a.archive_hour > NOW() - INTERVAL '30 days'
-WHERE t.is_active = true GROUP BY t.tag_name
-```
-- \>1000 → `active`, 1-1000 → `sparse`, 0 → `empty`
-
-**Step 6 — Multi-report tags:** Store all in `evidence.reports[]`, use first header-bearing template for line_name.
-
-**Step 7 — Orphaned profiles:** Tag deleted from `tags` → set `data_status='deleted'`, `is_tracked=false`.
-
-**Step 8 — UPSERT (protect user corrections):**
-```sql
-INSERT INTO hercules_ai_tag_profiles (..., source) VALUES (..., 'auto')
-ON CONFLICT (tag_name) DO UPDATE SET label=EXCLUDED.label, ...
-WHERE hercules_ai_tag_profiles.source = 'auto';
-```
-
-**Step 9 — Error handling:** try/except per template, return scan results with errors.
-
-**Step 10 — Update `last_scan_at` config.**
-
-### 5. Preview Summary Endpoint (`POST /hercules-ai/preview-summary`)
-
-1. Check `setup_completed` and `llm_api_key` exist
-2. Pick first report template that has tracked tags
-3. Fetch last 24h of historian data for those tags via existing `/historian/by-tags` query logic
-4. Build context: tag labels, types, values, line names from `hercules_ai_tag_profiles`
-5. Call Claude API with the prompt (see section 7)
-6. Return `{"summary": "...", "report_name": "...", "tags_used": 12}`
+1. Check setup_completed + provider configured
+2. Pick first template with tracked tags
+3. Fetch last 24h historian data
+4. Build context from hercules_ai_tag_profiles
+5. Call `ai_provider.generate()`
+6. Return summary + report_name + tags_used count
 
 ### 6. Email Summary Integration (`backend/distribution_engine.py`)
 
-In `execute_rule()`, after report data is computed:
+In `execute_rule()`, after report data computed, call `_generate_ai_summary()` which uses `ai_provider.generate()`. Timeout: 10s cloud, 30s local. On any failure -> skip silently, send email without summary.
 
-```python
-if rule.get('include_ai_summary'):
-    try:
-        summary = _generate_ai_summary(report_name, tag_data, time_range)
-        if summary:
-            body_html = _prepend_summary_to_email(summary, body_html)
-    except Exception as e:
-        logger.warning("AI summary generation failed, sending without: %s", e)
-```
+### 7. LLM Configuration
 
-`_generate_ai_summary()`:
-1. Load tracked profiles from `hercules_ai_tag_profiles` for tags in this report
-2. Build structured context (label, type, value, line_name for each tag)
-3. Load API key from `hercules_ai_config`
-4. If no key → return None (skip silently)
-5. Call Claude API with 10-second timeout
-6. On timeout/error → return None (never block email delivery)
-7. Generate ONE summary per distribution rule (not per report)
+**Packages:** `anthropic` + `openai` in requirements.txt (both graceful imports).
 
-### 7. LLM Prompt & Configuration
+**Default cloud model:** `claude-opus-4-6`
 
-**Package:** Add `anthropic` to `requirements.txt`. Graceful import:
-```python
-try:
-    import anthropic
-    _HAS_ANTHROPIC = True
-except ImportError:
-    _HAS_ANTHROPIC = False
-```
+**Cloud model options:** Opus ($109/yr), Sonnet ($22/yr), Haiku ($7/yr)
 
-**Model:** `claude-haiku-4-5-20251001` (cheapest, fastest). Configurable via `hercules_ai_config.llm_model`.
+**Recommended local model:** Qwen2.5 32B Q4_K_M
 
 **Prompt template:**
 ```
@@ -267,16 +351,10 @@ Rules:
 - Do not use markdown formatting. Plain text only.
 ```
 
-**Cost:** ~$0.001/call with Haiku. 10 daily rules = $3.65/year. Negligible.
-
-**Timeout:** 10 seconds hard limit. On failure, email sends without summary.
-
 ### 8. Register in `backend/app.py`
 
-- Import (line ~41): `from hercules_ai_bp import hercules_ai_bp`
-- Register (line ~265): `app.register_blueprint(hercules_ai_bp, url_prefix='/api')`
-- Add to `backend/hercules.spec` hiddenimports: `'hercules_ai_bp'`
-- Add `'anthropic'` to hiddenimports (graceful — won't fail if missing)
+- Import + register `hercules_ai_bp`
+- Add to hercules.spec hiddenimports: `hercules_ai_bp`, `ai_provider`, `anthropic`, `openai`
 
 ---
 
@@ -284,172 +362,40 @@ Rules:
 
 ### 9. API Layer: `Frontend/src/API/herculesAIApi.js`
 
-```js
-import axios from './axios';
-const BASE = '/api/hercules-ai';
-export const herculesAIApi = {
-  scan:            ()          => axios.post(`${BASE}/scan`),
-  getProfiles:     ()          => axios.get(`${BASE}/profiles`),
-  bulkUpdate:      (profiles)  => axios.put(`${BASE}/profiles/bulk`, { profiles }),
-  updateProfile:   (id, data)  => axios.put(`${BASE}/profiles/${id}`, data),
-  getConfig:       ()          => axios.get(`${BASE}/config`),
-  updateConfig:    (data)      => axios.put(`${BASE}/config`, data),
-  getStatus:       ()          => axios.get(`${BASE}/status`),
-  previewSummary:  ()          => axios.post(`${BASE}/preview-summary`),
-};
-```
+Standard axios wrapper with: scan, getProfiles, bulkUpdate, updateProfile, getConfig, updateConfig, getStatus, previewSummary, testConnection.
 
 ### 10. Setup Page: `Frontend/src/Pages/HerculesAI/HerculesAISetup.jsx`
 
-Settings page (not wizard). Adapts based on state:
+Three states:
 
-#### State A: First Visit (no scan done)
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Hercules AI                                                 │
-│  Learn your plant from your reports. Review its              │
-│  understanding so it can summarize reports, detect           │
-│  downtime, and track performance.                            │
-│                                                              │
-│        ┌─────────────────────┐                               │
-│        │   Scan My Reports   │                               │
-│        └─────────────────────┘                               │
-│                                                              │
-│  Hercules AI will read your report templates to              │
-│  understand which tags matter and what they measure.         │
-└──────────────────────────────────────────────────────────────┘
-```
+**State A — First Visit:** Title, subtitle, "Scan My Reports" button.
 
-#### State B: Scan Done, Reviewing
-Three zones as previously designed:
+**State B — Reviewing:** Top bar (counts + progress), filter bar (pill tabs + search + bulk actions), tag list (grouped by line, collapsible), AI Provider config section at bottom.
 
-**Zone 1 — Top Bar**
-- Status: "146 tags · 128 confirmed · 12 pending · 6 excluded"
-- Progress bar (green/amber/gray)
-- "Scan Reports" button + last scanned timestamp
-- If unseen reports: "2 new reports since last scan. [Scan Now]"
+**AI Provider Config Section:**
+- Radio: Cloud (Claude API) / Local (LM Studio)
+- Cloud: API key input (masked) + model dropdown (Opus/Sonnet/Haiku with costs)
+- Local: server URL input + auto-detected model name + status indicator
+- Test Connection button
+- Mark Setup Complete button
 
-**Zone 2 — Filter/Action Bar**
-- Pill tabs: All | Pending | Confirmed | Excluded (with counts)
-- Line dropdown + search
-- Bulk bar (when checkboxes selected): [Confirm] [Exclude] [Set Type ▾]
-
-**Zone 3 — Tag List (grouped by line)**
-- Collapsible cards per line. Pending groups expanded, confirmed collapsed.
-- Search auto-expands matching groups.
-- "Other Tags — Not in Reports" at bottom, collapsed.
-
-**Tag row:**
-```
-☑ | mil_b_b1_totalizer | B1 Totalizer | [Production Total] | ●●● | ✓ | kg | MIL-B
-```
-
-**Expanded row:**
-- "Hercules AI classified this as: Production Total. Reason: counter flag set, unit=kg"
-- Type pill buttons: Production Total | Flow Rate | Measurement | On/Off | Percentage | Setting | Selector | Unclassified
-- Label input + notes input
-- [Confirm] [Exclude] [Cancel]
-
-**Bottom:**
-- API Key input field (masked, with show/hide toggle): "Claude API Key (required for AI summaries)"
-- [Mark Setup Complete] button
-- "You can return anytime to update."
-
-#### State C: Setup Complete
-Zone 1 transforms into confirmation card:
-```
-┌──────────────────────────────────────────────────────────────┐
-│  ✓ Hercules AI is active                      [Edit Setup]  │
-│                                                              │
-│  Tracking 128 tags across 4 lines:                           │
-│  Mill A — 32 tags · Mill B — 28 tags                         │
-│  FCL — 18 tags · Pasta — 12 tags                             │
-│                                                              │
-│  [Preview Summary]  Enable "Include AI Summary" on your      │
-│                     distribution rules to receive insights.  │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────────┐│
-│  │ Preview: "Mill B produced 24,500 kg total. B1 Totalizer ││
-│  │ contributed 12,300 kg (50%). No downtime detected.       ││
-│  │ Data quality: 98%."                                      ││
-│  └──────────────────────────────────────────────────────────┘│
-└──────────────────────────────────────────────────────────────┘
-```
-- "Edit Setup" returns to State B (review mode)
-- "Preview Summary" calls the preview endpoint and shows result
-- Below: tag list still visible but read-only unless "Edit Setup" clicked
+**State C — Complete:** Confirmation card with provider + model + tag counts, Preview Summary button, read-only tag list, Edit Setup button.
 
 ### 11. Distribution Rule Toggle
 
-**`Frontend/src/Pages/Distribution/DistributionRuleEditor.jsx`:**
-- Add toggle: "Include AI Summary" (maps to `include_ai_summary`)
-- Place after format selector
-- If Hercules AI setup not complete: toggle disabled, tooltip: "Complete Hercules AI setup first"
-- Default: off
-- Add `include_ai_summary: false` to `EMPTY_RULE` constant
+Add "Include AI Summary" toggle to `DistributionRuleEditor.jsx`. Disabled if setup not complete. Add to `EMPTY_RULE`.
 
 ### 12. Sidebar Badge
 
-**`Frontend/src/Components/Common/SideNav.jsx`:**
-- For the Hercules AI nav item, fetch `GET /hercules-ai/status` on mount
-- If `unseen_reports_count > 0`, show a small number badge on the nav item
-- Refresh on navigation (not polling)
+Fetch unseen_reports_count on mount, show badge on Hercules AI nav item.
 
-### 13. Navigation: `Frontend/src/Data/Navbar.js`
+### 13-14. Navigation + Route
 
-```js
-{ name: t('nav.herculesAI'), icon: Sparkles, link: '/hercules-ai', roles: [Roles.Admin] }
-```
+Nav item with Sparkles icon after Distribution. Protected route for Admin role.
 
-After Distribution in nav order.
+### 15. i18n — ~60 keys across all 4 locale files
 
-### 14. Route: `Frontend/src/Routes/AppRoutes.jsx`
-
-```jsx
-<Route path="hercules-ai" element={
-  <ProtectedRoute roles={[Roles.Admin]}><HerculesAISetup /></ProtectedRoute>
-} />
-```
-
-### 15. i18n — All 4 Locale Files
-
-~45 keys per file:
-```
-nav.herculesAI, nav.tooltip.herculesAI
-
-herculesAI.title, herculesAI.subtitle
-herculesAI.scanButton, herculesAI.scanMyReports, herculesAI.scanning, herculesAI.lastScanned
-herculesAI.firstVisit.description, herculesAI.firstVisit.explanation
-
-herculesAI.status.confirmed, .pending, .excluded, .tags, .active, .tracking
-herculesAI.newReports (e.g. "{count} new reports since last scan")
-
-herculesAI.filter.all, .pending, .confirmed, .excluded
-herculesAI.allLines, herculesAI.search
-herculesAI.selectAll, herculesAI.deselectAll, herculesAI.selected
-herculesAI.bulk.confirm, .exclude, .setType
-
-herculesAI.type.counter ("Production Total"), .rate ("Flow Rate"), .boolean ("On/Off"),
-  .percentage ("Percentage"), .analog ("Measurement"), .setpoint ("Setting"),
-  .id_selector ("Selector"), .unknown ("Unclassified")
-
-herculesAI.confidence.high, .medium, .low
-herculesAI.expand.classified, .reason
-herculesAI.confirm, .exclude, .cancel
-herculesAI.label, .tagName, .unit, .source, .notes
-herculesAI.unassigned, .unassignedDesc
-
-herculesAI.apiKey, herculesAI.apiKeyHint
-herculesAI.markComplete, .editSetup, .saved
-herculesAI.scanFirst, .noTemplates, .noTemplatesHint
-
-herculesAI.dataStatus.active, .sparse, .empty, .deleted
-
-herculesAI.preview, .previewButton, .previewLoading, .previewError, .previewNoData
-herculesAI.complete.title, .complete.tracking, .complete.enableHint
-
-distribution.includeAISummary, distribution.aiSummaryDisabledHint
-```
+Provider-related keys: title, cloud, local, descriptions, settings labels, connection status messages, model descriptions with costs, LM Studio hints.
 
 ---
 
@@ -457,60 +403,52 @@ distribution.includeAISummary, distribution.aiSummaryDisabledHint
 - `backend/migrations/create_hercules_ai_tables.sql`
 - `backend/migrations/add_ai_summary_to_distribution.sql`
 - `backend/hercules_ai_bp.py`
+- `backend/ai_provider.py`
 - `Frontend/src/Pages/HerculesAI/HerculesAISetup.jsx`
 - `Frontend/src/API/herculesAIApi.js`
 
 ## Files to Modify
-- `backend/init_db.py` — add both migrations to MIGRATION_ORDER
-- `backend/app.py` — import + register hercules_ai_bp
-- `backend/hercules.spec` — add `'hercules_ai_bp'`, `'anthropic'` to hiddenimports
-- `backend/distribution_engine.py` — add `_generate_ai_summary()` + call in `execute_rule()`
-- `backend/requirements.txt` — add `anthropic`
-- `Frontend/src/Routes/AppRoutes.jsx` — add /hercules-ai route
+- `backend/init_db.py` — add migrations to MIGRATION_ORDER
+- `backend/app.py` — register hercules_ai_bp
+- `backend/hercules.spec` — add hiddenimports
+- `backend/distribution_engine.py` — add AI summary generation
+- `backend/requirements.txt` — add anthropic, openai
+- `Frontend/src/Routes/AppRoutes.jsx` — add route
 - `Frontend/src/Data/Navbar.js` — add nav item
-- `Frontend/src/Pages/Distribution/DistributionRuleEditor.jsx` — add AI summary toggle + EMPTY_RULE update
-- `Frontend/src/Components/Common/SideNav.jsx` — add badge for unseen reports
-- `Frontend/src/i18n/en.json` — add ~45 keys
-- `Frontend/src/i18n/ar.json` — add ~45 keys
-- `Frontend/src/i18n/hi.json` — add ~45 keys
-- `Frontend/src/i18n/ur.json` — add ~45 keys
-
-## Key Patterns to Reuse
-- `report_builder_bp.py` → `_get_db_connection()` (checks 'app' + '__main__')
-- `distribution_bp.py` → `_ensure_table()` guard pattern
-- `distribution_engine.py` → `extract_all_tags()` (DO NOT reimplement)
-- `smtp_config.py` → pattern for obfuscated/stored API keys
-- `ShiftsSettings.jsx` / `SystemSettings.jsx` → card container, form patterns
-- `DistributionPage.jsx` → dark mode theme, search/filter tabs
-- `DistributionRuleEditor.jsx` → toggle switch pattern, EMPTY_RULE constant
+- `Frontend/src/Pages/Distribution/DistributionRuleEditor.jsx` — add toggle
+- `Frontend/src/Components/Common/SideNav.jsx` — add badge
+- `Frontend/src/i18n/en.json`, `ar.json`, `hi.json`, `ur.json` — add ~60 keys each
 
 ## Implementation Order
-1. Migration SQL (both files) + init_db.py
-2. Backend blueprint — scan + CRUD + config + preview-summary endpoints
-3. Register in app.py + hercules.spec
-4. `anthropic` in requirements.txt
-5. Distribution engine — `_generate_ai_summary()` + integration in `execute_rule()`
-6. Frontend API layer
-7. Setup page (all 3 states: first visit, reviewing, complete)
-8. Distribution rule toggle + EMPTY_RULE
-9. Sidebar badge
-10. Route + nav
-11. i18n (all 4 files)
+1. `ai_provider.py` (everything depends on it)
+2. Migration SQL + init_db.py
+3. Backend blueprint (all endpoints)
+4. Register in app.py + hercules.spec
+5. requirements.txt
+6. Distribution engine integration
+7. Frontend API layer
+8. Setup page (all 3 states + provider config)
+9. Distribution rule toggle
+10. Sidebar badge
+11. Route + nav
+12. i18n (all 4 files)
 
 ## Verification
-1. `python app.py` — both tables created, no import errors
-2. `POST /api/hercules-ai/scan` — populates profiles from templates
-3. `GET /api/hercules-ai/profiles` — tags grouped by line with labels + types
-4. `GET /api/hercules-ai/status` — correct counts + unseen_reports_count
-5. Open `/hercules-ai` — shows first-visit state
-6. Click "Scan My Reports" → tags appear grouped by line
-7. Expand tag → change type → Confirm → persists on reload
-8. Bulk select → Confirm All → all updated
-9. Re-scan → user corrections survive
-10. Enter API key → Mark Setup Complete → confirmation card appears
-11. Click "Preview Summary" → sample AI summary displayed
-12. Open Distribution → edit rule → "Include AI Summary" toggle visible
-13. If setup not complete → toggle disabled with hint
-14. Run distribution rule with AI summary on → email has summary paragraph at top
-15. API call fails/times out → email sends without summary (no error to user)
-16. Add new report template → sidebar shows badge → re-scan picks up new tags
+1. `python app.py` — tables created, imports clean
+2. Scan populates profiles from templates
+3. Profiles grouped by line with correct labels/types
+4. Status endpoint returns correct counts
+5. First-visit state renders correctly
+6. Scan -> tags appear grouped -> expand -> edit -> confirm -> persists
+7. Bulk operations work
+8. Re-scan preserves user corrections
+9. Cloud: API key -> Test Connection -> "Connected (Claude Opus 4.6)"
+10. Local: URL -> Test Connection -> "Connected (Qwen2.5-32B-Q4_K_M)"
+11. Provider switch persists on reload
+12. Setup complete shows provider + model in confirmation
+13. Preview Summary works with selected provider
+14. Distribution toggle visible, disabled if setup incomplete
+15. Email includes AI summary when toggle on
+16. Cloud timeout (10s) / Local timeout (30s) -> email sends without summary
+17. New report -> sidebar badge -> re-scan picks up new tags
+18. Provider swap -> next distribution uses new provider
