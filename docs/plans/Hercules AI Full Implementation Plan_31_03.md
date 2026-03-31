@@ -14,11 +14,11 @@ Each phase builds on the previous. Phase 1 creates the foundation (tag profiles,
 
 ## Phase 1 — Setup + Email Summaries
 
-**User journey:** Admin scans reports → reviews tags → marks complete → next distribution email includes an AI summary.
+**User journey:** Admin scans reports → reviews tags → corrects any mistakes → marks complete → next distribution email includes an AI summary.
 
 ### Scope
 
-1. AI Setup page — scan, classify, review, confirm tags
+1. AI Setup page — scan, classify, review, correct, confirm tags
 2. Email summary generation — AI paragraph at top of distribution emails
 3. Toggle on Distribution Rules — "Include AI Summary: On/Off"
 4. Post-setup confirmation — show what Hercules AI learned
@@ -57,7 +57,7 @@ Enable "Include AI Summary" on your distribution rules to start receiving insigh
 
 #### New-Report Badge
 - Backend: `GET /hercules-ai/status` returns `unseen_reports_count` by comparing `report_builder_templates.updated_at` against `last_scan_at`
-- Frontend: sidebar nav item shows a small number badge when `unseen_reports_count > 0`
+- Frontend: Navbar.js adds `badge` field to nav item data; SideNav reads it and renders count
 - Setup page top bar shows: "2 new reports since last scan. [Scan Now]"
 
 #### Preview Summary (before any distribution runs)
@@ -105,7 +105,7 @@ CREATE INDEX IF NOT EXISTS idx_hai_profiles_line ON hercules_ai_tag_profiles(lin
 CREATE INDEX IF NOT EXISTS idx_hai_profiles_reviewed ON hercules_ai_tag_profiles(is_reviewed);
 CREATE INDEX IF NOT EXISTS idx_hai_profiles_tracked ON hercules_ai_tag_profiles(is_tracked);
 
--- Reuse trigger from create_tags_tables.sql
+-- Reuse trigger from create_tags_tables.sql (runs first in MIGRATION_ORDER)
 CREATE TRIGGER update_hai_profiles_modtime
     BEFORE UPDATE ON hercules_ai_tag_profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -121,21 +121,43 @@ ALTER TABLE distribution_rules
     ADD COLUMN IF NOT EXISTS include_ai_summary BOOLEAN DEFAULT false;
 ```
 
-Both added to `MIGRATION_ORDER` in `backend/init_db.py`.
+**CRITICAL: Both migrations MUST be appended to the END of `MIGRATION_ORDER` in `backend/init_db.py`** — they depend on `update_updated_at_column()` defined in `create_tags_tables.sql` which is first in the list.
 
-Config keys (inserted on first load):
+```python
+MIGRATION_ORDER = [
+    # ... existing 21 entries ...
+    'add_must_change_password.sql',       # last existing
+    'create_hercules_ai_tables.sql',      # NEW — must be after create_tags_tables.sql
+    'add_ai_summary_to_distribution.sql', # NEW — must be after create_distribution_rules_table.sql
+]
+```
+
+Config keys (inserted on first load by `_ensure_config_defaults()`):
 - `setup_completed` → `{"value": false}`
 - `last_scan_at` → `{"value": null}`
 - `production_value_per_ton` → `{"value": 0, "currency": "USD"}`
 - `llm_api_key` → `{"value": ""}` (entered by admin on setup page)
 - `llm_model` → `{"value": "claude-haiku-4-5-20251001"}`
 
-GET `/hercules-ai/config` returns flattened: `{"setup_completed": false, "llm_api_key": "", ...}`
+GET `/hercules-ai/config` returns flattened: `{"setup_completed": false, "llm_api_key_set": true, ...}`
+**SECURITY: GET never returns the actual API key — only `llm_api_key_set: true/false` (whether key is non-empty). Only last 4 chars shown as `llm_api_key_hint: "...k2Xm"`.** Similar to how `smtp_config` redacts passwords.
+
 PUT `/hercules-ai/config` accepts: `{"llm_api_key": "sk-ant-..."}` — stored in DB, not in code.
 
 #### 3. Blueprint: `backend/hercules_ai_bp.py`
 
-Uses `_get_db_connection()` from `report_builder_bp.py` pattern (checks both `'app'` and `'__main__'`).
+Uses `_get_db_connection()` from `report_builder_bp.py` pattern (checks both `'app'` and `'__main__'` in `sys.modules`):
+```python
+def _get_db_connection():
+    import sys
+    for mod_name in ('app', '__main__'):
+        if mod_name in sys.modules:
+            fn = getattr(sys.modules[mod_name], 'get_db_connection', None)
+            if fn:
+                return fn
+    raise RuntimeError("Could not get database connection function")
+```
+
 All routes with `@login_required`.
 Scan protected with `_scan_in_progress` flag + try/finally (409 if running).
 
@@ -147,22 +169,38 @@ Scan protected with `_scan_in_progress` flag + try/finally (409 if running).
 | GET | `/hercules-ai/profiles` | List all profiles grouped by line_name with counts |
 | PUT | `/hercules-ai/profiles/bulk` | Bulk update — transaction, all-or-nothing |
 | PUT | `/hercules-ai/profiles/<int:id>` | Update single profile by ID |
-| GET | `/hercules-ai/config` | Get global config (flattened) |
+| GET | `/hercules-ai/config` | Get global config (flattened, API key REDACTED) |
 | PUT | `/hercules-ai/config` | Update config entries |
 | GET | `/hercules-ai/status` | Status: setup_completed, tags counts, last_scan_at, unseen_reports_count |
 | POST | `/hercules-ai/preview-summary` | Generate a sample AI summary from most recent report data |
+
+**CRITICAL: PUT endpoints MUST set `source='user'` and `is_reviewed=true`:**
+```python
+@hercules_ai_bp.route('/hercules-ai/profiles/<int:profile_id>', methods=['PUT'])
+@login_required
+def update_profile(profile_id):
+    data = request.get_json()
+    # ALWAYS mark as user-edited so re-scans don't overwrite
+    data['source'] = 'user'
+    data['is_reviewed'] = True
+    # ... UPDATE hercules_ai_tag_profiles SET ... WHERE id = %s
+```
+
+Same for bulk update — every profile in the batch gets `source='user'`, `is_reviewed=True`.
 
 #### 4. Scanner Logic (`POST /hercules-ai/scan`)
 
 **Step 1 — Extract tags using existing code:**
 - Import `extract_all_tags` from `distribution_engine.py` (DO NOT reimplement)
-- Handles: tag cells, formula tags, group tags, mapping cells, silo widgets, series, summaries
+- This returns a `set()` of tag name strings only — no context
 
-**Step 2 — Extract labels/context (enrichment layer):**
-- Walk `paginatedSections[]`: pair static ID cells with tag cells for label mapping
-- Walk KPI rows: `kpi.label` → `kpi.tagName`
-- Walk headers: `statusLabel` → `statusTagName`
-- Walk widgets: `config.title` → `dataSource.tagName`
+**Step 2 — Extract labels/context (INDEPENDENT walk of layout_config):**
+- `extract_all_tags()` gives us the complete tag set, but no labels or positions
+- Must INDEPENDENTLY walk `layout_config` to extract label/context pairings:
+  - Walk `paginatedSections[]`: pair static cells (sourceType='static') with adjacent tag cells for label mapping
+  - Walk KPI rows: `kpi.label` → `kpi.tagName`
+  - Walk headers: `statusLabel` → `statusTagName`
+  - Walk widgets: `config.title` → `dataSource.tagName`
 - Derive `line_name`: header `title` (priority) → template `name` (fallback)
 - Derive `category`: section `label` field
 - Store all report appearances in `evidence.reports[]`
@@ -194,14 +232,41 @@ WHERE t.is_active = true GROUP BY t.tag_name
 
 **Step 6 — Multi-report tags:** Store all in `evidence.reports[]`, use first header-bearing template for line_name.
 
-**Step 7 — Orphaned profiles:** Tag deleted from `tags` → set `data_status='deleted'`, `is_tracked=false`.
+**Step 7 — Orphaned profiles + revival:**
+```python
+# Tags removed from PLC
+for profile in existing_profiles:
+    if profile['tag_name'] not in current_tags:
+        if profile['source'] == 'auto':
+            # Auto-classified: mark deleted
+            UPDATE SET data_status='deleted', is_tracked=false WHERE id = profile['id']
+        else:
+            # User-edited: just update data_status, keep their edits
+            UPDATE SET data_status='deleted' WHERE id = profile['id']
+
+# Tags re-added to PLC (revival case)
+for profile in existing_profiles:
+    if profile['data_status'] == 'deleted' and profile['tag_name'] in current_tags:
+        UPDATE SET data_status='active' WHERE id = profile['id']
+        # Note: does NOT overwrite type/label — preserves user edits
+```
 
 **Step 8 — UPSERT (protect user corrections):**
 ```sql
-INSERT INTO hercules_ai_tag_profiles (..., source) VALUES (..., 'auto')
-ON CONFLICT (tag_name) DO UPDATE SET label=EXCLUDED.label, ...
+INSERT INTO hercules_ai_tag_profiles
+    (tag_name, label, tag_type, line_name, category, source, confidence, evidence, data_status)
+VALUES (%s, %s, %s, %s, %s, 'auto', %s, %s, %s)
+ON CONFLICT (tag_name) DO UPDATE SET
+    label = EXCLUDED.label,
+    tag_type = EXCLUDED.tag_type,
+    line_name = EXCLUDED.line_name,
+    category = EXCLUDED.category,
+    confidence = EXCLUDED.confidence,
+    evidence = EXCLUDED.evidence,
+    data_status = EXCLUDED.data_status
 WHERE hercules_ai_tag_profiles.source = 'auto';
 ```
+**Key guarantee:** Rows with `source='user'` are NEVER overwritten by re-scans.
 
 **Step 9 — Error handling:** try/except per template, return scan results with errors.
 
@@ -209,37 +274,100 @@ WHERE hercules_ai_tag_profiles.source = 'auto';
 
 #### 5. Preview Summary Endpoint (`POST /hercules-ai/preview-summary`)
 
-1. Check `setup_completed` and `llm_api_key` exist
-2. Pick first report template that has tracked tags
-3. Fetch last 24h of historian data for those tags via existing `/historian/by-tags` query logic
-4. Build context: tag labels, types, values, line names from `hercules_ai_tag_profiles`
-5. Call Claude API with the prompt (see section 7)
-6. Return `{"summary": "...", "report_name": "...", "tags_used": 12}`
+1. Check `setup_completed` is true — if not, return 400 "Complete setup first"
+2. Load `llm_api_key` from config — if empty, return 400 "API key required"
+3. Pick first report template that has tracked tags
+4. Fetch last 24h of historian data for those tags via existing query logic
+5. Build context: tag labels, types, values, line names from `hercules_ai_tag_profiles`
+6. Call Claude API with the prompt (see section 7)
+7. On success: return `{"summary": "...", "report_name": "...", "tags_used": 12}`
+8. On API error: return `{"error": "Could not generate summary. Check your API key."}`
+9. On timeout: return `{"error": "Summary generation timed out. Try again."}`
 
 #### 6. Email Summary Integration (`backend/distribution_engine.py`)
 
-In `execute_rule()`, after report data is computed:
+**CRITICAL: Exact injection point — line 1752, AFTER `email_html = _build_email_html(...)` and BEFORE `email_result = _send_email(...)`.**
+
+The integration must handle multi-report rules (multiple reports per rule). Collect ALL tag data across all reports, then generate ONE summary:
 
 ```python
-if rule.get('include_ai_summary'):
-    try:
-        summary = _generate_ai_summary(report_name, tag_data, time_range)
-        if summary:
-            body_html = _prepend_summary_to_email(summary, body_html)
-    except Exception as e:
-        logger.warning("AI summary generation failed, sending without: %s", e)
+# In execute_distribution_rule(), at line 1749, BEFORE the email send block:
+
+        if delivery in ('email', 'both') and recipients:
+            names_str = ', '.join(report_names)
+            subject = f"Hercules Report: {names_str} — {datetime.now().strftime('%Y-%m-%d')}"
+            email_html = _build_email_html(names_str, from_dt, to_dt,
+                                           ', '.join(fn for fn, _ in attachments))
+
+            # ── AI Summary injection (Phase 1) ──────────────────────────
+            if rule.get('include_ai_summary'):
+                try:
+                    # Collect ALL tag data across all reports in this rule
+                    all_tag_data = {}
+                    for rid in report_ids:
+                        with closing(get_conn()) as conn2:
+                            actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
+                            cur2 = actual2.cursor(cursor_factory=RealDictCursor)
+                            cur2.execute("SELECT layout_config FROM report_builder_templates WHERE id = %s", (rid,))
+                            tpl = cur2.fetchone()
+                            if tpl:
+                                lc = tpl['layout_config']
+                                if isinstance(lc, str):
+                                    lc = json.loads(lc)
+                                tags = extract_all_tags(lc)
+                                td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
+                                all_tag_data.update(td)
+
+                    summary = _generate_ai_summary(
+                        report_names=report_names,  # list of all report names
+                        tag_data=all_tag_data,       # combined tag data dict
+                        from_dt=from_dt,
+                        to_dt=to_dt
+                    )
+                    if summary:
+                        email_html = _prepend_summary_to_email(summary, email_html)
+                except Exception as e:
+                    logger.warning("AI summary generation failed, sending without: %s", e)
+            # ── End AI Summary ───────────────────────────────────────────
+
+            email_result = _send_email(recipients, subject, email_html, attachments=attachments)
 ```
 
-`_generate_ai_summary()`:
-1. Load tracked profiles from `hercules_ai_tag_profiles` for tags in this report
-2. Build structured context (label, type, value, line_name for each tag)
-3. Load API key from `hercules_ai_config`
-4. If no key → return None (skip silently)
-5. Call Claude API with 10-second timeout
-6. On timeout/error → return None (never block email delivery)
-7. Generate ONE summary per distribution rule (not per report)
+**`_generate_ai_summary()` signature:**
+```python
+def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
+    """
+    Generate AI summary for distribution email.
+    Args:
+        report_names: list of report name strings
+        tag_data: dict {tag_name_or_namespaced: value} — combined from all reports
+        from_dt, to_dt: datetime range
+    Returns: summary text string or None
+    """
+```
 
-#### 7. LLM Prompt & Configuration
+Full implementation:
+1. Rate limit check (200 calls/day safety cap, reset daily)
+2. Load API key + model from `hercules_ai_config`
+3. Load tracked profiles for tags in `tag_data` from `hercules_ai_tag_profiles`
+4. Strip aggregation namespace prefixes (`'first::tagName'` → `'tagName'`)
+5. Build structured data table for prompt
+6. Call Claude API with 10-second timeout
+7. On failure → return None (never block email delivery)
+
+**`_prepend_summary_to_email()`** inserts a styled HTML block after `<body>`:
+```html
+<div style="background:#f0f9ff;border-left:4px solid #0284c7;padding:16px 20px;margin:0 0 24px;border-radius:6px;">
+    <div style="font-size:13px;font-weight:600;color:#0369a1;margin-bottom:8px;">Hercules AI Summary</div>
+    <div style="font-size:14px;color:#1e293b;line-height:1.6;">{summary_text}</div>
+</div>
+```
+
+**Cost:** ~$0.001/call with Haiku. 10 daily rules = $3.65/year. Safety cap at 200 calls/day.
+
+**Timeout:** 10 seconds hard limit. On failure, email sends without summary — never blocks delivery.
+
+#### 7. LLM Package Configuration
 
 **Package:** Add `anthropic` to `requirements.txt`. Graceful import:
 ```python
@@ -255,11 +383,11 @@ except ImportError:
 **Prompt template:**
 ```
 You are a production report summarizer for a manufacturing plant.
-Given the following data from the "{report_name}" report covering {time_from} to {time_to}:
+Given the following data from the "{report_names}" report(s) covering {time_from} to {time_to}:
 
 {structured_data_table}
 
-Each row shows: Tag Label | Type | Value | Unit | Line
+Each row shows: Tag Label | Type | Value | Line
 
 Write a 2-4 sentence summary for plant managers.
 
@@ -268,21 +396,26 @@ Rules:
 - Lead with the most important production metric (largest total, key output).
 - Mention at most 2 anomalies (values that are zero when expected, unusually high or low).
 - Use simple language. No technical jargon.
-- If a "Production Total" shows zero during what should be a production period, mention it as possible downtime.
+- If a "counter" type shows zero during what should be a production period, mention it as possible downtime.
 - Maximum 120 words.
 - Do not use markdown formatting. Plain text only.
 ```
 
-**Cost:** ~$0.001/call with Haiku. 10 daily rules = $3.65/year. Negligible.
-
-**Timeout:** 10 seconds hard limit. On failure, email sends without summary.
-
 #### 8. Register in `backend/app.py`
 
-- Import (line ~41): `from hercules_ai_bp import hercules_ai_bp`
-- Register (line ~265): `app.register_blueprint(hercules_ai_bp, url_prefix='/api')`
-- Add to `backend/hercules.spec` hiddenimports: `'hercules_ai_bp'`
-- Add `'anthropic'` to hiddenimports (graceful — won't fail if missing)
+```python
+# Line ~41 (after existing blueprint imports):
+from hercules_ai_bp import hercules_ai_bp
+
+# Line ~265 (after existing registrations):
+app.register_blueprint(hercules_ai_bp, url_prefix='/api')
+```
+
+Add to `backend/hercules.spec` hiddenimports:
+```python
+'hercules_ai_bp',
+'anthropic',
+```
 
 ---
 
@@ -326,6 +459,19 @@ Settings page (not wizard). Adapts based on state:
 └──────────────────────────────────────────────────────────────┘
 ```
 
+**Empty state (scan found zero tags):**
+```
+┌──────────────────────────────────────────────────────────────┐
+│  No tags found                                               │
+│                                                              │
+│  Hercules AI could not find any tags in your report          │
+│  templates. Create a report in the Report Builder first,     │
+│  then come back and scan again.                              │
+│                                                              │
+│  [Go to Report Builder]   [Scan Again]                       │
+└──────────────────────────────────────────────────────────────┘
+```
+
 **State B: Scan Done, Reviewing**
 
 Zone 1 — Top Bar:
@@ -333,6 +479,11 @@ Zone 1 — Top Bar:
 - Progress bar (green/amber/gray)
 - "Scan Reports" button + last scanned timestamp
 - If unseen reports: "2 new reports since last scan. [Scan Now]"
+
+**Filter state definitions (from database fields):**
+- **Pending** = `is_reviewed = false AND is_tracked = true`
+- **Confirmed** = `is_reviewed = true AND is_tracked = true`
+- **Excluded** = `is_tracked = false`
 
 Zone 2 — Filter/Action Bar:
 - Pill tabs: All | Pending | Confirmed | Excluded (with counts)
@@ -349,14 +500,39 @@ Tag row:
 ☑ | mil_b_b1_totalizer | B1 Totalizer | [Production Total] | ●●● | ✓ | kg | MIL-B
 ```
 
-Expanded row:
-- "Hercules AI classified this as: Production Total. Reason: counter flag set, unit=kg"
-- Type pill buttons: Production Total | Flow Rate | Measurement | On/Off | Percentage | Setting | Selector | Unclassified
-- Label input + notes input
-- [Confirm] [Exclude] [Cancel]
+**Expanded row (FULL user control):**
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Hercules AI classified this as: Production Total            │
+│  Reason: counter flag set, unit=kg                           │
+│                                                              │
+│  Type:                                                       │
+│  [Production Total] [Flow Rate] [Measurement] [On/Off]      │
+│  [Percentage] [Setting] [Selector] [Unclassified]           │
+│                                                              │
+│  Label:     [B1 Totalizer_______________]                    │
+│  Line:      [Mill B___________▾]  ← editable dropdown       │
+│  Category:  [Order Info________▾]  ← editable dropdown      │
+│  Notes:     [_____________________________]                  │
+│                                                              │
+│  [Confirm]  [Exclude]  [Cancel]                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**User-editable fields:**
+- **Type** — pill buttons (changes `tag_type`)
+- **Label** — text input (changes `label`)
+- **Line** — dropdown populated from all known `line_name` values + custom input (changes `line_name`)
+- **Category** — dropdown populated from all known `category` values + custom input (changes `category`)
+- **Notes** — text input (changes `user_notes`)
+
+**ALL edits set `source='user'` and `is_reviewed=true` on save.** This is the feedback loop — user corrections are permanently protected from re-scans.
 
 Bottom:
 - API Key input field (masked, with show/hide toggle): "Claude API Key (required for AI summaries)"
+  - On save, PUT to `/hercules-ai/config` with `{"llm_api_key": "..."}`
+  - Shows hint from GET: "Key ending in ...k2Xm" or "No key set"
+  - Invalid key error shown after Preview fails: "Could not generate summary. Check your API key."
 - [Mark Setup Complete] button
 - "You can return anytime to update."
 
@@ -394,18 +570,50 @@ Bottom:
 
 #### 12. Sidebar Badge
 
-**`Frontend/src/Components/Common/SideNav.jsx`:**
-- For the Hercules AI nav item, fetch `GET /hercules-ai/status` on mount
-- If `unseen_reports_count > 0`, show a small number badge on the nav item
-- Refresh on navigation (not polling)
+**Approach: Add `badge` field to nav item data model.**
 
-#### 13. Navigation: `Frontend/src/Data/Navbar.js`
-
+`Frontend/src/Data/Navbar.js`:
 ```js
-{ name: t('nav.herculesAI'), icon: Sparkles, link: '/hercules-ai', roles: [Roles.Admin] }
+import { LayoutGrid, BarChart2, Settings, Table2, Send, Sparkles } from 'lucide-react';
+
+export const getMenuItems = (t) => [
+  // ... existing items ...
+  {
+    name: t('nav.herculesAI'),
+    icon: Sparkles,
+    tooltip: t('nav.tooltip.herculesAI'),
+    link: '/hercules-ai',
+    roles: [Roles.Admin],
+    badgeEndpoint: '/api/hercules-ai/status',  // NEW field
+    badgeKey: 'unseen_reports_count',           // NEW field
+  },
+];
 ```
 
-After Distribution in nav order.
+`Frontend/src/Components/Common/SideNav.jsx` — add badge rendering logic:
+```jsx
+// Inside the nav item map, after the icon:
+{item.badgeEndpoint && badgeCounts[item.link] > 0 && (
+  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center
+                    text-[10px] font-bold bg-red-500 text-white rounded-full px-1">
+    {badgeCounts[item.link]}
+  </span>
+)}
+```
+
+SideNav fetches badge data on mount + route change (NOT polling):
+```jsx
+useEffect(() => {
+  const badgeItems = uniqueMenuItems.filter(i => i.badgeEndpoint);
+  badgeItems.forEach(item => {
+    axios.get(item.badgeEndpoint)
+      .then(res => setBadgeCounts(prev => ({ ...prev, [item.link]: res.data[item.badgeKey] || 0 })))
+      .catch(() => {});
+  });
+}, [location.pathname]);
+```
+
+#### 13. Navigation: After Distribution in nav order.
 
 #### 14. Route: `Frontend/src/Routes/AppRoutes.jsx`
 
@@ -417,7 +625,44 @@ After Distribution in nav order.
 
 #### 15. i18n — All 4 Locale Files
 
-~45 keys per file (nav, setup page, status, filters, types, badges, config, preview, distribution toggle).
+~50 keys per file. Key naming follows existing `section.camelCaseKey` pattern:
+```
+nav.herculesAI, nav.tooltip.herculesAI
+
+herculesAI.title, herculesAI.subtitle
+herculesAI.scanButton, herculesAI.scanMyReports, herculesAI.scanning, herculesAI.lastScanned
+herculesAI.firstVisit.description, herculesAI.firstVisit.explanation
+
+herculesAI.empty.title, herculesAI.empty.description, herculesAI.empty.goToBuilder
+
+herculesAI.status.confirmed, .pending, .excluded, .tags, .active, .tracking
+herculesAI.newReports (e.g. "{count} new reports since last scan")
+
+herculesAI.filter.all, .pending, .confirmed, .excluded
+herculesAI.allLines, herculesAI.search
+herculesAI.selectAll, herculesAI.deselectAll, herculesAI.selected
+herculesAI.bulk.confirm, .exclude, .setType
+
+herculesAI.type.counter ("Production Total"), .rate ("Flow Rate"), .boolean ("On/Off"),
+  .percentage ("Percentage"), .analog ("Measurement"), .setpoint ("Setting"),
+  .id_selector ("Selector"), .unknown ("Unclassified")
+
+herculesAI.field.label, .tagName, .unit, .line, .category, .notes, .source
+herculesAI.confidence.high, .medium, .low
+herculesAI.expand.classified, .reason
+herculesAI.confirm, .exclude, .cancel
+
+herculesAI.apiKey, herculesAI.apiKeyHint, herculesAI.apiKeyPlaceholder
+herculesAI.markComplete, .editSetup, .saved
+herculesAI.scanFirst, .noTemplates, .noTemplatesHint
+
+herculesAI.dataStatus.active, .sparse, .empty, .deleted
+
+herculesAI.preview, .previewButton, .previewLoading, .previewError, .previewNoData
+herculesAI.complete.title, .complete.tracking, .complete.enableHint
+
+distribution.includeAISummary, distribution.aiSummaryDisabledHint
+```
 
 ### Phase 1 — Files
 
@@ -429,28 +674,28 @@ After Distribution in nav order.
 - `Frontend/src/API/herculesAIApi.js`
 
 **Modify:**
-- `backend/init_db.py` — add both migrations to MIGRATION_ORDER
+- `backend/init_db.py` — append both migrations to END of MIGRATION_ORDER
 - `backend/app.py` — import + register hercules_ai_bp
 - `backend/hercules.spec` — add `'hercules_ai_bp'`, `'anthropic'` to hiddenimports
-- `backend/distribution_engine.py` — add `_generate_ai_summary()` + call in `execute_rule()`
+- `backend/distribution_engine.py` — add `_generate_ai_summary()`, `_prepend_summary_to_email()`, inject at line 1752
 - `backend/requirements.txt` — add `anthropic`
 - `Frontend/src/Routes/AppRoutes.jsx` — add /hercules-ai route
-- `Frontend/src/Data/Navbar.js` — add nav item
+- `Frontend/src/Data/Navbar.js` — add nav item with `badgeEndpoint` + `Sparkles` import
 - `Frontend/src/Pages/Distribution/DistributionRuleEditor.jsx` — add AI summary toggle + EMPTY_RULE update
-- `Frontend/src/Components/Common/SideNav.jsx` — add badge for unseen reports
-- `Frontend/src/i18n/en.json`, `ar.json`, `hi.json`, `ur.json` — add ~45 keys each
+- `Frontend/src/Components/Common/SideNav.jsx` — add badge rendering for items with `badgeEndpoint`
+- `Frontend/src/i18n/en.json`, `ar.json`, `hi.json`, `ur.json` — add ~50 keys each
 
 ### Phase 1 — Implementation Order
 
-1. Migration SQL (both files) + init_db.py
+1. Migration SQL (both files) + init_db.py (APPEND to END)
 2. Backend blueprint — scan + CRUD + config + preview-summary endpoints
 3. Register in app.py + hercules.spec
 4. `anthropic` in requirements.txt
-5. Distribution engine — `_generate_ai_summary()` + integration in `execute_rule()`
+5. Distribution engine — `_generate_ai_summary()` + inject at line 1752 in `execute_distribution_rule()`
 6. Frontend API layer
-7. Setup page (all 3 states: first visit, reviewing, complete)
+7. Setup page (all 3 states + empty state)
 8. Distribution rule toggle + EMPTY_RULE
-9. Sidebar badge
+9. Sidebar badge (Navbar.js + SideNav.jsx)
 10. Route + nav
 11. i18n (all 4 files)
 
@@ -462,16 +707,19 @@ After Distribution in nav order.
 4. `GET /api/hercules-ai/status` — correct counts + unseen_reports_count
 5. Open `/hercules-ai` — shows first-visit state
 6. Click "Scan My Reports" → tags appear grouped by line
-7. Expand tag → change type → Confirm → persists on reload
-8. Bulk select → Confirm All → all updated
-9. Re-scan → user corrections survive
+7. Expand tag → change type, label, line, category → Confirm → `source='user'` persists on reload
+8. Bulk select → Confirm All → all updated with `source='user'`
+9. Re-scan → user corrections survive (source='user' rows untouched)
 10. Enter API key → Mark Setup Complete → confirmation card appears
 11. Click "Preview Summary" → sample AI summary displayed
-12. Open Distribution → edit rule → "Include AI Summary" toggle visible
-13. If setup not complete → toggle disabled with hint
-14. Run distribution rule with AI summary on → email has summary paragraph at top
-15. API call fails/times out → email sends without summary (no error to user)
-16. Add new report template → sidebar shows badge → re-scan picks up new tags
+12. Bad API key → Preview fails with "Check your API key" message
+13. Open Distribution → edit rule → "Include AI Summary" toggle visible
+14. If setup not complete → toggle disabled with hint
+15. Run distribution rule with AI summary on → email has summary paragraph at top
+16. API call fails/times out → email sends without summary (no error to user)
+17. Add new report template → sidebar shows badge → re-scan picks up new tags
+18. Delete tag from PLC → re-scan marks `data_status='deleted'` (user edits preserved)
+19. Re-add same tag → data_status reverts to 'active' (user edits still preserved)
 
 ---
 
@@ -479,24 +727,25 @@ After Distribution in nav order.
 
 **Depends on:** Phase 1 complete (tag profiles classified, LLM integration working)
 
-**User journey:** Hercules AI continuously monitors tracked tags in the background. When it detects downtime, anomalies, or data quality issues, it sends alert emails and shows notifications in-app. Plant managers get proactive notifications without checking dashboards.
+**User journey:** Hercules AI runs a background worker every hour. When it detects downtime (zero production), anomalies, or data quality issues, it sends alert emails and shows in-app notifications. Plant managers get proactive notifications without checking dashboards.
 
 ### Scope
 
-1. Analysis worker — background thread that runs every hour, analyzes tag data
-2. Alert rules — configurable thresholds per line or tag type
-3. Alert history — log of all detected events with timestamps
-4. Email alerts — immediate notification emails when critical events detected
-5. In-app notification bell — alert count badge in header bar
-6. Alert settings — admin configures which alerts are active, recipients, thresholds
+1. Analysis worker — background thread that runs hourly, analyzes tag data
+2. Alert rules — configurable thresholds per alert type
+3. Alert history — log of all detected events
+4. Email alerts — notification emails when critical events detected
+5. In-app notification bell — alert count in top navbar
+6. Alert settings — configure which alerts are active, recipients, thresholds
 
-### How Downtime Detection Works
+### Detection Algorithms
 
-**Data source:** `tag_history_archive` table — hourly aggregated data already computed by `dynamic_archive_worker`
+#### Downtime Detection (production counters)
 
-**Detection logic for production counters (`is_counter=true`):**
+**Data source:** `tag_history_archive` — hourly aggregated data from `dynamic_archive_worker`. Uses `layout_id IS NULL` to query universal historian data (not per-layout data).
+
+**Step 1 — Find hours with zero production per line:**
 ```sql
--- Find hours where ALL production counters on a line had zero delta
 SELECT p.line_name, a.archive_hour,
        COUNT(*) AS counter_tags,
        COUNT(*) FILTER (WHERE COALESCE(a.value_delta, 0) = 0) AS zero_tags
@@ -505,51 +754,119 @@ JOIN tags t ON t.tag_name = p.tag_name
 JOIN tag_history_archive a ON a.tag_id = t.id
 WHERE p.tag_type = 'counter' AND p.is_tracked = true
   AND a.archive_hour >= NOW() - INTERVAL '24 hours'
+  AND a.layout_id IS NULL
 GROUP BY p.line_name, a.archive_hour
 HAVING COUNT(*) FILTER (WHERE COALESCE(a.value_delta, 0) = 0) = COUNT(*)
 ORDER BY p.line_name, a.archive_hour
 ```
 
-**Consecutive zero hours = downtime window:**
-- 1 hour zero delta → not reported (could be break/changeover)
-- 2+ consecutive hours zero delta on same line → downtime event
-- Configurable minimum: `min_downtime_hours` (default: 2)
+**Step 2 — Group consecutive zero-hours into downtime windows (Python):**
+```python
+def _detect_downtime_windows(zero_hours_by_line, min_hours=2):
+    """
+    Group consecutive zero-production hours into downtime windows.
+    Args:
+        zero_hours_by_line: dict {line_name: [datetime, ...]} sorted ASC
+        min_hours: minimum consecutive hours to count as downtime
+    Returns:
+        list of alert dicts
+    """
+    events = []
+    for line, hours in zero_hours_by_line.items():
+        if not hours:
+            continue
+        window_start = hours[0]
+        window_end = hours[0]
 
-**Downtime event structure:**
-```json
-{
-  "type": "downtime",
-  "line_name": "Mill B",
-  "started_at": "2026-03-31T02:00:00",
-  "ended_at": "2026-03-31T06:00:00",
-  "duration_hours": 4,
-  "affected_tags": ["mil_b_b1_totalizer", "mil_b_b2_totalizer"],
-  "severity": "warning"
-}
+        for i in range(1, len(hours)):
+            gap = (hours[i] - hours[i-1]).total_seconds() / 3600
+            if gap <= 1.0:
+                window_end = hours[i]
+            else:
+                duration = (window_end - window_start).total_seconds() / 3600 + 1
+                if duration >= min_hours:
+                    events.append({
+                        'type': 'downtime',
+                        'line_name': line,
+                        'started_at': window_start,
+                        'ended_at': window_end + timedelta(hours=1),
+                        'duration_hours': duration,
+                        'duration_minutes': int(duration * 60),
+                        'title': f'{line} — Down for {int(duration)} hours',
+                        'severity': 'warning' if duration < 6 else 'critical',
+                    })
+                window_start = hours[i]
+                window_end = hours[i]
+
+        # Last window
+        duration = (window_end - window_start).total_seconds() / 3600 + 1
+        if duration >= min_hours:
+            events.append({
+                'type': 'downtime',
+                'line_name': line,
+                'started_at': window_start,
+                'ended_at': window_end + timedelta(hours=1),
+                'duration_hours': duration,
+                'duration_minutes': int(duration * 60),
+                'title': f'{line} — Down for {int(duration)} hours',
+                'severity': 'warning' if duration < 6 else 'critical',
+            })
+    return events
 ```
 
-### Anomaly Detection
+#### Stale Data Detection
 
-**Type 1 — Stale data (no readings):**
-- Tag has `data_status='active'` but no new rows in `tag_history_archive` for 2+ hours
-- Indicates PLC communication loss or sensor failure
+```sql
+SELECT p.tag_name, p.label, p.line_name, p.tag_type,
+       MAX(a.archive_hour) as last_reading
+FROM hercules_ai_tag_profiles p
+JOIN tags t ON t.tag_name = p.tag_name
+LEFT JOIN tag_history_archive a ON a.tag_id = t.id
+  AND a.archive_hour >= NOW() - INTERVAL '24 hours'
+  AND a.layout_id IS NULL
+WHERE p.is_tracked = true AND p.data_status = 'active'
+GROUP BY p.tag_name, p.label, p.line_name, p.tag_type
+HAVING MAX(a.archive_hour) IS NULL
+   OR MAX(a.archive_hour) < NOW() - make_interval(hours => %s)
+```
+- Default `max_gap_hours`: 2
 - Severity: `critical`
+- Generates one alert per line (groups stale tags by line)
 
-**Type 2 — Value out of range:**
-- For `analog` and `rate` tags: compute rolling 7-day mean and standard deviation from archive
-- Value > mean + 3σ or < mean - 3σ → anomaly
-- Only for tags with 100+ hourly readings (enough data for statistics)
-- Severity: `warning`
+#### Value Anomaly Detection
 
-**Type 3 — Counter reset spike:**
-- Counter tag `value_delta` in a single hour > 10x the 7-day hourly average
-- Could indicate meter malfunction or unexpected restart
-- Severity: `info`
+```sql
+-- 7-day stats for analog/rate tags
+SELECT p.tag_name, p.label, p.line_name,
+       AVG(a.value) as mean_val, STDDEV(a.value) as stddev_val, COUNT(*) as cnt
+FROM hercules_ai_tag_profiles p
+JOIN tags t ON t.tag_name = p.tag_name
+JOIN tag_history_archive a ON a.tag_id = t.id
+WHERE p.tag_type IN ('analog', 'rate') AND p.is_tracked = true
+  AND a.archive_hour >= NOW() - INTERVAL '7 days'
+  AND a.layout_id IS NULL AND a.value IS NOT NULL
+GROUP BY p.tag_name, p.label, p.line_name
+HAVING COUNT(*) >= %s AND STDDEV(a.value) > 0
+```
+Then compare latest hour value against mean ± Nσ. Default sigma_threshold: 3.
 
-**Type 4 — Quality degradation:**
-- Count of `quality_code != 'GOOD'` readings in `tag_history` exceeds 10% of hour
-- Indicates unstable PLC communication
-- Severity: `warning`
+#### Quality Degradation Detection
+
+```sql
+SELECT t.tag_name, p.label, p.line_name,
+       COUNT(*) as total,
+       COUNT(*) FILTER (WHERE h.quality_code NOT IN ('GOOD', '')) as bad
+FROM hercules_ai_tag_profiles p
+JOIN tags t ON t.tag_name = p.tag_name
+JOIN tag_history h ON h.tag_id = t.id
+WHERE p.is_tracked = true
+  AND h.timestamp >= NOW() - INTERVAL '1 hour'
+  AND h.layout_id IS NULL
+GROUP BY t.tag_name, p.label, p.line_name
+HAVING COUNT(*) > 0
+  AND (COUNT(*) FILTER (WHERE h.quality_code NOT IN ('GOOD', '')))::float / COUNT(*) > %s
+```
+Default error_percent_threshold: 10%.
 
 ### Backend — Phase 2
 
@@ -574,7 +891,7 @@ CREATE TABLE IF NOT EXISTS hercules_ai_alerts (
 
 CREATE TABLE IF NOT EXISTS hercules_ai_alert_rules (
     id SERIAL PRIMARY KEY,
-    rule_type VARCHAR(50) NOT NULL,
+    rule_type VARCHAR(50) NOT NULL UNIQUE,
     is_enabled BOOLEAN DEFAULT true,
     config JSONB DEFAULT '{}',
     recipients JSONB DEFAULT '[]',
@@ -584,119 +901,97 @@ CREATE TABLE IF NOT EXISTS hercules_ai_alert_rules (
 
 CREATE INDEX IF NOT EXISTS idx_hai_alerts_type ON hercules_ai_alerts(alert_type);
 CREATE INDEX IF NOT EXISTS idx_hai_alerts_created ON hercules_ai_alerts(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_hai_alerts_read ON hercules_ai_alerts(is_read) WHERE is_read = false;
+CREATE INDEX IF NOT EXISTS idx_hai_alerts_unread ON hercules_ai_alerts(is_read) WHERE is_read = false;
 ```
 
-**Default alert rules (seeded on first load):**
-```json
-[
-  {
-    "rule_type": "downtime",
-    "is_enabled": true,
-    "config": {"min_downtime_hours": 2, "check_interval_minutes": 60},
-    "recipients": []
-  },
-  {
-    "rule_type": "stale_data",
-    "is_enabled": true,
-    "config": {"max_gap_hours": 2},
-    "recipients": []
-  },
-  {
-    "rule_type": "anomaly",
-    "is_enabled": false,
-    "config": {"sigma_threshold": 3, "min_readings": 100},
-    "recipients": []
-  },
-  {
-    "rule_type": "quality",
-    "is_enabled": false,
-    "config": {"error_percent_threshold": 10},
-    "recipients": []
-  }
-]
-```
+Added to END of `MIGRATION_ORDER`.
+
+Default alert rules seeded by `_ensure_alert_defaults()` on first load.
 
 #### Worker: `backend/workers/hercules_ai_worker.py`
 
-Background eventlet greenlet, similar pattern to `dynamic_archive_worker.py`.
+**Uses `from app import get_db_connection`** — same pattern as `historian_worker.py` and `dynamic_archive_worker.py`. NOT the blueprint `_get_db_connection()` pattern.
 
-**Main loop:**
-1. Sleep for `check_interval_minutes` (default 60 min)
-2. Check if `setup_completed` is true → skip if not
-3. Load enabled alert rules from `hercules_ai_alert_rules`
-4. For each enabled rule type, run detection query
-5. Deduplicate: don't create alert if identical event already exists within last 4 hours
-6. Insert new alerts into `hercules_ai_alerts`
-7. For alerts with recipients: send email notification via existing `_send_email()` from distribution_engine
-8. Use advisory lock (0x68616900/'hai\0') to prevent duplicate workers
+Main loop:
+1. Check `setup_completed` FIRST (before lock, to avoid holding lock unnecessarily)
+2. If not complete → sleep 5 min and retry
+3. Acquire advisory lock `0x68616900`
+4. Load enabled alert rules
+5. Run each detection type (try/except per type)
+6. Safety cap: max 50 alerts per run
+7. Deduplicate: skip if identical alert (same type + line) exists within 4 hours
+8. Insert new alerts
+9. Send email notifications for alerts with recipients
+10. Sleep for `check_interval_minutes` (default 60)
 
-**LLM-enhanced alert descriptions:**
-- When creating a downtime alert, call Claude with context:
+**Deduplication SQL:**
+```sql
+SELECT id FROM hercules_ai_alerts
+WHERE alert_type = %s AND line_name = %s
+  AND created_at >= NOW() - INTERVAL '4 hours'
+  AND is_dismissed = false
+LIMIT 1
 ```
-Line "{line_name}" had zero production for {duration} hours ({start} to {end}).
-Tags affected: {tag_list_with_labels}
-Last known values before downtime: {values}
 
-Write 1-2 sentences describing this event for a plant manager.
-Use simple language. State the facts only.
-```
-- 5-second timeout. On failure, use template: "{line_name} was down for {duration} hours."
+**Alert email template:** Styled HTML with colored header bar (red=critical, amber=warning, blue=info), title, description, duration, and footer with "Manage in Hercules AI setup."
 
-#### New Blueprint Routes (added to `hercules_ai_bp.py`)
+**LLM-enhanced descriptions:** Optional, with 5-second timeout. Fallback to template-based descriptions when API unavailable. Uses same daily rate limit as summaries (shared 200/day cap).
+
+#### Blueprint Routes (added to `hercules_ai_bp.py`)
 
 | Method | Route | Purpose |
 |--------|-------|---------|
-| GET | `/hercules-ai/alerts` | List alerts, filterable by type/severity/line/read status, paginated |
+| GET | `/hercules-ai/alerts` | List alerts. Params: `type`, `severity`, `line`, `is_read`, `limit`, `offset` |
 | PUT | `/hercules-ai/alerts/<int:id>/read` | Mark alert as read |
-| PUT | `/hercules-ai/alerts/read-all` | Mark all alerts as read |
-| PUT | `/hercules-ai/alerts/<int:id>/dismiss` | Dismiss alert (hide from list) |
-| GET | `/hercules-ai/alerts/unread-count` | Return count of unread alerts (for badge) |
-| GET | `/hercules-ai/alert-rules` | List all alert rules |
-| PUT | `/hercules-ai/alert-rules/<int:id>` | Update alert rule (enable/disable, config, recipients) |
+| PUT | `/hercules-ai/alerts/read-all` | Mark all as read |
+| PUT | `/hercules-ai/alerts/<int:id>/dismiss` | Dismiss (soft-hide) |
+| GET | `/hercules-ai/alerts/unread-count` | `{"count": 5}` for bell badge |
+| GET | `/hercules-ai/alert-rules` | List all 4 rules with config |
+| PUT | `/hercules-ai/alert-rules/<int:id>` | Update: `{is_enabled, config, recipients}` |
 
-#### Worker Registration in `app.py`
+#### Worker Registration in `app.py` (~line 1120)
 
 ```python
-# After existing worker starts (line ~1130)
-from workers.hercules_ai_worker import hercules_ai_worker
-eventlet.spawn(hercules_ai_worker)
+try:
+    from workers.hercules_ai_worker import hercules_ai_worker
+    eventlet.spawn(hercules_ai_worker)
+    logger.info("Started Hercules AI analysis worker")
+except Exception as e:
+    logger.error("Could not start Hercules AI worker: %s", e, exc_info=True)
 ```
 
 ### Frontend — Phase 2
 
-#### Alert Bell (Header/TopBar)
-- Notification bell icon in top bar (next to user menu)
-- Shows unread count badge (red dot with number)
-- Click opens dropdown panel with recent alerts
-- Each alert: icon (color by severity) + title + time ago + line name
-- "View All" link → opens `/hercules-ai/alerts`
-- Mark as read on click
+**Navigation: Tab-based within single `/hercules-ai` page** (no sub-routes). Tabs: **Setup | Alerts | Dashboard** (Dashboard added in Phase 3). This avoids SideNav refactoring.
 
-#### Alerts Page: `Frontend/src/Pages/HerculesAI/HerculesAIAlerts.jsx`
-- List view of all alerts with filters: All | Downtime | Anomaly | Quality | Stale Data
-- Filter by line, severity, date range
-- Each alert card:
-  ```
-  ⚠ Mill B — Down for 4 hours                           Mar 31, 02:00–06:00
-  Mill B had zero production output from 2am to 6am. B1 and B2 totalizers
-  both showed no movement during this period.
-                                                    [Mark Read] [Dismiss]
-  ```
-- Color coding: critical=red, warning=amber, info=blue
+#### Alert Bell in `Frontend/src/Components/Navbar/Navbar.jsx`
 
-#### Alert Settings: section in `HerculesAISetup.jsx`
-- Added below the tag review section (State C)
-- Card per alert type with:
-  - Enable/disable toggle
-  - Threshold inputs (e.g., "Minimum downtime hours: [2]")
-  - Recipients list (email addresses, reuse pattern from DistributionRuleEditor)
-- Save button per card
+Bell icon between dark mode toggle and user menu:
+```jsx
+import { Bell } from 'lucide-react';
+// Fetch unread count on route change
+const [alertCount, setAlertCount] = useState(0);
+useEffect(() => {
+  axios.get('/api/hercules-ai/alerts/unread-count')
+    .then(res => setAlertCount(res.data.count || 0)).catch(() => {});
+}, [location.pathname]);
 
-#### Navigation Update
-- Add `/hercules-ai/alerts` route
-- Hercules AI nav item becomes a group with sub-items: Setup | Alerts
-- Or: single nav item → setup page with tabs (Setup | Alerts | Analytics)
+// Render bell with badge
+<button onClick={() => navigate('/hercules-ai?tab=alerts')}>
+  <Bell size={20} />
+  {alertCount > 0 && <span className="badge">{alertCount > 99 ? '99+' : alertCount}</span>}
+</button>
+```
+
+#### Alerts Tab: `Frontend/src/Pages/HerculesAI/HerculesAIAlerts.jsx`
+
+Two sections: Alert List (top) + Alert Settings (bottom).
+
+**Alert list:** Filterable by type/line/severity. Each card shows severity icon, title, description, timestamp, Mark Read / Dismiss buttons. Empty state: "No alerts yet."
+
+**Alert settings:** Card per alert type with enable/disable toggle, threshold inputs, email recipients list, save button per card. Reuses toggle pattern from DistributionRuleEditor.
+
+**State:** `alerts` from GET, `alertRules` from GET. Local filter state.
 
 ### Phase 2 — Files
 
@@ -706,312 +1001,211 @@ eventlet.spawn(hercules_ai_worker)
 - `Frontend/src/Pages/HerculesAI/HerculesAIAlerts.jsx`
 
 **Modify:**
-- `backend/init_db.py` — add alerts migration
-- `backend/hercules_ai_bp.py` — add alert routes + alert rule routes
+- `backend/init_db.py` — append alerts migration
+- `backend/hercules_ai_bp.py` — add 7 alert routes
 - `backend/app.py` — spawn hercules_ai_worker
-- `backend/hercules.spec` — add `'workers.hercules_ai_worker'` to hiddenimports
+- `backend/hercules.spec` — add `'workers.hercules_ai_worker'`
 - `Frontend/src/API/herculesAIApi.js` — add alert endpoints
-- `Frontend/src/Components/Common/TopBar.jsx` (or equivalent) — add alert bell
-- `Frontend/src/Pages/HerculesAI/HerculesAISetup.jsx` — add alert settings section
-- `Frontend/src/Routes/AppRoutes.jsx` — add /hercules-ai/alerts route
-- `Frontend/src/i18n/*.json` — add ~30 alert-related keys each
+- `Frontend/src/Components/Navbar/Navbar.jsx` — add alert bell
+- `Frontend/src/Pages/HerculesAI/HerculesAISetup.jsx` — wrap with tab bar
+- `Frontend/src/i18n/*.json` — add ~35 alert keys each
 
 ### Phase 2 — Implementation Order
 
 1. Migration (alerts + alert rules tables)
-2. Worker — detection logic for all 4 alert types
+2. Worker — all 4 detection algorithms + dedup + email
 3. Blueprint routes — alerts CRUD + alert rules
 4. Worker registration in app.py + hercules.spec
-5. Frontend API layer (alert endpoints)
-6. Alert bell component in header
-7. Alerts list page
-8. Alert settings in setup page
-9. Routes + nav updates
-10. i18n (all 4 files)
+5. Frontend API layer
+6. Tab bar wrapper for Hercules AI page
+7. Alert bell in Navbar.jsx
+8. Alerts tab content (list + settings)
+9. i18n (all 4 files)
 
 ### Phase 2 — Verification
 
-1. Worker starts without errors, runs on schedule
-2. Simulate downtime: stop PLC for 2+ hours → alert created
-3. Alert email sent to configured recipients
-4. Alert bell shows unread count
-5. Click bell → see recent alerts in dropdown
-6. Alerts page → filter by type/line works
-7. Mark read / dismiss works
-8. Alert rules: disable downtime → no more downtime alerts
-9. Change threshold → new threshold respected
-10. Worker respects advisory lock (no duplicates)
-11. LLM description generated; fallback works if API fails
+1. Worker starts, logs activity, sleeps on schedule
+2. `setup_completed=false` → worker sleeps, rechecks every 5 min
+3. Advisory lock → only one worker runs
+4. Simulate downtime (2+ hours zero delta) → downtime alert created
+5. Consecutive hours grouped correctly (3h gap → two separate events)
+6. Dedup: same event within 4h → not duplicated
+7. Safety cap: 50+ alerts → capped
+8. Email sent to configured recipients
+9. Bell shows unread count, click navigates to alerts tab
+10. Filter by type/line works
+11. Mark read / dismiss works
+12. Settings: disable rule → detection stops
+13. Change threshold → new threshold respected
+14. LLM description works; fallback template works if API fails
+15. Empty state shown when no alerts
 
 ---
 
 ## Phase 3 — Production Analytics Dashboard
 
-**Depends on:** Phase 1 (tag profiles) + Phase 2 (alert history for downtime data)
+**Depends on:** Phase 1 (tag profiles) + Phase 2 (alerts for downtime data)
 
-**User journey:** Plant manager opens the Hercules AI dashboard and sees production trends, line comparisons, efficiency metrics, and AI-generated insights — all without building custom reports. The dashboard auto-configures from tag profiles.
+**User journey:** Plant manager opens the Dashboard tab and sees production trends, line comparisons, efficiency metrics, and AI-generated insights — all auto-configured from tag profiles.
 
 ### Scope
 
-1. Analytics dashboard page — auto-generated from tag profiles
-2. Production overview — total output per line, today vs yesterday vs last week
-3. Line comparison — side-by-side production across all lines
-4. Trend charts — 7-day / 30-day production trends per line
-5. Downtime summary — hours lost per line (from Phase 2 alerts)
-6. Efficiency metrics — uptime %, production rate per hour
-7. AI daily digest — LLM-generated daily summary of plant performance
-8. Period comparison — this week vs last week, this month vs last month
-
-### How Analytics Work
-
-**All data comes from existing tables — no new data collection:**
-
-| Metric | Source | Query |
-|--------|--------|-------|
-| Total production | `tag_history_archive` | `SUM(value_delta)` for counter tags per line per period |
-| Production rate | `tag_history_archive` | `AVG(value)` for rate tags per line per hour |
-| Uptime hours | `hercules_ai_alerts` | Total hours minus downtime hours from alerts |
-| Uptime % | Computed | `(total_hours - downtime_hours) / total_hours * 100` |
-| Period delta | Computed | `(this_period_total - last_period_total) / last_period_total * 100` |
-| Trend direction | Computed | Linear regression slope over 7-day daily totals |
-
-**Tag profiles drive everything:**
-- Only `is_tracked=true` tags appear
-- `tag_type='counter'` → production totals and efficiency
-- `tag_type='rate'` → throughput charts
-- `tag_type='boolean'` → running/stopped status
-- `line_name` → grouping
+1. Analytics dashboard tab — auto-generated from tag profiles
+2. Production overview — total output per line with period comparison
+3. Trend charts — 7/30-day production trends per line
+4. Line comparison — side-by-side production
+5. Efficiency metrics — uptime %, production/hour
+6. AI daily digest — LLM summary of plant performance
+7. Period comparison — this week vs last week
 
 ### Backend — Phase 3
 
-#### New Blueprint Routes (added to `hercules_ai_bp.py`)
-
-| Method | Route | Purpose |
-|--------|-------|---------|
-| GET | `/hercules-ai/analytics/overview` | Production totals per line for today, yesterday, this week, last week |
-| GET | `/hercules-ai/analytics/trends` | Time-series data for production counters, grouped by line, bucketed by day |
-| GET | `/hercules-ai/analytics/comparison` | Side-by-side line comparison for a given period |
-| GET | `/hercules-ai/analytics/efficiency` | Uptime %, production per hour, downtime hours per line |
-| GET | `/hercules-ai/analytics/digest` | AI-generated daily/weekly summary |
-| GET | `/hercules-ai/analytics/period-compare` | Two periods compared: totals, deltas, % change per line |
-
-#### Analytics Query: Overview (`GET /hercules-ai/analytics/overview`)
+#### Helper Functions (in `hercules_ai_bp.py`)
 
 ```python
-def _get_production_overview():
-    """Total production per line for multiple periods."""
-    periods = {
-        'today': (today_start, now),
-        'yesterday': (yesterday_start, today_start),
-        'this_week': (week_start, now),
-        'last_week': (last_week_start, week_start),
-        'this_month': (month_start, now),
-        'last_month': (last_month_start, month_start),
-    }
+def _get_tracked_tags_by_type(tag_type):
+    """Return tracked tag profiles filtered by type, joined with tags table."""
+    get_conn = _get_db_connection()
+    with closing(get_conn()) as conn:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT p.tag_name, p.label, p.line_name, p.category, t.id as tag_id, t.unit
+            FROM hercules_ai_tag_profiles p
+            JOIN tags t ON t.tag_name = p.tag_name
+            WHERE p.tag_type = %s AND p.is_tracked = true AND p.data_status = 'active'
+        """, (tag_type,))
+        return cur.fetchall()
 
-    # Get all tracked counter tags grouped by line
-    counter_tags = _get_tracked_tags_by_line('counter')
-
-    results = {}
-    for period_name, (from_dt, to_dt) in periods.items():
-        # SUM(value_delta) per line from tag_history_archive
-        sql = """
-            SELECT p.line_name, SUM(a.value_delta) as total
+def _get_production_for_period(from_dt, to_dt):
+    """SUM(value_delta) for tracked counter tags, grouped by line. Uses layout_id IS NULL for universal historian."""
+    get_conn = _get_db_connection()
+    with closing(get_conn()) as conn:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT p.line_name, SUM(a.value_delta) as total, t.unit
             FROM hercules_ai_tag_profiles p
             JOIN tags t ON t.tag_name = p.tag_name
             JOIN tag_history_archive a ON a.tag_id = t.id
             WHERE p.tag_type = 'counter' AND p.is_tracked = true
               AND a.archive_hour >= %s AND a.archive_hour < %s
               AND a.layout_id IS NULL
-            GROUP BY p.line_name
-        """
-        results[period_name] = dict(cursor.fetchall())
+            GROUP BY p.line_name, t.unit
+        """, (from_dt, to_dt))
+        return {r['line_name']: {'total': float(r['total'] or 0), 'unit': r['unit'] or ''} for r in cur.fetchall()}
 
-    return results
+def _get_downtime_hours(from_dt, to_dt):
+    """Sum downtime from alerts table, grouped by line."""
+    get_conn = _get_db_connection()
+    with closing(get_conn()) as conn:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT line_name, SUM(duration_minutes) / 60.0 as hours
+            FROM hercules_ai_alerts WHERE alert_type = 'downtime'
+              AND started_at >= %s AND started_at < %s
+            GROUP BY line_name
+        """, (from_dt, to_dt))
+        return {r['line_name']: float(r['hours'] or 0) for r in cur.fetchall()}
 ```
 
-**Response:**
-```json
-{
-  "lines": ["Mill A", "Mill B", "FCL", "Pasta"],
-  "periods": {
-    "today": {"Mill A": 12500, "Mill B": 24300, "FCL": 8200, "Pasta": 5100},
-    "yesterday": {"Mill A": 13100, "Mill B": 25000, "FCL": 7900, "Pasta": 4800},
-    "this_week": {"Mill A": 85000, "Mill B": 168000, "FCL": 55000, "Pasta": 34000},
-    "last_week": {"Mill A": 82000, "Mill B": 171000, "FCL": 53000, "Pasta": 35500}
-  },
-  "deltas": {
-    "today_vs_yesterday": {"Mill A": -4.6, "Mill B": -2.8, "FCL": 3.8, "Pasta": 6.3},
-    "this_week_vs_last": {"Mill A": 3.7, "Mill B": -1.8, "FCL": 3.8, "Pasta": -4.2}
-  },
-  "units": {"Mill A": "kg", "Mill B": "kg", "FCL": "kg", "Pasta": "kg"}
-}
-```
+#### Analytics Routes (all with `@login_required`)
 
-#### Analytics Query: Trends (`GET /hercules-ai/analytics/trends`)
+| Method | Route | Params | Purpose |
+|--------|-------|--------|---------|
+| GET | `/hercules-ai/analytics/overview` | `period` (today/week/month) | KPI cards: per-line totals + delta % |
+| GET | `/hercules-ai/analytics/trends` | `days` (7/30), `line` | Daily time-series per line |
+| GET | `/hercules-ai/analytics/comparison` | `from`, `to` | Side-by-side bar data |
+| GET | `/hercules-ai/analytics/efficiency` | `from`, `to` | Uptime %, prod/hour per line |
+| GET | `/hercules-ai/analytics/digest` | `period` (today/week) | AI executive summary |
+| GET | `/hercules-ai/analytics/period-compare` | `period` (week/month) | This vs last: totals + deltas |
 
+**Overview implementation:** Computes `_get_production_for_period()` for current + previous period, calculates delta %.
+
+**Trends implementation:**
 ```sql
--- Daily production totals per line for last 30 days
 SELECT p.line_name, DATE_TRUNC('day', a.archive_hour) as day,
        SUM(a.value_delta) as daily_total
 FROM hercules_ai_tag_profiles p
 JOIN tags t ON t.tag_name = p.tag_name
 JOIN tag_history_archive a ON a.tag_id = t.id
 WHERE p.tag_type = 'counter' AND p.is_tracked = true
-  AND a.archive_hour >= NOW() - INTERVAL '30 days'
-  AND a.layout_id IS NULL
+  AND a.archive_hour >= %s AND a.layout_id IS NULL
 GROUP BY p.line_name, DATE_TRUNC('day', a.archive_hour)
 ORDER BY p.line_name, day
 ```
+Returns `{series: {lineName: [{date, total}, ...]}}`.
 
-**Response:** Time-series arrays per line, ready for Chart.js:
-```json
-{
-  "Mill A": [{"date": "2026-03-01", "total": 13200}, {"date": "2026-03-02", "total": 12800}, ...],
-  "Mill B": [...]
-}
-```
+**Efficiency implementation:** `total_hours - downtime_hours` = uptime. `production / uptime` = rate.
 
-#### Analytics Query: Efficiency (`GET /hercules-ai/analytics/efficiency`)
+**Period Compare implementation:** Runs `_get_production_for_period()` + `_get_downtime_hours()` for both current and previous period.
 
-```python
-def _get_efficiency(from_dt, to_dt):
-    total_hours = (to_dt - from_dt).total_seconds() / 3600
-
-    # Get downtime hours per line from alerts
-    downtime_sql = """
-        SELECT line_name, SUM(duration_minutes) / 60.0 as downtime_hours
-        FROM hercules_ai_alerts
-        WHERE alert_type = 'downtime'
-          AND started_at >= %s AND started_at < %s
-        GROUP BY line_name
-    """
-
-    # Get production totals per line
-    production = _get_production_for_period(from_dt, to_dt)
-
-    results = {}
-    for line in lines:
-        downtime = downtime_hours.get(line, 0)
-        uptime = total_hours - downtime
-        results[line] = {
-            'total_hours': total_hours,
-            'uptime_hours': round(uptime, 1),
-            'downtime_hours': round(downtime, 1),
-            'uptime_percent': round(uptime / total_hours * 100, 1),
-            'total_production': production.get(line, 0),
-            'production_per_hour': round(production.get(line, 0) / max(uptime, 1), 1),
-        }
-    return results
-```
-
-#### Analytics Query: AI Digest (`GET /hercules-ai/analytics/digest`)
-
-Generates a natural-language summary of the last 24h (or custom period). Uses Claude with a richer prompt:
-
+**Digest implementation:** Builds prompt with production totals, deltas, downtime, efficiency. Calls Claude with 150-word max. Prompt:
 ```
 You are a production analyst for a manufacturing plant.
-
-Here is the plant's performance data for {period_label} ({from} to {to}):
-
-PRODUCTION TOTALS (per line):
-{line_totals_table}
-
-COMPARISON TO PREVIOUS PERIOD:
-{delta_table}
-
-DOWNTIME EVENTS:
-{downtime_list or "None detected"}
-
-EFFICIENCY:
-{efficiency_table}
-
-Write a 3-5 sentence executive summary for the plant manager.
-
-Rules:
-- Lead with overall plant output and whether it's up or down vs. previous period.
-- Mention the best and worst performing lines.
-- Note any downtime events and their impact.
-- If all lines are performing normally, say so briefly.
-- Use simple language. No technical jargon.
-- ONLY reference numbers from the data above.
-- Maximum 150 words.
-- Plain text only, no markdown.
+[structured data: totals, deltas, downtime, efficiency per line]
+Write 3-5 sentence executive summary. Simple language. Facts from data only. Max 150 words.
 ```
-
-**Cost:** One digest per day = ~$0.37/year with Haiku. Negligible.
+10-second timeout. On failure: return 500 with error message.
 
 ### Frontend — Phase 3
 
-#### Dashboard Page: `Frontend/src/Pages/HerculesAI/HerculesAIDashboard.jsx`
+#### Dashboard Tab: `Frontend/src/Pages/HerculesAI/HerculesAIDashboard.jsx`
 
-Uses existing chart components (`react-chartjs-2`, `chart.js`). Dark mode via `useTheme()` pattern from DistributionPage.
+Uses `react-chartjs-2` (already in dependencies) and `@tanstack/react-query` (already in dependencies).
 
-**Layout:**
+**Component tree:**
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│  Plant Performance                        [Today ▾] [This Week ▾]  │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ┌─ AI Summary ────────────────────────────────────────────────────┐ │
-│  │ "The plant produced 50,100 kg today, down 3% from yesterday.  │ │
-│  │  Mill B led with 24,300 kg. FCL showed a 3.8% increase.       │ │
-│  │  No downtime detected across any line."                        │ │
-│  └────────────────────────────────────────────────────────────────┘ │
-│                                                                      │
-│  ┌─ Mill A ──────┐  ┌─ Mill B ──────┐  ┌─ FCL ─────────┐  ┌─ Pasta │
-│  │  12,500 kg    │  │  24,300 kg    │  │  8,200 kg     │  │  5,100 │
-│  │  ▼ 4.6%       │  │  ▼ 2.8%       │  │  ▲ 3.8%       │  │  ▲ 6.3 │
-│  │  vs yesterday │  │  vs yesterday │  │  vs yesterday │  │  vs ye │
-│  └───────────────┘  └───────────────┘  └───────────────┘  └────────┘
-│                                                                      │
-│  ┌─ Production Trend (30 days) ────────────────────────────────────┐ │
-│  │  [Line chart: daily totals per line, color-coded]               │ │
-│  │  ████████████████████████████████████████████████████████████    │ │
-│  └────────────────────────────────────────────────────────────────┘ │
-│                                                                      │
-│  ┌─ Line Comparison ──────────┐  ┌─ Efficiency ──────────────────┐ │
-│  │  [Horizontal bar chart]     │  │  Mill A: 96.2% uptime         │ │
-│  │  Mill B  ████████████ 48%   │  │  Mill B: 83.3% uptime (4h ↓) │ │
-│  │  Mill A  ██████ 25%         │  │  FCL:    100% uptime          │ │
-│  │  FCL     ████ 16%           │  │  Pasta:  100% uptime          │ │
-│  │  Pasta   ███ 10%            │  │                                │ │
-│  └─────────────────────────────┘  └────────────────────────────────┘ │
-│                                                                      │
-│  ┌─ Recent Alerts ────────────────────────────────────────────────┐ │
-│  │  ⚠ Mill B down 4h (02:00–06:00)                    [View All] │ │
-│  │  ✓ No other issues                                             │ │
-│  └────────────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────────────┘
+HerculesAIDashboard
+  ├── PeriodSelector          (dropdown: Today / This Week / This Month)
+  ├── AISummaryCard           (digest text, loading/error states)
+  ├── ProductionCards         (KPI card per line: total + delta %)
+  ├── TrendChart              (Line chart via react-chartjs-2)
+  ├── LineComparisonChart     (Horizontal Bar via react-chartjs-2)
+  ├── EfficiencyTable         (table with progress bars)
+  ├── RecentAlerts            (last 5 alerts, "View All" → alerts tab)
+  └── DashboardSkeleton       (loading placeholder)
 ```
 
-#### Dashboard Components
+**Data fetching (React Query with auto-refresh):**
+```jsx
+const overview = useQuery({
+  queryKey: ['hai-overview', period],
+  queryFn: () => herculesAIApi.getOverview(period),
+  refetchInterval: 5 * 60 * 1000,  // 5 min
+});
+const trends = useQuery({ queryKey: ['hai-trends', days], queryFn: ..., refetchInterval: 5*60*1000 });
+const efficiency = useQuery({ queryKey: ['hai-efficiency'], queryFn: ..., refetchInterval: 5*60*1000 });
+const digest = useQuery({ queryKey: ['hai-digest', period], queryFn: ..., refetchInterval: 10*60*1000 });
+const alerts = useQuery({ queryKey: ['hai-recent-alerts'], queryFn: () => herculesAIApi.getAlerts({limit:5}) });
+```
 
-| Component | Chart type | Data source |
-|-----------|-----------|-------------|
-| AI Summary card | Text | `/hercules-ai/analytics/digest` |
-| Line KPI cards | Numbers + delta % | `/hercules-ai/analytics/overview` |
-| Production Trend | Line chart (Chart.js) | `/hercules-ai/analytics/trends` |
-| Line Comparison | Horizontal bar | `/hercules-ai/analytics/overview` (this_week) |
-| Efficiency table | Progress bars + text | `/hercules-ai/analytics/efficiency` |
-| Recent Alerts | List (last 5) | `/hercules-ai/alerts?limit=5` |
+**States:**
+- **Loading:** `DashboardSkeleton` — gray pulsing rectangles matching layout
+- **Error:** Red-bordered card: "Could not load analytics data. [Retry]"
+- **Empty:** "No production data available yet. Data appears once historian collects readings."
+- **Single line:** No comparison chart. Single KPI card. Single trend line.
 
-#### Period Selector
-- Dropdown in top-right: Today, Yesterday, This Week, Last Week, This Month, Last Month, Custom Range
-- Changes all dashboard cards simultaneously
-- Custom range: date picker (reuse from distribution rule editor)
+**Component props:**
+- `ProductionCards` — `cards: [{line_name, total, delta_percent, unit, label}]`
+- `TrendChart` — `series: {lineName: [{date, total}]}`, `days: number`
+- `LineComparisonChart` — `cards: same as ProductionCards`
+- `EfficiencyTable` — `lines: [{line_name, uptime_percent, downtime_hours, production_per_hour, unit}]`
+- `AISummaryCard` — `summary: string`, `isLoading: bool`, `error: string|null`
+- `RecentAlerts` — `alerts: [{id, title, severity, line_name, created_at}]`, `onViewAll: () => void`
 
-#### Auto-Refresh
-- Dashboard refreshes every 5 minutes (configurable)
-- Small "Last updated: 2 min ago" indicator in header
-- Manual refresh button
+**Period selector** changes `period` state → all `useQuery` keys update → all components re-render.
 
-#### Navigation Update
-- Hercules AI nav becomes expandable group:
-  - Dashboard (`/hercules-ai` — default landing)
-  - Alerts (`/hercules-ai/alerts`)
-  - Setup (`/hercules-ai/setup`)
-- Or: tab-based single page (simpler, fewer routes)
+**"Last updated"** timestamp from React Query's `dataUpdatedAt`.
+
+#### API Methods (added to herculesAIApi.js)
+
+```js
+getOverview:      (period)     => axios.get(`${BASE}/analytics/overview`, { params: { period } }),
+getTrends:        (days, line) => axios.get(`${BASE}/analytics/trends`, { params: { days, line } }),
+getComparison:    (from, to)   => axios.get(`${BASE}/analytics/comparison`, { params: { from, to } }),
+getEfficiency:    (from, to)   => axios.get(`${BASE}/analytics/efficiency`, { params: { from, to } }),
+getDigest:        (period)     => axios.get(`${BASE}/analytics/digest`, { params: { period } }),
+getPeriodCompare: (period)     => axios.get(`${BASE}/analytics/period-compare`, { params: { period } }),
+```
 
 ### Phase 3 — Files
 
@@ -1019,45 +1213,51 @@ Uses existing chart components (`react-chartjs-2`, `chart.js`). Dark mode via `u
 - `Frontend/src/Pages/HerculesAI/HerculesAIDashboard.jsx`
 - `Frontend/src/Pages/HerculesAI/components/ProductionCards.jsx`
 - `Frontend/src/Pages/HerculesAI/components/TrendChart.jsx`
-- `Frontend/src/Pages/HerculesAI/components/LineComparison.jsx`
+- `Frontend/src/Pages/HerculesAI/components/LineComparisonChart.jsx`
 - `Frontend/src/Pages/HerculesAI/components/EfficiencyTable.jsx`
 - `Frontend/src/Pages/HerculesAI/components/AISummaryCard.jsx`
 - `Frontend/src/Pages/HerculesAI/components/RecentAlerts.jsx`
+- `Frontend/src/Pages/HerculesAI/components/PeriodSelector.jsx`
+- `Frontend/src/Pages/HerculesAI/components/DashboardSkeleton.jsx`
 
 **Modify:**
-- `backend/hercules_ai_bp.py` — add 6 analytics routes
-- `Frontend/src/API/herculesAIApi.js` — add analytics endpoints
-- `Frontend/src/Routes/AppRoutes.jsx` — add /hercules-ai/dashboard, update /hercules-ai routing
-- `Frontend/src/Data/Navbar.js` — update nav structure (sub-items or tabs)
+- `backend/hercules_ai_bp.py` — add 6 analytics routes + 3 helper functions
+- `Frontend/src/API/herculesAIApi.js` — add 6 analytics endpoints
+- `Frontend/src/Pages/HerculesAI/HerculesAISetup.jsx` — add Dashboard tab
 - `Frontend/src/i18n/*.json` — add ~40 analytics keys each
 
 ### Phase 3 — Implementation Order
 
-1. Backend analytics routes (overview, trends, comparison, efficiency, digest, period-compare)
-2. Frontend API layer (analytics endpoints)
-3. Dashboard page shell + period selector
-4. KPI cards component (production totals + deltas)
-5. AI Summary card component
-6. Trend chart component (30-day line chart)
-7. Line comparison component (bar chart)
-8. Efficiency table component
-9. Recent alerts component (reuses Phase 2 alert data)
-10. Routes + nav restructure
-11. i18n (all 4 files)
+1. Backend helpers (`_get_tracked_tags_by_type`, `_get_production_for_period`, `_get_downtime_hours`)
+2. Backend routes (overview, trends, efficiency, period-compare, digest, comparison)
+3. Frontend API layer (6 endpoints)
+4. Dashboard shell + period selector + tab integration
+5. AI Summary card
+6. KPI cards (production totals + deltas)
+7. Trend chart (Line)
+8. Line comparison (horizontal Bar)
+9. Efficiency table (progress bars)
+10. Recent alerts
+11. Loading skeleton + error + empty states
+12. i18n (all 4 files)
 
 ### Phase 3 — Verification
 
-1. `/api/hercules-ai/analytics/overview` returns correct totals per line per period
-2. Period deltas match manual calculation
-3. Trends chart shows 30 days of daily data per line
-4. Line comparison bar chart renders correctly
-5. Efficiency shows correct uptime % (cross-check with Phase 2 alerts)
-6. AI digest generates coherent summary referencing actual data
-7. Period selector changes all cards
-8. Dashboard renders correctly in dark mode
-9. Auto-refresh updates data without page reload
-10. Empty state: no data yet → helpful message, not errors
-11. Single line plant → no comparison chart, just overview
+1. Overview returns correct totals per line per period
+2. Deltas match manual calculation
+3. Trends shows daily data, correct values
+4. Comparison bar chart renders proportionally
+5. Efficiency uptime % cross-checks with Phase 2 alerts
+6. AI digest references actual data, coherent
+7. Period selector changes all components
+8. Auto-refresh every 5 min (React Query)
+9. "Last updated" shown
+10. Dark mode renders correctly
+11. Empty state: no data → helpful message
+12. Single line: no comparison, single card/line
+13. Loading skeleton shown during fetch
+14. Error: API failure → retry card
+15. Recent alerts matches Phase 2 data
 
 ---
 
@@ -1065,34 +1265,41 @@ Uses existing chart components (`react-chartjs-2`, `chart.js`). Dark mode via `u
 
 ```
 Phase 1: Setup + Email Summaries
-  ├── Tag profiles (foundation for everything)
-  ├── LLM integration (reused in Phase 2 + 3)
-  ├── Scanner (reused on re-scans)
-  └── Distribution engine integration
+  ├── Tag profiles DB + scanner (foundation for everything)
+  ├── LLM integration + rate limiting (reused in Phase 2 + 3)
+  ├── User correction feedback loop (source='user' + UPSERT protection)
+  ├── Full edit control: type, label, LINE, CATEGORY, notes
+  ├── Distribution engine integration (email summaries)
+  └── Setup page with 3 states + empty state
 
 Phase 2: Downtime Detection + Alerts (requires Phase 1)
-  ├── Analysis worker (uses tag profiles from Phase 1)
-  ├── Alert rules + history
-  ├── Email alerts (uses LLM from Phase 1)
-  └── In-app notifications
+  ├── Worker with advisory lock (uses `from app import get_db_connection`)
+  ├── 4 detection algorithms with full SQL + Python implementations
+  ├── Consecutive-hour gap grouping algorithm
+  ├── Dedup + safety cap (50/run) + rate limit (200 LLM calls/day)
+  ├── Alert email template (HTML, color-coded by severity)
+  ├── Bell in Navbar.jsx (not SideNav)
+  └── Tab-based navigation (Setup | Alerts)
 
 Phase 3: Analytics Dashboard (requires Phase 1 + 2)
-  ├── Analytics queries (uses tag profiles from Phase 1)
-  ├── Efficiency metrics (uses downtime data from Phase 2)
-  ├── AI digest (uses LLM from Phase 1)
-  └── Dashboard UI (uses chart components already in project)
+  ├── 3 helper functions with full SQL
+  ├── 6 analytics endpoints with full implementations
+  ├── 9 frontend components with props/state defined
+  ├── React Query auto-refresh (5 min)
+  ├── Loading skeleton + error + empty states
+  ├── AI digest with structured prompt
+  └── Tab-based navigation (Setup | Alerts | Dashboard)
 ```
 
 ## Key Patterns to Reuse (All Phases)
 
-- `report_builder_bp.py` → `_get_db_connection()` (checks 'app' + '__main__')
+- `report_builder_bp.py` → `_get_db_connection()` checks both `'app'` and `'__main__'` — use in **blueprint**
+- `historian_worker.py` → `from app import get_db_connection` — use in **workers**
 - `distribution_bp.py` → `_ensure_table()` guard pattern
-- `distribution_engine.py` → `extract_all_tags()` (DO NOT reimplement)
+- `distribution_engine.py` → `extract_all_tags()` for tag extraction (DO NOT reimplement)
 - `distribution_engine.py` → `_send_email()` for alert emails
-- `dynamic_archive_worker.py` → worker pattern with advisory lock + eventlet sleep loop
-- `smtp_config.py` → pattern for obfuscated/stored API keys
-- `ShiftsSettings.jsx` / `SystemSettings.jsx` → card container, form patterns
-- `DistributionPage.jsx` → dark mode theme, search/filter tabs, `useTheme()` hook
-- `DistributionRuleEditor.jsx` → toggle switch pattern, EMPTY_RULE constant
-- `DynamicLineChart.jsx` / `DynamicBarChart.jsx` → chart rendering (react-chartjs-2)
-- `DynamicKPICards.jsx` → KPI card pattern with live values
+- `dynamic_archive_worker.py` → worker pattern with advisory lock + eventlet sleep
+- `DistributionPage.jsx` → dark mode `useTheme()` hook
+- `DistributionRuleEditor.jsx` → toggle switch pattern, `EMPTY_RULE` constant
+- `react-chartjs-2` → Line + Bar charts (already in package.json)
+- `@tanstack/react-query` → data fetching + auto-refresh (already in package.json)
