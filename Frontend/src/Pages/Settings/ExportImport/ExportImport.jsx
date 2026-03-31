@@ -270,8 +270,9 @@ const ExportImport = () => {
           try {
             let count = 0;
             for (const tpl of importFile.report_templates) {
-              try { await axios.post('/api/report-builder/templates', tpl); count++; }
-              catch { try { await axios.put(`/api/report-builder/templates/${tpl.id}`, tpl); count++; } catch { /* skip */ } }
+              const payload = { ...tpl, status: 'released' };
+              try { await axios.post('/api/report-builder/templates', payload); count++; }
+              catch { try { await axios.put(`/api/report-builder/templates/${tpl.id}`, payload); count++; } catch { /* skip */ } }
             }
             results.push({ type: 'success', msg: `Report Templates: imported ${count}` });
           } catch (e) { results.push({ type: 'error', msg: `Report Templates: ${e.message}` }); }
