@@ -83,7 +83,7 @@ const ExportImport = () => {
   const fetchMappings = async () => { try { return (await axios.get('/api/mappings')).data?.mappings || []; } catch { return []; } };
   const fetchFormulas = () => { try { return JSON.parse(localStorage.getItem('system_saved_formulas') || '[]'); } catch { return []; } };
   const fetchReports = () => { try { return JSON.parse(localStorage.getItem('dynamicReportConfigs') || '[]'); } catch { return []; } };
-  const fetchReportTemplates = async () => { try { return (await axios.get('/api/report-builder/templates')).data?.templates || []; } catch { return []; } };
+  const fetchReportTemplates = async () => { try { return (await axios.get('/api/report-builder/templates')).data?.data || []; } catch { return []; } };
   const fetchShifts = async () => { try { return (await axios.get('/api/settings/shifts')).data || null; } catch { return null; } };
   const fetchSmtp = async () => { try { return (await axios.get('/api/settings/smtp-config')).data || null; } catch { return null; } };
   const fetchDistributionRules = async () => { try { return (await axios.get('/api/distribution/rules')).data?.rules || []; } catch { return []; } };
