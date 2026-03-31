@@ -1976,22 +1976,27 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
     time_from = from_dt.strftime('%Y-%m-%d %H:%M')
     time_to = to_dt.strftime('%Y-%m-%d %H:%M')
 
-    prompt = f"""You are a production report summarizer for a manufacturing plant.
-Given the following data from the "{names_str}" report(s) covering {time_from} to {time_to}:
+    prompt = f"""You summarize production data for plant managers. Be extremely concise.
 
+Report: {names_str}
+Period: {time_from} to {time_to}
+
+Data (Label | Type | Value | Line):
 {structured_data}
 
-Each row shows: Tag Label | Type | Value | Line
+Output format — use EXACTLY this structure:
+**{names_str}** — {{one-line verdict: running normally / reduced output / line down / no data}}
 
-Write a 2-4 sentence summary for plant managers.
+• **Production**: {{key totals with values, or "No data recorded"}}
+• **Status**: {{equipment on/off states, only if notable}}
+• **Alerts**: {{zero counters, unusual values — or "None"}}
+
 Rules:
-- ONLY reference numbers that appear in the data above. Never calculate or infer new numbers.
-- Lead with the most important production metric (largest total, key output).
-- Mention at most 2 anomalies (values that are zero when expected, unusually high or low).
-- Use simple language. No technical jargon.
-- If a "counter" type shows zero during what should be a production period, mention it as possible downtime.
-- Maximum 120 words.
-- Do not use markdown formatting. Plain text only."""
+- Maximum 4 bullet points. No bullet longer than 15 words.
+- Only cite numbers from the data above. Never calculate or infer.
+- N/A values mean no data was recorded — say "no data", don't speculate why.
+- Skip any bullet that has nothing useful to report.
+- No paragraphs. No filler. No recommendations."""
 
     try:
         import ai_provider
@@ -2019,14 +2024,33 @@ def _is_zero(val):
         return False
 
 
+def _format_summary_html(summary):
+    """Convert AI summary markdown (bold + bullets) to email-safe HTML."""
+    import re
+    # Bold
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_escape(summary))
+    # Bullet lines
+    lines = text.split('\n')
+    out = []
+    for line in lines:
+        line = line.strip()
+        if line.startswith('• ') or line.startswith('&bull; '):
+            content = line.lstrip('• ').lstrip('&bull; ')
+            out.append(f'<div style="padding-left:12px;margin:2px 0;">• {content}</div>')
+        elif line:
+            out.append(f'<div style="margin:2px 0;">{line}</div>')
+    return ''.join(out)
+
+
 def _prepend_summary_to_email(summary, email_html):
     """Insert AI summary block after <body> in the email HTML."""
+    formatted = _format_summary_html(summary)
     summary_block = (
         '<div style="background:#f0f9ff;border-left:4px solid #0284c7;'
         'padding:16px 20px;margin:0 0 24px;border-radius:6px;">'
         '<div style="font-size:13px;font-weight:600;color:#0369a1;margin-bottom:8px;">'
         'Hercules AI Summary</div>'
-        f'<div style="font-size:14px;color:#1e293b;line-height:1.6;">{html_escape(summary)}</div>'
+        f'<div style="font-size:14px;color:#1e293b;line-height:1.5;">{formatted}</div>'
         '</div>'
     )
     # Insert after first <body...> tag

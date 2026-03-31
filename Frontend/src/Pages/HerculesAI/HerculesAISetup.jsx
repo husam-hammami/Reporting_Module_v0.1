@@ -375,7 +375,7 @@ export default function HerculesAISetup() {
             </div>
 
             <p className="text-sm mb-3" style={{ color: t.textSecondary }}>
-              {tr('herculesAI.complete.tracking', { count: status?.total - (status?.excluded || 0) })}
+              {tr('herculesAI.complete.tracking').replace('{count}', status?.total - (status?.excluded || 0))}
             </p>
 
             {status?.lines?.length > 0 && (
@@ -419,7 +419,14 @@ export default function HerculesAISetup() {
                   <div className="text-xs font-semibold mb-2" style={{ color: t.success }}>
                     {tr('herculesAI.preview')} — {previewResult.report}
                   </div>
-                  <p className="text-sm" style={{ color: t.text }}>{previewResult.summary}</p>
+                  <div className="text-sm" style={{ color: t.text }}
+                    dangerouslySetInnerHTML={{
+                      __html: previewResult.summary
+                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/^• /gm, '<li style="margin-left:1rem;list-style:disc">')
+                        .replace(/\n/g, '<br/>')
+                    }}
+                  />
                 </>
               )}
             </div>

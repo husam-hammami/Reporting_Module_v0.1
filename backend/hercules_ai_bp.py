@@ -822,22 +822,27 @@ def preview_summary():
     time_from = from_dt.strftime('%Y-%m-%d %H:%M')
     time_to = to_dt.strftime('%Y-%m-%d %H:%M')
 
-    prompt = f"""You are a production report summarizer for a manufacturing plant.
-Given the following data from the "{chosen_template['name']}" report covering {time_from} to {time_to}:
+    prompt = f"""You summarize production data for plant managers. Be extremely concise.
 
+Report: {chosen_template['name']}
+Period: {time_from} to {time_to}
+
+Data (Label | Type | Value | Line):
 {structured_data}
 
-Each row shows: Tag Label | Type | Value | Line
+Output format — use EXACTLY this structure:
+**{chosen_template['name']}** — {{one-line verdict: running normally / reduced output / line down / no data}}
 
-Write a 2-4 sentence summary for plant managers.
+• **Production**: {{key totals with values, or "No data recorded"}}
+• **Status**: {{equipment on/off states, only if notable}}
+• **Alerts**: {{zero counters, unusual values — or "None"}}
+
 Rules:
-- ONLY reference numbers that appear in the data above. Never calculate or infer new numbers.
-- Lead with the most important production metric (largest total, key output).
-- Mention at most 2 anomalies (values that are zero when expected, unusually high or low).
-- Use simple language. No technical jargon.
-- If a "counter" type shows zero during what should be a production period, mention it as possible downtime.
-- Maximum 120 words.
-- Do not use markdown formatting. Plain text only."""
+- Maximum 4 bullet points. No bullet longer than 15 words.
+- Only cite numbers from the data above. Never calculate or infer.
+- N/A values mean no data was recorded — say "no data", don't speculate why.
+- Skip any bullet that has nothing useful to report.
+- No paragraphs. No filler. No recommendations."""
 
     try:
         import ai_provider
