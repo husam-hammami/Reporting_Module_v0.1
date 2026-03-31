@@ -33,6 +33,24 @@ except ImportError:
 
 LICENSE_SERVER_URL = "https://api.herculesv2.app"
 
+
+def _hide_launcher_console():
+    """Hide the launcher's own console window immediately.
+
+    We build with console=True (PyInstaller) so PostgreSQL child processes inherit
+    a real console and don't crash with 0xC0000005.  This function hides the window
+    before the user can see it.
+    """
+    try:
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 0)  # SW_HIDE
+    except Exception:
+        pass
+
+_hide_launcher_console()
+
+
 def _hidden_si():
     """Return a STARTUPINFO that hides the console window without breaking child processes."""
     si = subprocess.STARTUPINFO()
@@ -290,29 +308,40 @@ def get_venv_env():
     return env
 
 
-def run(cmd, env=None, cwd=None):
+def _hidden_kwargs():
+    """Return kwargs that hide child process windows.
+
+    With console=True in the spec, children inherit the launcher's (hidden) console.
+    SW_HIDE ensures no new visible windows appear.
+    """
+    return dict(startupinfo=_hidden_si())
+
+
+def run(cmd, env=None, cwd=None, hide=True):
     """Run command, return CompletedProcess with stdout/stderr bytes."""
-    return subprocess.run(
-        cmd,
+    kwargs = dict(
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         env=env or os.environ,
         cwd=cwd or BASE_DIR,
         shell=False,
-        startupinfo=_hidden_si(),
     )
+    if hide:
+        kwargs.update(_hidden_kwargs())
+    return subprocess.run(cmd, **kwargs)
 
 
-def run_checked(cmd, label="Command", env=None, cwd=None):
+def run_checked(cmd, label="Command", env=None, cwd=None, hide=True):
     """Run a command, capture output, and show a message box on failure."""
-    result = subprocess.run(
-        cmd,
+    kwargs = dict(
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         env=env or os.environ,
         cwd=cwd or BASE_DIR,
-        startupinfo=_hidden_si(),
     )
+    if hide:
+        kwargs.update(_hidden_kwargs())
+    result = subprocess.run(cmd, **kwargs)
     if result.returncode != 0:
         output = (result.stdout or b"").decode("utf-8", errors="replace").strip()
         log.error("%s failed (exit %d):\n%s", label, result.returncode, output)
@@ -328,7 +357,8 @@ def init_db_if_needed():
     log.info("Initializing PostgreSQL cluster...")
     os.makedirs(DATA_DIR, exist_ok=True)
     run_checked(
-        [INITDB, "-D", DATA_DIR, "-U", "postgres"],
+        [INITDB, "-D", DATA_DIR, "-U", "postgres",
+         "--encoding=UTF8", "--locale=C"],
         label="PostgreSQL initdb",
     )
 
@@ -462,7 +492,7 @@ def kill_previous_instances():
             subprocess.run(
                 [PG_CTL, "-D", DATA_DIR, "stop", "-m", "fast"],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                timeout=15, startupinfo=_hidden_si(),
+                timeout=15, **_hidden_kwargs(),
             )
         except Exception:
             subprocess.run(
@@ -482,7 +512,7 @@ def stop_postgres():
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             timeout=30,
-            startupinfo=_hidden_si(),
+            **_hidden_kwargs(),
         )
         log.info("PostgreSQL stopped.")
     except Exception as e:
@@ -569,7 +599,7 @@ def check_and_apply_update():
             best_release = release
 
     if best_release is None:
-        print(f"No releases found for branch '{branch}'.")
+        log.info("No releases found for branch '%s'.", branch)
         return
 
     remote_ver = best_release["tag_name"][len(prefix):]
