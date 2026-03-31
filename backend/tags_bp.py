@@ -725,6 +725,33 @@ def delete_tag(tag_name):
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@tags_bp.route('/tags/bulk-delete', methods=['POST'])
+def bulk_delete_tags():
+    """Bulk soft-delete tags by tag_name list"""
+    try:
+        data = request.get_json()
+        tag_names = data.get('tag_names', [])
+        if not tag_names or not isinstance(tag_names, list):
+            return jsonify({'status': 'error', 'message': 'tag_names array is required'}), 400
+
+        get_db_connection_func = _get_db_connection()
+        with closing(get_db_connection_func()) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE tags SET is_active = false WHERE tag_name = ANY(%s) AND is_active = true",
+                (tag_names,)
+            )
+            deleted = cursor.rowcount
+            conn.commit()
+
+            logger.info(f"Bulk deleted {deleted} tags")
+            return jsonify({'status': 'success', 'deleted': deleted})
+
+    except Exception as e:
+        logger.error(f"Error bulk deleting tags: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @tags_bp.route('/tags/<tag_name>/test', methods=['GET'])
 def test_tag(tag_name):
     """Test reading a tag from PLC"""
