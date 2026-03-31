@@ -87,13 +87,20 @@ def _get_config(cur):
 
 # ── Classification rules ─────────────────────────────────────────────────────
 
-def _classify_tag(tag_name, meta):
-    """Rule-based tag classification. Returns (tag_type, confidence)."""
+def _classify_tag(tag_name, meta, label=''):
+    """Rule-based tag classification. Returns (tag_type, confidence).
+
+    Uses metadata first (unit, data_type, is_counter), then falls back to
+    name/label keyword matching so obvious tags never show as 'unknown'.
+    """
     is_counter = meta.get('is_counter', False)
     data_type = (meta.get('data_type') or '').upper()
     unit = (meta.get('unit') or '').lower().strip()
     name_lower = tag_name.lower()
+    label_lower = (label or '').lower()
+    text = f"{name_lower} {label_lower}"  # combined for keyword search
 
+    # ── Priority 1: Strong metadata matches ─────────────────────────────
     if is_counter and unit in ('kg', 't', 'ton', 'tons', 'lb', 'lbs'):
         return 'counter', 0.95
     if is_counter:
@@ -110,12 +117,52 @@ def _classify_tag(tag_name, meta):
         return 'analog', 0.90
     if unit in ('rpm',):
         return 'analog', 0.85
-    if unit in ('a', 'v', 'kw', 'kwh'):
+    if unit in ('a', 'v', 'kw', 'kwh', 'mwh', 'w', 'hz'):
         return 'analog', 0.80
-    if any(w in name_lower for w in ('selected', 'running', 'emptying')) and data_type == 'BOOL':
-        return 'boolean', 0.80
-    if re.search(r'\bid\b|\bbin\b', name_lower):
+
+    # ── Priority 2: Name/label keyword matching ─────────────────────────
+    # Counters / totals
+    if any(w in text for w in ('total', 'counter', 'accumulator', 'totalizer',
+                                'cumulative', 'production_total', 'prod_total')):
+        return 'counter', 0.75
+
+    # Booleans / on-off / status
+    if any(w in text for w in ('running', 'on_off', 'on/off', 'status', 'active',
+                                'enabled', 'disabled', 'start', 'stop', 'alarm',
+                                'fault', 'trip', 'interlock', 'selected',
+                                'emptying', 'filling', 'open', 'closed')):
+        return 'boolean', 0.70
+
+    # Rates / flow
+    if any(w in text for w in ('flow', 'rate', 'speed', 'feed_rate', 'feedrate',
+                                'throughput', 'capacity')):
+        return 'rate', 0.70
+
+    # Percentages / levels
+    if any(w in text for w in ('percent', 'level', 'moisture', 'humidity',
+                                'efficiency', 'utilization', 'load')):
+        return 'percentage', 0.70
+
+    # Temperatures
+    if any(w in text for w in ('temp', 'temperature', 'heating', 'cooling')):
+        return 'analog', 0.70
+
+    # Pressures
+    if any(w in text for w in ('pressure', 'vacuum')):
+        return 'analog', 0.70
+
+    # General analog (current, voltage, power, weight, etc.)
+    if any(w in text for w in ('current', 'voltage', 'power', 'energy',
+                                'weight', 'torque', 'vibration', 'position',
+                                'setpoint', 'set_point', 'sp_')):
+        if any(w in text for w in ('setpoint', 'set_point', 'sp_')):
+            return 'setpoint', 0.70
+        return 'analog', 0.65
+
+    # ID / selector / recipe
+    if re.search(r'\bid\b|\bbin\b|\brecipe\b|\bproduct\b|\bgrade\b', text):
         return 'id_selector', 0.70
+
     return 'unknown', 0.30
 
 
@@ -282,10 +329,9 @@ def scan_reports():
             profiles = []
             for tag_name in all_tags:
                 meta = tag_meta.get(tag_name, {})
-                tag_type, confidence = _classify_tag(tag_name, meta)
                 ctx = all_context.get(tag_name, {})
-
                 label = ctx.get('label', '') or meta.get('display_name', '') or ''
+                tag_type, confidence = _classify_tag(tag_name, meta, label=label)
                 line_name = ctx.get('line_name', '')
                 category = ctx.get('category', '')
                 evidence = {
