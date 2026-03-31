@@ -545,9 +545,11 @@ function httpsGetJSON(url) {
 function downloadFile(url, dest, onProgress) {
   const https = require('https');
   return new Promise((resolve, reject) => {
+    let redirects = 0;
     const follow = (u) => {
       https.get(u, { headers: { 'User-Agent': 'HerculesDesktop/1.0' }, timeout: 120000 }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          if (++redirects > 5) { reject(new Error('Too many redirects')); return; }
           follow(res.headers.location);
           return;
         }
@@ -563,7 +565,15 @@ function downloadFile(url, dest, onProgress) {
           file.write(chunk);
           if (total > 0 && onProgress) onProgress((downloaded / total) * 100);
         });
-        res.on('end', () => { file.end(); resolve(); });
+        res.on('end', () => {
+          file.end(() => {
+            if (total > 0 && downloaded < total) {
+              reject(new Error(`Incomplete download: ${downloaded}/${total} bytes`));
+            } else {
+              resolve();
+            }
+          });
+        });
         res.on('error', (e) => { file.end(); reject(e); });
       }).on('error', reject).on('timeout', function() { this.destroy(); reject(new Error('Download timeout')); });
     };
@@ -691,8 +701,11 @@ async function checkAndApplyUpdate() {
 
   } catch (err) {
     console.error('[OTA] Install failed, rolling back:', err.message);
-    // Rollback: restore backup
-    if (!fs.existsSync(BACKEND_DIR) && fs.existsSync(backupDir)) {
+    // Rollback: remove partial extraction, restore backup
+    if (fs.existsSync(BACKEND_DIR) && fs.existsSync(backupDir)) {
+      try { fs.rmSync(BACKEND_DIR, { recursive: true, force: true }); } catch { /* ignore */ }
+    }
+    if (fs.existsSync(backupDir)) {
       try { fs.renameSync(backupDir, BACKEND_DIR); } catch { /* critical failure */ }
     }
     try { fs.unlinkSync(tmpZip); } catch { /* ignore */ }
