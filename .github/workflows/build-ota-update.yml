@@ -1,33 +1,50 @@
-name: Build OTA Update
+name: Build Full Installer
 
 on:
+  # Manual trigger from GitHub Actions tab — pick the branch to build
+  workflow_dispatch:
+  # Or push a version tag like: git tag release-v1.0.50 && git push --tags
   push:
-    branches: [Salalah_Mill_B]
+    tags:
+      - '*-v*'
 
 permissions:
   contents: write
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
+  build-installer:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Generate version from commit count
+      - name: Extract branch name and generate version
+        shell: bash
         id: version
         run: |
+          BRANCH="${GITHUB_REF##refs/heads/}"
+          BRANCH_SLUG=$(echo "$BRANCH" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
           COUNT=$(git rev-list --count HEAD)
           VERSION="1.0.${COUNT}"
+          TAG="${BRANCH_SLUG}-v${VERSION}"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "branch_slug=${BRANCH_SLUG}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Generated version: ${VERSION}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
+      # ── Setup tools ──────────────────────────────────────────────
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Build frontend for launcher
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      # ── Step 1: Build frontend ───────────────────────────────────
+      - name: Build frontend
+        shell: bash
         run: |
           cd Frontend
           cp .env.launcher .env.production.local
@@ -35,26 +52,141 @@ jobs:
           npm run build
 
       - name: Copy frontend into backend
+        shell: bash
         run: |
           rm -rf backend/frontend/dist
           mkdir -p backend/frontend
           cp -r Frontend/dist backend/frontend/dist
 
-      - name: Create update zip
-        run: zip -r hercules-update-${{ steps.version.outputs.version }}.zip backend/
+      - name: Write version and branch info
+        shell: bash
+        run: |
+          echo "${{ steps.version.outputs.version }}" > backend/version.txt
+          echo "${{ steps.version.outputs.branch }}" > backend/release_branch.txt
+
+      # ── Step 2: Build backend exe with PyInstaller ───────────────
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build backend exe
+        shell: bash
+        run: |
+          cd backend
+          python -m PyInstaller hercules.spec --noconfirm
+
+      # ── Step 3: Download portable PostgreSQL ─────────────────────
+      - name: Download portable PostgreSQL 17
+        shell: pwsh
+        run: |
+          $pgUrl = "https://get.enterprisedb.com/postgresql/postgresql-17.2-1-windows-x64-binaries.zip"
+          Write-Host "Downloading PostgreSQL portable..."
+          Invoke-WebRequest -Uri $pgUrl -OutFile pgsql.zip -UseBasicParsing
+          Write-Host "Extracting..."
+          Expand-Archive -Path pgsql.zip -DestinationPath pgsql-extract -Force
+          # The zip contains a pgsql/ folder inside
+          if (Test-Path "pgsql-extract/pgsql") {
+            Move-Item "pgsql-extract/pgsql" "desktop/pgsql"
+          } else {
+            # Fallback: find the bin folder
+            $binDir = Get-ChildItem -Path "pgsql-extract" -Recurse -Filter "pg_ctl.exe" | Select-Object -First 1
+            if ($binDir) {
+              $pgRoot = $binDir.Directory.Parent.FullName
+              Move-Item $pgRoot "desktop/pgsql"
+            } else {
+              Write-Error "Could not find PostgreSQL binaries in downloaded archive"
+              exit 1
+            }
+          }
+          Remove-Item pgsql.zip
+          Remove-Item pgsql-extract -Recurse -Force -ErrorAction SilentlyContinue
+          Write-Host "PostgreSQL portable ready at desktop/pgsql/"
+
+      # ── Step 4: Download VC++ Redistributable ────────────────────
+      - name: Download VC++ Redistributable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "desktop/vcredist" -Force | Out-Null
+          $vcUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+          Invoke-WebRequest -Uri $vcUrl -OutFile "desktop/vcredist/vc_redist.x64.exe" -UseBasicParsing
+          Write-Host "VC++ redistributable downloaded."
+
+      # ── Step 5: Build Electron installer ─────────────────────────
+      - name: Install Electron dependencies
+        shell: bash
+        run: |
+          cd desktop
+          npm install
+
+      - name: Build Electron NSIS installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd desktop
+          npx electron-builder --win --publish never
+
+      # ── Step 6: Create OTA update zip (frozen backend for launcher) ──
+      - name: Create OTA update zip
+        shell: pwsh
+        id: ota
+        run: |
+          $OTA_NAME = "Hercules-OTA-${{ steps.version.outputs.tag }}.zip"
+          # Launcher extracts to BASE_DIR and expects a backend/ folder.
+          # PyInstaller outputs to backend/dist/hercules-backend/ — rename to backend/
+          Set-Location backend/dist
+          if (Test-Path "hercules-backend") {
+            Rename-Item "hercules-backend" "backend"
+          } else {
+            $first = Get-ChildItem -Directory | Select-Object -First 1
+            Rename-Item $first.Name "backend"
+          }
+          Compress-Archive -Path "backend" -DestinationPath "../../$OTA_NAME" -Force
+          Set-Location ../..
+          echo "zip=$OTA_NAME" >> $env:GITHUB_OUTPUT
+          Write-Host "Created OTA zip: $OTA_NAME"
+
+      # ── Step 7: Upload installer + OTA to GitHub Release ─────────
+      - name: Find and rename installer exe
+        shell: pwsh
+        id: installer
+        run: |
+          $exe = Get-ChildItem -Path "desktop/dist" -Filter "*.exe" | Where-Object { $_.Name -notmatch "\.blockmap" } | Select-Object -First 1
+          if (-not $exe) {
+            Write-Error "No installer exe found in desktop/dist/"
+            Get-ChildItem "desktop/dist/"
+            exit 1
+          }
+          $newName = "Hercules-Setup-${{ steps.version.outputs.tag }}.exe"
+          $newPath = "desktop/dist/$newName"
+          Move-Item $exe.FullName $newPath
+          echo "exe=$newPath" >> $env:GITHUB_OUTPUT
+          echo "name=$newName" >> $env:GITHUB_OUTPUT
+          Write-Host "Found installer: $newName"
 
       - name: Compute SHA-256
+        shell: pwsh
         id: hash
         run: |
-          SHA=$(sha256sum hercules-update-${{ steps.version.outputs.version }}.zip | cut -d' ' -f1)
-          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
+          $sha = (Get-FileHash "${{ steps.installer.outputs.exe }}" -Algorithm SHA256).Hash.ToLower()
+          echo "sha256=$sha" >> $env:GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: v${{ steps.version.outputs.version }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "${{ steps.version.outputs.branch }} — v${{ steps.version.outputs.version }}"
           body: |
-            Auto-generated OTA update from Salalah_Mill_B branch.
+            **Hercules Reporting Module** — Full standalone installer.
+            Branch: `${{ steps.version.outputs.branch }}`
+            Version: `${{ steps.version.outputs.version }}`
             SHA-256: `${{ steps.hash.outputs.sha256 }}`
-          files: hercules-update-${{ steps.version.outputs.version }}.zip
+
+            **Installer** (.exe): Full standalone setup — run on any Windows PC.
+            **OTA Update** (.zip): Automatic update package for existing installations.
+          files: |
+            ${{ steps.installer.outputs.exe }}
+            ${{ steps.ota.outputs.zip }}

@@ -287,26 +287,6 @@ export default function SystemSettings() {
               </div>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-              <div className="px-3 py-2 rounded-md bg-[#f5f8fb] dark:bg-[#0d1825] border border-[#e3e9f0] dark:border-[#1e2d40]">
-                <p className="text-[9px] text-[#8898aa] uppercase font-medium">{t('system.hourlyRows')}</p>
-                <p className="text-[13px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">{(retention.stats?.hourlyRows || 0).toLocaleString()}</p>
-              </div>
-              <div className="px-3 py-2 rounded-md bg-[#f5f8fb] dark:bg-[#0d1825] border border-[#e3e9f0] dark:border-[#1e2d40]">
-                <p className="text-[9px] text-[#8898aa] uppercase font-medium">{t('system.dailyRows')}</p>
-                <p className="text-[13px] font-bold text-[#2a3545] dark:text-[#e1e8f0]">{(retention.stats?.dailyRows || 0).toLocaleString()}</p>
-              </div>
-              <div className="px-3 py-2 rounded-md bg-[#f5f8fb] dark:bg-[#0d1825] border border-[#e3e9f0] dark:border-[#1e2d40]">
-                <p className="text-[9px] text-[#8898aa] uppercase font-medium">{t('system.oldestRecord')}</p>
-                <p className="text-[11px] font-medium text-[#2a3545] dark:text-[#e1e8f0]">{retention.stats?.oldestRecord ? new Date(retention.stats.oldestRecord).toLocaleDateString() : '—'}</p>
-              </div>
-              <div className="px-3 py-2 rounded-md bg-[#f5f8fb] dark:bg-[#0d1825] border border-[#e3e9f0] dark:border-[#1e2d40]">
-                <p className="text-[9px] text-[#8898aa] uppercase font-medium">{t('system.newestRecord')}</p>
-                <p className="text-[11px] font-medium text-[#2a3545] dark:text-[#e1e8f0]">{retention.stats?.newestRecord ? new Date(retention.stats.newestRecord).toLocaleDateString() : '—'}</p>
-              </div>
-            </div>
-
             {/* Rollup toggle */}
             <div className="flex items-center justify-between py-2 mb-2 border-b border-[#e3e9f0] dark:border-[#1e2d40]">
               <div>
