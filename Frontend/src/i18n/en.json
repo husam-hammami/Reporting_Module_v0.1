@@ -588,6 +588,8 @@
   "updates.branch": "Branch",
   "updates.released": "Released",
   "updates.download": "Download Installer",
+  "updates.installRestart": "Install & Restart",
+  "updates.restartManual": "Please close and reopen the app to install the update.",
 
   "distribution.title": "Distribution",
   "distribution.subtitle": "Scheduled report delivery rules",

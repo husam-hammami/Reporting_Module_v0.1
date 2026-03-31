@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FaSync, FaDownload, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import { FaSync, FaDownload, FaCheckCircle, FaExclamationTriangle, FaRedo } from 'react-icons/fa';
 import { useLanguage } from '../../Hooks/useLanguage';
 import axios from '../../API/axios';
 
@@ -20,6 +20,15 @@ export default function SoftwareUpdates() {
       setError(e.response?.data?.error || e.message);
     } finally {
       setChecking(false);
+    }
+  };
+
+  const handleRestartForUpdate = () => {
+    if (window.hercules?.restartForUpdate) {
+      window.hercules.restartForUpdate();
+    } else {
+      // Not running in Electron — show manual instruction
+      setError(t('updates.restartManual'));
     }
   };
 
@@ -94,17 +103,26 @@ export default function SoftwareUpdates() {
                 )}
               </div>
 
-              {result.latest.download_url && (
-                <a
-                  href={result.latest.download_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRestartForUpdate}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-md bg-[var(--brand)] text-white hover:opacity-90 transition-opacity"
                 >
-                  <FaDownload size={10} />
-                  {t('updates.download')}
-                </a>
-              )}
+                  <FaRedo size={10} />
+                  {t('updates.installRestart')}
+                </button>
+                {result.latest.download_url && (
+                  <a
+                    href={result.latest.download_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-md border border-[var(--brand)] text-[var(--brand)] hover:opacity-90 transition-opacity"
+                  >
+                    <FaDownload size={10} />
+                    {t('updates.download')}
+                  </a>
+                )}
+              </div>
             </div>
           )}
         </div>

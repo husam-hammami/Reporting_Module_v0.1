@@ -854,6 +854,15 @@ ipcMain.handle('save-config', async (_event, config) => {
   }
 });
 
+// ─── IPC: Restart for OTA update ─────────────────────────────────────────────
+ipcMain.handle('restart-for-update', async () => {
+  console.log('[Electron] Restart requested for update...');
+  stopBackend();
+  stopPostgres();
+  app.relaunch();
+  app.exit(0);
+});
+
 // ─── Setup wizard ────────────────────────────────────────────────────────────
 function showSetupWizard() {
   return new Promise((resolve) => {

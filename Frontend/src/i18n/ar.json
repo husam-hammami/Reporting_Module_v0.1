@@ -588,6 +588,8 @@
   "updates.branch": "الفرع",
   "updates.released": "تاريخ الإصدار",
   "updates.download": "تنزيل برنامج التثبيت",
+  "updates.installRestart": "تثبيت وإعادة تشغيل",
+  "updates.restartManual": "يرجى إغلاق التطبيق وإعادة فتحه لتثبيت التحديث.",
 
   "distribution.title": "التوزيع",
   "distribution.subtitle": "قواعد تسليم التقارير المجدولة",

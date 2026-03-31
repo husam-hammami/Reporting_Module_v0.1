@@ -588,6 +588,8 @@
   "updates.branch": "برانچ",
   "updates.released": "ریلیز کی تاریخ",
   "updates.download": "انسٹالر ڈاؤن لوڈ کریں",
+  "updates.installRestart": "انسٹال کریں اور دوبارہ شروع کریں",
+  "updates.restartManual": "اپ ڈیٹ انسٹال کرنے کے لیے براہ کرم ایپ بند کریں اور دوبارہ کھولیں۔",
 
   "distribution.title": "ترسیل",
   "distribution.subtitle": "شیڈول شدہ رپورٹ ترسیل کے قواعد",
