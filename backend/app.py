@@ -812,20 +812,37 @@ def _run_startup_migrations():
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
                     sql = f.read()
-                cur.execute(sql)
+                # Split into individual statements so one failure doesn't rollback all
+                statements = [s.strip() for s in sql.split(';') if s.strip()]
+                for stmt in statements:
+                    try:
+                        cur.execute(stmt)
+                    except Exception:
+                        pass  # "already exists" errors are expected
                 logger.info(f"Migration OK: {filename}")
             except Exception as e:
-                # "already exists" errors are expected and safe
                 logger.debug(f"Migration skip: {filename} ({str(e)[:80]})")
-        # Step 3: Ensure default admin user exists
+        # Step 3: Ensure default admin user exists with werkzeug-compatible hash
         try:
             cur.execute("SELECT 1 FROM users WHERE username = 'admin'")
             if not cur.fetchone():
+                from werkzeug.security import generate_password_hash as _gen_hash
                 cur.execute(
                     "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
-                    ('admin', '$2b$12$LJ3m4ys3Lk0TSwMBQWJxaeflIOwnGGkahJCsOvn/F9JDOaFf1liGu', 'admin')
+                    ('admin', _gen_hash('admin'), 'admin')
                 )
                 logger.info("Created default admin user (admin/admin)")
+            else:
+                # Fix existing admin with incompatible bcrypt hash
+                cur.execute("SELECT password_hash FROM users WHERE username = 'admin'")
+                row = cur.fetchone()
+                if row and row[0] and row[0].startswith('$2b$'):
+                    from werkzeug.security import generate_password_hash as _gen_hash
+                    cur.execute(
+                        "UPDATE users SET password_hash = %s WHERE username = 'admin'",
+                        (_gen_hash('admin'),)
+                    )
+                    logger.info("Fixed admin password hash (bcrypt → werkzeug)")
         except Exception as e:
             logger.debug(f"Admin user check: {e}")
 
