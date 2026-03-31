@@ -60,6 +60,7 @@ let tray = null;
 let backendProcess = null;
 let backendRestarts = 0;
 let pgStarted = false;
+let otaInProgress = false;
 const MAX_BACKEND_RESTARTS = 3;
 
 // ─── Machine ID (must match backend/machine_id.py exactly) ──────────────────
@@ -628,6 +629,7 @@ async function checkAndApplyUpdate() {
   }
 
   console.log(`[OTA] Update available: ${localVer} → ${bestVersion}`);
+  otaInProgress = true;
   updateSplashStatus(`Downloading update v${bestVersion}...`, 0);
 
   const tmpZip = path.join(os.tmpdir(), zipAsset.name);
@@ -637,6 +639,7 @@ async function checkAndApplyUpdate() {
     });
   } catch (err) {
     console.error('[OTA] Download failed:', err.message);
+    otaInProgress = false;
     updateSplashStatus('Starting services...');
     return null;
   }
@@ -682,6 +685,7 @@ async function checkAndApplyUpdate() {
     try { fs.unlinkSync(tmpZip); } catch { /* ignore */ }
 
     console.log(`[OTA] Successfully updated to v${bestVersion}`);
+    otaInProgress = false;
     updateSplashStatus(`Updated to v${bestVersion}!`);
     return bestVersion;
 
@@ -692,6 +696,7 @@ async function checkAndApplyUpdate() {
       try { fs.renameSync(backupDir, BACKEND_DIR); } catch { /* critical failure */ }
     }
     try { fs.unlinkSync(tmpZip); } catch { /* ignore */ }
+    otaInProgress = false;
     updateSplashStatus('Starting services...');
     return null;
   }
@@ -701,10 +706,13 @@ async function checkAndApplyUpdate() {
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 420, height: 320,
-    frame: false, transparent: true, alwaysOnTop: true, resizable: false,
+    frame: false, transparent: true, alwaysOnTop: true, resizable: false, closable: false,
     webPreferences: { nodeIntegration: false, contextIsolation: true },
   });
   splashWindow.loadFile(path.join(__dirname, 'splash.html'));
+  splashWindow.on('close', (e) => {
+    if (otaInProgress) e.preventDefault();
+  });
 }
 
 function createMainWindow() {
@@ -958,5 +966,6 @@ app.on('before-quit', () => {
 });
 
 app.on('window-all-closed', () => {
+  if (otaInProgress) return; // Don't quit during OTA update
   if (!tray) app.quit();
 });
