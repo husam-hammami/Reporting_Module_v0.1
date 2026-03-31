@@ -11,4 +11,5 @@ export const herculesAIApi = {
   updateConfig:    (data)      => axios.put(`${BASE}/config`, data),
   getStatus:       ()          => axios.get(`${BASE}/status`),
   previewSummary:  ()          => axios.post(`${BASE}/preview-summary`),
+  testConnection:  ()          => axios.post(`${BASE}/test-connection`),
 };

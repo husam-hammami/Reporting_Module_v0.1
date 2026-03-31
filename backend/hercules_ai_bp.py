@@ -40,8 +40,11 @@ _CONFIG_DEFAULTS = {
     'setup_completed': {'value': False},
     'last_scan_at': {'value': None},
     'production_value_per_ton': {'value': 0, 'currency': 'USD'},
+    'ai_provider': {'value': 'cloud'},
     'llm_api_key': {'value': ''},
-    'llm_model': {'value': 'claude-haiku-4-5-20251001'},
+    'llm_model': {'value': 'claude-opus-4-6'},
+    'local_server_url': {'value': 'http://localhost:1234/v1'},
+    'local_model': {'value': ''},
 }
 
 
@@ -53,6 +56,17 @@ def _ensure_config_defaults(cur):
             VALUES (%s, %s)
             ON CONFLICT (key) DO NOTHING
         """, (key, json.dumps(val)))
+
+
+def _get_raw_config(cur):
+    """Load all config as a flat dict WITH raw values (for ai_provider calls)."""
+    _ensure_config_defaults(cur)
+    cur.execute("SELECT key, value FROM hercules_ai_config")
+    config = {}
+    for row in cur.fetchall():
+        val = row['value'] if isinstance(row['value'], dict) else json.loads(row['value'])
+        config[row['key']] = val.get('value', val)
+    return config
 
 
 def _get_config(cur):
@@ -610,23 +624,13 @@ def preview_summary():
         if not config.get('setup_completed'):
             return jsonify({'error': 'Complete setup first'}), 400
 
-        # Load API key (raw)
-        cur.execute("SELECT value FROM hercules_ai_config WHERE key = 'llm_api_key'")
-        row = cur.fetchone()
-        api_key = ''
-        if row:
-            val = row['value'] if isinstance(row['value'], dict) else json.loads(row['value'])
-            api_key = val.get('value', '')
-        if not api_key:
-            return jsonify({'error': 'API key required'}), 400
+        # Load full raw config for ai_provider
+        ai_config = _get_raw_config(cur)
 
-        # Load model
-        cur.execute("SELECT value FROM hercules_ai_config WHERE key = 'llm_model'")
-        row = cur.fetchone()
-        model = 'claude-haiku-4-5-20251001'
-        if row:
-            val = row['value'] if isinstance(row['value'], dict) else json.loads(row['value'])
-            model = val.get('value', model)
+        # Validate provider is configured
+        provider = ai_config.get('ai_provider', 'cloud')
+        if provider == 'cloud' and not ai_config.get('llm_api_key'):
+            return jsonify({'error': 'API key required'}), 400
 
         # Pick first template with tracked tags
         cur.execute("""
@@ -725,22 +729,15 @@ Rules:
 - Do not use markdown formatting. Plain text only."""
 
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(
-            model=model,
-            max_tokens=300,
-            messages=[{'role': 'user', 'content': prompt}],
-            timeout=10.0,
-        )
-        summary = response.content[0].text
+        import ai_provider
+        summary = ai_provider.generate(prompt, ai_config)
+        if not summary:
+            return jsonify({'error': 'Could not generate summary. Check your provider settings.'}), 400
         return jsonify({
             'summary': summary,
             'report_name': chosen_template['name'],
             'tags_used': len(data_rows),
         })
-    except ImportError:
-        return jsonify({'error': 'anthropic package not installed'}), 500
     except Exception as e:
         logger.warning("Preview summary failed: %s", e)
         err_msg = str(e)
@@ -749,3 +746,19 @@ Rules:
         if 'timeout' in err_msg.lower() or 'timed out' in err_msg.lower():
             return jsonify({'error': 'Summary generation timed out. Try again.'}), 504
         return jsonify({'error': f'Could not generate summary: {err_msg}'}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/test-connection', methods=['POST'])
+@login_required
+def test_ai_connection():
+    """Test AI provider connectivity and return detected model."""
+    get_conn = _get_db_connection()
+    with closing(get_conn()) as conn:
+        actual = conn._conn if hasattr(conn, '_conn') else conn
+        cur = actual.cursor(cursor_factory=RealDictCursor)
+        ai_config = _get_raw_config(cur)
+        actual.commit()
+
+    import ai_provider
+    result = ai_provider.test_connection(ai_config)
+    return jsonify(result)

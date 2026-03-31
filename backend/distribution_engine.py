@@ -1877,12 +1877,6 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
     """
     global _ai_call_count, _ai_call_date
 
-    try:
-        import anthropic
-    except ImportError:
-        logger.warning("anthropic package not installed, skipping AI summary")
-        return None
-
     # Rate limit check
     today = datetime.now().date()
     if _ai_call_date != today:
@@ -1892,25 +1886,22 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
         logger.warning("AI daily rate limit reached (%d calls)", _AI_DAILY_CAP)
         return None
 
-    # Load API key + model from config
+    # Load all config from DB
     get_conn = _get_db_connection()
-    api_key = ''
-    model = 'claude-haiku-4-5-20251001'
+    ai_config = {}
 
     try:
         with closing(get_conn()) as conn:
             actual = conn._conn if hasattr(conn, '_conn') else conn
             cur = actual.cursor(cursor_factory=RealDictCursor)
 
-            cur.execute("SELECT key, value FROM hercules_ai_config WHERE key IN ('llm_api_key', 'llm_model')")
+            cur.execute("SELECT key, value FROM hercules_ai_config")
             for row in cur.fetchall():
                 val = row['value'] if isinstance(row['value'], dict) else json.loads(row['value'])
-                if row['key'] == 'llm_api_key':
-                    api_key = val.get('value', '')
-                elif row['key'] == 'llm_model':
-                    model = val.get('value', model)
+                ai_config[row['key']] = val.get('value', val)
 
-            if not api_key:
+            provider = ai_config.get('ai_provider', 'cloud')
+            if provider == 'cloud' and not ai_config.get('llm_api_key'):
                 logger.warning("No LLM API key configured, skipping AI summary")
                 return None
 
@@ -2003,15 +1994,11 @@ Rules:
 - Do not use markdown formatting. Plain text only."""
 
     try:
-        client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(
-            model=model,
-            max_tokens=300,
-            messages=[{'role': 'user', 'content': prompt}],
-            timeout=10.0,
-        )
-        _ai_call_count += 1
-        return response.content[0].text
+        import ai_provider
+        result = ai_provider.generate(prompt, ai_config)
+        if result:
+            _ai_call_count += 1
+        return result
     except Exception as e:
         logger.warning("AI summary API call failed: %s", e)
         return None

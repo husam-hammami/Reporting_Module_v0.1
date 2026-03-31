@@ -762,6 +762,17 @@
   "herculesAI.complete.tracking": "تتبع {count} علامات",
   "herculesAI.complete.enableHint": "فعّل \"تضمين ملخص AI\" في قواعد التوزيع لتلقي الرؤى.",
 
+  "herculesAI.provider.title": "مزود الذكاء الاصطناعي",
+  "herculesAI.provider.cloud": "سحابي (Claude API)",
+  "herculesAI.provider.cloudDesc": "أفضل جودة، يتطلب مفتاح API + إنترنت",
+  "herculesAI.provider.local": "محلي (LM Studio)",
+  "herculesAI.provider.localDesc": "مجاني، داخل الشبكة، يتطلب 24 جيجا ذاكرة",
+  "herculesAI.provider.model": "النموذج",
+  "herculesAI.provider.serverUrl": "عنوان خادم LM Studio",
+  "herculesAI.provider.currentUrl": "الحالي",
+  "herculesAI.provider.localHint": "ثبّت LM Studio، حمّل نموذج 32B (مثل Qwen2.5 32B Q4_K_M)، وفعّل الخادم المحلي على المنفذ 1234. يتطلب 24 جيجا ذاكرة حرة و16+ نواة معالج.",
+  "herculesAI.provider.testConnection": "اختبار الاتصال",
+
   "distribution.includeAISummary": "ملخص AI",
   "distribution.aiSummaryDisabledHint": "أكمل إعداد هرقل AI أولاً"
 }

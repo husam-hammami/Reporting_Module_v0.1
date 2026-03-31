@@ -762,6 +762,17 @@
   "herculesAI.complete.tracking": "Tracking {count} tags",
   "herculesAI.complete.enableHint": "Enable \"Include AI Summary\" on your distribution rules to receive insights.",
 
+  "herculesAI.provider.title": "AI Provider",
+  "herculesAI.provider.cloud": "Cloud (Claude API)",
+  "herculesAI.provider.cloudDesc": "Best quality, requires API key + internet",
+  "herculesAI.provider.local": "Local (LM Studio)",
+  "herculesAI.provider.localDesc": "Free, on-premises, requires 24GB RAM",
+  "herculesAI.provider.model": "Model",
+  "herculesAI.provider.serverUrl": "LM Studio Server URL",
+  "herculesAI.provider.currentUrl": "Current",
+  "herculesAI.provider.localHint": "Install LM Studio, load a 32B model (e.g. Qwen2.5 32B Q4_K_M), and enable the local server on port 1234. Requires 24GB free RAM and 16+ CPU cores.",
+  "herculesAI.provider.testConnection": "Test Connection",
+
   "distribution.includeAISummary": "AI Summary",
   "distribution.aiSummaryDisabledHint": "Complete Hercules AI setup first"
 }

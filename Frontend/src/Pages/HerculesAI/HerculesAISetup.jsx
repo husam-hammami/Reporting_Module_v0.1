@@ -77,6 +77,11 @@ export default function HerculesAISetup() {
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
 
+  // Provider
+  const [localUrl, setLocalUrl] = useState('');
+  const [connectionResult, setConnectionResult] = useState(null);
+  const [testingConnection, setTestingConnection] = useState(false);
+
   // Preview
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewResult, setPreviewResult] = useState(null);
@@ -231,6 +236,25 @@ export default function HerculesAISetup() {
     if (!apiKey.trim()) return;
     await handleSaveConfig({ llm_api_key: apiKey.trim() });
     setApiKey('');
+  };
+
+  const handleTestConnection = async () => {
+    setTestingConnection(true);
+    setConnectionResult(null);
+    try {
+      const res = await herculesAIApi.testConnection();
+      setConnectionResult(res.data);
+    } catch (err) {
+      setConnectionResult({ ok: false, message: err.response?.data?.error || 'Connection test failed' });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleSaveLocalUrl = async () => {
+    if (!localUrl.trim()) return;
+    await handleSaveConfig({ local_server_url: localUrl.trim() });
+    setLocalUrl('');
   };
 
   const handleMarkComplete = async () => {
@@ -560,59 +584,151 @@ export default function HerculesAISetup() {
           lineNames={lineNames} isRTL={isRTL}
         />
 
-        {/* Bottom — API key + complete */}
+        {/* Bottom — AI Provider Config + Complete */}
         <div className="rounded-xl p-5 mt-4" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-          {/* API Key */}
-          <div className="mb-4">
-            <label className="block text-xs font-medium mb-1.5" style={{ color: t.textSecondary }}>
-              {tr('herculesAI.apiKey')}
-            </label>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={e => setApiKey(e.target.value)}
-                  placeholder={config.llm_api_key_set ? `${tr('herculesAI.apiKeyHint')}: ${config.llm_api_key_hint || ''}` : tr('herculesAI.apiKeyPlaceholder')}
-                  className="w-full px-3 py-2 rounded-lg text-xs pr-8"
-                  style={{ background: t.inputBg, color: t.text, border: `1px solid ${t.border}` }}
-                />
-                <button
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-2 top-2"
-                  style={{ color: t.textMuted }}
-                >
-                  {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: t.text }}>{tr('herculesAI.provider.title')}</h3>
+
+          {/* Provider radio */}
+          <div className="flex gap-2 mb-4">
+            {[
+              { value: 'cloud', label: tr('herculesAI.provider.cloud'), desc: tr('herculesAI.provider.cloudDesc') },
+              { value: 'local', label: tr('herculesAI.provider.local'), desc: tr('herculesAI.provider.localDesc') },
+            ].map(opt => (
               <button
-                onClick={handleSaveApiKey}
-                disabled={!apiKey.trim() || saving}
-                className="px-3 py-2 rounded-lg text-xs font-medium"
-                style={{ background: t.accent, color: t.btnText, opacity: !apiKey.trim() ? 0.5 : 1 }}
+                key={opt.value}
+                onClick={() => handleSaveConfig({ ai_provider: opt.value })}
+                className="flex-1 p-3 rounded-lg text-left transition-all"
+                style={{
+                  background: config.ai_provider === opt.value ? t.accentBg : t.surfaceAlt,
+                  border: `1.5px solid ${config.ai_provider === opt.value ? t.accent : t.border}`,
+                }}
               >
-                {tr('herculesAI.saved') === tr('herculesAI.saved') ? 'Save' : tr('herculesAI.saved')}
+                <div className="text-xs font-semibold" style={{ color: config.ai_provider === opt.value ? t.accent : t.text }}>
+                  {opt.label}
+                </div>
+                <div className="text-[10px] mt-0.5" style={{ color: t.textMuted }}>{opt.desc}</div>
               </button>
+            ))}
+          </div>
+
+          {/* Cloud settings */}
+          {config.ai_provider !== 'local' && (
+            <div className="space-y-3 mb-4">
+              {/* API Key */}
+              <div>
+                <label className="block text-[10px] font-medium mb-1" style={{ color: t.textMuted }}>
+                  {tr('herculesAI.apiKey')}
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showApiKey ? 'text' : 'password'}
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
+                      placeholder={config.llm_api_key_set ? `${tr('herculesAI.apiKeyHint')}: ${config.llm_api_key_hint || ''}` : tr('herculesAI.apiKeyPlaceholder')}
+                      className="w-full px-3 py-2 rounded-lg text-xs pr-8"
+                      style={{ background: t.inputBg, color: t.text, border: `1px solid ${t.border}` }}
+                    />
+                    <button onClick={() => setShowApiKey(!showApiKey)} className="absolute right-2 top-2" style={{ color: t.textMuted }}>
+                      {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  <button onClick={handleSaveApiKey} disabled={!apiKey.trim() || saving}
+                    className="px-3 py-2 rounded-lg text-xs font-medium"
+                    style={{ background: t.accent, color: t.btnText, opacity: !apiKey.trim() ? 0.5 : 1 }}>
+                    Save
+                  </button>
+                </div>
+              </div>
+
+              {/* Model selector */}
+              <div>
+                <label className="block text-[10px] font-medium mb-1" style={{ color: t.textMuted }}>
+                  {tr('herculesAI.provider.model')}
+                </label>
+                <div className="flex gap-1.5">
+                  {[
+                    { id: 'claude-opus-4-6', label: 'Opus', cost: '$109/yr' },
+                    { id: 'claude-sonnet-4-6', label: 'Sonnet', cost: '$22/yr' },
+                    { id: 'claude-haiku-4-5-20251001', label: 'Haiku', cost: '$7/yr' },
+                  ].map(m => (
+                    <button key={m.id} onClick={() => handleSaveConfig({ llm_model: m.id })}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                      style={{
+                        background: config.llm_model === m.id ? t.accent : t.inputBg,
+                        color: config.llm_model === m.id ? t.btnText : t.textSecondary,
+                        border: `1px solid ${config.llm_model === m.id ? t.accent : t.border}`,
+                      }}>
+                      {m.label} <span className="opacity-60 text-[9px]">{m.cost}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* Local settings */}
+          {config.ai_provider === 'local' && (
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-[10px] font-medium mb-1" style={{ color: t.textMuted }}>
+                  {tr('herculesAI.provider.serverUrl')}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={localUrl || ''}
+                    onChange={e => setLocalUrl(e.target.value)}
+                    placeholder={config.local_server_url || 'http://localhost:1234/v1'}
+                    className="flex-1 px-3 py-2 rounded-lg text-xs"
+                    style={{ background: t.inputBg, color: t.text, border: `1px solid ${t.border}` }}
+                  />
+                  <button onClick={handleSaveLocalUrl} disabled={!localUrl.trim() || saving}
+                    className="px-3 py-2 rounded-lg text-xs font-medium"
+                    style={{ background: t.accent, color: t.btnText, opacity: !localUrl.trim() ? 0.5 : 1 }}>
+                    Save
+                  </button>
+                </div>
+                {config.local_server_url && (
+                  <div className="text-[10px] mt-1" style={{ color: t.textMuted }}>
+                    {tr('herculesAI.provider.currentUrl')}: {config.local_server_url}
+                  </div>
+                )}
+              </div>
+              <div className="text-[10px] p-2 rounded-lg" style={{ background: t.surfaceAlt, color: t.textMuted }}>
+                {tr('herculesAI.provider.localHint')}
+              </div>
+            </div>
+          )}
+
+          {/* Test Connection */}
+          <div className="flex items-center gap-3 mb-4">
+            <button onClick={handleTestConnection} disabled={testingConnection}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
+              style={{ border: `1px solid ${t.border}`, color: t.text, opacity: testingConnection ? 0.6 : 1 }}>
+              {testingConnection ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+              {tr('herculesAI.provider.testConnection')}
+            </button>
+            {connectionResult && (
+              <span className="text-xs" style={{ color: connectionResult.ok ? t.success : t.danger }}>
+                {connectionResult.ok ? '✓' : '✕'} {connectionResult.message}
+                {connectionResult.model && ` (${connectionResult.model})`}
+              </span>
+            )}
           </div>
 
           {/* Mark complete / Edit setup */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pt-3" style={{ borderTop: `1px solid ${t.border}` }}>
             {isSetupComplete ? (
-              <button
-                onClick={() => { setEditMode(false); }}
+              <button onClick={() => { setEditMode(false); }}
                 className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={{ border: `1px solid ${t.border}`, color: t.textSecondary }}
-              >
+                style={{ border: `1px solid ${t.border}`, color: t.textSecondary }}>
                 {tr('herculesAI.complete.title')} ✓
               </button>
             ) : (
-              <button
-                onClick={handleMarkComplete}
-                disabled={saving || counts.total === 0}
+              <button onClick={handleMarkComplete} disabled={saving || counts.total === 0}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-                style={{ background: t.accent, color: t.btnText, opacity: counts.total === 0 ? 0.5 : 1 }}
-              >
+                style={{ background: t.accent, color: t.btnText, opacity: counts.total === 0 ? 0.5 : 1 }}>
                 {tr('herculesAI.markComplete')}
               </button>
             )}

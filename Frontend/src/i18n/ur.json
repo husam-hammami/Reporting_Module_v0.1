@@ -762,6 +762,17 @@
   "herculesAI.complete.tracking": "{count} ٹیگز ٹریک ہو رہے ہیں",
   "herculesAI.complete.enableHint": "بصیرت حاصل کرنے کے لیے اپنے ترسیل کے قواعد پر \"AI خلاصہ شامل کریں\" فعال کریں۔",
 
+  "herculesAI.provider.title": "AI فراہم کنندہ",
+  "herculesAI.provider.cloud": "کلاؤڈ (Claude API)",
+  "herculesAI.provider.cloudDesc": "بہترین معیار، API کلید + انٹرنیٹ ضروری",
+  "herculesAI.provider.local": "مقامی (LM Studio)",
+  "herculesAI.provider.localDesc": "مفت، آن-پریمائسز، 24GB RAM ضروری",
+  "herculesAI.provider.model": "ماڈل",
+  "herculesAI.provider.serverUrl": "LM Studio سرور URL",
+  "herculesAI.provider.currentUrl": "موجودہ",
+  "herculesAI.provider.localHint": "LM Studio انسٹال کریں، 32B ماڈل لوڈ کریں (جیسے Qwen2.5 32B Q4_K_M)، اور پورٹ 1234 پر لوکل سرور فعال کریں۔ 24GB خالی RAM اور 16+ CPU کور ضروری۔",
+  "herculesAI.provider.testConnection": "کنکشن ٹیسٹ",
+
   "distribution.includeAISummary": "AI خلاصہ",
   "distribution.aiSummaryDisabledHint": "پہلے ہرکیولیز AI سیٹ اپ مکمل کریں"
 }
