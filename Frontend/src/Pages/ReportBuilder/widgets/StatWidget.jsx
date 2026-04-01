@@ -90,11 +90,11 @@ export default function StatWidget({ config, tagValues }) {
         justifyContent: 'center',
         height: '100%',
         minHeight: 0,
-        padding: '6px 10px 6px 0',
+        padding: '2px 8px 2px 0',
         alignItems,
         position: 'relative',
         borderLeft: `3px solid ${color}`,
-        paddingLeft: '10px',
+        paddingLeft: '8px',
       }}
     >
       {showTitle && (
