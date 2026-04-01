@@ -469,11 +469,32 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   return (
     <div className="rb-report-viewer-outer flex flex-col h-[calc(100vh-80px)] bg-transparent">
       {/* ── Toolbar: back + report selector (centered) | actions ── */}
-      <div className={`bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-3 ${dashboardHeader ? 'py-1' : 'py-3'} flex items-center gap-3 flex-shrink-0 print:hidden`}>
+      <div
+        className={`backdrop-blur-sm border-b px-3 py-1.5 flex items-center gap-3 flex-shrink-0 print:hidden ${
+          dashboardHeader
+            ? 'border-transparent'
+            : 'bg-white/90 dark:bg-[#0a1525] border-[#e3e9f0] dark:border-gray-700 py-3'
+        }`}
+        style={dashboardHeader ? {
+          background: dashboardHeader.bg || 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
+          color: dashboardHeader.color || '#ffffff',
+        } : undefined}
+      >
         {/* Left: back */}
-        <button onClick={onBack} className="p-1.5 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0">
+        <button onClick={onBack} className={`p-1.5 rounded-md transition-colors flex-shrink-0 ${dashboardHeader ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-[#6b7f94] hover:text-brand hover:bg-brand-subtle'}`}>
           <FaChevronLeft size={12} />
         </button>
+        {/* Dashboard title + logo inline */}
+        {dashboardHeader && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {dashboardHeader.showLogo !== false && (
+              <img src="/api/branding/logo" alt="" style={{ height: 22, width: 'auto', borderRadius: 3 }} onError={(e) => { e.target.style.display = 'none'; }} />
+            )}
+            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>
+              {dashboardHeader.title || template?.name || 'Dashboard'}
+            </span>
+          </div>
+        )}
 
         {/* Center: report tab bar or name + date/time */}
         <div className="flex items-center gap-3 flex-1 justify-center min-w-0">
@@ -642,24 +663,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         onWheelCapture={handleWheelCapture}
       >
         <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}>
-          {/* ── Dashboard Header Bar (title + logo only) ── */}
-          {dashboardHeader && (
-            <div
-              className="flex items-center px-4 py-2 mx-1 mt-1 mb-1 rounded-md print:mx-0"
-              style={{
-                background: dashboardHeader.bg || 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
-                color: dashboardHeader.color || '#ffffff',
-                minHeight: 36,
-              }}
-            >
-              {dashboardHeader.showLogo !== false && (
-                <img src="/api/branding/logo" alt="" style={{ height: 24, width: 'auto', borderRadius: 3, marginRight: 10 }} onError={(e) => { e.target.style.display = 'none'; }} />
-              )}
-              <span style={{ fontSize: dashboardHeader.titleSize || 14, fontWeight: 700, letterSpacing: '-0.01em' }}>
-                {dashboardHeader.title || template?.name || 'Dashboard'}
-              </span>
-            </div>
-          )}
+          {/* Dashboard header bar is rendered above in the toolbar when dashboardHeader is active */}
 
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
             <div className="text-center py-16 text-[12px] text-[#6b7f94] dark:text-[#8898aa]">No widgets in this report.</div>
