@@ -383,10 +383,11 @@ export default function ReportBuilderPreview() {
                     : CARDLESS_WIDGET_TYPES.has(wt)
                       ? widget.config?.showCard === true
                       : widget.config?.showCard !== false;
+                  const csMap = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'};
                   const cardClass = isInvisible
                     ? 'overflow-visible flex flex-col min-h-0'
                     : showCard
-                      ? 'rounded rb-widget-card overflow-hidden flex flex-col'
+                      ? `rounded rb-widget-card overflow-hidden flex flex-col ${csMap[widget.config?.cardStyle] || ''}`
                       : 'overflow-hidden flex flex-col min-h-0 p-0.5';
                   return (
                     <div

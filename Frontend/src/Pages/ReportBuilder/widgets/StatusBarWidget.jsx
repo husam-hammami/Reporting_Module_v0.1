@@ -1,11 +1,6 @@
 /**
  * StatusBarWidget — Compact horizontal multi-tag status indicators.
  * Replaces multiple individual StatusWidgets with one configurable bar.
- *
- * Config:
- *   tags[]   — { tagName, label, onLabel, offLabel, onColor, offColor }
- *   layout   — 'horizontal' (default)
- *   showTitle — show header title
  */
 
 import { TITLE_FONT_SIZES } from './widgetDefaults';
@@ -17,18 +12,31 @@ export default function StatusBarWidget({ config, tagValues }) {
 
   if (tags.length === 0) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '4px 8px' }}>
-        <span style={{ fontSize: 11, color: 'var(--rb-text-muted)' }}>Add status tags in properties</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        <span style={{ fontSize: 10, color: 'var(--rb-text-muted)' }}>Add status tags in properties</span>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '3px 8px', justifyContent: 'center', gap: 2 }}>
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: showTitle ? 'flex-start' : 'center',
+      height: '100%',
+      padding: '0 12px',
+      gap: showTitle ? 12 : 0,
+    }}>
       {showTitle && (
-        <p className="rb-widget-title" style={{ fontSize: titleFontSize, margin: 0 }}>{config.title}</p>
+        <p className="rb-widget-title" style={{ fontSize: titleFontSize, margin: 0, flexShrink: 0 }}>{config.title}</p>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 16,
+        flex: 1,
+      }}>
         {tags.map((tag, i) => {
           const raw = tagValues?.[tag.tagName];
           const num = raw != null ? Number(raw) : null;
@@ -37,14 +45,13 @@ export default function StatusBarWidget({ config, tagValues }) {
           const statusText = isOn ? (tag.onLabel || 'ON') : (tag.offLabel || 'OFF');
 
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <div style={{
-                width: 7, height: 7, borderRadius: '50%',
+                width: 6, height: 6, borderRadius: '50%',
                 background: dotColor,
-                boxShadow: isOn ? `0 0 5px ${dotColor}` : 'none',
-                flexShrink: 0,
+                boxShadow: isOn ? `0 0 4px ${dotColor}` : 'none',
               }} />
-              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--rb-text-muted)', letterSpacing: '0.02em' }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--rb-text-muted)' }}>
                 {tag.label || tag.tagName}
               </span>
               <span style={{ fontSize: 10, fontWeight: 700, color: dotColor }}>

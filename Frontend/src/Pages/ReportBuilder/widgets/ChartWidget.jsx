@@ -49,19 +49,17 @@ export default function ChartWidget({ config, tagValues, tagHistory, isPreview =
   }
 
   return (
-    <div className="relative flex flex-col h-full w-full" style={{ padding: 0 }}>
+    <div className="flex flex-col h-full w-full" style={{ padding: 0 }}>
       {config.title && (
         <div
-          className="rb-widget-title absolute z-10"
+          className="rb-widget-title flex-shrink-0 truncate"
           style={{
-            top: 6,
-            left: 8,
+            padding: '4px 8px 0',
             fontSize: '10px',
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
             color: 'var(--rb-text-muted)',
-            pointerEvents: 'none',
           }}
         >
           {config.title}
@@ -225,19 +223,17 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
   }), [config, isCapturing, annotationObjs, isDark]);
 
   return (
-    <div className="relative flex flex-col h-full w-full" style={{ padding: 0 }}>
+    <div className="flex flex-col h-full w-full" style={{ padding: 0 }}>
       {config.title && (
         <div
-          className="rb-widget-title absolute z-10"
+          className="rb-widget-title flex-shrink-0 truncate"
           style={{
-            top: 6,
-            left: 8,
+            padding: '4px 8px 0',
             fontSize: '10px',
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
             color: 'var(--rb-text-muted)',
-            pointerEvents: 'none',
           }}
         >
           {config.title}
