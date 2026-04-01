@@ -469,10 +469,10 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   return (
     <div className="rb-report-viewer-outer flex flex-col h-[calc(100vh-80px)] bg-transparent">
       {/* ── Toolbar: back + report selector (centered) | actions ── */}
-      <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
+      <div className={`bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-3 ${dashboardHeader ? 'py-1' : 'py-3'} flex items-center gap-3 flex-shrink-0 print:hidden`}>
         {/* Left: back */}
-        <button onClick={onBack} className="p-2 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0">
-          <FaChevronLeft size={14} />
+        <button onClick={onBack} className="p-1.5 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0">
+          <FaChevronLeft size={12} />
         </button>
 
         {/* Center: report tab bar or name + date/time */}
@@ -493,12 +493,28 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                 </button>
               ))}
             </div>
-          ) : (
+          ) : !dashboardHeader ? (
             <span className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] truncate">{template?.name || 'Report'}</span>
+          ) : null}
+          {dashboardHeader ? (
+            <TimePeriodTabs
+              tabs={VIEWER_TABS}
+              activeTab={timePeriod.tab}
+              onTabChange={tpActions.setTab}
+              customFrom={timePeriod.customFrom}
+              customTo={timePeriod.customTo}
+              onCustomFrom={tpActions.setCustomFrom}
+              onCustomTo={tpActions.setCustomTo}
+              shiftsConfig={shiftsConfig}
+              selectedShift={timePeriod.selectedShift}
+              onShiftChange={tpActions.setShift}
+              compact
+            />
+          ) : (
+            <span className="text-[12px] font-medium text-[#8898aa] whitespace-nowrap tabular-nums hidden sm:inline" title="Current date and time">
+              {now.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })} · {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
           )}
-          <span className="text-[12px] font-medium text-[#8898aa] whitespace-nowrap tabular-nums hidden sm:inline" title="Current date and time">
-            {now.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })} · {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </span>
         </div>
 
         {/* Right: view toggle + fullscreen + print */}
@@ -553,22 +569,24 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         </div>
       </div>
 
-      {/* ── Time period tabs ── */}
-      <TimePeriodTabs
-        tabs={VIEWER_TABS}
-        activeTab={timePeriod.tab}
-        onTabChange={tpActions.setTab}
-        customFrom={timePeriod.customFrom}
-        customTo={timePeriod.customTo}
-        onCustomFrom={tpActions.setCustomFrom}
-        onCustomTo={tpActions.setCustomTo}
-        shiftsConfig={shiftsConfig}
-        selectedShift={timePeriod.selectedShift}
-        onShiftChange={tpActions.setShift}
-      />
+      {/* ── Time period tabs (hidden when dashboard header merges it into toolbar) ── */}
+      {!dashboardHeader && (
+        <TimePeriodTabs
+          tabs={VIEWER_TABS}
+          activeTab={timePeriod.tab}
+          onTabChange={tpActions.setTab}
+          customFrom={timePeriod.customFrom}
+          customTo={timePeriod.customTo}
+          onCustomFrom={tpActions.setCustomFrom}
+          onCustomTo={tpActions.setCustomTo}
+          shiftsConfig={shiftsConfig}
+          selectedShift={timePeriod.selectedShift}
+          onShiftChange={tpActions.setShift}
+        />
+      )}
 
-      {/* ── Status indicator — single persistent div, bg cross-fades via transition-colors ── */}
-      {(() => {
+      {/* ── Status indicator — hidden when dashboardHeader is active ── */}
+      {!dashboardHeader && (() => {
         let bg, dot, msg;
         if (timePeriod.tab === 'live') {
           if (liveError) {
@@ -762,7 +780,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             /* ══ Grid View — original react-grid-layout rendering ══ */
             <div
               ref={containerRef}
-              className="report-builder rb-canvas-perspective rb-layout-readonly pt-3 pb-6 px-6"
+              className={`report-builder rb-canvas-perspective rb-layout-readonly ${dashboardHeader ? 'pt-0 pb-3 px-1' : 'pt-3 pb-6 px-6'}`}
               style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}
             >
               <GridLayout
