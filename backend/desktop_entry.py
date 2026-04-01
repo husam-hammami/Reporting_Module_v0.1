@@ -106,9 +106,10 @@ def main():
     start_scheduler()
     logger.info("Distribution scheduler started")
 
+    host = os.environ.get('FLASK_HOST', '0.0.0.0')
     port = int(os.environ.get('FLASK_PORT', 5001))
-    logger.info("Starting Flask-SocketIO on 127.0.0.1:%d", port)
-    socketio.run(app, host='127.0.0.1', port=port, debug=False, use_reloader=False)
+    logger.info("Starting Flask-SocketIO on %s:%d", host, port)
+    socketio.run(app, host=host, port=port, debug=False, use_reloader=False)
 
 
 if __name__ == '__main__':

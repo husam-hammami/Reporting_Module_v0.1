@@ -251,8 +251,8 @@ function startPostgres() {
   console.log(`[Electron] Starting PostgreSQL on port ${PG_PORT}...`);
   spawn(PG_CTL, ['-D', PG_DATA_DIR, '-o', `-p ${PG_PORT}`, '-l', path.join(APPDATA_DIR, 'pg.log'), 'start'], {
     stdio: 'ignore',
-    detached: true,
-  }).unref();
+    windowsHide: true,
+  });
   pgStarted = true;
 }
 
@@ -430,6 +430,7 @@ function startBackend() {
     cwd: path.dirname(BACKEND_EXE),
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
   });
 
   backendProcess.stdout.on('data', (d) => console.log(`[Backend] ${d.toString().trim()}`));
@@ -732,6 +733,14 @@ function createSplashWindow() {
   splashWindow.on('close', (e) => {
     if (otaInProgress) e.preventDefault();
   });
+  // Fallback: auto-destroy splash after 15s
+  setTimeout(() => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      console.warn('[Electron] Splash timeout — force destroying');
+      splashWindow.destroy();
+      splashWindow = null;
+    }
+  }, 15000);
 }
 
 function createMainWindow() {
@@ -746,12 +755,30 @@ function createMainWindow() {
   });
   mainWindow.loadURL(`http://127.0.0.1:${BACKEND_PORT}`);
   mainWindow.once('ready-to-show', () => {
-    if (splashWindow) { splashWindow.close(); splashWindow = null; }
+    if (splashWindow && !splashWindow.isDestroyed()) { splashWindow.destroy(); splashWindow = null; }
     mainWindow.maximize();
     mainWindow.show();
   });
   mainWindow.on('close', (e) => {
-    if (tray) { e.preventDefault(); mainWindow.hide(); }
+    e.preventDefault();
+    if (tray) {
+      mainWindow.hide();
+    } else {
+      const choice = require('electron').dialog.showMessageBoxSync(mainWindow, {
+        type: 'warning',
+        buttons: ['Minimize', 'Quit'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Hercules Reporting Module',
+        message: 'Closing will stop PLC polling and report distribution.\nMinimize instead?',
+      });
+      if (choice === 1) {
+        mainWindow.removeAllListeners('close');
+        app.quit();
+      } else {
+        mainWindow.minimize();
+      }
+    }
   });
 }
 
