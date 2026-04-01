@@ -339,7 +339,7 @@ function resolveCellValue(cell, tagValues, rowContext = null) {
     const n = Number(raw);
     if (isNaN(n)) return raw;
     if (cell.unit === '__checkbox__') return { type: 'boolean', checked: n === 1 || n === '1' };
-    const d = cell.decimals ?? 1;
+    const d = cell.decimals ?? 0;
     const formatted = n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
     const suffix = effectiveUnit(cell);
     return suffix ? `${formatted} ${suffix}` : formatted;
@@ -350,7 +350,7 @@ function resolveCellValue(cell, tagValues, rowContext = null) {
     const n = Number(result);
     if (isNaN(n)) return result;
     if (cell.unit === '__checkbox__') return { type: 'boolean', checked: n === 1 || n === '1' };
-    const d = cell.decimals ?? 1;
+    const d = cell.decimals ?? 0;
     const formatted = n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
     const suffix = effectiveUnit(cell);
     return suffix ? `${formatted} ${suffix}` : formatted;
@@ -366,7 +366,7 @@ function resolveCellValue(cell, tagValues, rowContext = null) {
     else if (agg === 'count') n = vals.length;
     else n = vals.reduce((a, b) => a + b, 0) / vals.length;
     if (cell.unit === '__checkbox__') return { type: 'boolean', checked: n === 1 || n === '1' };
-    const d = cell.decimals ?? 1;
+    const d = cell.decimals ?? 0;
     const formatted = Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
     const suffix = effectiveUnit(cell);
     return suffix ? `${formatted} ${suffix}` : formatted;
@@ -389,7 +389,7 @@ function resolveCellValue(cell, tagValues, rowContext = null) {
       if (weightRaw == null) return '—';
       const n = Number(weightRaw);
       if (isNaN(n)) return weightRaw;
-      const d = cell.decimals ?? 1;
+      const d = cell.decimals ?? 0;
       const formatted = n.toLocaleString(undefined, {
         minimumFractionDigits: d,
         maximumFractionDigits: d,

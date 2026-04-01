@@ -107,6 +107,34 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "HerculesReporti
 - **System tray**: If tray icon is active, X hides to tray (no dialog)
 - **PLC polling is protected**: Accidental window close does NOT stop data collection
 
+## Running Backend Manually (Without Electron)
+
+For debugging or server deployments without the Electron app:
+
+### 1. Start PostgreSQL
+```powershell
+& "C:\Users\Administrator\AppData\Local\Programs\Hercules Reporting Module\resources\pgsql\bin\pg_ctl.exe" start -D "$env:APPDATA\Hercules\pgdata" -l "$env:APPDATA\Hercules\pg.log"
+```
+Check which port it started on: `netstat -ano | findstr LISTEN | findstr 543`
+
+### 2. Start Backend
+```powershell
+cd "C:\Users\Administrator\AppData\Local\Programs\Hercules Reporting Module\resources\backend"
+$env:DB_PORT="<port from step 1>"    # Usually 5432 if manual, 5435 if Electron started PG
+$env:POSTGRES_DB="dynamic_db_hercules"
+$env:POSTGRES_USER="postgres"
+$env:POSTGRES_PASSWORD=""
+$env:FLASK_HOST="0.0.0.0"
+$env:FLASK_PORT="5001"
+.\hercules-backend.exe
+```
+
+### Important Notes
+- **Port mismatch is the #1 issue.** Electron starts PG on 5435. Manual `pg_ctl start` uses the port in `postgresql.conf` (default 5432). Always verify with `netstat`.
+- **`db_config.json`** at `%APPDATA%\Hercules\config\` stores `db_port`. The backend reads this. Electron overwrites it on startup to 5435.
+- **PLC errors will flood logs** if PLCs are unreachable — this is expected on servers without PLC access. The backend still serves HTTP requests.
+- **Use `Start-Process`** in PowerShell if you want the backend to run in background.
+
 ## Troubleshooting
 
 ### App won't start

@@ -568,16 +568,27 @@ def _read_tags_batched(plc, tags):
                 result[tag['tag_name']] = None
             continue
 
-        # Single PLC read for the entire DB range
+        # Single PLC read for the entire DB range (use tpool to avoid blocking eventlet)
         try:
-            buf = plc.db_read(db_num, min_offset, total_size)
+            try:
+                from eventlet import tpool
+                buf = tpool.execute(plc.db_read, db_num, min_offset, total_size)
+            except ImportError:
+                buf = plc.db_read(db_num, min_offset, total_size)
         except Exception as e:
+            err_str = str(e)
             logger.error("[BatchRead] Failed to read DB%d (offset=%d, size=%d): %s",
                          db_num, min_offset, total_size, e)
-            # Fallback: try individual reads for this group
+            # If entire DB is unavailable, skip individual fallback (avoid blocking eventlet)
+            if 'out of range' in err_str or 'not available' in err_str:
+                for tag in group_tags:
+                    result[tag['tag_name']] = None
+                continue
+            # Fallback: try individual reads only for partial failures
             for tag in group_tags:
                 try:
-                    value = read_tag_value(plc, tag)
+                    from eventlet import tpool as _tp
+                    value = _tp.execute(read_tag_value, plc, tag)
                     result[tag['tag_name']] = value
                 except Exception:
                     result[tag['tag_name']] = None

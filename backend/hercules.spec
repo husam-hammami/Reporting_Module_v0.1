@@ -7,8 +7,13 @@ Build from backend/ directory:
 """
 import os
 import glob
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 block_cipher = None
+
+# Collect reportlab and xhtml2pdf fully (data files + submodules)
+reportlab_datas, reportlab_binaries, reportlab_hiddenimports = collect_all('reportlab')
+xhtml2pdf_datas, xhtml2pdf_binaries, xhtml2pdf_hiddenimports = collect_all('xhtml2pdf')
 
 # Locate snap7.dll in the python-snap7 package
 snap7_dll = []
@@ -27,14 +32,14 @@ except ImportError:
 a = Analysis(
     ['desktop_entry.py'],
     pathex=['.'],
-    binaries=snap7_dll,
+    binaries=snap7_dll + reportlab_binaries + xhtml2pdf_binaries,
     datas=[
         ('frontend/dist', 'frontend/dist'),
         ('config', 'config'),
         ('migrations', 'migrations'),
         ('version.txt', '.'),
         ('release_branch.txt', '.'),
-    ],
+    ] + reportlab_datas + xhtml2pdf_datas,
     hiddenimports=[
         # eventlet (all hubs must be importable — eventlet probes them at init)
         'eventlet.hubs.selects',
@@ -103,6 +108,7 @@ a = Analysis(
         'reportlab.graphics.barcode',
         'reportlab.graphics.barcode.code128',
         'reportlab.graphics.barcode.code39',
+        'reportlab.graphics.barcode.code93',
         'reportlab.graphics.barcode.common',
 
         # Libraries
@@ -121,7 +127,7 @@ a = Analysis(
         'werkzeug.security',
         'dns',
         'dns.resolver',
-    ],
+    ] + reportlab_hiddenimports + xhtml2pdf_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=['pyinstaller_runtime_hook.py'],

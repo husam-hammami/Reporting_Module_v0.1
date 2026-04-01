@@ -184,6 +184,7 @@ def _validate_rule(data):
         'schedule_day_of_week': dow,
         'schedule_day_of_month': dom,
         'enabled': bool(data.get('enabled', True)),
+        'include_ai_summary': bool(data.get('include_ai_summary', False)),
     }
     return cleaned, None
 
@@ -280,8 +281,8 @@ def create_rule():
                 INSERT INTO distribution_rules
                     (name, report_id, report_ids, delivery_method, recipients, save_path,
                      format, schedule_type, schedule_time, schedule_day_of_week,
-                     schedule_day_of_month, enabled)
-                VALUES (%s, %s, %s::jsonb, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s)
+                     schedule_day_of_month, enabled, include_ai_summary)
+                VALUES (%s, %s, %s::jsonb, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
             """, (
                 cleaned['name'], cleaned['report_id'],
@@ -290,7 +291,7 @@ def create_rule():
                 json.dumps(cleaned['recipients']), cleaned['save_path'],
                 cleaned['format'], cleaned['schedule_type'], cleaned['schedule_time'],
                 cleaned['schedule_day_of_week'], cleaned['schedule_day_of_month'],
-                cleaned['enabled'],
+                cleaned['enabled'], cleaned['include_ai_summary'],
             ))
             row = cursor.fetchone()
             actual_conn.commit()
@@ -326,7 +327,7 @@ def update_rule(rule_id):
                     recipients = %s::jsonb, save_path = %s, format = %s,
                     schedule_type = %s, schedule_time = %s,
                     schedule_day_of_week = %s, schedule_day_of_month = %s,
-                    enabled = %s, updated_at = NOW()
+                    enabled = %s, include_ai_summary = %s, updated_at = NOW()
                 WHERE id = %s
                 RETURNING *
             """, (
@@ -336,7 +337,7 @@ def update_rule(rule_id):
                 json.dumps(cleaned['recipients']), cleaned['save_path'],
                 cleaned['format'], cleaned['schedule_type'], cleaned['schedule_time'],
                 cleaned['schedule_day_of_week'], cleaned['schedule_day_of_month'],
-                cleaned['enabled'], rule_id,
+                cleaned['enabled'], cleaned['include_ai_summary'], rule_id,
             ))
             row = cursor.fetchone()
             if not row:
