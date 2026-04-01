@@ -587,69 +587,69 @@ def _get_logo_data_uris():
 # ── Shared CSS (matches frontend PaginatedReportPreview / ReportViewer) ──────
 
 _SHARED_CSS = """
-@page { size: A4; margin: 8mm 10mm; }
+@page { size: A4; margin: 6mm 10mm; }
 body {
   font-family: Inter, system-ui, -apple-system, sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   color: #1a1a2e;
-  line-height: 1.4;
+  line-height: 1.35;
   margin: 0;
   padding: 0;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
-/* ── Logo header bar (table-based for xhtml2pdf compat) ── */
-.logo-header-table { margin-bottom: 4px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; }
+/* ── Logo header bar ── */
+.logo-header-table { margin-bottom: 2px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 2px; }
 .logo-header-table img { vertical-align: middle; }
 
 /* ── Report header ── */
 h1.report-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #0f172a;
-  margin: 2px 0 2px 0;
+  margin: 0 0 1px 0;
 }
-p.subtitle { font-size: 13px; color: #64748b; margin: 0 0 2px 0; }
-p.period   { font-size: 13px; color: #64748b; font-weight: 500; margin: 0 0 4px 0; }
+p.subtitle { font-size: 12px; color: #64748b; margin: 0 0 1px 0; }
+p.period   { font-size: 12px; color: #64748b; font-weight: 500; margin: 0 0 2px 0; }
 .header-rule {
-  margin-top: 4px;
+  margin-top: 2px;
   height: 2px;
   background-color: #1a5276;
 }
 
 /* ── Section label ── */
 .section-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #0f172a;
-  margin: 12px 0 4px 0;
+  margin: 6px 0 2px 0;
 }
 .kpi-section-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #94a3b8;
-  margin: 10px 0 4px 0;
+  margin: 6px 0 2px 0;
 }
 
-/* ── KPI row (table-based for xhtml2pdf compat) ── */
-.kpi-row-table { width: 100%; margin-bottom: 8px; }
-.kpi-row-table td { text-align: right; padding: 2px 8px; }
+/* ── KPI row ── */
+.kpi-row-table { width: 100%; margin-bottom: 4px; }
+.kpi-row-table td { text-align: right; padding: 1px 8px; }
 .kpi-label { font-size: 10px; font-weight: 500; color: #64748b; }
-.kpi-value { font-size: 13px; font-weight: 700; color: #0f172a; }
+.kpi-value { font-size: 12px; font-weight: 700; color: #0f172a; }
 
 /* ── Data tables ── */
 table.data-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 4px 0 8px 0;
+  margin: 2px 0 6px 0;
   font-size: 11px;
 }
 table.data-table th {
-  padding: 6px 8px;
+  padding: 5px 8px;
   font-weight: 700;
   font-size: 10px;
   border: 1px solid #94a3b8;
@@ -659,7 +659,7 @@ table.data-table th {
   letter-spacing: 0.03em;
 }
 table.data-table td {
-  padding: 5px 8px;
+  padding: 4px 8px;
   font-size: 11px;
   border: 1px solid #d1d5db;
   color: #1e293b;
@@ -669,13 +669,13 @@ table.data-table .summary-row { font-weight: 700; background-color: #e0f2fe; }
 table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11px; }
 
 /* ── Text blocks ── */
-.text-block { margin-bottom: 6px; }
+.text-block { margin-bottom: 4px; }
 
 /* ── Signature block ── */
-.sig-block { margin-top: 24px; margin-bottom: 8px; }
+.sig-block { margin-top: 16px; margin-bottom: 6px; }
 .sig-block table { width: 100%; border-collapse: collapse; }
 .sig-block td { padding: 0 16px; vertical-align: top; }
-.sig-label { font-size: 11px; font-weight: 500; color: #64748b; margin-bottom: 24px; }
+.sig-label { font-size: 11px; font-weight: 500; color: #64748b; margin-bottom: 20px; }
 .sig-line  { border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; font-size: 12px; color: #334155; min-height: 18px; }
 .sig-date  { font-size: 10px; color: #94a3b8; margin-top: 4px; }
 
@@ -687,33 +687,33 @@ table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11p
   right: 0;
   display: flex;
   justify-content: space-between;
-  padding: 4px 10mm;
-  font-size: 10px;
+  padding: 2px 10mm;
+  font-size: 9px;
   color: #94a3b8;
 }
 
-/* ── Dashboard grid (for dashboard-type reports) ── */
-.dashboard-section { margin-bottom: 12px; }
+/* ── Dashboard grid ── */
+.dashboard-section { margin-bottom: 8px; }
 .dashboard-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 10px;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
 }
-.widget-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
-.widget-value { font-size: 22px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
-.widget-unit  { font-size: 13px; font-weight: 500; color: #94a3b8; margin-left: 4px; }
-.widget-silo  { font-size: 14px; color: #334155; }
-.widget-chart-note { font-size: 11px; color: #94a3b8; font-style: italic; padding: 8px 0; }
+.widget-label { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
+.widget-value { font-size: 20px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
+.widget-unit  { font-size: 12px; font-weight: 500; color: #94a3b8; margin-left: 4px; }
+.widget-silo  { font-size: 13px; color: #334155; }
+.widget-chart-note { font-size: 10px; color: #94a3b8; font-style: italic; padding: 4px 0; }
 
 /* ── Generated footer ── */
 .gen-footer {
-  margin-top: 28px;
-  font-size: 10px;
+  margin-top: 12px;
+  font-size: 9px;
   color: #94a3b8;
   border-top: 1px solid #e5e7eb;
-  padding-top: 8px;
+  padding-top: 4px;
 }
 """
 
@@ -843,7 +843,7 @@ def _generate_dashboard_html(report_name, widgets, tag_data, from_dt, to_dt):
 
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>{_SHARED_CSS}</style></head>
-<body style="padding: 4mm 10mm 8mm 10mm; width: 190mm;">
+<body style="padding: 3mm 10mm 5mm 10mm; width: 190mm;">
 {logo_html}
 <h1 class="report-title" style="text-align:center">{_esc(report_name)}</h1>
 <p class="period" style="text-align:center"><strong>From:</strong> {_esc(period_start)} &nbsp;&mdash;&nbsp; <strong>To:</strong> {_esc(period_end)}</p>
@@ -874,7 +874,7 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
             title = s.get('title', report_name) or report_name
             subtitle = s.get('subtitle', '')
             align = s.get('align', 'center')
-            body_parts.append(f'<div style="text-align:{_esc(align)};margin-bottom:4px">')
+            body_parts.append(f'<div style="text-align:{_esc(align)};margin-bottom:0">')
             body_parts.append(f'<h1 class="report-title">{_esc(title)}</h1>')
             if subtitle:
                 body_parts.append(f'<p class="subtitle">{_esc(subtitle)}</p>')
@@ -888,16 +888,16 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                     status_val = str(sv)
             elif status_src == 'tag' and s.get('statusTagName'):
                 cell = {'sourceType': 'tag', 'tagName': s['statusTagName'],
-                        'decimals': 1, 'unit': '', 'customUnit': ''}
+                        'decimals': 0, 'unit': '', 'customUnit': ''}
                 status_val = _resolve_cell(cell, tag_data)
             elif status_src == 'formula' and s.get('statusFormula'):
                 cell = {'sourceType': 'formula', 'formula': s['statusFormula'],
-                        'decimals': 1, 'unit': '', 'customUnit': ''}
+                        'decimals': 0, 'unit': '', 'customUnit': ''}
                 status_val = _resolve_cell(cell, tag_data)
             elif status_src == 'group' and s.get('statusGroupTags'):
                 cell = {'sourceType': 'group', 'groupTags': s['statusGroupTags'],
                         'aggregation': s.get('statusAggregation', 'avg'),
-                        'decimals': 1, 'unit': '', 'customUnit': ''}
+                        'decimals': 0, 'unit': '', 'customUnit': ''}
                 status_val = _resolve_cell(cell, tag_data)
 
             if status_val and status_val not in ('—', ''):
@@ -1095,7 +1095,7 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
     footer_records = f'Records: {total_rows}' if total_rows > 0 else ''
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>{_SHARED_CSS}</style></head>
-<body style="padding: 4mm 10mm 8mm 10mm; width: 190mm;">
+<body style="padding: 3mm 10mm 5mm 10mm; width: 190mm;">
 {content_html}
 <div class="gen-footer" style="display:flex;justify-content:space-between">
 <span>{_esc(footer_records)}</span>
