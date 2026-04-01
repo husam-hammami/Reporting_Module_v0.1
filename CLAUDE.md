@@ -290,6 +290,13 @@ When adding a new feature that touches backend + frontend + database:
 - **Aggregation options**: Last, First (Start), Delta (End−Start), Average, Sum, Min, Max, Count
 - **Use case**: Totalizer reports — same tag with different aggregations per column (Delta for weight, First for start, Last for end)
 
+### Cell Value Formatting (`resolveCellValue()`)
+- **Decimals**: Each cell stores its own `decimals` property. Default fallback is `0` (no decimals) when unset.
+- **Unit**: Each cell stores its own `unit` property. Displayed via `effectiveUnit()` which handles `__custom__`, `__checkbox__`, and predefined units.
+- **IMPORTANT**: Decimals and unit are **snapshotted** into the report cell JSON when a tag is first picked via `TagPicker`. Changing the tag's `decimal_places` or `unit` in Settings does NOT retroactively update existing report cells. Users must edit the cell in the report builder to update.
+- **TagPicker defaults**: When picking a tag, decimals defaults to `tag.decimal_places`, or `0` for INT/DINT/BOOL types, `2` for REAL. Unit defaults to `tag.unit`.
+- **Known pitfall**: If a report shows wrong decimals or missing units, check the stored `layout_config` JSON in `report_builder_templates` table — the cell-level config overrides everything.
+
 ### Per-Cell Aggregation Architecture
 - **Frontend**: `collectPaginatedTagAggregations()` groups tags by aggregation type → `{ 'last': [tags], 'sum': [tags], 'delta': [tags] }`
 - **Live preview**: Queries `/api/historian/by-tags` with 1-hour rolling window, parallel requests per aggregation group
@@ -350,6 +357,9 @@ For full deployment instructions, see **[`docs/Deployment_Guide.md`](docs/Deploy
 - **psql.exe / pg_ctl.exe "access denied"**: Missing VC++ Redistributable (`VCRUNTIME140_1.dll`). Install from `resources/vcredist/vc_redist.x64.exe`
 - **PostgreSQL version mismatch**: PG data directory created by one version, binaries from another. Check `pgdata/PG_VERSION` and match with `postgres.exe --version`
 - **Login returns 500**: Admin password hash is bcrypt (`$2b$`). Backend `_run_startup_migrations` auto-fixes this, but only runs on startup. Restart the app.
+- **Manual backend start — wrong DB port**: If starting `hercules-backend.exe` manually (without Electron), PostgreSQL defaults to port 5432 but the backend defaults to 5433. Set `DB_PORT` env var to match the running PG port. Electron hardcodes `PG_PORT=5435` and starts PG on that port — never change this.
+- **Manual backend start — auth/timeout failures**: PLC read errors can flood eventlet workers, causing HTTP timeouts and eventual crash. This is a known issue when PLCs are unreachable. The backend will still serve reports but log many PLC errors.
+- **`db_config.json` port mismatch**: Electron overwrites `db_config.json` on every startup with `db_port: 5435`. If running manually, edit this file to match your PG port — but know Electron will reset it.
 - **Missing tables** (`hercules_ai_config`, `distribution_rules`): Migration didn't run. Check `_run_startup_migrations` logs. Tables are created by both `before_request` hooks and startup migrations.
 - **Splash stuck on "Starting services..."**: Use `splashWindow.destroy()` not `.close()`. 15-second fallback timeout should auto-dismiss.
 - **Black terminal window flashing**: `detached: true` on `spawn()` creates console windows on Windows. Remove it. Use `windowsHide: true` instead.
