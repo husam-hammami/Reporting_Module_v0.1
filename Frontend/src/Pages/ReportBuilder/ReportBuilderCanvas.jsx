@@ -650,7 +650,7 @@ export default function ReportBuilderCanvas() {
                             isInvisible
                               ? ''
                               : showCard
-                                ? 'rounded rb-widget-card'
+                                ? `rounded rb-widget-card ${({'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'})[widget.config?.cardStyle] || ''}`
                                 : 'rounded border border-dashed border-[var(--rb-border)]/60'
                           } ${
                             isSelected

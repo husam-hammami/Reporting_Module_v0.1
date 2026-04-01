@@ -56,10 +56,10 @@ export default function ChartWidget({ config, tagValues, tagHistory, isPreview =
           style={{
             top: 6,
             left: 8,
-            fontSize: '9px',
+            fontSize: '10px',
             fontWeight: 700,
             textTransform: 'uppercase',
-            letterSpacing: '0.10em',
+            letterSpacing: '0.06em',
             color: 'var(--rb-text-muted)',
             pointerEvents: 'none',
           }}
@@ -232,10 +232,10 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
           style={{
             top: 6,
             left: 8,
-            fontSize: '9px',
+            fontSize: '10px',
             fontWeight: 700,
             textTransform: 'uppercase',
-            letterSpacing: '0.10em',
+            letterSpacing: '0.06em',
             color: 'var(--rb-text-muted)',
             pointerEvents: 'none',
           }}

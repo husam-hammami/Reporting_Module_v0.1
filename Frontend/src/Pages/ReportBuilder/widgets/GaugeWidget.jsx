@@ -137,7 +137,7 @@ export default function GaugeWidget({ config, tagValues }) {
       )}
 
       <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-        <svg viewBox="0 0 128 90" className="w-full flex-shrink" style={{ maxWidth: '240px', maxHeight: '60%' }}>
+        <svg viewBox="0 0 128 90" className="w-full flex-shrink" style={{ maxHeight: '70%' }}>
           <defs>
             <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
               {zoneGradientStops.map((stop, i) => (

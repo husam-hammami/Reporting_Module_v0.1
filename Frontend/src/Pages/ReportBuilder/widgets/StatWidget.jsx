@@ -60,7 +60,7 @@ function useAnimatedNumber(target, decimals, skipAnimation) {
   useEffect(() => { fromRef.current = display; }, [display]);
 
   if (target == null) return '\u2014';
-  return Number(display).toFixed(decimals);
+  return Number(display).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 export default function StatWidget({ config, tagValues }) {

@@ -739,10 +739,11 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
 
                 // Non-table widgets: render inline at natural size
                 const minH = wt === 'chart' || wt === 'barchart' ? '300px' : wt === 'gauge' || wt === 'silo' ? '200px' : 'auto';
+                const csMap = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'};
                 const cardClass = isInvisible
                   ? ''
                   : showCard
-                    ? 'rounded-lg rb-widget-card overflow-hidden'
+                    ? `rounded-lg rb-widget-card overflow-hidden ${csMap[widget.config?.cardStyle] || ''}`
                     : 'overflow-hidden';
                 return (
                   <div key={widget.id} className={cardClass} style={{ minHeight: minH }}>
@@ -783,10 +784,11 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                     : CARDLESS_WIDGET_TYPES.has(wt)
                       ? widget.config?.showCard === true
                       : widget.config?.showCard !== false;
+                  const csMap2 = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'};
                   const cardClass = isInvisible
                     ? 'overflow-visible flex flex-col min-h-0'
                     : showCard
-                      ? 'rounded-lg rb-widget-card overflow-hidden flex flex-col'
+                      ? `rounded-lg rb-widget-card overflow-hidden flex flex-col ${csMap2[widget.config?.cardStyle] || ''}`
                       : 'overflow-hidden flex flex-col min-h-0 p-0.5';
                   return (
                     <div key={item.i} className={`${cardClass} flex flex-col min-h-0 relative`}>

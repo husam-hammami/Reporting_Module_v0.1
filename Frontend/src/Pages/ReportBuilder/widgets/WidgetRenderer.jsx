@@ -13,6 +13,7 @@ import StatusWidget from './StatusWidget';
 import SparklineWidget from './SparklineWidget';
 import ProgressWidget from './ProgressWidget';
 import HopperWidget from './HopperWidget';
+import StatusBarWidget from './StatusBarWidget';
 
 /* ── Error Boundary — catches widget render crashes ── */
 class WidgetErrorBoundary extends React.Component {
@@ -63,6 +64,7 @@ const RENDERERS = {
   sparkline: SparklineWidget,
   progress: ProgressWidget,
   hopper: HopperWidget,
+  statusbar: StatusBarWidget,
 };
 
 export const CARDLESS_WIDGET_TYPES = new Set(['image', 'text', 'logo']);

@@ -1432,13 +1432,68 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
               exit={prefersReducedMotion ? undefined : { opacity: 0, x: -8 }}
               transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
             >
-              {['kpi', 'gauge', 'silo', 'stat', 'chart', 'barchart', 'piechart', 'table', 'image'].includes(widget.type) && (
+              {['kpi', 'gauge', 'silo', 'stat', 'chart', 'barchart', 'piechart', 'table', 'image', 'status', 'sparkline', 'progress', 'hopper', 'statusbar'].includes(widget.type) && (
                 <Section icon={Palette} title="Card Appearance" defaultOpen={true} isFirst>
                   <Toggle
                     label="Show card (border & background)"
                     value={config.showCard !== false}
                     onChange={(v) => handleConfigUpdate({ showCard: v })}
                   />
+                  {config.showCard !== false && (
+                    <div className="mt-1">
+                      <label className="rb-label block mb-1">Card Style</label>
+                      <select
+                        value={config.cardStyle || 'default'}
+                        onChange={(e) => handleConfigUpdate({ cardStyle: e.target.value })}
+                        className="rb-input-base w-full text-[11px] py-1 px-2"
+                      >
+                        <option value="default">Default</option>
+                        <option value="borderless">Borderless</option>
+                        <option value="glass">Glass</option>
+                        <option value="accent-top">Accent Top</option>
+                      </select>
+                    </div>
+                  )}
+                </Section>
+              )}
+              {widget.type === 'statusbar' && (
+                <Section icon={Palette} title="Status Tags" defaultOpen={true}>
+                  <p className="rb-caption mb-1">Add boolean tags as status indicators</p>
+                  {(config.tags || []).map((tag, i) => (
+                    <div key={i} className="flex items-center gap-1 mb-1">
+                      <input
+                        className="rb-input-base text-[10px] py-0.5 px-1 flex-1"
+                        placeholder="Tag name"
+                        value={tag.tagName || ''}
+                        onChange={(e) => {
+                          const newTags = [...(config.tags || [])];
+                          newTags[i] = { ...newTags[i], tagName: e.target.value };
+                          handleConfigUpdate({ tags: newTags });
+                        }}
+                      />
+                      <input
+                        className="rb-input-base text-[10px] py-0.5 px-1 w-16"
+                        placeholder="Label"
+                        value={tag.label || ''}
+                        onChange={(e) => {
+                          const newTags = [...(config.tags || [])];
+                          newTags[i] = { ...newTags[i], label: e.target.value };
+                          handleConfigUpdate({ tags: newTags });
+                        }}
+                      />
+                      <button
+                        className="text-[10px] text-red-400 hover:text-red-600 px-1"
+                        onClick={() => {
+                          const newTags = (config.tags || []).filter((_, j) => j !== i);
+                          handleConfigUpdate({ tags: newTags });
+                        }}
+                      >✕</button>
+                    </div>
+                  ))}
+                  <button
+                    className="rb-input-base text-[10px] py-0.5 px-2 mt-1 w-full text-center hover:bg-[var(--rb-accent-subtle)]"
+                    onClick={() => handleConfigUpdate({ tags: [...(config.tags || []), { tagName: '', label: '', onLabel: 'ON', offLabel: 'OFF' }] })}
+                  >+ Add Tag</button>
                 </Section>
               )}
               <Section icon={SeparatorHorizontal} title="Separator Line" defaultOpen={false}>
