@@ -88,11 +88,8 @@ jobs:
           cd backend
           python -m PyInstaller hercules.spec --noconfirm
 
-      - name: Build launcher exe
-        shell: bash
-        run: |
-          pip install pyinstaller
-          python -m PyInstaller launcher.spec --noconfirm
+      # NOTE: launcher.exe build removed — Electron is the primary desktop entry point.
+      # launcher.py is kept in repo for legacy/dev use but is no longer built by CI.
 
       # ── Step 3: Download portable PostgreSQL ─────────────────────
       - name: Download portable PostgreSQL 17

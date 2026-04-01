@@ -39,10 +39,6 @@
         "to": "backend"
       },
       {
-        "from": "../dist/launcher",
-        "to": "."
-      },
-      {
         "from": "pgsql",
         "to": "pgsql"
       },

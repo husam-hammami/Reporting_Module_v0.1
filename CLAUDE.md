@@ -46,8 +46,9 @@ DB Port: 5433
 ```
 
 ### Backend Port
-- Launcher uses port 5004 (set via FLASK_PORT env var)
+- Electron app uses port 5001 (set via FLASK_PORT env var)
 - Default fallback in app.py: 5001
+- LAN access controlled via `FLASK_HOST` env var in `desktop_entry.py` (default: `0.0.0.0`)
 
 ### Key Branches
 - `main` — production, deployed to Vercel (frontend) and client PCs (backend)
@@ -57,7 +58,7 @@ DB Port: 5433
 ### Technology Stack
 - Backend: Flask + eventlet + PostgreSQL + Snap7 (PLC)
 - Frontend: React + Vite + Tailwind
-- Desktop: PyInstaller EXE (launcher.py)
+- Desktop: Electron + NSIS installer (primary), launcher.py (legacy, do not use for new deployments)
 - Email: Resend API (reports@herculesv2.app)
 - Languages: English, Arabic (RTL), Hindi, Urdu (RTL)
 
@@ -102,15 +103,16 @@ DB Port: 5433
 ## CI/CD — GitHub Actions
 
 ### Build Full Installer (`.github/workflows/build-ota-update.yml`)
-- **Trigger**: Manual dispatch only (Actions → Run workflow) or version tag push
-- **NOT triggered on every push** — builds are slow (~8 min on Windows runner)
+- **Trigger**: Push to `Salalah_Mill_B` branch or manual dispatch
 - **Runner**: `windows-latest` (Node 20 + Python 3.9)
 - **Build steps**: Frontend → PyInstaller backend exe → download portable PostgreSQL 17 → download VC++ Redistributable → Electron NSIS installer
 - **Output**: Two release assets per version:
   - `.exe` — Full standalone installer for new PCs (portal download button)
-  - `.zip` — Frozen backend OTA package for launcher auto-updates
+  - `.zip` — Frozen backend OTA package (auto-downloaded by Electron app on startup)
 - **Tags**: Branch-prefixed, e.g. `main-v1.0.50`, `salalah_mill_b-v1.0.50`
 - **Version**: Auto-generated from git commit count: `1.0.{commit_count}`
+- **PostgreSQL**: Bundled as portable PG 17.2 — requires VC++ Redistributable (installed by NSIS)
+- **IMPORTANT**: Every push to `Salalah_Mill_B` triggers a build (~8 min). Be aware of this when pushing multiple commits.
 
 ### Deploy workflow
 - Separate from installer build
@@ -119,33 +121,114 @@ DB Port: 5433
 ## Desktop App (Electron + NSIS)
 
 ### Structure (`desktop/`)
-- `main.js` — Electron main process
+- `main.js` — Electron main process (OTA, splash, backend lifecycle, license check)
+- `preload.js` — IPC bridge (initDatabase, saveConfig, restartForUpdate)
+- `splash.html` — Splash screen with progress bar and close button
 - `package.json` — Build config with `publish: null` (we upload releases ourselves)
 - `installer-scripts/vcredist-check.nsh` — NSIS script to install VC++ if missing
 - Bundles: frozen backend exe, portable PostgreSQL, VC++ redistributable, frontend
 
-### Launcher (`launcher.py`)
-- Starts portable PostgreSQL → runs DB setup → starts Flask backend
-- **OTA Updates**: Checks GitHub Releases API for `.zip` asset matching branch prefix
-  - Downloads zip → backs up `backend/` → extracts new backend → updates version.txt
-  - Detects frozen backend (`hercules-backend.exe`) and runs it directly
-  - Falls back to `python app.py` for source-based dev environments
-- **License check**: Validates against api.herculesv2.app on startup
-- Compiled to `launcher.exe` via PyInstaller (`launcher.spec`)
+### Electron Startup Sequence
+1. Single-instance lock
+2. License check (Node.js HTTPS → api.herculesv2.app)
+3. First-run → setup wizard (auto-init DB, PLC, SMTP config)
+4. Splash screen shown
+5. **OTA auto-update** — checks GitHub Releases for newer `.zip`, downloads + extracts
+6. Port checks (PG 5435, backend 5001)
+7. Start PostgreSQL (pg_ctl.exe from `resources/pgsql/bin/`)
+8. Start backend (hercules-backend.exe from `resources/backend/`)
+9. Health poll → load main window → destroy splash
+
+### OTA Auto-Update System
+- **Runs on every app startup** before backend starts
+- Checks GitHub Releases API for `.zip` asset matching branch prefix (e.g. `salalah_mill_b-v*`)
+- Downloads with progress bar on splash screen
+- Backs up `resources/backend/` → extracts new zip → writes new version
+- **Rollback**: If extraction fails, restores backup automatically
+- **LIMITATION**: OTA only replaces `resources/backend/`. It does NOT update the Electron shell (`main.js`, `splash.html`, `preload.js`). Electron-level fixes require a new installer.
+- Version/branch files: `resources/version.txt` and `resources/release_branch.txt`
+- Settings > Updates page has "Install & Restart" button for manual OTA trigger
+
+### Splash Screen Behavior
+- **NEVER use `closable: false`** — it prevents `splashWindow.close()` from working programmatically
+- Use `splashWindow.destroy()` (not `.close()`) to dismiss — `.close()` is blocked by event handlers
+- 15-second fallback timeout auto-destroys splash if `ready-to-show` never fires
+- Close button (x) on splash for manual dismissal
+- Splash is unclosable ONLY during OTA download (via `otaInProgress` flag in close event handler)
+
+### Window Close Behavior
+- Clicking X shows "Minimize" / "Quit" confirmation dialog
+- "Minimize" keeps PLC polling and distribution running in background
+- If tray icon exists (`icons/icon.ico`), window hides to tray instead of showing dialog
+- Auto-start via Windows registry (`HKCU\...\Run\HerculesReporting`)
+
+### Backend Process Spawning (Windows)
+- **Always use `windowsHide: true`** on `spawn()` calls — prevents black console windows
+- **NEVER use `detached: true`** on Windows — it forces a new console window. `pg_ctl start` already backgrounds itself.
+- `execSync` calls (for pg_isready, initdb, etc.) also flash consoles — use `{ stdio: 'pipe', windowsHide: true }`
+
+### Launcher (`launcher.py`) — LEGACY
+- **Do NOT use for new deployments** — Electron app is the primary desktop entry point
+- The standalone launcher was the v1 approach, kept for backwards compatibility
+- Has its own OTA logic separate from Electron's
 
 ### PyInstaller (`backend/hercules.spec`)
 - Entry point: `desktop_entry.py`
 - Output: `hercules-backend/` folder with `hercules-backend.exe`
-- Bundles: frontend/dist, config/, migrations/, snap7.dll
+- Bundles: frontend/dist, config/, migrations/, version.txt, release_branch.txt, snap7.dll
 - All blueprints and workers listed in hiddenimports
 - **When adding a new blueprint or Python dependency**: add to `hiddenimports` in `hercules.spec`
+
+### Backend Self-Bootstrapping (`app.py` — `_run_startup_migrations`)
+- Runs at import time when `app.py` loads — no dependency on `psql.exe`
+- **Step 0**: Connects to `postgres` system DB, creates app database if missing
+- **Step 1**: Runs all migration SQL files via psycopg2 (splits by `;` so trigger errors don't rollback tables)
+- **Step 2**: Creates default admin user with **werkzeug** `generate_password_hash` (NOT bcrypt)
+- **Step 3**: Detects and converts existing bcrypt `$2b$` hashes to werkzeug format
+- Migration order must match `MIGRATION_ORDER` in both `init_db.py` AND `app.py`
+
+### Database Defaults for Electron (DO NOT CHANGE)
+```
+DB Name: dynamic_db_hercules (lowercase — set by Electron via POSTGRES_DB env var)
+DB User: postgres
+DB Password: (empty — trust auth)
+DB Host: 127.0.0.1
+DB Port: 5435
+```
+Note: These differ from the dev defaults in app.py (`Dynamic_DB_Hercules`, port 5433, password `Admin@123`). Electron overrides them via environment variables.
+
+## API Response Formats — MUST MATCH Frontend
+
+Backend endpoints return different response structures. When writing frontend fetch helpers, the key MUST match:
+
+| Endpoint | Response Key | Example |
+|----------|-------------|---------|
+| `/api/tags` | `{ tags: [...] }` | `.data?.tags` |
+| `/api/tag-groups` | `{ tag_groups: [...] }` | `.data?.tag_groups` |
+| `/api/mappings` | `{ mappings: [...] }` | `.data?.mappings` |
+| `/api/report-builder/templates` | `{ data: [...] }` | `.data?.data` |
+| `/api/distribution/rules` | `{ data: [...] }` | `.data?.data` |
+
+**Common mistake**: Using `.data?.templates` or `.data?.rules` when the backend returns `.data` as the array. Always check the actual `jsonify()` call in the blueprint.
+
+### Export/Import (`ExportImport.jsx`)
+- Export fetches from API and bundles into JSON
+- Import reads JSON and POSTs/PUTs back to API
+- **Report templates** are in the database (`report_builder_templates` table)
+- **Report configs** are in browser `localStorage` (`dynamicReportConfigs` key)
+- Both use the same export JSON file with different section keys
+
+### Password Hashing
+- **werkzeug** `generate_password_hash` / `check_password_hash` — used by Flask login
+- **NEVER use bcrypt** `$2b$` hashes — werkzeug cannot verify them, login returns 500
+- The Electron setup wizard's `runInitDb()` historically used a bcrypt hash — `_run_startup_migrations` auto-detects and converts these
 
 ## Adding New Features — Checklist
 
 When adding a new feature that touches backend + frontend + database:
 
-1. **Database migration**: Add SQL file in `backend/migrations/`, append to `MIGRATION_ORDER` in `init_db.py`
-2. **Auto-create tables**: New blueprints must create their own tables via `before_request` hook (existing DBs won't re-run `init_db.py`)
+1. **Database migration**: Add SQL file in `backend/migrations/`, append to `MIGRATION_ORDER` in **THREE places**: `init_db.py`, `app.py` (`_run_startup_migrations`), and `desktop/main.js` (`migrationOrder`)
+2. **Auto-create tables**: New blueprints can create their own tables via `before_request` hook — but use `actual = conn._conn if hasattr(conn, '_conn') else conn; actual.autocommit = True` to unwrap PooledConnection
 3. **Requirements**: Add Python packages to BOTH `requirements.txt` AND `requirements-railway.txt`
 4. **PyInstaller**: Add new modules to `hiddenimports` in `backend/hercules.spec`
 5. **Blueprint registration**: Register in `app.py` with `url_prefix='/api'`
@@ -244,6 +327,35 @@ When adding a new feature that touches backend + frontend + database:
 ### AI Summary in Distribution Emails
 - `distribution_engine.py` calls `_generate_ai_summary()` between email build and send
 - 30-tag significance filter, 200 calls/day rate limit, graceful timeout (never blocks email)
+
+## Deployment Troubleshooting
+
+### Common Issues on Windows Server
+- **psql.exe / pg_ctl.exe "access denied"**: Missing VC++ Redistributable (`VCRUNTIME140_1.dll`). Install from `resources/vcredist/vc_redist.x64.exe`
+- **PostgreSQL version mismatch**: PG data directory created by one version, binaries from another. Check `pgdata/PG_VERSION` and match with `postgres.exe --version`
+- **Login returns 500**: Admin password hash is bcrypt (`$2b$`). Backend `_run_startup_migrations` auto-fixes this, but only runs on startup. Restart the app.
+- **Missing tables** (`hercules_ai_config`, `distribution_rules`): Migration didn't run. Check `_run_startup_migrations` logs. Tables are created by both `before_request` hooks and startup migrations.
+- **Splash stuck on "Starting services..."**: Use `splashWindow.destroy()` not `.close()`. 15-second fallback timeout should auto-dismiss.
+- **Black terminal window flashing**: `detached: true` on `spawn()` creates console windows on Windows. Remove it. Use `windowsHide: true` instead.
+- **Timezone errors in pg.log**: `pgsql/share/timezone` directory missing. Reinstall PostgreSQL binaries.
+- **Multiple installations conflicting**: Check for old installs at `C:\Program Files\HerculesReporting\`. Uninstall old versions.
+
+### Debugging Without psql.exe
+If `psql.exe` doesn't work, use Python psycopg2 to query the database directly:
+```python
+import psycopg2
+conn = psycopg2.connect(dbname='dynamic_db_hercules', user='postgres', host='127.0.0.1', port=5435)
+conn.autocommit = True
+cur = conn.cursor()
+cur.execute("SELECT * FROM users")
+print(cur.fetchall())
+```
+
+### OTA Limitations
+- OTA replaces `resources/backend/` ONLY
+- Does NOT update: `main.js`, `splash.html`, `preload.js`, `pgsql/` directory
+- Electron shell fixes require a new installer build
+- Version detection: `resources/version.txt` (written by OTA) and `backend/_internal/release_branch.txt` (bundled by PyInstaller)
 
 ## UI Patterns — Report Builder
 - CSS variables: `--rb-accent`, `--rb-surface`, `--rb-panel`, `--rb-border`, `--rb-text`, `--rb-text-muted`
