@@ -319,6 +319,18 @@ When adding a new feature that touches backend + frontend + database:
 - Config stored in `hercules_ai_config` table (key-value JSONB)
 - API key stored redacted in API responses (only hint + boolean), raw key used internally
 
+### AI Tables (`hercules_ai_bp.py` — `_ensure_tables`)
+- Tables: `hercules_ai_config` (key-value config) and `hercules_ai_tag_profiles` (tag classification results)
+- Created via `before_request` hook on first request to any `/api/hercules-ai/*` endpoint
+- Also created by `_run_startup_migrations` via `create_hercules_ai_tables.sql`
+- **CRITICAL**: When using `_ensure_tables`, must unwrap PooledConnection before setting autocommit:
+  ```python
+  actual = conn._conn if hasattr(conn, '_conn') else conn
+  actual.autocommit = True
+  ```
+  Setting `conn.autocommit = True` on a PooledConnection does NOTHING — it sets the attribute on the wrapper, not the real psycopg2 connection. Without this fix, DDL statements silently roll back.
+- Trigger creation failures are caught individually and do not affect table creation (autocommit = each statement commits independently)
+
 ### Tag Classification
 - Rule-based: metadata first (unit, data_type, is_counter), then name/label keyword fallback
 - Types: counter, rate, boolean, percentage, analog, setpoint, id_selector, unknown
@@ -328,7 +340,11 @@ When adding a new feature that touches backend + frontend + database:
 - `distribution_engine.py` calls `_generate_ai_summary()` between email build and send
 - 30-tag significance filter, 200 calls/day rate limit, graceful timeout (never blocks email)
 
-## Deployment Troubleshooting
+## Deployment
+
+For full deployment instructions, see **[`docs/Deployment_Guide.md`](docs/Deployment_Guide.md)**.
+
+### Troubleshooting
 
 ### Common Issues on Windows Server
 - **psql.exe / pg_ctl.exe "access denied"**: Missing VC++ Redistributable (`VCRUNTIME140_1.dll`). Install from `resources/vcredist/vc_redist.x64.exe`
