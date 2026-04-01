@@ -545,10 +545,13 @@ def _get_logo_data_uris():
     project_root = os.path.dirname(backend_dir)
 
     # Search multiple possible logo directories (Vite dist, static, source assets)
+    # PyInstaller bundles to _internal/frontend/dist/assets/ (lowercase)
     search_dirs = [
-        os.path.join(backend_dir, 'static', 'assets'),           # backend/static/assets/
-        os.path.join(project_root, 'Frontend', 'dist', 'assets'),  # Frontend/dist/assets/
-        os.path.join(project_root, 'Frontend', 'src', 'Assets'),   # Frontend/src/Assets/
+        os.path.join(backend_dir, 'frontend', 'dist', 'assets'),    # PyInstaller: _internal/frontend/dist/assets/
+        os.path.join(backend_dir, 'static', 'assets'),              # backend/static/assets/
+        os.path.join(project_root, 'Frontend', 'dist', 'assets'),   # Frontend/dist/assets/
+        os.path.join(project_root, 'Frontend', 'src', 'Assets'),    # Frontend/src/Assets/
+        os.path.join(project_root, 'frontend', 'dist', 'assets'),   # frontend/dist/assets/ (lowercase)
     ]
 
     hercules_uri = ''
