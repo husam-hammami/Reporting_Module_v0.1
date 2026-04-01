@@ -1986,27 +1986,32 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
     time_from = from_dt.strftime('%Y-%m-%d %H:%M')
     time_to = to_dt.strftime('%Y-%m-%d %H:%M')
 
-    prompt = f"""You summarize production data for plant managers. Be extremely concise.
+    prompt = f"""You summarize industrial production data for mill/plant managers. Be direct and useful.
 
 Report: {names_str}
 Period: {time_from} to {time_to}
 
-Data (Label | Type | Value | Line):
+Tag Data (Label | Type | Value | Production Line):
 {structured_data}
 
-Output format — use EXACTLY this structure:
-**{names_str}** — {{one-line verdict: running normally / reduced output / line down / no data}}
+Write a brief summary using EXACTLY this format:
 
-• **Production**: {{key totals with values, or "No data recorded"}}
-• **Status**: {{equipment on/off states, only if notable}}
-• **Alerts**: {{zero counters, unusual values — or "None"}}
+**{names_str}** — {{one-line verdict: running normally / reduced output / line stopped / no data}}
+
+• **Production**: {{totalizer values with units, format large numbers with commas e.g. 420,436 kg}}
+• **Flow rates**: {{current rates if available, skip if none}}
+• **Status**: {{equipment on/off, only if notable — skip if all normal}}
+• **Alerts**: {{zero counters, zero flow rates, unusual values — or "None"}}
 
 Rules:
-- Maximum 4 bullet points. No bullet longer than 15 words.
-- Only cite numbers from the data above. Never calculate or infer.
-- N/A values mean no data was recorded — say "no data", don't speculate why.
-- Skip any bullet that has nothing useful to report.
-- No paragraphs. No filler. No recommendations."""
+- Use the Label column (not raw tag names) when referring to tags.
+- Maximum 4 bullet points. Each bullet under 20 words.
+- Format numbers with thousand separators (e.g. 1,234,567 kg not 1234567.0 kg).
+- Round decimals: 0 decimals for totalizers, 1 decimal for rates and percentages.
+- Only cite numbers from the data. Never calculate ratios or differences.
+- N/A or missing values = "no data" — do not guess why.
+- Skip any bullet with nothing to report.
+- No paragraphs. No filler. No recommendations. No greetings."""
 
     try:
         import ai_provider
@@ -2053,22 +2058,28 @@ def _format_summary_html(summary):
 
 
 def _prepend_summary_to_email(summary, email_html):
-    """Insert AI summary block after <body> in the email HTML."""
+    """Insert AI summary block into the email HTML, after the message paragraph."""
     formatted = _format_summary_html(summary)
-    summary_block = (
+    summary_row = (
+        '<tr><td style="padding:0 32px 24px 32px">'
         '<div style="background:#f0f9ff;border-left:4px solid #0284c7;'
-        'padding:16px 20px;margin:0 0 24px;border-radius:6px;">'
-        '<div style="font-size:13px;font-weight:600;color:#0369a1;margin-bottom:8px;">'
-        'Hercules AI Summary</div>'
-        f'<div style="font-size:14px;color:#1e293b;line-height:1.5;">{formatted}</div>'
-        '</div>'
+        'padding:16px 20px;border-radius:6px;">'
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;'
+        'letter-spacing:0.06em;color:#0369a1;margin-bottom:8px;">AI Summary</div>'
+        f'<div style="font-size:13px;color:#1e293b;line-height:1.6;">{formatted}</div>'
+        '</div></td></tr>'
     )
-    # Insert after first <body...> tag
-    idx = email_html.lower().find('<body')
+    # Insert before the <!-- Footer --> comment or the footer <tr>
+    marker = '<!-- Footer -->'
+    idx = email_html.find(marker)
     if idx >= 0:
-        # Find the closing > of the <body> tag
-        close = email_html.find('>', idx)
-        if close >= 0:
-            return email_html[:close + 1] + summary_block + email_html[close + 1:]
-    # Fallback: prepend
-    return summary_block + email_html
+        return email_html[:idx] + summary_row + '\n\n  ' + email_html[idx:]
+    # Fallback: insert before closing </table></td></tr></table>
+    idx = email_html.lower().find('</table>\n</td></tr>')
+    if idx >= 0:
+        return email_html[:idx] + summary_row + '\n' + email_html[idx:]
+    # Last resort: append before </body>
+    idx = email_html.lower().find('</body>')
+    if idx >= 0:
+        return email_html[:idx] + summary_row + email_html[idx:]
+    return email_html + summary_row

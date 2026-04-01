@@ -6,6 +6,7 @@ export const herculesAIApi = {
   scan:            ()          => axios.post(`${BASE}/scan`),
   getProfiles:     ()          => axios.get(`${BASE}/profiles`),
   bulkUpdate:      (profiles)  => axios.put(`${BASE}/profiles/bulk`, { profiles }),
+  bulkDelete:      (ids)       => axios.delete(`${BASE}/profiles/bulk`, { data: { ids } }),
   updateProfile:   (id, data)  => axios.put(`${BASE}/profiles/${id}`, data),
   getConfig:       ()          => axios.get(`${BASE}/config`),
   updateConfig:    (data)      => axios.put(`${BASE}/config`, data),
