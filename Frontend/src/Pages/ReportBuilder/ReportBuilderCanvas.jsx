@@ -646,7 +646,7 @@ export default function ReportBuilderCanvas() {
                           key={String(widget.id)}
                           data-widget-id={widget.id}
                           onClick={(e) => handleSelect(widget.id, e)}
-                          className={`group transition-shadow overflow-visible ${
+                          className={`group overflow-visible ${
                             isInvisible
                               ? ''
                               : showCard
