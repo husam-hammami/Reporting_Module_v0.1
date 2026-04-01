@@ -438,6 +438,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   const gridCols = template?.layout_config?.grid?.cols ?? GRID_COLS_DEFAULT;
   const gridRowH = template?.layout_config?.grid?.rowHeight ?? GRID_ROW_H_DEFAULT;
   const pageMode = template?.layout_config?.grid?.pageMode || 'a4';
+  const dashboardHeader = template?.layout_config?.dashboardHeader;
 
   const layout = useMemo(
     () =>
@@ -623,6 +624,55 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         onWheelCapture={handleWheelCapture}
       >
         <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}>
+          {/* ── Dashboard Header Bar ── */}
+          {dashboardHeader && (
+            <div
+              className="flex items-center justify-between px-4 py-2 mx-1 mt-2 mb-1 rounded-lg print:mx-0"
+              style={{
+                background: dashboardHeader.bg || 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
+                color: dashboardHeader.color || '#ffffff',
+                minHeight: 44,
+              }}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                {dashboardHeader.showLogo !== false && (
+                  <img src="/api/branding/logo" alt="" style={{ height: 28, width: 'auto', borderRadius: 4 }} onError={(e) => { e.target.style.display = 'none'; }} />
+                )}
+                <span style={{ fontSize: dashboardHeader.titleSize || 15, fontWeight: 700, letterSpacing: '-0.01em' }}>
+                  {dashboardHeader.title || template?.name || 'Dashboard'}
+                </span>
+                {dashboardHeader.subtitle && (
+                  <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 4 }}>{dashboardHeader.subtitle}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {(dashboardHeader.statusTags || []).map((st, i) => {
+                  const val = tagValues?.[st.tagName];
+                  const num = val != null ? Number(val) : null;
+                  const isOn = num === 1;
+                  return (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <div style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: isOn ? (st.onColor || '#34d399') : (st.offColor || '#6b7280'),
+                        boxShadow: isOn ? `0 0 6px ${st.onColor || '#34d399'}` : 'none',
+                      }} />
+                      <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.9 }}>
+                        {st.label || st.tagName}
+                      </span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700,
+                        color: isOn ? (st.onColor || '#34d399') : (st.offColor || '#94a3b8'),
+                      }}>
+                        {isOn ? (st.onLabel || 'ON') : (st.offLabel || 'OFF')}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
             <div className="text-center py-16 text-[12px] text-[#6b7f94] dark:text-[#8898aa]">No widgets in this report.</div>
           ) : viewMode === 'tabular' ? (
