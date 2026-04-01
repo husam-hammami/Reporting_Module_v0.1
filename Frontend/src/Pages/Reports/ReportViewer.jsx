@@ -530,6 +530,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
               selectedShift={timePeriod.selectedShift}
               onShiftChange={tpActions.setShift}
               compact
+              variant="dark"
             />
           ) : (
             <span className="text-[12px] font-medium text-[#8898aa] whitespace-nowrap tabular-nums hidden sm:inline" title="Current date and time">
@@ -558,11 +559,11 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
               </button>
             </div>
           )}
-          <button onClick={toggleFullscreen} className="p-2 rounded-lg text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors border border-transparent hover:border-[#e3e9f0]" title="Fullscreen">
+          <button onClick={toggleFullscreen} className={`p-2 rounded-lg transition-colors border border-transparent ${dashboardHeader ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-[#6b7f94] hover:text-brand hover:bg-brand-subtle hover:border-[#e3e9f0]'}`} title="Fullscreen">
             {fullscreen ? <FaCompress size={14} /> : <FaExpand size={14} />}
           </button>
           <div className="relative group">
-            <button className="inline-flex items-center gap-2 px-3 py-2 text-[12px] font-semibold rounded-lg bg-brand hover:bg-brand-hover text-white transition-colors">
+            <button className={`inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold rounded-lg transition-colors ${dashboardHeader ? 'bg-white/15 hover:bg-white/25 text-white border border-white/20' : 'bg-brand hover:bg-brand-hover text-white'}`}>
               <FaPrint size={12} /> {exporting ? 'Exporting...' : 'Export'}
             </button>
             <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
