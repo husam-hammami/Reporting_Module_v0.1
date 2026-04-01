@@ -723,8 +723,8 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                 rowHeight={gridRowH}
                 margin={GRID_MARGIN}
                 containerPadding={GRID_PADDING}
-                compactType={null}
-                allowOverlap={true}
+                compactType="vertical"
+                allowOverlap={false}
                 isDraggable={false}
                 isResizable={false}
                 static
