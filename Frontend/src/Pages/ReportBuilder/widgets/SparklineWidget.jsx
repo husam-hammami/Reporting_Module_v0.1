@@ -109,7 +109,7 @@ export default function SparklineWidget({ config, tagValues }) {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      padding: '6px 12px',
+      padding: '4px 8px',
       height: '100%',
     }}>
       {/* Title */}

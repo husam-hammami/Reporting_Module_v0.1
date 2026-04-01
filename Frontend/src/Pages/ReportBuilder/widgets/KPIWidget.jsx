@@ -194,7 +194,7 @@ export default function KPIWidget({ config, tagValues, sparklineData, layout }) 
         height: '100%',
         justifyContent: 'center',
         alignItems,
-        padding: '8px 12px',
+        padding: '4px 8px',
         minHeight: 0,
         position: 'relative',
         overflow: 'hidden',

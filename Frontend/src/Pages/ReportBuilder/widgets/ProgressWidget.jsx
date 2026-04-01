@@ -87,7 +87,7 @@ export default function ProgressWidget({ config, tagValues }) {
       flexDirection: 'column',
       justifyContent: 'center',
       gap: '4px',
-      padding: '8px 12px',
+      padding: '4px 8px',
       height: '100%',
     }}>
       {/* Title + value row */}
