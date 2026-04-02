@@ -439,7 +439,16 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   const gridCols = template?.layout_config?.grid?.cols ?? GRID_COLS_DEFAULT;
   const gridRowH = template?.layout_config?.grid?.rowHeight ?? GRID_ROW_H_DEFAULT;
   const pageMode = template?.layout_config?.grid?.pageMode || 'a4';
-  const dashboardHeader = template?.layout_config?.dashboardHeader;
+  const dashboardHeaderCfg = template?.layout_config?.dashboardHeader;
+  // Unified chrome bar is always active for dashboard reports.
+  // dashboardHeaderCfg provides optional overrides (bg, color, logo, title).
+  const dashboardHeader = {
+    bg: 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
+    color: '#ffffff',
+    showLogo: true,
+    title: template?.name || 'Dashboard',
+    ...dashboardHeaderCfg,
+  };
 
   const layout = useMemo(
     () =>
@@ -471,35 +480,29 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     <div className="rb-report-viewer-outer flex flex-col h-[calc(100vh-80px)] bg-transparent">
       {/* ── Toolbar: back + report selector (centered) | actions ── */}
       <div
-        className={`backdrop-blur-sm border-b px-3 py-1.5 flex items-center gap-3 flex-shrink-0 print:hidden ${
-          dashboardHeader
-            ? 'border-transparent'
-            : 'bg-white/90 dark:bg-[#0a1525] border-[#e3e9f0] dark:border-gray-700 py-3'
-        }`}
-        style={dashboardHeader ? {
-          background: dashboardHeader.bg || 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
-          color: dashboardHeader.color || '#ffffff',
-        } : undefined}
+        className="backdrop-blur-sm border-b border-transparent px-3 py-1.5 flex items-center gap-3 flex-shrink-0 print:hidden"
+        style={{
+          background: dashboardHeader.bg,
+          color: dashboardHeader.color,
+        }}
       >
         {/* Left: back */}
-        <button onClick={onBack} className={`p-1.5 rounded-md transition-colors flex-shrink-0 ${dashboardHeader ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-[#6b7f94] hover:text-brand hover:bg-brand-subtle'}`}>
+        <button onClick={onBack} className="p-1.5 rounded-md transition-colors flex-shrink-0 text-white/70 hover:text-white hover:bg-white/10">
           <FaChevronLeft size={12} />
         </button>
         {/* Dashboard title + logo inline */}
-        {dashboardHeader && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {dashboardHeader.showLogo !== false && (
-              <img src="/api/branding/logo" alt="" style={{ height: 22, width: 'auto', borderRadius: 3 }} onError={(e) => { e.target.style.display = 'none'; }} />
-            )}
-            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>
-              {dashboardHeader.title || template?.name || 'Dashboard'}
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {dashboardHeader.showLogo !== false && (
+            <img src="/api/branding/logo" alt="" style={{ height: 22, width: 'auto', borderRadius: 3 }} onError={(e) => { e.target.style.display = 'none'; }} />
+          )}
+          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>
+            {dashboardHeader.title || template?.name || 'Dashboard'}
+          </span>
+        </div>
 
         {/* Center: report tab bar or name + date/time */}
         <div className="flex items-center gap-3 flex-1 justify-center min-w-0">
-          {siblingReports?.length > 1 ? (
+          {siblingReports?.length > 1 && (
             <div className="flex items-center gap-1 overflow-x-auto max-w-full">
               {siblingReports.map((r) => (
                 <button
@@ -515,29 +518,21 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                 </button>
               ))}
             </div>
-          ) : !dashboardHeader ? (
-            <span className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] truncate">{template?.name || 'Report'}</span>
-          ) : null}
-          {dashboardHeader ? (
-            <TimePeriodTabs
-              tabs={VIEWER_TABS}
-              activeTab={timePeriod.tab}
-              onTabChange={tpActions.setTab}
-              customFrom={timePeriod.customFrom}
-              customTo={timePeriod.customTo}
-              onCustomFrom={tpActions.setCustomFrom}
-              onCustomTo={tpActions.setCustomTo}
-              shiftsConfig={shiftsConfig}
-              selectedShift={timePeriod.selectedShift}
-              onShiftChange={tpActions.setShift}
-              compact
-              variant="dark"
-            />
-          ) : (
-            <span className="text-[12px] font-medium text-[#8898aa] whitespace-nowrap tabular-nums hidden sm:inline" title="Current date and time">
-              {now.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })} · {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </span>
           )}
+          <TimePeriodTabs
+            tabs={VIEWER_TABS}
+            activeTab={timePeriod.tab}
+            onTabChange={tpActions.setTab}
+            customFrom={timePeriod.customFrom}
+            customTo={timePeriod.customTo}
+            onCustomFrom={tpActions.setCustomFrom}
+            onCustomTo={tpActions.setCustomTo}
+            shiftsConfig={shiftsConfig}
+            selectedShift={timePeriod.selectedShift}
+            onShiftChange={tpActions.setShift}
+            compact
+            variant="dark"
+          />
         </div>
 
         {/* Right: view toggle + fullscreen + print */}
@@ -560,11 +555,11 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
               </button>
             </div>
           )}
-          <button onClick={toggleFullscreen} className={`p-2 rounded-lg transition-colors border border-transparent ${dashboardHeader ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-[#6b7f94] hover:text-brand hover:bg-brand-subtle hover:border-[#e3e9f0]'}`} title="Fullscreen">
+          <button onClick={toggleFullscreen} className="p-2 rounded-lg transition-colors border border-transparent text-white/70 hover:text-white hover:bg-white/10" title="Fullscreen">
             {fullscreen ? <FaCompress size={14} /> : <FaExpand size={14} />}
           </button>
           <div className="relative group">
-            <button className={`inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold rounded-lg transition-colors ${dashboardHeader ? 'bg-white/15 hover:bg-white/25 text-white border border-white/20' : 'bg-brand hover:bg-brand-hover text-white'}`}>
+            <button className="inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold rounded-lg transition-colors bg-white/15 hover:bg-white/25 text-white border border-white/20">
               <FaPrint size={12} /> {exporting ? 'Exporting...' : 'Export'}
             </button>
             <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
@@ -592,23 +587,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         </div>
       </div>
 
-      {/* ── Time period tabs (hidden when dashboard header merges it into toolbar) ── */}
-      {!dashboardHeader && (
-        <TimePeriodTabs
-          tabs={VIEWER_TABS}
-          activeTab={timePeriod.tab}
-          onTabChange={tpActions.setTab}
-          customFrom={timePeriod.customFrom}
-          customTo={timePeriod.customTo}
-          onCustomFrom={tpActions.setCustomFrom}
-          onCustomTo={tpActions.setCustomTo}
-          shiftsConfig={shiftsConfig}
-          selectedShift={timePeriod.selectedShift}
-          onShiftChange={tpActions.setShift}
-        />
-      )}
-
-      {/* ── Dashboard tabs (viewer) ── */}
+      {/* ── Dashboard tabs (viewer) — centered below chrome bar ── */}
       {dashboardTabs?.enabled && Array.isArray(dashboardTabs.tabs) && dashboardTabs.tabs.length > 1 && (
         <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0 print:hidden border-b border-[#e3e9f0] dark:border-gray-700 bg-white dark:bg-[#0d1117]">
           <TabSelector
@@ -619,49 +598,6 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
           />
         </div>
       )}
-
-      {/* ── Status indicator — hidden when dashboardHeader is active ── */}
-      {!dashboardHeader && (() => {
-        let bg, dot, msg;
-        if (timePeriod.tab === 'live') {
-          if (liveError) {
-            bg  = 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30';
-            dot = <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0" />;
-            msg = <span className="text-[11px] font-medium text-[#ef4444]">{liveError}</span>;
-          } else if (emulatorOn || Object.keys(liveTagValues).length > 0) {
-            bg  = 'bg-[#ecfdf5] dark:bg-[#0d2e1f] border-[#a7f3d0] dark:border-[#065f46]';
-            dot = <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse flex-shrink-0" />;
-            msg = <span className="text-[11px] font-medium text-[#059669]">{emulatorOn ? 'Live (Emulator)' : 'Live'}</span>;
-          } else {
-            bg  = 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30';
-            dot = <FaClock size={9} className="text-[#d97706] flex-shrink-0" />;
-            msg = <span className="text-[11px] font-medium text-[#d97706]">Waiting for live data…</span>;
-          }
-        } else if (historicalLoading) {
-          bg  = 'bg-[#eff6ff] dark:bg-[#0c1a2e] border-[#93c5fd]/30';
-          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse flex-shrink-0" />;
-          msg = <span className="text-[11px] font-medium text-[#3b82f6]">Loading historical data…</span>;
-        } else if (historicalError) {
-          bg  = 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30';
-          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0" />;
-          msg = <span className="text-[11px] font-medium text-[#ef4444]">{historicalError}</span>;
-        } else if (Object.keys(historicalTagValues).length > 0) {
-          bg  = 'bg-[#f0f9ff] dark:bg-[#0c1e2e] border-[#7dd3fc]/30';
-          dot = <FaClock size={9} className="text-[#0284c7] flex-shrink-0" />;
-          msg = <span className="text-[11px] font-medium text-[#0284c7]">
-            Historical — {dateRange?.from?.toLocaleDateString?.()} {dateRange?.from?.toLocaleTimeString?.(undefined, {hour:'2-digit',minute:'2-digit'})} to {dateRange?.to?.toLocaleDateString?.()} {dateRange?.to?.toLocaleTimeString?.(undefined, {hour:'2-digit',minute:'2-digit'})} ({Object.keys(historicalTagValues).length} tags)
-          </span>;
-        } else {
-          bg  = 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30';
-          dot = <FaClock size={9} className="text-[#d97706] flex-shrink-0" />;
-          msg = <span className="text-[11px] font-medium text-[#d97706]">No historical data for this period</span>;
-        }
-        return (
-          <div className={`border-b px-4 py-1.5 flex items-center gap-2 print:hidden transition-colors duration-300 ${bg}`}>
-            {dot}{msg}
-          </div>
-        );
-      })()}
 
       {/* ── Report content: full width; scrollable with mouse wheel ── */}
       <div
@@ -677,7 +613,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         onWheelCapture={handleWheelCapture}
       >
         <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}>
-          {/* Dashboard header bar is rendered above in the toolbar when dashboardHeader is active */}
+          {/* Dashboard header bar is rendered in the unified chrome toolbar above */}
 
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
             <div className="text-center py-16 text-[12px] text-[#6b7f94] dark:text-[#8898aa]">No widgets in this report.</div>
@@ -769,7 +705,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             /* ══ Grid View — original react-grid-layout rendering ══ */
             <div
               ref={containerRef}
-              className={`report-builder rb-canvas-perspective rb-layout-readonly ${dashboardHeader ? 'pt-0 pb-3 px-1' : 'pt-3 pb-6 px-6'}`}
+              className="report-builder rb-canvas-perspective rb-layout-readonly pt-0 pb-3 px-1"
               style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}
             >
               <GridLayout

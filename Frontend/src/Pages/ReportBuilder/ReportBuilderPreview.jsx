@@ -150,7 +150,15 @@ export default function ReportBuilderPreview() {
   const gridCols = template?.layout_config?.grid?.cols ?? GRID_COLS_DEFAULT;
   const gridRowH = template?.layout_config?.grid?.rowHeight ?? GRID_ROW_H_DEFAULT;
   const pageMode = template?.layout_config?.grid?.pageMode || 'a4';
-  const dashboardHeader = template?.layout_config?.dashboardHeader;
+  const dashboardHeaderCfg = template?.layout_config?.dashboardHeader;
+  const dashboardHeader = {
+    bg: 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
+    color: '#ffffff',
+    showLogo: true,
+    title: template?.name || 'Dashboard',
+    titleSize: 14,
+    ...dashboardHeaderCfg,
+  };
 
   const layout = useMemo(
     () =>
@@ -327,33 +335,22 @@ export default function ReportBuilderPreview() {
           className={`w-full mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}
           {...pageEntrance}
         >
-          {/* Dashboard header bar or compact report header */}
-          {dashboardHeader ? (
-            <div
-              className="flex items-center px-4 py-2 mx-2 mt-1 mb-1 rounded-md"
-              style={{
-                background: dashboardHeader.bg || 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
-                color: dashboardHeader.color || '#ffffff',
-                minHeight: 36,
-              }}
-            >
-              {dashboardHeader.showLogo !== false && (
-                <img src="/api/branding/logo" alt="" style={{ height: 24, width: 'auto', borderRadius: 3, marginRight: 10 }} onError={(e) => { e.target.style.display = 'none'; }} />
-              )}
-              <span style={{ fontSize: dashboardHeader.titleSize || 14, fontWeight: 700 }}>
-                {dashboardHeader.title || template?.name || 'Dashboard'}
-              </span>
-            </div>
-          ) : (
-            <div className="mb-1 print:mb-2 px-4 pt-3">
-              <h1 className="rb-title" style={{ fontSize: 'var(--rb-font-lg)' }}>
-                {template?.name || 'Report'}
-              </h1>
-              <p className="rb-caption mt-0.5">
-                Generated: {new Date().toLocaleString()}
-              </p>
-            </div>
-          )}
+          {/* Unified dashboard header bar */}
+          <div
+            className="flex items-center px-4 py-2 mx-2 mt-1 mb-1 rounded-md"
+            style={{
+              background: dashboardHeader.bg,
+              color: dashboardHeader.color,
+              minHeight: 36,
+            }}
+          >
+            {dashboardHeader.showLogo !== false && (
+              <img src="/api/branding/logo" alt="" style={{ height: 24, width: 'auto', borderRadius: 3, marginRight: 10 }} onError={(e) => { e.target.style.display = 'none'; }} />
+            )}
+            <span style={{ fontSize: dashboardHeader.titleSize, fontWeight: 700 }}>
+              {dashboardHeader.title || template?.name || 'Dashboard'}
+            </span>
+          </div>
 
           {/* Widgets grid */}
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
