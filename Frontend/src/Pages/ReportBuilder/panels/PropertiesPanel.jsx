@@ -1750,42 +1750,67 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
               )}
               {widget.type === 'statusbar' && (
                 <Section icon={Palette} title="Status Tags" defaultOpen={true}>
-                  <p className="rb-caption mb-1">Add boolean tags as status indicators</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--rb-text-muted)]">Tags</span>
+                    <button
+                      onClick={() => handleConfigUpdate({ tags: [...(config.tags || []), { tagName: '', label: '', onLabel: 'ON', offLabel: 'OFF', onColor: '#10b981', offColor: '#6b7280' }] })}
+                      className="text-[9px] font-medium text-[var(--rb-accent)] hover:underline"
+                    >+ Add tag</button>
+                  </div>
                   {(config.tags || []).map((tag, i) => (
-                    <div key={i} className="flex items-center gap-1 mb-1">
-                      <input
-                        className="rb-input-base text-[10px] py-0.5 px-1 flex-1"
-                        placeholder="Tag name"
+                    <div key={i} className="p-2 rounded border border-[var(--rb-border)] space-y-1.5 mb-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-medium text-[var(--rb-text-muted)]">Tag {i + 1}</span>
+                        <button
+                          onClick={() => {
+                            const newTags = (config.tags || []).filter((_, j) => j !== i);
+                            handleConfigUpdate({ tags: newTags });
+                          }}
+                          className="p-0.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
+                        ><X size={10} /></button>
+                      </div>
+                      <TagPicker
+                        tags={tags}
                         value={tag.tagName || ''}
-                        onChange={(e) => {
+                        onChange={(v) => {
                           const newTags = [...(config.tags || [])];
-                          newTags[i] = { ...newTags[i], tagName: e.target.value };
+                          const picked = tags.find(t => t.tag_name === v);
+                          newTags[i] = { ...newTags[i], tagName: v, label: newTags[i].label || picked?.display_name || v };
                           handleConfigUpdate({ tags: newTags });
                         }}
                       />
-                      <input
-                        className="rb-input-base text-[10px] py-0.5 px-1 w-16"
-                        placeholder="Label"
-                        value={tag.label || ''}
-                        onChange={(e) => {
-                          const newTags = [...(config.tags || [])];
-                          newTags[i] = { ...newTags[i], label: e.target.value };
-                          handleConfigUpdate({ tags: newTags });
-                        }}
-                      />
-                      <button
-                        className="text-[10px] text-red-400 hover:text-red-600 px-1"
-                        onClick={() => {
-                          const newTags = (config.tags || []).filter((_, j) => j !== i);
-                          handleConfigUpdate({ tags: newTags });
-                        }}
-                      >✕</button>
+                      <div className="grid grid-cols-2 gap-1">
+                        <Field label="Label">
+                          <TextInput value={tag.label || ''} onChange={(v) => {
+                            const newTags = [...(config.tags || [])];
+                            newTags[i] = { ...newTags[i], label: v };
+                            handleConfigUpdate({ tags: newTags });
+                          }} />
+                        </Field>
+                        <Field label="ON Text">
+                          <TextInput value={tag.onLabel || 'ON'} onChange={(v) => {
+                            const newTags = [...(config.tags || [])];
+                            newTags[i] = { ...newTags[i], onLabel: v };
+                            handleConfigUpdate({ tags: newTags });
+                          }} />
+                        </Field>
+                        <Field label="OFF Text">
+                          <TextInput value={tag.offLabel || 'OFF'} onChange={(v) => {
+                            const newTags = [...(config.tags || [])];
+                            newTags[i] = { ...newTags[i], offLabel: v };
+                            handleConfigUpdate({ tags: newTags });
+                          }} />
+                        </Field>
+                        <Field label="ON Color">
+                          <ColorInput value={tag.onColor || '#10b981'} onChange={(v) => {
+                            const newTags = [...(config.tags || [])];
+                            newTags[i] = { ...newTags[i], onColor: v };
+                            handleConfigUpdate({ tags: newTags });
+                          }} />
+                        </Field>
+                      </div>
                     </div>
                   ))}
-                  <button
-                    className="rb-input-base text-[10px] py-0.5 px-2 mt-1 w-full text-center hover:bg-[var(--rb-accent-subtle)]"
-                    onClick={() => handleConfigUpdate({ tags: [...(config.tags || []), { tagName: '', label: '', onLabel: 'ON', offLabel: 'OFF' }] })}
-                  >+ Add Tag</button>
                 </Section>
               )}
               <Section icon={SeparatorHorizontal} title="Separator Line" defaultOpen={false}>
