@@ -219,6 +219,19 @@ export default function HerculesAISetup() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!window.confirm(`Permanently delete ${selected.size} tag(s)? This cannot be undone.`)) return;
+    try {
+      await herculesAIApi.bulkDelete(Array.from(selected));
+      setSelected(new Set());
+      await loadData();
+      toast.success(`Deleted ${selected.size} tag(s)`);
+    } catch (err) {
+      toast.error('Delete failed');
+    }
+  };
+
   const handleSaveConfig = async (updates) => {
     setSaving(true);
     try {
@@ -575,6 +588,10 @@ export default function HerculesAISetup() {
               <button onClick={() => handleBulkAction('exclude')}
                 className="px-3 py-1 rounded text-xs font-medium" style={{ background: t.danger, color: '#fff' }}>
                 {tr('herculesAI.bulk.exclude')}
+              </button>
+              <button onClick={handleBulkDelete}
+                className="px-3 py-1 rounded text-xs font-medium" style={{ background: '#7f1d1d', color: '#fff' }}>
+                Delete
               </button>
               <BulkTypeMenu tr={tr} theme={t} onSelect={handleBulkSetType} TypeBadge={TypeBadge} />
             </div>

@@ -86,6 +86,15 @@ export function collectWidgetTagNames(widgets) {
     if (c.capacityTag) names.add(c.capacityTag);
     if (c.tonsTag) names.add(c.tonsTag);
 
+    // Tab container: recursively collect from all tabs' sub-widgets
+    if (w.type === 'tabcontainer' && Array.isArray(c.tabs)) {
+      c.tabs.forEach((tab) => {
+        if (Array.isArray(tab.widgets)) {
+          collectWidgetTagNames(tab.widgets).forEach((t) => names.add(t));
+        }
+      });
+    }
+
     // Drill-down detail widgets: expand {ROW_KEY} templates for every known row key
     const dd = c.drillDown;
     if (dd?.enabled && Array.isArray(dd.detailWidgets) && dd.detailWidgets.length > 0) {
@@ -217,6 +226,16 @@ export function collectWidgetTagAggregations(widgets) {
     // Silo capacity/tons tags
     if (c.capacityTag) setAgg(c.capacityTag, 'last');
     if (c.tonsTag) setAgg(c.tonsTag, 'last');
+
+    // Tab container: recursively collect aggregations from all tabs' sub-widgets
+    if (w.type === 'tabcontainer' && Array.isArray(c.tabs)) {
+      c.tabs.forEach((tab) => {
+        if (Array.isArray(tab.widgets)) {
+          const subAgg = collectWidgetTagAggregations(tab.widgets);
+          Object.entries(subAgg).forEach(([tag, agg]) => setAgg(tag, agg));
+        }
+      });
+    }
 
     // Drill-down detail widgets: expand {ROW_KEY} and assign aggregations
     const dd = c.drillDown;
@@ -884,6 +903,34 @@ export function useReportCanvas(templateId) {
     setDirty(true);
   }, []);
 
+  const duplicateDashboardTab = useCallback((sourceTabId, newLabel) => {
+    const dt = tabsRef.current;
+    if (!dt?.enabled) return;
+    pushToHistory(widgets);
+    const sourceTab = sourceTabId === activeTabId
+      ? { ...dt.tabs.find(t => t.id === sourceTabId), widgets: [...widgets] }
+      : dt.tabs.find(t => t.id === sourceTabId);
+    if (!sourceTab) return;
+    const newId = _tabUid();
+    const clonedWidgets = JSON.parse(JSON.stringify(sourceTab.widgets || []));
+    clonedWidgets.forEach(w => { w.id = `w-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; });
+    const updatedTabs = {
+      ...dt,
+      tabs: [
+        ...dt.tabs.map(t => t.id === activeTabId ? { ...t, widgets: [...widgets] } : t),
+        { id: newId, label: newLabel || `${sourceTab.label} (copy)`, widgets: clonedWidgets },
+      ],
+    };
+    setDashboardTabs(updatedTabs);
+    setActiveTabId(newId);
+    setWidgets(clonedWidgets);
+    pastRef.current = [];
+    futureRef.current = [];
+    setHistoryState({ pastCount: 0, futureCount: 0 });
+    setDirty(true);
+    return newId;
+  }, [widgets, activeTabId, pushToHistory]);
+
   const switchDashboardTab = useCallback((newTabId) => {
     const dt = tabsRef.current;
     if (!dt?.enabled || newTabId === activeTabId) return;
@@ -931,7 +978,7 @@ export function useReportCanvas(templateId) {
     undo, redo, canUndo, canRedo,
     dashboardTabs, activeTabId, allTabsWidgets,
     enableDashboardTabs, disableDashboardTabs,
-    addDashboardTab, removeDashboardTab, renameDashboardTab, switchDashboardTab,
+    addDashboardTab, removeDashboardTab, renameDashboardTab, switchDashboardTab, duplicateDashboardTab,
   };
 }
 

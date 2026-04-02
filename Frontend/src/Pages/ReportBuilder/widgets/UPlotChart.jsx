@@ -288,7 +288,9 @@ export default function UPlotChart({ series: seriesDefs, tagHistory, tagValues, 
 
     const rect = el.getBoundingClientRect();
     const w = Math.floor(rect.width) || 400;
-    const h = Math.floor(rect.height) || 200;
+    // Reserve ~30px for legend below chart
+    const legendReserve = config.showLegend !== false ? 30 : 0;
+    const h = Math.max(60, (Math.floor(rect.height) || 200) - legendReserve);
     const currentKey = seriesKey(normalizedSeries);
     const currentSpan = dataSpanKey(data);
 
@@ -351,9 +353,13 @@ export default function UPlotChart({ series: seriesDefs, tagHistory, tagValues, 
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         if (chartRef.current && width > 0 && height > 0) {
+          // Reserve space for legend (approx 28px per row, max 2 rows)
+          const legendEl = el.querySelector('.u-legend');
+          const legendH = legendEl ? legendEl.offsetHeight : 0;
+          const chartH = Math.max(60, Math.floor(height) - legendH);
           chartRef.current.setSize({
             width: Math.floor(width),
-            height: Math.floor(height),
+            height: chartH,
           });
         }
       }

@@ -93,7 +93,7 @@ function useAnimatedNumber(target, decimals, skipAnimation) {
   useEffect(() => { fromRef.current = display; }, [display]);
 
   if (target == null) return '\u2014';
-  return Number(display).toFixed(decimals);
+  return Number(display).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 export default function KPIWidget({ config, tagValues, sparklineData, layout }) {
@@ -194,7 +194,7 @@ export default function KPIWidget({ config, tagValues, sparklineData, layout }) 
         height: '100%',
         justifyContent: 'center',
         alignItems,
-        padding: '8px 12px',
+        padding: '4px 8px',
         minHeight: 0,
         position: 'relative',
         overflow: 'hidden',

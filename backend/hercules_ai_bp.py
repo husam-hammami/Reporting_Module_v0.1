@@ -460,6 +460,13 @@ def scan_reports():
                             WHERE id = %s
                         """, (prof['id'],))
 
+            # Auto-clean stale deleted profiles older than 30 days
+            cur.execute("""
+                DELETE FROM hercules_ai_tag_profiles
+                WHERE data_status = 'deleted' AND source = 'auto'
+                  AND updated_at < NOW() - INTERVAL '30 days'
+            """)
+
             # Revival: tags re-added
             for tag_name, prof in existing.items():
                 if prof['data_status'] == 'deleted' and tag_name in all_tags:
@@ -590,6 +597,26 @@ def bulk_update_profiles():
         actual.commit()
 
     return jsonify({'updated': updated})
+
+
+@hercules_ai_bp.route('/hercules-ai/profiles/bulk', methods=['DELETE'])
+@login_required
+def bulk_delete_profiles():
+    """Permanently delete profiles by ID list."""
+    data = request.get_json()
+    ids = data.get('ids', [])
+    if not ids:
+        return jsonify({'error': 'No IDs provided'}), 400
+
+    get_conn = _get_db_connection()
+    with closing(get_conn()) as conn:
+        actual = conn._conn if hasattr(conn, '_conn') else conn
+        cur = actual.cursor()
+        cur.execute("DELETE FROM hercules_ai_tag_profiles WHERE id = ANY(%s)", (ids,))
+        deleted = cur.rowcount
+        actual.commit()
+
+    return jsonify({'deleted': deleted})
 
 
 @hercules_ai_bp.route('/hercules-ai/profiles/<int:profile_id>', methods=['PUT'])

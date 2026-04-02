@@ -13,6 +13,8 @@ import StatusWidget from './StatusWidget';
 import SparklineWidget from './SparklineWidget';
 import ProgressWidget from './ProgressWidget';
 import HopperWidget from './HopperWidget';
+import StatusBarWidget from './StatusBarWidget';
+import TabContainerWidget from './TabContainerWidget';
 
 /* ── Error Boundary — catches widget render crashes ── */
 class WidgetErrorBoundary extends React.Component {
@@ -63,6 +65,8 @@ const RENDERERS = {
   sparkline: SparklineWidget,
   progress: ProgressWidget,
   hopper: HopperWidget,
+  statusbar: StatusBarWidget,
+  tabcontainer: TabContainerWidget,
 };
 
 export const CARDLESS_WIDGET_TYPES = new Set(['image', 'text', 'logo']);
@@ -80,6 +84,21 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
   if (!Component) return null;
   const tableProps = widget.type === 'table'
     ? { isSelected, onUpdate: onUpdateWidget, widgetId, tags, layoutH: widget.h, layoutRowHeight, isReportBuilderWorkspace, savedFormulas, tagHistory }
+    : {};
+  const tabContainerProps = widget.type === 'tabcontainer'
+    ? {
+        isSelected, onUpdate: onUpdateWidget, widgetId, tags, savedFormulas, tagHistory,
+        renderWidget: (subWidget) => (
+          <WidgetRenderer
+            widget={subWidget}
+            tagValues={tagValues}
+            isPreview={isPreview || !isSelected}
+            tags={tags}
+            tagHistory={tagHistory}
+            savedFormulas={savedFormulas}
+          />
+        ),
+      }
     : {};
   const siloProps = widget.type === 'silo' ? { isReportBuilderWorkspace } : {};
   const sparklineTag = widget.type === 'kpi' ? getKpiSparklineTag(widget.config) : null;
@@ -101,6 +120,7 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
           tagValues={tagValues || {}}
           isPreview={isPreview}
           {...tableProps}
+          {...tabContainerProps}
           {...siloProps}
           {...kpiProps}
           {...chartProps}

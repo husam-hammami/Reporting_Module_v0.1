@@ -39,7 +39,7 @@ function timeAgo(iso) {
 
 const GRID_COLS_DEFAULT = 12;
 const GRID_ROW_H_DEFAULT = 40;
-const GRID_MARGIN = [12, 12];
+const GRID_MARGIN = [6, 6];
 const GRID_PADDING = [0, 0];
 
 
@@ -439,6 +439,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   const gridCols = template?.layout_config?.grid?.cols ?? GRID_COLS_DEFAULT;
   const gridRowH = template?.layout_config?.grid?.rowHeight ?? GRID_ROW_H_DEFAULT;
   const pageMode = template?.layout_config?.grid?.pageMode || 'a4';
+  const dashboardHeader = template?.layout_config?.dashboardHeader;
 
   const layout = useMemo(
     () =>
@@ -469,11 +470,32 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   return (
     <div className="rb-report-viewer-outer flex flex-col h-[calc(100vh-80px)] bg-transparent">
       {/* ── Toolbar: back + report selector (centered) | actions ── */}
-      <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
+      <div
+        className={`backdrop-blur-sm border-b px-3 py-1.5 flex items-center gap-3 flex-shrink-0 print:hidden ${
+          dashboardHeader
+            ? 'border-transparent'
+            : 'bg-white/90 dark:bg-[#0a1525] border-[#e3e9f0] dark:border-gray-700 py-3'
+        }`}
+        style={dashboardHeader ? {
+          background: dashboardHeader.bg || 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
+          color: dashboardHeader.color || '#ffffff',
+        } : undefined}
+      >
         {/* Left: back */}
-        <button onClick={onBack} className="p-2 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0">
-          <FaChevronLeft size={14} />
+        <button onClick={onBack} className={`p-1.5 rounded-md transition-colors flex-shrink-0 ${dashboardHeader ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-[#6b7f94] hover:text-brand hover:bg-brand-subtle'}`}>
+          <FaChevronLeft size={12} />
         </button>
+        {/* Dashboard title + logo inline */}
+        {dashboardHeader && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {dashboardHeader.showLogo !== false && (
+              <img src="/api/branding/logo" alt="" style={{ height: 22, width: 'auto', borderRadius: 3 }} onError={(e) => { e.target.style.display = 'none'; }} />
+            )}
+            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>
+              {dashboardHeader.title || template?.name || 'Dashboard'}
+            </span>
+          </div>
+        )}
 
         {/* Center: report tab bar or name + date/time */}
         <div className="flex items-center gap-3 flex-1 justify-center min-w-0">
@@ -493,12 +515,29 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                 </button>
               ))}
             </div>
-          ) : (
+          ) : !dashboardHeader ? (
             <span className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] truncate">{template?.name || 'Report'}</span>
+          ) : null}
+          {dashboardHeader ? (
+            <TimePeriodTabs
+              tabs={VIEWER_TABS}
+              activeTab={timePeriod.tab}
+              onTabChange={tpActions.setTab}
+              customFrom={timePeriod.customFrom}
+              customTo={timePeriod.customTo}
+              onCustomFrom={tpActions.setCustomFrom}
+              onCustomTo={tpActions.setCustomTo}
+              shiftsConfig={shiftsConfig}
+              selectedShift={timePeriod.selectedShift}
+              onShiftChange={tpActions.setShift}
+              compact
+              variant="dark"
+            />
+          ) : (
+            <span className="text-[12px] font-medium text-[#8898aa] whitespace-nowrap tabular-nums hidden sm:inline" title="Current date and time">
+              {now.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })} · {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
           )}
-          <span className="text-[12px] font-medium text-[#8898aa] whitespace-nowrap tabular-nums hidden sm:inline" title="Current date and time">
-            {now.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })} · {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </span>
         </div>
 
         {/* Right: view toggle + fullscreen + print */}
@@ -521,11 +560,11 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
               </button>
             </div>
           )}
-          <button onClick={toggleFullscreen} className="p-2 rounded-lg text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors border border-transparent hover:border-[#e3e9f0]" title="Fullscreen">
+          <button onClick={toggleFullscreen} className={`p-2 rounded-lg transition-colors border border-transparent ${dashboardHeader ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-[#6b7f94] hover:text-brand hover:bg-brand-subtle hover:border-[#e3e9f0]'}`} title="Fullscreen">
             {fullscreen ? <FaCompress size={14} /> : <FaExpand size={14} />}
           </button>
           <div className="relative group">
-            <button className="inline-flex items-center gap-2 px-3 py-2 text-[12px] font-semibold rounded-lg bg-brand hover:bg-brand-hover text-white transition-colors">
+            <button className={`inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold rounded-lg transition-colors ${dashboardHeader ? 'bg-white/15 hover:bg-white/25 text-white border border-white/20' : 'bg-brand hover:bg-brand-hover text-white'}`}>
               <FaPrint size={12} /> {exporting ? 'Exporting...' : 'Export'}
             </button>
             <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
@@ -553,19 +592,21 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         </div>
       </div>
 
-      {/* ── Time period tabs ── */}
-      <TimePeriodTabs
-        tabs={VIEWER_TABS}
-        activeTab={timePeriod.tab}
-        onTabChange={tpActions.setTab}
-        customFrom={timePeriod.customFrom}
-        customTo={timePeriod.customTo}
-        onCustomFrom={tpActions.setCustomFrom}
-        onCustomTo={tpActions.setCustomTo}
-        shiftsConfig={shiftsConfig}
-        selectedShift={timePeriod.selectedShift}
-        onShiftChange={tpActions.setShift}
-      />
+      {/* ── Time period tabs (hidden when dashboard header merges it into toolbar) ── */}
+      {!dashboardHeader && (
+        <TimePeriodTabs
+          tabs={VIEWER_TABS}
+          activeTab={timePeriod.tab}
+          onTabChange={tpActions.setTab}
+          customFrom={timePeriod.customFrom}
+          customTo={timePeriod.customTo}
+          onCustomFrom={tpActions.setCustomFrom}
+          onCustomTo={tpActions.setCustomTo}
+          shiftsConfig={shiftsConfig}
+          selectedShift={timePeriod.selectedShift}
+          onShiftChange={tpActions.setShift}
+        />
+      )}
 
       {/* ── Dashboard tabs (viewer) ── */}
       {dashboardTabs?.enabled && Array.isArray(dashboardTabs.tabs) && dashboardTabs.tabs.length > 1 && (
@@ -579,8 +620,8 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         </div>
       )}
 
-      {/* ── Status indicator — single persistent div, bg cross-fades via transition-colors ── */}
-      {(() => {
+      {/* ── Status indicator — hidden when dashboardHeader is active ── */}
+      {!dashboardHeader && (() => {
         let bg, dot, msg;
         if (timePeriod.tab === 'live') {
           if (liveError) {
@@ -636,6 +677,8 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         onWheelCapture={handleWheelCapture}
       >
         <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}>
+          {/* Dashboard header bar is rendered above in the toolbar when dashboardHeader is active */}
+
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
             <div className="text-center py-16 text-[12px] text-[#6b7f94] dark:text-[#8898aa]">No widgets in this report.</div>
           ) : viewMode === 'tabular' ? (
@@ -709,10 +752,11 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
 
                 // Non-table widgets: render inline at natural size
                 const minH = wt === 'chart' || wt === 'barchart' ? '300px' : wt === 'gauge' || wt === 'silo' ? '200px' : 'auto';
+                const csMap = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'};
                 const cardClass = isInvisible
                   ? ''
                   : showCard
-                    ? 'rounded-lg rb-widget-card overflow-hidden'
+                    ? `rounded-lg rb-widget-card overflow-hidden ${csMap[widget.config?.cardStyle] || ''}`
                     : 'overflow-hidden';
                 return (
                   <div key={widget.id} className={cardClass} style={{ minHeight: minH }}>
@@ -725,7 +769,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             /* ══ Grid View — original react-grid-layout rendering ══ */
             <div
               ref={containerRef}
-              className="report-builder rb-canvas-perspective rb-layout-readonly pt-3 pb-6 px-6"
+              className={`report-builder rb-canvas-perspective rb-layout-readonly ${dashboardHeader ? 'pt-0 pb-3 px-1' : 'pt-3 pb-6 px-6'}`}
               style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}
             >
               <GridLayout
@@ -736,8 +780,8 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                 rowHeight={gridRowH}
                 margin={GRID_MARGIN}
                 containerPadding={GRID_PADDING}
-                compactType={null}
-                allowOverlap={true}
+                compactType="vertical"
+                allowOverlap={false}
                 isDraggable={false}
                 isResizable={false}
                 static
@@ -753,10 +797,11 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                     : CARDLESS_WIDGET_TYPES.has(wt)
                       ? widget.config?.showCard === true
                       : widget.config?.showCard !== false;
+                  const csMap2 = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'};
                   const cardClass = isInvisible
                     ? 'overflow-visible flex flex-col min-h-0'
                     : showCard
-                      ? 'rounded-lg rb-widget-card overflow-hidden flex flex-col'
+                      ? `rounded-lg rb-widget-card overflow-hidden flex flex-col ${csMap2[widget.config?.cardStyle] || ''}`
                       : 'overflow-hidden flex flex-col min-h-0 p-0.5';
                   return (
                     <div key={item.i} className={`${cardClass} flex flex-col min-h-0 relative`}>

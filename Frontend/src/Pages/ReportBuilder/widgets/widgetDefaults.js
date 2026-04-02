@@ -289,6 +289,24 @@ export const WIDGET_CATALOG = [
     },
   },
 
+  // ── Containers ──
+  {
+    type: 'tabcontainer',
+    category: 'layout',
+    label: 'Tab Container',
+    lucideIcon: 'Layers',
+    description: 'Tabbed container with independent dashboards per tab',
+    defaultW: 12,
+    defaultH: 8,
+    defaultConfig: {
+      tabs: [
+        { id: 'tc-tab-1', label: 'Tab 1', widgets: [] },
+      ],
+      activeTabId: 'tc-tab-1',
+      showCard: true,
+    },
+  },
+
   // ── Industrial ──
   {
     type: 'status',
@@ -381,6 +399,33 @@ export const WIDGET_CATALOG = [
       showCapacity: false,
     },
   },
+  // ── Composite ──
+  {
+    type: 'statusbar',
+    category: 'values',
+    label: 'Status Bar',
+    lucideIcon: 'LayoutList',
+    description: 'Compact multi-tag status indicators in one row',
+    defaultW: 12,
+    defaultH: 1,
+    defaultConfig: {
+      title: '',
+      tags: [],
+      layout: 'horizontal',
+      showTitle: false,
+      showCard: true,
+      cardStyle: 'glass',
+    },
+  },
+];
+
+/* ── Card Style Options ───────────────────────────────────────── */
+
+export const CARD_STYLES = [
+  { value: 'default', label: 'Default' },
+  { value: 'borderless', label: 'Borderless' },
+  { value: 'glass', label: 'Glass' },
+  { value: 'accent-top', label: 'Accent Top' },
 ];
 
 /* ── DataSource defaults ───────────────────────────────────────── */

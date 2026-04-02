@@ -27,8 +27,8 @@ import './reportBuilderTheme.css';
 /* ── Grid: match report viewer; compact row height for less clutter ─────── */
 const GRID_COLS_DEFAULT   = 12;
 const GRID_ROW_H_DEFAULT  = 40;   // row height (px) — compact layout
-const GRID_MARGIN         = [12, 12];
-const GRID_PADDING        = [16, 16];
+const GRID_MARGIN         = [6, 6];
+const GRID_PADDING        = [8, 8];
 
 
 /* ── Canvas Page ───────────────────────────────────────────────── */
@@ -44,7 +44,7 @@ export default function ReportBuilderCanvas() {
     undo, redo, canUndo, canRedo,
     dashboardTabs, activeTabId, allTabsWidgets,
     enableDashboardTabs, disableDashboardTabs,
-    addDashboardTab, removeDashboardTab, renameDashboardTab, switchDashboardTab,
+    addDashboardTab, removeDashboardTab, renameDashboardTab, switchDashboardTab, duplicateDashboardTab,
   } = useReportCanvas(id);
 
   const { tags } = useAvailableTags();
@@ -94,6 +94,7 @@ export default function ReportBuilderCanvas() {
   const [renamingTabId, setRenamingTabId] = useState(null);
   const [tabNameInput, setTabNameInput] = useState('');
   const tabNameRef = useRef(null);
+  const [showAddTabMenu, setShowAddTabMenu] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
@@ -558,17 +559,51 @@ export default function ReportBuilderCanvas() {
             onChange={(tabId) => { switchDashboardTab(tabId); setSelectedId(null); }}
             size="sm"
           />
-          <Tooltip title="Add new tab" placement="bottom" arrow disableInteractive>
-            <button
-              onClick={() => {
-                const label = prompt('Tab name:', `Tab ${(dashboardTabs.tabs || []).length + 1}`);
-                if (label) addDashboardTab(label);
-              }}
-              className="p-1.5 rounded-md text-[#556677] hover:text-[#22d3ee] hover:bg-[#1a2233] transition-colors"
-            >
-              <Plus size={14} />
-            </button>
-          </Tooltip>
+          <div className="relative">
+            <Tooltip title="Add new tab" placement="bottom" arrow disableInteractive>
+              <button
+                onClick={() => setShowAddTabMenu(v => !v)}
+                className="p-1.5 rounded-md text-[#556677] hover:text-[#22d3ee] hover:bg-[#1a2233] transition-colors"
+              >
+                <Plus size={14} />
+              </button>
+            </Tooltip>
+            {showAddTabMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowAddTabMenu(false)} />
+                <div className="absolute z-50 mt-1 left-0 w-52 rounded-lg border border-[#1e293b] bg-[#111827] shadow-xl overflow-hidden">
+                  <button
+                    onClick={() => {
+                      const label = prompt('Tab name:', `Tab ${(dashboardTabs.tabs || []).length + 1}`);
+                      if (label) addDashboardTab(label);
+                      setShowAddTabMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2.5 text-[12px] text-[#f0f4f8] hover:bg-[#1a2233] transition-colors flex items-center gap-2"
+                  >
+                    <Plus size={12} className="text-[#22d3ee]" /> Empty tab
+                  </button>
+                  {(dashboardTabs.tabs || []).length > 0 && (
+                    <div className="border-t border-[#1e293b]">
+                      <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-[#556677]">Copy from...</div>
+                      {(dashboardTabs.tabs || []).map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => {
+                            const label = prompt('Name for the copy:', `${tab.label} (copy)`);
+                            if (label) duplicateDashboardTab(tab.id, label);
+                            setShowAddTabMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-[12px] text-[#8899ab] hover:text-[#f0f4f8] hover:bg-[#1a2233] transition-colors flex items-center gap-2"
+                        >
+                          <Copy size={11} className="text-[#556677]" /> {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
           {dashboardTabs.tabs?.length > 1 && (
             <Tooltip title="Rename active tab" placement="bottom" arrow disableInteractive>
               <button
@@ -731,11 +766,11 @@ export default function ReportBuilderCanvas() {
                           key={String(widget.id)}
                           data-widget-id={widget.id}
                           onClick={(e) => handleSelect(widget.id, e)}
-                          className={`group transition-shadow overflow-visible ${
+                          className={`group overflow-visible ${
                             isInvisible
                               ? ''
                               : showCard
-                                ? 'rounded rb-widget-card'
+                                ? `rounded rb-widget-card ${({'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'})[widget.config?.cardStyle] || ''}`
                                 : 'rounded border border-dashed border-[var(--rb-border)]/60'
                           } ${
                             isSelected

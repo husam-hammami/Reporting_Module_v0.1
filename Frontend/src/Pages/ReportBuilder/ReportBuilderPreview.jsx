@@ -21,8 +21,8 @@ import './reportBuilderTheme.css';
 
 const GRID_COLS_DEFAULT = 12;
 const GRID_ROW_H_DEFAULT = 40;
-const GRID_MARGIN = [8, 8];
-const GRID_PADDING = [12, 12];
+const GRID_MARGIN = [6, 6];
+const GRID_PADDING = [8, 8];
 
 export default function ReportBuilderPreview() {
   const { id } = useParams();
@@ -150,6 +150,7 @@ export default function ReportBuilderPreview() {
   const gridCols = template?.layout_config?.grid?.cols ?? GRID_COLS_DEFAULT;
   const gridRowH = template?.layout_config?.grid?.rowHeight ?? GRID_ROW_H_DEFAULT;
   const pageMode = template?.layout_config?.grid?.pageMode || 'a4';
+  const dashboardHeader = template?.layout_config?.dashboardHeader;
 
   const layout = useMemo(
     () =>
@@ -326,15 +327,33 @@ export default function ReportBuilderPreview() {
           className={`w-full mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}
           {...pageEntrance}
         >
-          {/* Compact report header */}
-          <div className="mb-1 print:mb-2 px-4 pt-3">
-            <h1 className="rb-title" style={{ fontSize: 'var(--rb-font-lg)' }}>
-              {template?.name || 'Report'}
-            </h1>
-            <p className="rb-caption mt-0.5">
-              Generated: {new Date().toLocaleString()}
-            </p>
-          </div>
+          {/* Dashboard header bar or compact report header */}
+          {dashboardHeader ? (
+            <div
+              className="flex items-center px-4 py-2 mx-2 mt-1 mb-1 rounded-md"
+              style={{
+                background: dashboardHeader.bg || 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
+                color: dashboardHeader.color || '#ffffff',
+                minHeight: 36,
+              }}
+            >
+              {dashboardHeader.showLogo !== false && (
+                <img src="/api/branding/logo" alt="" style={{ height: 24, width: 'auto', borderRadius: 3, marginRight: 10 }} onError={(e) => { e.target.style.display = 'none'; }} />
+              )}
+              <span style={{ fontSize: dashboardHeader.titleSize || 14, fontWeight: 700 }}>
+                {dashboardHeader.title || template?.name || 'Dashboard'}
+              </span>
+            </div>
+          ) : (
+            <div className="mb-1 print:mb-2 px-4 pt-3">
+              <h1 className="rb-title" style={{ fontSize: 'var(--rb-font-lg)' }}>
+                {template?.name || 'Report'}
+              </h1>
+              <p className="rb-caption mt-0.5">
+                Generated: {new Date().toLocaleString()}
+              </p>
+            </div>
+          )}
 
           {/* Widgets grid */}
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
@@ -360,8 +379,8 @@ export default function ReportBuilderPreview() {
                 rowHeight={gridRowH}
                 margin={GRID_MARGIN}
                 containerPadding={GRID_PADDING}
-                compactType={null}
-                allowOverlap={true}
+                compactType="vertical"
+                allowOverlap={false}
                 isDraggable={false}
                 isResizable={false}
                 static
@@ -377,10 +396,11 @@ export default function ReportBuilderPreview() {
                     : CARDLESS_WIDGET_TYPES.has(wt)
                       ? widget.config?.showCard === true
                       : widget.config?.showCard !== false;
+                  const csMap = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'};
                   const cardClass = isInvisible
                     ? 'overflow-visible flex flex-col min-h-0'
                     : showCard
-                      ? 'rounded rb-widget-card overflow-hidden flex flex-col'
+                      ? `rounded rb-widget-card overflow-hidden flex flex-col ${csMap[widget.config?.cardStyle] || ''}`
                       : 'overflow-hidden flex flex-col min-h-0 p-0.5';
                   return (
                     <div

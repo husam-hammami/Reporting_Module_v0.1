@@ -46,7 +46,7 @@ function useAnimatedNumber(target, decimals, skipAnimation) {
 
   useEffect(() => { fromRef.current = display; }, [display]);
   if (target == null) return '—';
-  return Number(display).toFixed(decimals);
+  return Number(display).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 // Build sparkline points from history buffer
@@ -109,7 +109,7 @@ export default function SparklineWidget({ config, tagValues }) {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      padding: '6px 12px',
+      padding: '4px 8px',
       height: '100%',
     }}>
       {/* Title */}
