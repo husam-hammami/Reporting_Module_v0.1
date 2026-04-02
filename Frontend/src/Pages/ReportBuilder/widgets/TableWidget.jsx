@@ -874,10 +874,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            const label = prompt('Section header label:', 'Section');
-                            if (label) addSectionHeader(label, staticDataRows.length + 1);
-                          }}
+                          onClick={() => addSectionHeader('Section', staticDataRows.length + 1)}
                           className="rb-body inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--rb-text-muted)]/30 text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:border-[var(--rb-accent)]/50 hover:bg-[var(--rb-accent-subtle)] transition-colors"
                         >
                           <GripVertical size={12} /> Section header

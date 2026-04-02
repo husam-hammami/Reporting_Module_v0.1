@@ -553,12 +553,29 @@ export default function ReportBuilderCanvas() {
       {/* ── Dashboard Tabs Bar ── */}
       {dashboardTabs?.enabled && (
         <div className="h-10 flex items-center gap-2 px-4 bg-[#0d1117] border-b border-[#1e293b] flex-shrink-0">
-          <TabSelector
-            tabs={(dashboardTabs.tabs || []).map(t => ({ id: t.id, label: t.label }))}
-            activeId={activeTabId}
-            onChange={(tabId) => { switchDashboardTab(tabId); setSelectedId(null); }}
-            size="sm"
-          />
+          {renamingTabId ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={tabNameRef}
+                autoFocus
+                value={tabNameInput}
+                onChange={(e) => setTabNameInput(e.target.value)}
+                onBlur={() => { if (tabNameInput.trim()) renameDashboardTab(renamingTabId, tabNameInput.trim()); setRenamingTabId(null); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { if (tabNameInput.trim()) renameDashboardTab(renamingTabId, tabNameInput.trim()); setRenamingTabId(null); }
+                  if (e.key === 'Escape') setRenamingTabId(null);
+                }}
+                className="bg-[#1a2233] border border-[#22d3ee] rounded px-2 py-1 text-[12px] text-[#f0f4f8] outline-none w-32"
+              />
+            </div>
+          ) : (
+            <TabSelector
+              tabs={(dashboardTabs.tabs || []).map(t => ({ id: t.id, label: t.label }))}
+              activeId={activeTabId}
+              onChange={(tabId) => { switchDashboardTab(tabId); setSelectedId(null); }}
+              size="sm"
+            />
+          )}
           <div className="relative">
             <Tooltip title="Add new tab" placement="bottom" arrow disableInteractive>
               <button
@@ -574,8 +591,7 @@ export default function ReportBuilderCanvas() {
                 <div className="absolute z-50 mt-1 left-0 w-52 rounded-lg border border-[#1e293b] bg-[#111827] shadow-xl overflow-hidden">
                   <button
                     onClick={() => {
-                      const label = prompt('Tab name:', `Tab ${(dashboardTabs.tabs || []).length + 1}`);
-                      if (label) addDashboardTab(label);
+                      addDashboardTab(`Tab ${(dashboardTabs.tabs || []).length + 1}`);
                       setShowAddTabMenu(false);
                     }}
                     className="w-full text-left px-3 py-2.5 text-[12px] text-[#f0f4f8] hover:bg-[#1a2233] transition-colors flex items-center gap-2"
@@ -589,8 +605,7 @@ export default function ReportBuilderCanvas() {
                         <button
                           key={tab.id}
                           onClick={() => {
-                            const label = prompt('Name for the copy:', `${tab.label} (copy)`);
-                            if (label) duplicateDashboardTab(tab.id, label);
+                            duplicateDashboardTab(tab.id, `${tab.label} (copy)`);
                             setShowAddTabMenu(false);
                           }}
                           className="w-full text-left px-3 py-2 text-[12px] text-[#8899ab] hover:text-[#f0f4f8] hover:bg-[#1a2233] transition-colors flex items-center gap-2"
@@ -604,14 +619,15 @@ export default function ReportBuilderCanvas() {
               </>
             )}
           </div>
-          {dashboardTabs.tabs?.length > 1 && (
-            <Tooltip title="Rename active tab" placement="bottom" arrow disableInteractive>
+          {dashboardTabs.tabs?.length > 0 && (
+            <Tooltip title="Rename active tab (double-click tab to rename)" placement="bottom" arrow disableInteractive>
               <button
                 onClick={() => {
                   const tab = dashboardTabs.tabs?.find(t => t.id === activeTabId);
                   if (!tab) return;
-                  const newName = prompt('Rename tab:', tab.label);
-                  if (newName && newName.trim()) renameDashboardTab(activeTabId, newName.trim());
+                  setTabNameInput(tab.label);
+                  setRenamingTabId(activeTabId);
+                  setTimeout(() => tabNameRef.current?.focus(), 50);
                 }}
                 className="p-1.5 rounded-md text-[#556677] hover:text-[#f0f4f8] hover:bg-[#1a2233] transition-colors"
               >
@@ -622,13 +638,7 @@ export default function ReportBuilderCanvas() {
           {dashboardTabs.tabs?.length > 1 && (
             <Tooltip title="Remove active tab" placement="bottom" arrow disableInteractive>
               <button
-                onClick={() => {
-                  const tab = dashboardTabs.tabs?.find(t => t.id === activeTabId);
-                  if (!tab) return;
-                  if (confirm(`Remove tab "${tab.label}"? Widgets on this tab will be lost.`)) {
-                    removeDashboardTab(activeTabId);
-                  }
-                }}
+                onClick={() => removeDashboardTab(activeTabId)}
                 className="p-1.5 rounded-md text-[#556677] hover:text-[#ef4444] hover:bg-[#1a2233] transition-colors"
               >
                 <Trash2 size={12} />
@@ -638,9 +648,7 @@ export default function ReportBuilderCanvas() {
           <div className="ml-auto">
             <Tooltip title="Disable tabs (merge active tab to main)" placement="bottom" arrow disableInteractive>
               <button
-                onClick={() => {
-                  if (confirm('Disable tabs? Active tab widgets will become the main dashboard.')) disableDashboardTabs();
-                }}
+                onClick={() => disableDashboardTabs()}
                 className="text-[9px] font-medium px-2 py-1 rounded text-[#556677] hover:text-[#f0f4f8] hover:bg-[#1a2233] transition-colors"
               >
                 Disable Tabs

@@ -16,6 +16,8 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
   const canEdit = Boolean(isSelected && onUpdate && widgetId);
   const [showAddWidget, setShowAddWidget] = useState(false);
   const [showAddTab, setShowAddTab] = useState(false);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameInput, setRenameInput] = useState('');
 
   const updateConfig = useCallback((patch) => {
     if (!onUpdate || !widgetId) return;
@@ -105,22 +107,34 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
       <div className="flex items-center gap-1 mb-2 flex-shrink-0 border-b border-[var(--rb-border)] pb-2">
         <div className="flex items-center gap-0.5 flex-1 min-w-0 overflow-x-auto">
           {tabs.map(tab => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              onDoubleClick={canEdit ? () => {
-                const newName = prompt('Rename tab:', tab.label);
-                if (newName?.trim()) renameTab(tab.id, newName.trim());
-              } : undefined}
-              className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg whitespace-nowrap transition-all ${
-                tab.id === activeTabId
-                  ? 'bg-[var(--rb-accent)] text-white shadow-sm'
-                  : 'text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:bg-[var(--rb-surface)]'
-              }`}
-            >
-              {tab.label}
-            </button>
+            renamingId === tab.id ? (
+              <input
+                key={tab.id}
+                autoFocus
+                value={renameInput}
+                onChange={(e) => setRenameInput(e.target.value)}
+                onBlur={() => { if (renameInput.trim()) renameTab(tab.id, renameInput.trim()); setRenamingId(null); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { if (renameInput.trim()) renameTab(tab.id, renameInput.trim()); setRenamingId(null); }
+                  if (e.key === 'Escape') setRenamingId(null);
+                }}
+                className="px-2 py-1 text-[11px] font-semibold rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-accent)] text-[var(--rb-text)] outline-none w-24"
+              />
+            ) : (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                onDoubleClick={canEdit ? () => { setRenameInput(tab.label); setRenamingId(tab.id); } : undefined}
+                className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg whitespace-nowrap transition-all ${
+                  tab.id === activeTabId
+                    ? 'bg-[var(--rb-accent)] text-white shadow-sm'
+                    : 'text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:bg-[var(--rb-surface)]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            )
           ))}
         </div>
         {canEdit && (
@@ -152,10 +166,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
                           <button
                             key={tab.id}
                             type="button"
-                            onClick={() => {
-                              const label = prompt('Name for the copy:', `${tab.label} (copy)`);
-                              if (label?.trim()) addTab(label.trim(), tab.id);
-                            }}
+                            onClick={() => addTab(`${tab.label} (copy)`, tab.id)}
                             className="w-full text-left px-3 py-1.5 text-[11px] text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:bg-[var(--rb-accent-subtle)] transition-colors flex items-center gap-2"
                           >
                             <Copy size={10} /> {tab.label}
@@ -170,9 +181,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
             {tabs.length > 1 && (
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm(`Remove tab "${activeTab?.label}"?`)) removeTab(activeTabId);
-                }}
+                onClick={() => removeTab(activeTabId)}
                 className="p-1 rounded text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] transition-colors"
                 title="Remove active tab"
               >
