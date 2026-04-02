@@ -584,13 +584,14 @@ export function useReportCanvas(templateId) {
 
     // When tabs are enabled, persist current widgets into the active tab
     const currentTabs = tabsRef.current;
+    const currentActiveTabId = currentTabs?.activeTabId;
     let savedTabs = currentTabs;
-    if (currentTabs?.enabled && activeTabId && Array.isArray(currentTabs.tabs)) {
+    if (currentTabs?.enabled && currentActiveTabId && Array.isArray(currentTabs.tabs)) {
       savedTabs = {
         ...currentTabs,
-        activeTabId,
+        activeTabId: currentActiveTabId,
         tabs: currentTabs.tabs.map((tab) =>
-          tab.id === activeTabId ? { ...tab, widgets: w } : tab
+          tab.id === currentActiveTabId ? { ...tab, widgets: JSON.parse(JSON.stringify(w)) } : tab
         ),
       };
     }
@@ -851,14 +852,16 @@ export function useReportCanvas(templateId) {
     if (!dt?.enabled) return;
     pushToHistory(widgets);
     const newId = _tabUid();
+    const savedCurrentWidgets = JSON.parse(JSON.stringify(widgets));
     const updatedTabs = {
       ...dt,
-      tabs: [...dt.tabs, { id: newId, label: label || `Tab ${dt.tabs.length + 1}`, widgets: [] }],
+      activeTabId: newId,
+      tabs: [
+        ...dt.tabs.map(t => t.id === activeTabId ? { ...t, widgets: savedCurrentWidgets } : t),
+        { id: newId, label: label || `Tab ${dt.tabs.length + 1}`, widgets: [] },
+      ],
     };
-    // Save current widgets to current tab before switching
-    updatedTabs.tabs = updatedTabs.tabs.map(t =>
-      t.id === activeTabId ? { ...t, widgets: [...widgets] } : t
-    );
+    tabsRef.current = updatedTabs;
     setDashboardTabs(updatedTabs);
     setActiveTabId(newId);
     setWidgets([]);
@@ -872,16 +875,18 @@ export function useReportCanvas(templateId) {
   const removeDashboardTab = useCallback((tabId) => {
     const dt = tabsRef.current;
     if (!dt?.enabled || dt.tabs.length <= 1) return;
-    const remaining = dt.tabs.filter(t => t.id !== tabId);
+    const savedCurrentWidgets = JSON.parse(JSON.stringify(widgets));
+    const remaining = dt.tabs
+      .map(t => t.id === activeTabId ? { ...t, widgets: savedCurrentWidgets } : t)
+      .filter(t => t.id !== tabId);
     if (remaining.length === 0) return;
     const switchTo = tabId === activeTabId ? remaining[0] : remaining.find(t => t.id === activeTabId) || remaining[0];
     const updatedTabs = {
       ...dt,
-      tabs: remaining.map(t =>
-        t.id === activeTabId && tabId !== activeTabId ? { ...t, widgets: [...widgets] } : t
-      ),
+      tabs: remaining,
       activeTabId: switchTo.id,
     };
+    tabsRef.current = updatedTabs;
     setDashboardTabs(updatedTabs);
     if (tabId === activeTabId) {
       setActiveTabId(switchTo.id);
@@ -907,8 +912,9 @@ export function useReportCanvas(templateId) {
     const dt = tabsRef.current;
     if (!dt?.enabled) return;
     pushToHistory(widgets);
+    const savedCurrentWidgets = JSON.parse(JSON.stringify(widgets));
     const sourceTab = sourceTabId === activeTabId
-      ? { ...dt.tabs.find(t => t.id === sourceTabId), widgets: [...widgets] }
+      ? { ...dt.tabs.find(t => t.id === sourceTabId), widgets: savedCurrentWidgets }
       : dt.tabs.find(t => t.id === sourceTabId);
     if (!sourceTab) return;
     const newId = _tabUid();
@@ -916,11 +922,13 @@ export function useReportCanvas(templateId) {
     clonedWidgets.forEach(w => { w.id = `w-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; });
     const updatedTabs = {
       ...dt,
+      activeTabId: newId,
       tabs: [
-        ...dt.tabs.map(t => t.id === activeTabId ? { ...t, widgets: [...widgets] } : t),
+        ...dt.tabs.map(t => t.id === activeTabId ? { ...t, widgets: savedCurrentWidgets } : t),
         { id: newId, label: newLabel || `${sourceTab.label} (copy)`, widgets: clonedWidgets },
       ],
     };
+    tabsRef.current = updatedTabs;
     setDashboardTabs(updatedTabs);
     setActiveTabId(newId);
     setWidgets(clonedWidgets);
@@ -934,22 +942,25 @@ export function useReportCanvas(templateId) {
   const switchDashboardTab = useCallback((newTabId) => {
     const dt = tabsRef.current;
     if (!dt?.enabled || newTabId === activeTabId) return;
-    const targetTab = dt.tabs.find(t => t.id === newTabId);
-    if (!targetTab) return;
-    // Save current widgets to current tab
+    // Deep-copy current widgets into the active tab before switching
+    const savedCurrentWidgets = JSON.parse(JSON.stringify(widgets));
     const updatedTabs = {
       ...dt,
       activeTabId: newTabId,
       tabs: dt.tabs.map(t =>
-        t.id === activeTabId ? { ...t, widgets: [...widgets] } : t
+        t.id === activeTabId ? { ...t, widgets: savedCurrentWidgets } : t
       ),
     };
+    // Read target tab from the UPDATED structure (not old dt)
+    const targetTab = updatedTabs.tabs.find(t => t.id === newTabId);
+    tabsRef.current = updatedTabs;
     setDashboardTabs(updatedTabs);
     setActiveTabId(newTabId);
-    setWidgets(targetTab.widgets || []);
+    setWidgets(targetTab?.widgets || []);
     pastRef.current = [];
     futureRef.current = [];
     setHistoryState({ pastCount: 0, futureCount: 0 });
+    setDirty(true);
   }, [activeTabId, widgets]);
 
   // Collect all widgets across all tabs (for tag subscription)
