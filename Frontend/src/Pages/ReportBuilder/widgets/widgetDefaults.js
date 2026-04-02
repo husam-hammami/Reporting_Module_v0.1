@@ -310,10 +310,10 @@ export const WIDGET_CATALOG = [
   // ── Industrial ──
   {
     type: 'status',
-    category: 'values',
-    label: 'Status Indicator',
+    category: 'advanced',
+    label: 'Status (Single)',
     lucideIcon: 'CircleDot',
-    description: 'On/off/alarm status for equipment',
+    description: 'Single tag on/off — use Status Bar for multiple',
     defaultW: 2,
     defaultH: 1,
     defaultConfig: {
@@ -404,8 +404,8 @@ export const WIDGET_CATALOG = [
     type: 'statusbar',
     category: 'values',
     label: 'Status Bar',
-    lucideIcon: 'LayoutList',
-    description: 'Compact multi-tag status indicators in one row',
+    lucideIcon: 'CircleDot',
+    description: 'Multi-tag equipment status indicators',
     defaultW: 12,
     defaultH: 1,
     defaultConfig: {

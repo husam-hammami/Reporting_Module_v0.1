@@ -1699,57 +1699,8 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
               {HAS_TABLE_COLUMNS.has(widget.type) && (
                 <DrillDownSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
               )}
-              {widget.type === 'tabcontainer' && (
-                <Section icon={Layers} title="Tab Container" defaultOpen={true}>
-                  <p className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed">
-                    Click the tab container on the canvas to manage tabs and add widgets.
-                    Double-click a tab label to rename it. Use the + button inside the widget to add tabs and sub-widgets.
-                  </p>
-                </Section>
-              )}
-              {!HAS_DATA_SOURCE.has(widget.type) && !HAS_SERIES.has(widget.type) && !HAS_TABLE_COLUMNS.has(widget.type) && widget.type !== 'tabcontainer' && (
-                <div className="px-5 py-6 text-[9px] text-[var(--rb-text-muted)]">
-                  {widget.type === 'text' || widget.type === 'logo'
-                    ? 'Use the Format tab to configure this element.'
-                    : 'No data options for this widget.'}
-                </div>
-              )}
-            </motion.div>
-          )}
-          {activeTab === TAB_FORMAT && (
-            <motion.div
-              key="format"
-              initial={prefersReducedMotion ? false : { opacity: 0, x: 8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={prefersReducedMotion ? undefined : { opacity: 0, x: -8 }}
-              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
-            >
-              {['kpi', 'gauge', 'silo', 'stat', 'chart', 'barchart', 'piechart', 'table', 'image', 'status', 'sparkline', 'progress', 'hopper', 'statusbar', 'tabcontainer'].includes(widget.type) && (
-                <Section icon={Palette} title="Card Appearance" defaultOpen={true} isFirst>
-                  <Toggle
-                    label="Show card (border & background)"
-                    value={config.showCard !== false}
-                    onChange={(v) => handleConfigUpdate({ showCard: v })}
-                  />
-                  {config.showCard !== false && (
-                    <div className="mt-1">
-                      <label className="rb-label block mb-1">Card Style</label>
-                      <select
-                        value={config.cardStyle || 'default'}
-                        onChange={(e) => handleConfigUpdate({ cardStyle: e.target.value })}
-                        className="rb-input-base w-full text-[11px] py-1 px-2"
-                      >
-                        <option value="default">Default</option>
-                        <option value="borderless">Borderless</option>
-                        <option value="glass">Glass</option>
-                        <option value="accent-top">Accent Top</option>
-                      </select>
-                    </div>
-                  )}
-                </Section>
-              )}
               {widget.type === 'statusbar' && (
-                <Section icon={Palette} title="Status Tags" defaultOpen={true}>
+                <Section icon={Database} title="Status Tags" defaultOpen={true}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--rb-text-muted)]">Tags</span>
                     <button
@@ -1813,6 +1764,56 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
                   ))}
                 </Section>
               )}
+              {widget.type === 'tabcontainer' && (
+                <Section icon={Layers} title="Tab Container" defaultOpen={true}>
+                  <p className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed">
+                    Click the tab container on the canvas to manage tabs and add widgets.
+                    Double-click a tab label to rename it. Use the + button inside the widget to add tabs and sub-widgets.
+                  </p>
+                </Section>
+              )}
+              {!HAS_DATA_SOURCE.has(widget.type) && !HAS_SERIES.has(widget.type) && !HAS_TABLE_COLUMNS.has(widget.type) && widget.type !== 'tabcontainer' && (
+                <div className="px-5 py-6 text-[9px] text-[var(--rb-text-muted)]">
+                  {widget.type === 'text' || widget.type === 'logo'
+                    ? 'Use the Format tab to configure this element.'
+                    : 'No data options for this widget.'}
+                </div>
+              )}
+            </motion.div>
+          )}
+          {activeTab === TAB_FORMAT && (
+            <motion.div
+              key="format"
+              initial={prefersReducedMotion ? false : { opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0, x: -8 }}
+              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
+            >
+              {['kpi', 'gauge', 'silo', 'stat', 'chart', 'barchart', 'piechart', 'table', 'image', 'status', 'sparkline', 'progress', 'hopper', 'statusbar', 'tabcontainer'].includes(widget.type) && (
+                <Section icon={Palette} title="Card Appearance" defaultOpen={true} isFirst>
+                  <Toggle
+                    label="Show card (border & background)"
+                    value={config.showCard !== false}
+                    onChange={(v) => handleConfigUpdate({ showCard: v })}
+                  />
+                  {config.showCard !== false && (
+                    <div className="mt-1">
+                      <label className="rb-label block mb-1">Card Style</label>
+                      <select
+                        value={config.cardStyle || 'default'}
+                        onChange={(e) => handleConfigUpdate({ cardStyle: e.target.value })}
+                        className="rb-input-base w-full text-[11px] py-1 px-2"
+                      >
+                        <option value="default">Default</option>
+                        <option value="borderless">Borderless</option>
+                        <option value="glass">Glass</option>
+                        <option value="accent-top">Accent Top</option>
+                      </select>
+                    </div>
+                  )}
+                </Section>
+              )}
+              {/* StatusBar tags are in the Data tab, not here */}
               <Section icon={SeparatorHorizontal} title="Separator Line" defaultOpen={false}>
                 <Toggle
                   label="Show bottom separator"
