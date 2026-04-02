@@ -32,6 +32,7 @@ function VizIcon({ type, isActive }) {
     case 'piechart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M16 4a12 12 0 0 1 0 24A12 12 0 0 1 16 4z" stroke={m} strokeWidth="2" /><path d="M16 4a12 12 0 0 1 10.4 6L16 16V4z" fill={p} /><path d="M26.4 10A12 12 0 0 1 16 28V16l10.4-6z" fill={l} /></svg>;
     case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="6" y="22" fill={p} fontSize="16" fontWeight="bold" fontFamily="serif">T</text><path d="M18 10h8M18 16h6M18 22h4" stroke={m} strokeWidth="1.6" strokeLinecap="round" /></svg>;
     case 'logo': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="7" width="24" height="18" rx="3" stroke={m} strokeWidth="1.8" /><path d="M10 16h12" stroke={p} strokeWidth="2" strokeLinecap="round" /><path d="M14 12h4v8h-4z" fill={l} rx="1" /><circle cx="16" cy="16" r="4" stroke={p} strokeWidth="1.5" fill="none" /></svg>;
+    case 'tabcontainer': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="24" height="18" rx="3" stroke={m} strokeWidth="1.8" /><rect x="5" y="8" width="9" height="5" rx="1.5" fill={p} /><rect x="15" y="8" width="9" height="5" rx="1.5" fill={l} /><path d="M4 13h24" stroke={m} strokeWidth="1" /></svg>;
     default: return null;
   }
 }
@@ -57,6 +58,7 @@ function SmallVizIcon({ type }) {
     case 'piechart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M16 4a12 12 0 0 1 0 24A12 12 0 0 1 16 4z" stroke={m} strokeWidth="2" /><path d="M16 4a12 12 0 0 1 10.4 6L16 16V4z" fill={p} /><path d="M26.4 10A12 12 0 0 1 16 28V16l10.4-6z" fill={l} /></svg>;
     case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="8" y="22" fill={p} fontSize="18" fontWeight="bold" fontFamily="serif">T</text></svg>;
     case 'logo': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="7" width="24" height="18" rx="3" stroke={m} strokeWidth="2" /><circle cx="16" cy="16" r="4" stroke={p} strokeWidth="2" fill="none" /></svg>;
+    case 'tabcontainer': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="24" height="18" rx="3" stroke={m} strokeWidth="2.5" /><rect x="5" y="8" width="10" height="5" rx="1.5" fill={p} /><rect x="16" y="8" width="10" height="5" rx="1.5" fill={l} /></svg>;
     default: return null;
   }
 }
@@ -77,9 +79,10 @@ const COMPONENTS = [
   { section: 'Layout', type: 'text', label: 'Text Block' },
   { section: 'Layout', type: 'image', label: 'Image' },
   { section: 'Layout', type: 'logo', label: 'Client Logo' },
+  { section: 'Layout', type: 'tabcontainer', label: 'Tab Container' },
 ];
 
-const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', status: 'Status', sparkline: 'Spark', progress: 'Progress', hopper: 'Hopper' };
+const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', status: 'Status', sparkline: 'Spark', progress: 'Progress', hopper: 'Hopper', tabcontainer: 'Tabs' };
 
 const SECTIONS = ['Data', 'Charts', 'Tables', 'Layout', 'Tag Groups', 'Widgets'];
 
