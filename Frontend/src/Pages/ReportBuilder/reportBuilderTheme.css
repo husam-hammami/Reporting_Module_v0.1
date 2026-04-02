@@ -328,63 +328,43 @@
   border: 1px solid var(--rb-card-border);
   border-radius: var(--rb-radius-lg);
   padding: var(--rb-pad-md);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 .dark .report-builder .rb-widget-card {
-  background: linear-gradient(160deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 20, 32, 0.98) 100%);
+  background: rgba(17, 24, 39, 0.95);
   border-color: rgba(91, 155, 213, 0.12);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03);
-}
-.report-builder .rb-widget-card:hover {
-  box-shadow: 0 2px 6px rgba(0,0,0,0.07);
-}
-.dark .report-builder .rb-widget-card:hover {
-  border-color: rgba(91, 155, 213, 0.2);
-  box-shadow: 0 3px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
-/* Borderless — no border, no shadow, transparent */
+/* Borderless — clean, no decoration */
 .report-builder .rb-card-borderless {
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
 }
-.report-builder .rb-card-borderless:hover {
-  box-shadow: none !important;
-  transform: none !important;
-}
 
-/* Glass — frosted glass effect */
+/* Glass — subtle frosted effect with tinted background */
 .report-builder .rb-card-glass {
-  background: rgba(255,255,255,0.55) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.25) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5) !important;
+  background: rgba(248,250,252,0.85) !important;
+  border: 1px solid rgba(226,232,240,0.6) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
 }
 .dark .report-builder .rb-card-glass {
-  background: rgba(15,23,42,0.6) !important;
-  border: 1px solid rgba(255,255,255,0.08) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04) !important;
-}
-.report-builder .rb-card-glass:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.5) !important;
+  background: rgba(15,23,42,0.65) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25) !important;
 }
 
-/* Accent top — colored top border, clean sides */
+/* Accent top — colored top border from widget color */
 .report-builder .rb-card-accent-top {
   border: none !important;
-  border-top: 3px solid var(--rb-widget-accent, var(--rb-accent)) !important;
+  border-top: 3px solid var(--widget-color, #0369a1) !important;
   border-radius: 2px 2px var(--rb-radius-lg) var(--rb-radius-lg) !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
 }
 .dark .report-builder .rb-card-accent-top {
-  background: rgba(15,23,42,0.8) !important;
+  background: rgba(15,23,42,0.85) !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
-}
-.report-builder .rb-card-accent-top:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
 }
 
 .report-builder .rb-widget-card.rb-widget-selected,

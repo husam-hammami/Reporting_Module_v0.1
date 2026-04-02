@@ -791,10 +791,13 @@ export default function ReportBuilderCanvas() {
                                   ? 'border-[var(--rb-border)] hover:border-[var(--rb-accent)]'
                                   : 'hover:border-[var(--rb-accent)]/50'
                           }`}
-                          style={isSelected && !isInvisible ? {
-                            borderColor: 'var(--rb-accent)',
-                            boxShadow: '0 0 0 2px var(--rb-accent)',
-                          } : undefined}
+                          style={{
+                            '--widget-color': widget.config?.color || undefined,
+                            ...(isSelected && !isInvisible ? {
+                              borderColor: 'var(--rb-accent)',
+                              boxShadow: '0 0 0 2px var(--rb-accent)',
+                            } : {}),
+                          }}
                         >
                           {/* Selection handles (4 corners) */}
                           {isSelected && (

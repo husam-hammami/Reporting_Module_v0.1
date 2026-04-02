@@ -740,7 +740,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                       ? `rounded-lg rb-widget-card overflow-hidden flex flex-col ${csMap2[widget.config?.cardStyle] || ''}`
                       : 'overflow-hidden flex flex-col min-h-0 p-0.5';
                   return (
-                    <div key={item.i} className={`${cardClass} flex flex-col min-h-0 relative`}>
+                    <div key={item.i} className={`${cardClass} flex flex-col min-h-0 relative`} style={{ '--widget-color': widget.config?.color || undefined }}>
                       <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
                       {widget.config?.showSeparator && (
                         <div

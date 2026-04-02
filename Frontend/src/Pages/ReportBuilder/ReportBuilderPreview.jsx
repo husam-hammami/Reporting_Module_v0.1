@@ -403,6 +403,7 @@ export default function ReportBuilderPreview() {
                     <div
                       key={item.i}
                       className={`${cardClass} flex flex-col min-h-0 relative`}
+                      style={{ '--widget-color': widget.config?.color || undefined }}
                     >
                       <WidgetRenderer
                         widget={widget}

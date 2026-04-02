@@ -22,20 +22,21 @@ export default function StatusBarWidget({ config, tagValues }) {
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      justifyContent: showTitle ? 'flex-start' : 'center',
       height: '100%',
-      padding: '0 12px',
-      gap: showTitle ? 12 : 0,
+      padding: '0 10px',
+      gap: 10,
+      overflow: 'hidden',
     }}>
       {showTitle && (
-        <p className="rb-widget-title" style={{ fontSize: titleFontSize, margin: 0, flexShrink: 0 }}>{config.title}</p>
+        <span className="rb-widget-title" style={{ fontSize: titleFontSize, flexShrink: 0 }}>{config.title}</span>
       )}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: 16,
+        justifyContent: tags.length <= 6 ? 'space-evenly' : 'flex-start',
         flex: 1,
+        gap: 4,
+        overflow: 'hidden',
       }}>
         {tags.map((tag, i) => {
           const raw = tagValues?.[tag.tagName];
@@ -45,16 +46,24 @@ export default function StatusBarWidget({ config, tagValues }) {
           const statusText = isOn ? (tag.onLabel || 'ON') : (tag.offLabel || 'OFF');
 
           return (
-            <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <div key={i} style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 3,
+              padding: '2px 6px',
+              borderRadius: 4,
+              background: isOn ? `${dotColor}12` : 'transparent',
+              flexShrink: 0,
+            }}>
               <div style={{
                 width: 6, height: 6, borderRadius: '50%',
                 background: dotColor,
                 boxShadow: isOn ? `0 0 4px ${dotColor}` : 'none',
               }} />
-              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--rb-text-muted)' }}>
+              <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--rb-text-muted)', whiteSpace: 'nowrap' }}>
                 {tag.label || tag.tagName}
               </span>
-              <span style={{ fontSize: 10, fontWeight: 700, color: dotColor }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: dotColor, whiteSpace: 'nowrap' }}>
                 {statusText}
               </span>
             </div>
