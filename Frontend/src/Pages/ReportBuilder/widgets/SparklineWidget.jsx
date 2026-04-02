@@ -153,9 +153,9 @@ export default function SparklineWidget({ config, tagValues }) {
       {/* Value */}
       <div style={{ flexShrink: 0, textAlign: 'end' }}>
         <span style={{
-          fontSize: '14px',
-          fontWeight: 700,
-          color: 'var(--rb-text)',
+          fontSize: '15px',
+          fontWeight: 800,
+          color: color || 'var(--rb-text)',
           fontVariantNumeric: 'tabular-nums',
         }}>
           {display}

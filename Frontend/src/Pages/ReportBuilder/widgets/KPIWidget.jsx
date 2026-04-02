@@ -225,7 +225,7 @@ export default function KPIWidget({ config, tagValues, sparklineData, layout }) 
           className="rb-value-primary"
           style={{
             color: activeColor,
-            fontSize: valueFontSize || 'clamp(24px, 4vw, 42px)',
+            fontSize: valueFontSize || (displayValue.length > 10 ? 'clamp(18px, 3vw, 28px)' : displayValue.length > 7 ? 'clamp(20px, 3.5vw, 34px)' : 'clamp(24px, 4vw, 42px)'),
             fontWeight: 800,
             letterSpacing: '-0.03em',
           }}

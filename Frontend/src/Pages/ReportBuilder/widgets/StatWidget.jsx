@@ -118,7 +118,7 @@ export default function StatWidget({ config, tagValues }) {
         className="rb-value-primary"
         style={{
           color,
-          fontSize: valueFontSize || 'clamp(20px, 4vw, 40px)',
+          fontSize: valueFontSize || (display.length > 10 ? 'clamp(16px, 3vw, 28px)' : display.length > 7 ? 'clamp(18px, 3.5vw, 32px)' : 'clamp(20px, 4vw, 40px)'),
           lineHeight: 1.1,
           fontWeight: 800,
           fontVariantNumeric: 'tabular-nums',

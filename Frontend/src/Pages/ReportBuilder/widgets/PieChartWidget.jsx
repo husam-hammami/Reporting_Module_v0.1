@@ -249,7 +249,7 @@ export default function PieChartWidget({ config, tagValues }) {
                   onMouseLeave={() => setHoveredIdx(null)}
                 >
                   <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: slice.color }} />
-                  <span className="text-[10px] text-[var(--rb-text,#f0f4f8)] truncate flex-1 font-medium">{slice.label}</span>
+                  <span className="text-[10px] text-[var(--rb-text,#f0f4f8)] whitespace-nowrap font-medium">{slice.label}</span>
                   <span className="text-[10px] text-[var(--rb-text-muted,#556677)] font-mono tabular-nums flex-shrink-0">{pct}%</span>
                 </div>
               );
