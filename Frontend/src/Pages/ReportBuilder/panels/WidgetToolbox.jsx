@@ -68,7 +68,7 @@ const COMPONENTS = [
   { section: 'Data', type: 'kpi', label: 'KPI Card' },
   { section: 'Data', type: 'gauge', label: 'Gauge' },
   { section: 'Data', type: 'stat', label: 'Stat Panel' },
-  { section: 'Data', type: 'status', label: 'Status Indicator' },
+  { section: 'Data', type: 'statusbar', label: 'Status Bar' },
   { section: 'Data', type: 'progress', label: 'Progress Bar' },
   { section: 'Data', type: 'silo', label: 'Silo Visual' },
   { section: 'Data', type: 'hopper', label: 'Hopper' },
@@ -83,7 +83,7 @@ const COMPONENTS = [
   { section: 'Layout', type: 'tabcontainer', label: 'Tab Container' },
 ];
 
-const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', status: 'Status', sparkline: 'Spark', progress: 'Progress', hopper: 'Hopper', tabcontainer: 'Tabs' };
+const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', status: 'Status', statusbar: 'Status', sparkline: 'Spark', progress: 'Progress', hopper: 'Hopper', tabcontainer: 'Tabs' };
 
 const SECTIONS = ['Data', 'Charts', 'Tables', 'Layout', 'Tag Groups', 'Widgets'];
 
