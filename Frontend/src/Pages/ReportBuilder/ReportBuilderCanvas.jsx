@@ -11,6 +11,7 @@ import {
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useReportCanvas, useAvailableTags, useAvailableGroups, useAvailableFormulas, collectWidgetTagNames } from '../../Hooks/useReportBuilder';
+import TabSelector from '../../Components/ui/TabSelector';
 import { useTagHistory } from '../../Hooks/useTagHistory';
 import WidgetToolbox from './panels/WidgetToolbox';
 import PropertiesPanel from './panels/PropertiesPanel';
@@ -41,6 +42,9 @@ export default function ReportBuilderCanvas() {
     addWidget, addWidgetAt, updateWidget, removeWidget, updateLayout,
     addComputedSignal, saveLayout, updateMeta,
     undo, redo, canUndo, canRedo,
+    dashboardTabs, activeTabId, allTabsWidgets,
+    enableDashboardTabs, disableDashboardTabs,
+    addDashboardTab, removeDashboardTab, renameDashboardTab, switchDashboardTab,
   } = useReportCanvas(id);
 
   const { tags } = useAvailableTags();
@@ -51,7 +55,7 @@ export default function ReportBuilderCanvas() {
   const isCapturing = useThumbnailCapture();
   const skipAnimations = prefersReducedMotion || isCapturing;
   const widgets = rawWidgets;
-  const usedTagNames = useMemo(() => collectWidgetTagNames(widgets), [widgets]);
+  const usedTagNames = useMemo(() => collectWidgetTagNames(allTabsWidgets || widgets), [allTabsWidgets, widgets]);
   const [polledTagValues, setPolledTagValues] = useState({});
   useEffect(() => {
     if (emulatorOn || usedTagNames.length === 0) return;
@@ -87,6 +91,9 @@ export default function ReportBuilderCanvas() {
   const [selectedId, setSelectedId] = useState(null);
   const [showToolbox, setShowToolbox] = useState(true);
   const [showProperties, setShowProperties] = useState(true);
+  const [renamingTabId, setRenamingTabId] = useState(null);
+  const [tabNameInput, setTabNameInput] = useState('');
+  const tabNameRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
@@ -474,6 +481,18 @@ export default function ReportBuilderCanvas() {
             </button>
           </div>
 
+          {!dashboardTabs?.enabled && (
+            <Tooltip title="Enable dashboard tabs" placement="bottom" arrow disableInteractive>
+              <button
+                onClick={enableDashboardTabs}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium text-[#556677] hover:text-[#8899ab] hover:bg-[#1a2233] border border-[#1e293b] transition-all"
+              >
+                <Copy size={13} />
+                <span className="hidden sm:inline">Tabs</span>
+              </button>
+            </Tooltip>
+          )}
+
           <div className="w-px h-5 bg-[#1e293b] mx-1" />
 
           <Tooltip title="Preview report" placement="bottom" arrow disableInteractive>
@@ -529,6 +548,72 @@ export default function ReportBuilderCanvas() {
 
         </div>
       </div>
+
+      {/* ── Dashboard Tabs Bar ── */}
+      {dashboardTabs?.enabled && (
+        <div className="h-10 flex items-center gap-2 px-4 bg-[#0d1117] border-b border-[#1e293b] flex-shrink-0">
+          <TabSelector
+            tabs={(dashboardTabs.tabs || []).map(t => ({ id: t.id, label: t.label }))}
+            activeId={activeTabId}
+            onChange={(tabId) => { switchDashboardTab(tabId); setSelectedId(null); }}
+            size="sm"
+          />
+          <Tooltip title="Add new tab" placement="bottom" arrow disableInteractive>
+            <button
+              onClick={() => {
+                const label = prompt('Tab name:', `Tab ${(dashboardTabs.tabs || []).length + 1}`);
+                if (label) addDashboardTab(label);
+              }}
+              className="p-1.5 rounded-md text-[#556677] hover:text-[#22d3ee] hover:bg-[#1a2233] transition-colors"
+            >
+              <Plus size={14} />
+            </button>
+          </Tooltip>
+          {dashboardTabs.tabs?.length > 1 && (
+            <Tooltip title="Rename active tab" placement="bottom" arrow disableInteractive>
+              <button
+                onClick={() => {
+                  const tab = dashboardTabs.tabs?.find(t => t.id === activeTabId);
+                  if (!tab) return;
+                  const newName = prompt('Rename tab:', tab.label);
+                  if (newName && newName.trim()) renameDashboardTab(activeTabId, newName.trim());
+                }}
+                className="p-1.5 rounded-md text-[#556677] hover:text-[#f0f4f8] hover:bg-[#1a2233] transition-colors"
+              >
+                <Pencil size={12} />
+              </button>
+            </Tooltip>
+          )}
+          {dashboardTabs.tabs?.length > 1 && (
+            <Tooltip title="Remove active tab" placement="bottom" arrow disableInteractive>
+              <button
+                onClick={() => {
+                  const tab = dashboardTabs.tabs?.find(t => t.id === activeTabId);
+                  if (!tab) return;
+                  if (confirm(`Remove tab "${tab.label}"? Widgets on this tab will be lost.`)) {
+                    removeDashboardTab(activeTabId);
+                  }
+                }}
+                className="p-1.5 rounded-md text-[#556677] hover:text-[#ef4444] hover:bg-[#1a2233] transition-colors"
+              >
+                <Trash2 size={12} />
+              </button>
+            </Tooltip>
+          )}
+          <div className="ml-auto">
+            <Tooltip title="Disable tabs (merge active tab to main)" placement="bottom" arrow disableInteractive>
+              <button
+                onClick={() => {
+                  if (confirm('Disable tabs? Active tab widgets will become the main dashboard.')) disableDashboardTabs();
+                }}
+                className="text-[9px] font-medium px-2 py-1 rounded text-[#556677] hover:text-[#f0f4f8] hover:bg-[#1a2233] transition-colors"
+              >
+                Disable Tabs
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+      )}
 
       {/* ── Three-zone body: toolbox | canvas | properties ── */}
       <div className="flex flex-1 min-h-0 overflow-hidden">

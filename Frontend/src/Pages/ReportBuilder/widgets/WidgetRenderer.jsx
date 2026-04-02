@@ -79,7 +79,7 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
   const Component = RENDERERS[widget.type];
   if (!Component) return null;
   const tableProps = widget.type === 'table'
-    ? { isSelected, onUpdate: onUpdateWidget, widgetId, tags, layoutH: widget.h, layoutRowHeight, isReportBuilderWorkspace, savedFormulas }
+    ? { isSelected, onUpdate: onUpdateWidget, widgetId, tags, layoutH: widget.h, layoutRowHeight, isReportBuilderWorkspace, savedFormulas, tagHistory }
     : {};
   const siloProps = widget.type === 'silo' ? { isReportBuilderWorkspace } : {};
   const sparklineTag = widget.type === 'kpi' ? getKpiSparklineTag(widget.config) : null;

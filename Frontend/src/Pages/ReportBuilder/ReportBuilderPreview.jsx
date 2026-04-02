@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { exportAsPNG, exportAsPDF } from '../../utils/exportReport';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
 import { useReportCanvas, useAvailableTags, collectWidgetTagNames } from '../../Hooks/useReportBuilder';
+import TabSelector from '../../Components/ui/TabSelector';
 import { useTagHistory } from '../../Hooks/useTagHistory';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from './widgets/WidgetRenderer';
 import axios from '../../API/axios';
@@ -26,7 +27,7 @@ const GRID_PADDING = [12, 12];
 export default function ReportBuilderPreview() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { template, widgets, loading } = useReportCanvas(id);
+  const { template, widgets, loading, dashboardTabs, activeTabId, allTabsWidgets, switchDashboardTab } = useReportCanvas(id);
   const { tags: availableTags } = useAvailableTags();
   const [liveTagValues, setLiveTagValues] = useState({});
   const [lastDataUpdate, setLastDataUpdate] = useState(Date.now());
@@ -62,7 +63,7 @@ export default function ReportBuilderPreview() {
     e.preventDefault();
   }, []);
 
-  const usedTagNames = useMemo(() => collectWidgetTagNames(widgets), [widgets]);
+  const usedTagNames = useMemo(() => collectWidgetTagNames(allTabsWidgets || widgets), [allTabsWidgets, widgets]);
 
   useEffect(() => {
     if (usedTagNames.length === 0) return;
@@ -300,6 +301,18 @@ export default function ReportBuilderPreview() {
           </div>
         </div>
       </div>
+
+      {/* Dashboard Tabs (preview) */}
+      {dashboardTabs?.enabled && Array.isArray(dashboardTabs.tabs) && dashboardTabs.tabs.length > 1 && (
+        <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0 print:hidden" style={{ borderBottom: '1px solid var(--rb-border)', background: 'var(--rb-surface)' }}>
+          <TabSelector
+            tabs={dashboardTabs.tabs.map(t => ({ id: t.id, label: t.label }))}
+            activeId={activeTabId}
+            onChange={switchDashboardTab}
+            size="sm"
+          />
+        </div>
+      )}
 
       {/* Preview body */}
       <div

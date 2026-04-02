@@ -1513,3 +1513,61 @@
 .dark .rb-chart-empty-text {
   color: #8899ab;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Drill-Down Panel — master-detail for table rows
+   ═══════════════════════════════════════════════════════════════ */
+
+.rb-table-row-clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.rb-table-row-clickable:hover {
+  background-color: rgba(14, 116, 144, 0.06) !important;
+}
+.dark .rb-table-row-clickable:hover {
+  background-color: rgba(34, 211, 238, 0.06) !important;
+}
+
+.rb-table-row-active {
+  background-color: rgba(14, 116, 144, 0.1) !important;
+  box-shadow: inset 3px 0 0 var(--rb-accent);
+}
+.dark .rb-table-row-active {
+  background-color: rgba(34, 211, 238, 0.08) !important;
+}
+
+.rb-drilldown-panel {
+  border: 1px solid var(--rb-border);
+  border-radius: 8px;
+  background: var(--rb-panel);
+  overflow: hidden;
+  animation: rb-drilldown-slide 0.2s ease-out;
+}
+
+@keyframes rb-drilldown-slide {
+  from { opacity: 0; max-height: 0; transform: translateY(-8px); }
+  to   { opacity: 1; max-height: 2000px; transform: translateY(0); }
+}
+
+.rb-drilldown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rb-border);
+  background: var(--rb-surface);
+}
+
+.rb-drilldown-grid {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.rb-drilldown-widget-cell {
+  border: 1px solid var(--rb-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--rb-panel);
+}

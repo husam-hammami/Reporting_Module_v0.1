@@ -228,6 +228,13 @@ export const WIDGET_CATALOG = [
       borderColor: '',
       sectionHeaderBg: '',
       sectionHeaderColor: '',
+      drillDown: {
+        enabled: false,
+        keyColumn: 0,
+        prefixSeparator: '_',
+        detailWidgets: [],
+        detailGridCols: 2,
+      },
     },
   },
 

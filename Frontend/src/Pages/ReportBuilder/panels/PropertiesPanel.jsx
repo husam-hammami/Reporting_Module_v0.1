@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy, Move, PanelRightClose } from 'lucide-react';
+import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy, Move, PanelRightClose, Layers } from 'lucide-react';
+import { uid, WIDGET_CATALOG } from '../widgets/widgetDefaults';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import FormulaEditor from '../formulas/FormulaEditor';
 
@@ -1291,6 +1292,286 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
   );
 }
 
+const DRILLDOWN_WIDGET_TYPES = WIDGET_CATALOG.filter(
+  (w) => ['kpi', 'chart', 'barchart', 'gauge', 'stat', 'piechart', 'sparkline', 'progress'].includes(w.type)
+);
+
+function DrillDownSection({ config, onUpdate, tags, tagValues, savedFormulas = [] }) {
+  const dd = config.drillDown || { enabled: false, keyColumn: 0, prefixSeparator: '_', detailWidgets: [], detailGridCols: 2 };
+  const columns = Array.isArray(config.tableColumns) ? config.tableColumns : [];
+  const detailWidgets = Array.isArray(dd.detailWidgets) ? dd.detailWidgets : [];
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [expandedWidget, setExpandedWidget] = useState(null);
+
+  const updateDD = (patch) => onUpdate({ drillDown: { ...dd, ...patch } });
+
+  const addDetailWidget = (catalogEntry) => {
+    const dw = {
+      id: uid(),
+      type: catalogEntry.type,
+      w: catalogEntry.defaultW || 6,
+      h: catalogEntry.defaultH || 2,
+      config: JSON.parse(JSON.stringify(catalogEntry.defaultConfig)),
+    };
+    updateDD({ detailWidgets: [...detailWidgets, dw] });
+    setShowAddMenu(false);
+    setExpandedWidget(dw.id);
+  };
+
+  const removeDetailWidget = (id) => {
+    updateDD({ detailWidgets: detailWidgets.filter((w) => w.id !== id) });
+    if (expandedWidget === id) setExpandedWidget(null);
+  };
+
+  const updateDetailWidget = (id, patch) => {
+    updateDD({
+      detailWidgets: detailWidgets.map((w) => {
+        if (w.id !== id) return w;
+        const next = { ...w, ...patch };
+        if (patch.config && typeof patch.config === 'object') {
+          next.config = { ...(w.config || {}), ...patch.config };
+        }
+        return next;
+      }),
+    });
+  };
+
+  const HAS_DS = new Set(['kpi', 'gauge', 'stat', 'sparkline', 'progress']);
+  const HAS_SR = new Set(['chart', 'barchart', 'piechart']);
+
+  return (
+    <Section icon={Layers} title="Drill-Down" defaultOpen={false}>
+      <Toggle label="Enable row drill-down" value={dd.enabled} onChange={(v) => updateDD({ enabled: v })} />
+
+      {dd.enabled && (
+        <>
+          <Field label="Key column (row identifier)">
+            <SelectInput
+              value={String(dd.keyColumn ?? 0)}
+              onChange={(v) => updateDD({ keyColumn: Number(v) })}
+              options={columns.length > 0
+                ? columns.map((col, i) => ({ value: String(i), label: col.label || `Column ${i + 1}` }))
+                : [{ value: '0', label: 'No columns yet' }]
+              }
+            />
+          </Field>
+
+          <Field label="Tag prefix separator">
+            <TextInput value={dd.prefixSeparator ?? '_'} onChange={(v) => updateDD({ prefixSeparator: v })} placeholder="_" />
+            <p className="text-[9px] text-[var(--rb-text-muted)] mt-1">
+              Tags use <code className="font-mono bg-[var(--rb-surface)] px-1 rounded">{'{ROW_KEY}'}</code> placeholder, e.g. <code className="font-mono bg-[var(--rb-surface)] px-1 rounded">{'{ROW_KEY}_total_active_energy'}</code>
+            </p>
+          </Field>
+
+          <Field label="Detail panel columns">
+            <SelectInput
+              value={String(dd.detailGridCols || 2)}
+              onChange={(v) => updateDD({ detailGridCols: Number(v) })}
+              options={[
+                { value: '1', label: '1 column' },
+                { value: '2', label: '2 columns' },
+                { value: '3', label: '3 columns' },
+                { value: '4', label: '4 columns' },
+              ]}
+            />
+          </Field>
+
+          <div className="mt-3 pt-3 border-t border-[var(--rb-border)]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--rb-text-muted)]">
+                Detail Widgets ({detailWidgets.length})
+              </span>
+            </div>
+
+            {detailWidgets.length === 0 && (
+              <p className="text-[9px] text-[var(--rb-text-muted)] mb-3">
+                Add widgets that appear when a row is clicked. Use <code className="font-mono bg-[var(--rb-surface)] px-1 rounded">{'{ROW_KEY}'}</code> in tag names.
+              </p>
+            )}
+
+            <div className="space-y-2">
+              {detailWidgets.map((dw) => {
+                const isExpanded = expandedWidget === dw.id;
+                const dwConfig = dw.config || {};
+                const catEntry = WIDGET_CATALOG.find((c) => c.type === dw.type);
+
+                return (
+                  <div key={dw.id} className="rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-border)] overflow-hidden">
+                    <div
+                      className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
+                      onClick={() => setExpandedWidget(isExpanded ? null : dw.id)}
+                    >
+                      <ChevronRight size={12} className={`text-[var(--rb-text-muted)] transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                      <span className="flex-1 text-[12px] font-medium text-[var(--rb-text)] truncate">
+                        {dwConfig.title || catEntry?.label || dw.type}
+                      </span>
+                      <span className="text-[9px] text-[var(--rb-text-muted)] flex-shrink-0">{dw.type}</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeDetailWidget(dw.id); }}
+                        className="rb-btn-ghost p-1 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="px-3 pb-3 pt-1 space-y-3 border-t border-[var(--rb-border)]">
+                        <Field label="Title">
+                          <TextInput
+                            value={dwConfig.title || ''}
+                            onChange={(v) => updateDetailWidget(dw.id, { config: { title: v } })}
+                            placeholder="{ROW_KEY} Energy Chart"
+                          />
+                        </Field>
+
+                        {HAS_DS.has(dw.type) && (
+                          <>
+                            <Field label="Source type">
+                              <SelectInput
+                                value={dwConfig.dataSource?.type || 'tag'}
+                                onChange={(v) => updateDetailWidget(dw.id, { config: { dataSource: { ...(dwConfig.dataSource || {}), type: v } } })}
+                                options={[
+                                  { value: 'tag', label: 'Single Tag' },
+                                  { value: 'formula', label: 'Custom Formula' },
+                                ]}
+                              />
+                            </Field>
+                            {(dwConfig.dataSource?.type || 'tag') === 'tag' && (
+                              <Field label="Tag name (use {ROW_KEY})">
+                                <TextInput
+                                  value={dwConfig.dataSource?.tagName || ''}
+                                  onChange={(v) => updateDetailWidget(dw.id, { config: { dataSource: { ...(dwConfig.dataSource || {}), tagName: v } } })}
+                                  placeholder="{ROW_KEY}_total_active_energy"
+                                />
+                              </Field>
+                            )}
+                            {dwConfig.dataSource?.type === 'formula' && (
+                              <Field label="Formula (use {ROW_KEY})">
+                                <TextInput
+                                  value={dwConfig.dataSource?.formula || ''}
+                                  onChange={(v) => updateDetailWidget(dw.id, { config: { dataSource: { ...(dwConfig.dataSource || {}), formula: v } } })}
+                                  placeholder="{'{ROW_KEY}_power'} * 2"
+                                />
+                              </Field>
+                            )}
+                          </>
+                        )}
+
+                        {HAS_SR.has(dw.type) && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--rb-text-muted)]">Series</span>
+                              <button
+                                onClick={() => {
+                                  const series = [...(dwConfig.series || []), {
+                                    dataSource: { type: 'tag', tagName: '', formula: '' },
+                                    label: `Series ${(dwConfig.series || []).length + 1}`,
+                                    color: '',
+                                  }];
+                                  updateDetailWidget(dw.id, { config: { series } });
+                                }}
+                                className="text-[9px] font-medium text-[var(--rb-accent)] hover:underline"
+                              >
+                                + Add series
+                              </button>
+                            </div>
+                            {(dwConfig.series || []).map((s, si) => (
+                              <div key={si} className="p-2 rounded border border-[var(--rb-border)] space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-medium text-[var(--rb-text-muted)]">Series {si + 1}</span>
+                                  <button
+                                    onClick={() => {
+                                      const series = (dwConfig.series || []).filter((_, j) => j !== si);
+                                      updateDetailWidget(dw.id, { config: { series } });
+                                    }}
+                                    className="p-0.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
+                                  >
+                                    <X size={10} />
+                                  </button>
+                                </div>
+                                <Field label="Label">
+                                  <TextInput
+                                    value={s.label || ''}
+                                    onChange={(v) => {
+                                      const series = [...(dwConfig.series || [])];
+                                      series[si] = { ...series[si], label: v };
+                                      updateDetailWidget(dw.id, { config: { series } });
+                                    }}
+                                    placeholder="Series label"
+                                  />
+                                </Field>
+                                <Field label="Tag name (use {ROW_KEY})">
+                                  <TextInput
+                                    value={s.dataSource?.tagName || s.tagName || ''}
+                                    onChange={(v) => {
+                                      const series = [...(dwConfig.series || [])];
+                                      series[si] = { ...series[si], dataSource: { ...(series[si].dataSource || {}), type: 'tag', tagName: v } };
+                                      updateDetailWidget(dw.id, { config: { series } });
+                                    }}
+                                    placeholder="{ROW_KEY}_effective_power"
+                                  />
+                                </Field>
+                              </div>
+                            ))}
+                          </>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <Field label="Unit">
+                            <TextInput
+                              value={dwConfig.unit || ''}
+                              onChange={(v) => updateDetailWidget(dw.id, { config: { unit: v } })}
+                              placeholder="kWh"
+                            />
+                          </Field>
+                          <Field label="Decimals">
+                            <TextInput
+                              type="number"
+                              value={dwConfig.decimals ?? 1}
+                              onChange={(v) => updateDetailWidget(dw.id, { config: { decimals: v } })}
+                            />
+                          </Field>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="relative mt-2">
+              <button
+                onClick={() => setShowAddMenu(!showAddMenu)}
+                className="inline-flex items-center gap-1.5 text-[9px] font-medium text-[var(--rb-accent)] hover:underline"
+              >
+                <Plus size={12} />
+                Add detail widget
+              </button>
+              {showAddMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)} />
+                  <div className="absolute z-50 mt-1 left-0 w-48 rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] shadow-xl overflow-hidden">
+                    {DRILLDOWN_WIDGET_TYPES.map((cat) => (
+                      <button
+                        key={cat.type}
+                        type="button"
+                        onClick={() => addDetailWidget(cat)}
+                        className="w-full text-left px-3 py-2 text-[12px] hover:bg-[var(--rb-accent-subtle)] transition-colors text-[var(--rb-text)]"
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </Section>
+  );
+}
+
 const HAS_DATA_SOURCE = new Set(['kpi', 'gauge', 'stat', 'silo', 'status', 'sparkline', 'progress', 'hopper']);
 const HAS_THRESHOLDS = new Set(['kpi', 'gauge', 'stat', 'table', 'silo', 'status', 'progress', 'hopper']);
 const HAS_SERIES = new Set(['chart', 'barchart', 'piechart']);
@@ -1414,6 +1695,9 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
               )}
               {HAS_TABLE_COLUMNS.has(widget.type) && (
                 <TableColumnsSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
+              )}
+              {HAS_TABLE_COLUMNS.has(widget.type) && (
+                <DrillDownSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
               )}
               {!HAS_DATA_SOURCE.has(widget.type) && !HAS_SERIES.has(widget.type) && !HAS_TABLE_COLUMNS.has(widget.type) && (
                 <div className="px-5 py-6 text-[9px] text-[var(--rb-text-muted)]">

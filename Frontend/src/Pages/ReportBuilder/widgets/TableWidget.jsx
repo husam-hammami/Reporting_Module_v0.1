@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, X, Settings2, GripVertical } from 'lucide-react';
+import { Plus, Trash2, X, Settings2, GripVertical, ChevronDown } from 'lucide-react';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import FormulaEditor from '../formulas/FormulaEditor';
+import WidgetRenderer from './WidgetRenderer';
 
 import { getCachedMappings, refreshMappingsCache } from '../../../utils/mappingsCache';
 
@@ -161,6 +162,15 @@ function defaultStaticCellConfig() {
   };
 }
 
+/* ── Drill-down: rewrite {ROW_KEY} placeholders in a widget config ── */
+
+function rewriteTagsForRow(widgetConfig, rowKey, separator = '_') {
+  if (!widgetConfig || !rowKey) return widgetConfig;
+  const json = JSON.stringify(widgetConfig);
+  const resolved = json.replace(/\{ROW_KEY\}/g, rowKey);
+  try { return JSON.parse(resolved); } catch { return widgetConfig; }
+}
+
 /* ── Tag select (simple dropdown for inline editing) ───────────── */
 
 function TagSelect({ tags, value, onChange }) {
@@ -247,7 +257,7 @@ function tableBodyMinHeight(layoutH, layoutRowHeight) {
   return Math.max(60, total - reserved);
 }
 
-export default function TableWidget({ config, tagValues, isPreview, isSelected, onUpdate, widgetId, tags, layoutH, layoutRowHeight, isReportBuilderWorkspace, savedFormulas = [] }) {
+export default function TableWidget({ config, tagValues, isPreview, isSelected, onUpdate, widgetId, tags, layoutH, layoutRowHeight, isReportBuilderWorkspace, savedFormulas = [], tagHistory }) {
   const safeConfig = config || {};
   const columns = Array.isArray(safeConfig.tableColumns) ? safeConfig.tableColumns : [];
   const summaryRows = Array.isArray(safeConfig.summaryRows) ? safeConfig.summaryRows : [];
@@ -286,12 +296,21 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const fitInContainer = false;
   const tableBodyMin = canEdit ? tableBodyMinHeight(layoutH, layoutRowHeight) : undefined;
 
+  /* ── Drill-down config ── */
+  const drillDown = safeConfig.drillDown || {};
+  const drillDownEnabled = !!drillDown.enabled;
+  const drillDownKeyCol = drillDown.keyColumn ?? 0;
+  const drillDownSep = drillDown.prefixSeparator ?? '_';
+  const drillDownWidgets = Array.isArray(drillDown.detailWidgets) ? drillDown.detailWidgets : [];
+  const drillDownGridCols = drillDown.detailGridCols || 2;
+
   /* ── Editing state ── */
   const [editingCol, setEditingCol] = useState(null);
   const [draft, setDraft] = useState(null);
   const [editingStaticCell, setEditingStaticCell] = useState(null);
   const [draftStaticCell, setDraftStaticCell] = useState(null);
   const [showTotalsOptions, setShowTotalsOptions] = useState(false);
+  const [activeRowKey, setActiveRowKey] = useState(null);
 
   const openEditor = useCallback((mode, index, colDef) => {
     setEditingCol({ mode, index });
@@ -436,6 +455,29 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
     });
     return map;
   }, [sectionHeaders]);
+
+  /* ── Drill-down row key resolver ── */
+  const getRowKeyValue = useCallback((rowType, rowIndex) => {
+    if (!drillDownEnabled) return null;
+    if (rowType === 'live') {
+      const col = columns[drillDownKeyCol];
+      if (!col) return null;
+      const val = resolveColumnValue(col, tagValues);
+      return val != null ? String(val) : null;
+    }
+    if (rowType === 'static') {
+      const cell = staticDataRows[rowIndex]?.[drillDownKeyCol];
+      if (!cell) return null;
+      const val = resolveColumnValue(cell, tagValues);
+      return val != null ? String(val) : null;
+    }
+    return null;
+  }, [drillDownEnabled, columns, drillDownKeyCol, staticDataRows, tagValues]);
+
+  const handleRowClick = useCallback((rowKey) => {
+    if (!drillDownEnabled || !rowKey) return;
+    setActiveRowKey((prev) => (prev === rowKey ? null : rowKey));
+  }, [drillDownEnabled]);
 
   /* ── Compute one row of live values ── */
   const rowValues = useMemo(() => {
@@ -634,10 +676,11 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
             {renderSectionHeaderRows(0)}
             {/* ── Live data row ── */}
             <tr
-              className={`rb-table-body-row ${striped ? 'rb-row-striped' : ''}`}
+              className={`rb-table-body-row ${striped ? 'rb-row-striped' : ''} ${drillDownEnabled ? 'rb-table-row-clickable' : ''} ${activeRowKey && activeRowKey === getRowKeyValue('live') ? 'rb-table-row-active' : ''}`}
               style={{
                 ...(rowBg ? { backgroundColor: rowBg } : {}),
               }}
+              onClick={drillDownEnabled ? () => handleRowClick(getRowKeyValue('live')) : undefined}
             >
               {columns.map((col, ci) => {
                 const rawValue = rowValues[ci];
@@ -698,12 +741,13 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                 <React.Fragment key={`static-group-${ri}`}>
                   {renderSectionHeaderRows(rowIndex)}
                   <tr
-                    className={`rb-table-body-row ${isStriped ? 'rb-row-striped' : ''}`}
+                    className={`rb-table-body-row ${isStriped ? 'rb-row-striped' : ''} ${drillDownEnabled ? 'rb-table-row-clickable' : ''} ${activeRowKey && activeRowKey === getRowKeyValue('static', ri) ? 'rb-table-row-active' : ''}`}
                     style={{
                       ...(isStriped && stripedRowBg ? { backgroundColor: stripedRowBg } : {}),
                       ...(!isStriped && rowBg ? { backgroundColor: rowBg } : {}),
                       ...(borderColor ? { borderColor } : {}),
                     }}
+                    onClick={drillDownEnabled ? () => handleRowClick(getRowKeyValue('static', ri)) : undefined}
                   >
                     {columns.map((col, ci) => {
                       const cellConfig = rowCells[ci];
@@ -882,6 +926,62 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
           </tbody>
         </table>
       </div>}
+
+      {/* ── Drill-down detail panel ── */}
+      {drillDownEnabled && activeRowKey && drillDownWidgets.length > 0 && (
+        <div className="rb-drilldown-panel mt-2">
+          <div className="rb-drilldown-header">
+            <span className="flex items-center gap-2">
+              <ChevronDown size={14} className="text-[var(--rb-accent)]" />
+              <span className="text-[12px] font-bold text-[var(--rb-text)]">Details: {activeRowKey}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setActiveRowKey(null)}
+              className="p-1 rounded text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] transition-colors"
+              title="Close detail panel"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div className="rb-drilldown-grid" style={{ gridTemplateColumns: `repeat(${drillDownGridCols}, 1fr)` }}>
+            {drillDownWidgets.map((dw) => {
+              const rewrittenConfig = rewriteTagsForRow(dw.config, activeRowKey, drillDownSep);
+              const rewrittenWidget = { ...dw, config: rewrittenConfig };
+              return (
+                <div
+                  key={dw.id}
+                  className="rb-drilldown-widget-cell"
+                  style={{ minHeight: `${(dw.h || 2) * 80}px` }}
+                >
+                  <WidgetRenderer
+                    widget={rewrittenWidget}
+                    tagValues={tagValues}
+                    isPreview={isPreview}
+                    tags={tags}
+                    tagHistory={tagHistory}
+                    savedFormulas={savedFormulas}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {drillDownEnabled && activeRowKey && drillDownWidgets.length === 0 && canEdit && (
+        <div className="rb-drilldown-panel mt-2">
+          <div className="rb-drilldown-header">
+            <span className="flex items-center gap-2">
+              <ChevronDown size={14} className="text-[var(--rb-accent)]" />
+              <span className="text-[12px] font-bold text-[var(--rb-text)]">Details: {activeRowKey}</span>
+            </span>
+            <button type="button" onClick={() => setActiveRowKey(null)} className="p-1 rounded text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] transition-colors"><X size={14} /></button>
+          </div>
+          <p className="text-[11px] text-[var(--rb-text-muted)] text-center py-6">
+            No detail widgets configured. Open Properties panel &rarr; Drill-Down section to add widgets.
+          </p>
+        </div>
+      )}
 
       {/* ── Column editor panel (slides in from right) ── */}
       {editingCol && draft && (

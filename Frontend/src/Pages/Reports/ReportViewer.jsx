@@ -8,6 +8,7 @@ import { useTagHistory } from '../../Hooks/useTagHistory';
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '../ReportBuilder/widgets/WidgetRenderer';
+import TabSelector from '../../Components/ui/TabSelector';
 import ReportThumbnail from '../ReportBuilder/ReportThumbnail';
 import ReportListingPage from '../../Components/Reports/ReportListingPage';
 import PaginatedReportView from './PaginatedReportViewer';
@@ -127,7 +128,7 @@ function ReportList({ onSelect, filterType }) {
    ══════════════════════════════════════════════════════════════════ */
 
 function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) {
-  const { template, widgets, loading } = useReportCanvas(reportId);
+  const { template, widgets, loading, dashboardTabs, activeTabId, allTabsWidgets, switchDashboardTab } = useReportCanvas(reportId);
   const { tags } = useAvailableTags();
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
   const { socket } = useSocket();
@@ -178,8 +179,8 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     e.preventDefault();
   }, []);
 
-  const usedTagNames = useMemo(() => collectWidgetTagNames(widgets), [widgets]);
-  const tagAggregations = useMemo(() => collectWidgetTagAggregations(widgets), [widgets]);
+  const usedTagNames = useMemo(() => collectWidgetTagNames(allTabsWidgets || widgets), [allTabsWidgets, widgets]);
+  const tagAggregations = useMemo(() => collectWidgetTagAggregations(allTabsWidgets || widgets), [allTabsWidgets, widgets]);
 
   React.useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -565,6 +566,18 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         selectedShift={timePeriod.selectedShift}
         onShiftChange={tpActions.setShift}
       />
+
+      {/* ── Dashboard tabs (viewer) ── */}
+      {dashboardTabs?.enabled && Array.isArray(dashboardTabs.tabs) && dashboardTabs.tabs.length > 1 && (
+        <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0 print:hidden border-b border-[#e3e9f0] dark:border-gray-700 bg-white dark:bg-[#0d1117]">
+          <TabSelector
+            tabs={dashboardTabs.tabs.map(t => ({ id: t.id, label: t.label }))}
+            activeId={activeTabId}
+            onChange={switchDashboardTab}
+            size="sm"
+          />
+        </div>
+      )}
 
       {/* ── Status indicator — single persistent div, bg cross-fades via transition-colors ── */}
       {(() => {

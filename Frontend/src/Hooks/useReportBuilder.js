@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { loadAndMigrateConfig, EMPTY_LAYOUT_CONFIG, CURRENT_SCHEMA_VERSION } from '../Pages/ReportBuilder/state/templateSchema';
 import { buildGrainSilosTemplate } from '../Pages/ReportBuilder/seed/grainSilosTemplate';
 import { reportBuilderApi } from '../API/reportBuilderApi';
@@ -85,6 +85,57 @@ export function collectWidgetTagNames(widgets) {
     }
     if (c.capacityTag) names.add(c.capacityTag);
     if (c.tonsTag) names.add(c.tonsTag);
+
+    // Drill-down detail widgets: expand {ROW_KEY} templates for every known row key
+    const dd = c.drillDown;
+    if (dd?.enabled && Array.isArray(dd.detailWidgets) && dd.detailWidgets.length > 0) {
+      const keyCol = dd.keyColumn ?? 0;
+      const rowKeys = new Set();
+      // Collect row key values from the live row key column and static rows
+      const liveCol = Array.isArray(c.tableColumns) ? c.tableColumns[keyCol] : null;
+      if (liveCol?.sourceType === 'static' && liveCol.staticValue) rowKeys.add(liveCol.staticValue);
+      if (liveCol?.tagName) rowKeys.add(liveCol.tagName);
+      if (Array.isArray(c.staticDataRows)) {
+        c.staticDataRows.forEach((row) => {
+          if (!Array.isArray(row)) return;
+          const cell = row[keyCol];
+          if (cell && typeof cell === 'object') {
+            if (cell.sourceType === 'static' && cell.staticValue) rowKeys.add(String(cell.staticValue));
+            else if (cell.tagName) rowKeys.add(cell.tagName);
+          } else if (cell != null) {
+            rowKeys.add(String(cell));
+          }
+        });
+      }
+      // For each detail widget, collect tag names with {ROW_KEY} expanded
+      dd.detailWidgets.forEach((dw) => {
+        const dc = dw.config || {};
+        const collectFromConfig = (cfg) => {
+          const json = JSON.stringify(cfg);
+          if (!json.includes('{ROW_KEY}')) {
+            // No placeholder — collect tags directly
+            if (cfg.dataSource?.tagName) names.add(cfg.dataSource.tagName);
+            if (Array.isArray(cfg.series)) cfg.series.forEach((s) => {
+              const tag = s?.dataSource?.tagName ?? s?.tagName;
+              if (tag) names.add(tag);
+            });
+            return;
+          }
+          rowKeys.forEach((rk) => {
+            const resolved = json.replace(/\{ROW_KEY\}/g, rk);
+            try {
+              const rc = JSON.parse(resolved);
+              if (rc.dataSource?.tagName) names.add(rc.dataSource.tagName);
+              if (Array.isArray(rc.series)) rc.series.forEach((s) => {
+                const tag = s?.dataSource?.tagName ?? s?.tagName;
+                if (tag) names.add(tag);
+              });
+            } catch { /* skip malformed */ }
+          });
+        };
+        collectFromConfig(dc);
+      });
+    }
   });
   return [...names];
 }
@@ -166,6 +217,46 @@ export function collectWidgetTagAggregations(widgets) {
     // Silo capacity/tons tags
     if (c.capacityTag) setAgg(c.capacityTag, 'last');
     if (c.tonsTag) setAgg(c.tonsTag, 'last');
+
+    // Drill-down detail widgets: expand {ROW_KEY} and assign aggregations
+    const dd = c.drillDown;
+    if (dd?.enabled && Array.isArray(dd.detailWidgets) && dd.detailWidgets.length > 0) {
+      const keyCol = dd.keyColumn ?? 0;
+      const rowKeys = new Set();
+      const liveCol = Array.isArray(c.tableColumns) ? c.tableColumns[keyCol] : null;
+      if (liveCol?.sourceType === 'static' && liveCol.staticValue) rowKeys.add(liveCol.staticValue);
+      if (liveCol?.tagName) rowKeys.add(liveCol.tagName);
+      if (Array.isArray(c.staticDataRows)) {
+        c.staticDataRows.forEach((row) => {
+          if (!Array.isArray(row)) return;
+          const cell = row[keyCol];
+          if (cell && typeof cell === 'object') {
+            if (cell.sourceType === 'static' && cell.staticValue) rowKeys.add(String(cell.staticValue));
+            else if (cell.tagName) rowKeys.add(cell.tagName);
+          } else if (cell != null) rowKeys.add(String(cell));
+        });
+      }
+      dd.detailWidgets.forEach((dw) => {
+        const dc = dw.config || {};
+        const json = JSON.stringify(dc);
+        const expand = (rk) => {
+          try {
+            const rc = JSON.parse(json.replace(/\{ROW_KEY\}/g, rk));
+            const dds = rc.dataSource;
+            if (dds?.tagName) setAgg(dds.tagName, dds.aggregation || 'last');
+            if (Array.isArray(rc.series)) rc.series.forEach((s) => {
+              const tag = s?.dataSource?.tagName ?? s?.tagName;
+              if (tag) setAgg(tag, 'last');
+            });
+          } catch { /* skip */ }
+        };
+        if (json.includes('{ROW_KEY}')) {
+          rowKeys.forEach(expand);
+        } else {
+          expand(''); // no placeholder, collect as-is
+        }
+      });
+    }
   });
 
   return tagAgg;
@@ -337,6 +428,13 @@ export function useReportCanvas(templateId) {
   const layoutDebounceRef = useRef({ timer: null, pendingPrev: null });
   const lastUndoRedoAt = useRef(0);
 
+  /* ── Dashboard Tabs state ── */
+  const [dashboardTabs, setDashboardTabs] = useState(null);
+  const [activeTabId, setActiveTabId] = useState(null);
+  const tabsRef = useRef(null);
+  useEffect(() => { tabsRef.current = dashboardTabs; }, [dashboardTabs]);
+
+  const tabsEnabled = !!dashboardTabs?.enabled;
 
   // Keep templateRef always up-to-date so performSave never uses stale closures
   useEffect(() => { templateRef.current = template; }, [template]);
@@ -373,7 +471,16 @@ export function useReportCanvas(templateId) {
           const found = mapApiTemplate(data);
           const { config, migrated: wasMigrated, repaired } = loadAndMigrateConfig(found.layout_config || {});
           setTemplate(found);
-          setWidgets(config.widgets || []);
+          const dt = config.dashboardTabs || null;
+          setDashboardTabs(dt);
+          if (dt?.enabled && Array.isArray(dt.tabs) && dt.tabs.length > 0) {
+            const firstTab = dt.tabs.find(t => t.id === dt.activeTabId) || dt.tabs[0];
+            setActiveTabId(firstTab.id);
+            setWidgets(firstTab.widgets || []);
+          } else {
+            setActiveTabId(null);
+            setWidgets(config.widgets || []);
+          }
           setParameters(config.parameters || []);
           setComputedSignals(config.computedSignals || []);
           setMigrated(wasMigrated || repaired);
@@ -402,7 +509,16 @@ export function useReportCanvas(templateId) {
       if (!cancelled && found) {
         const { config, migrated: wasMigrated, repaired } = loadAndMigrateConfig(found.layout_config);
         setTemplate(found);
-        setWidgets(config.widgets || []);
+        const dt = config.dashboardTabs || null;
+        setDashboardTabs(dt);
+        if (dt?.enabled && Array.isArray(dt.tabs) && dt.tabs.length > 0) {
+          const firstTab = dt.tabs.find(t => t.id === dt.activeTabId) || dt.tabs[0];
+          setActiveTabId(firstTab.id);
+          setWidgets(firstTab.widgets || []);
+        } else {
+          setActiveTabId(null);
+          setWidgets(config.widgets || []);
+        }
         setParameters(config.parameters || []);
         setComputedSignals(config.computedSignals || []);
         setMigrated(wasMigrated || repaired);
@@ -444,18 +560,30 @@ export function useReportCanvas(templateId) {
 
   const performSave = useCallback(async (w, p, cs) => {
     if (!templateId) return;
-    // Use ref to always get the latest template (avoids stale closure issues)
     const currentTemplate = templateRef.current;
-    // Preserve all existing layout_config keys (reportType, paginatedSections, pageMode, etc.)
-    // and merge in the updated widgets/parameters/signals/grid
     const existingLC = currentTemplate?.layout_config || {};
+
+    // When tabs are enabled, persist current widgets into the active tab
+    const currentTabs = tabsRef.current;
+    let savedTabs = currentTabs;
+    if (currentTabs?.enabled && activeTabId && Array.isArray(currentTabs.tabs)) {
+      savedTabs = {
+        ...currentTabs,
+        activeTabId,
+        tabs: currentTabs.tabs.map((tab) =>
+          tab.id === activeTabId ? { ...tab, widgets: w } : tab
+        ),
+      };
+    }
+
     const layout_config = {
       ...existingLC,
       schemaVersion: CURRENT_SCHEMA_VERSION,
-      widgets: w,
+      widgets: savedTabs?.enabled ? [] : w,
       parameters: p,
       computedSignals: cs,
       grid: existingLC.grid || { cols: 12, rowHeight: 40 },
+      dashboardTabs: savedTabs || null,
     };
 
     const payload = { layout_config };
@@ -674,6 +802,124 @@ export function useReportCanvas(templateId) {
     setDirty(true);
   }, []);
 
+  /* ── Dashboard Tab operations ── */
+
+  const _tabUid = () => `tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+  const enableDashboardTabs = useCallback(() => {
+    const tabId = _tabUid();
+    const dt = {
+      enabled: true,
+      activeTabId: tabId,
+      tabs: [{ id: tabId, label: 'Tab 1', widgets: [...widgets] }],
+    };
+    setDashboardTabs(dt);
+    setActiveTabId(tabId);
+    setDirty(true);
+  }, [widgets]);
+
+  const disableDashboardTabs = useCallback(() => {
+    const dt = tabsRef.current;
+    const activeW = dt?.tabs?.find(t => t.id === activeTabId)?.widgets || widgets;
+    setDashboardTabs(null);
+    setActiveTabId(null);
+    setWidgets(activeW);
+    setDirty(true);
+  }, [activeTabId, widgets]);
+
+  const addDashboardTab = useCallback((label) => {
+    const dt = tabsRef.current;
+    if (!dt?.enabled) return;
+    pushToHistory(widgets);
+    const newId = _tabUid();
+    const updatedTabs = {
+      ...dt,
+      tabs: [...dt.tabs, { id: newId, label: label || `Tab ${dt.tabs.length + 1}`, widgets: [] }],
+    };
+    // Save current widgets to current tab before switching
+    updatedTabs.tabs = updatedTabs.tabs.map(t =>
+      t.id === activeTabId ? { ...t, widgets: [...widgets] } : t
+    );
+    setDashboardTabs(updatedTabs);
+    setActiveTabId(newId);
+    setWidgets([]);
+    pastRef.current = [];
+    futureRef.current = [];
+    setHistoryState({ pastCount: 0, futureCount: 0 });
+    setDirty(true);
+    return newId;
+  }, [widgets, activeTabId, pushToHistory]);
+
+  const removeDashboardTab = useCallback((tabId) => {
+    const dt = tabsRef.current;
+    if (!dt?.enabled || dt.tabs.length <= 1) return;
+    const remaining = dt.tabs.filter(t => t.id !== tabId);
+    if (remaining.length === 0) return;
+    const switchTo = tabId === activeTabId ? remaining[0] : remaining.find(t => t.id === activeTabId) || remaining[0];
+    const updatedTabs = {
+      ...dt,
+      tabs: remaining.map(t =>
+        t.id === activeTabId && tabId !== activeTabId ? { ...t, widgets: [...widgets] } : t
+      ),
+      activeTabId: switchTo.id,
+    };
+    setDashboardTabs(updatedTabs);
+    if (tabId === activeTabId) {
+      setActiveTabId(switchTo.id);
+      setWidgets(switchTo.widgets || []);
+      pastRef.current = [];
+      futureRef.current = [];
+      setHistoryState({ pastCount: 0, futureCount: 0 });
+    }
+    setDirty(true);
+  }, [activeTabId, widgets]);
+
+  const renameDashboardTab = useCallback((tabId, newLabel) => {
+    const dt = tabsRef.current;
+    if (!dt?.enabled) return;
+    setDashboardTabs({
+      ...dt,
+      tabs: dt.tabs.map(t => t.id === tabId ? { ...t, label: newLabel } : t),
+    });
+    setDirty(true);
+  }, []);
+
+  const switchDashboardTab = useCallback((newTabId) => {
+    const dt = tabsRef.current;
+    if (!dt?.enabled || newTabId === activeTabId) return;
+    const targetTab = dt.tabs.find(t => t.id === newTabId);
+    if (!targetTab) return;
+    // Save current widgets to current tab
+    const updatedTabs = {
+      ...dt,
+      activeTabId: newTabId,
+      tabs: dt.tabs.map(t =>
+        t.id === activeTabId ? { ...t, widgets: [...widgets] } : t
+      ),
+    };
+    setDashboardTabs(updatedTabs);
+    setActiveTabId(newTabId);
+    setWidgets(targetTab.widgets || []);
+    pastRef.current = [];
+    futureRef.current = [];
+    setHistoryState({ pastCount: 0, futureCount: 0 });
+  }, [activeTabId, widgets]);
+
+  // Collect all widgets across all tabs (for tag subscription)
+  const allTabsWidgets = useMemo(() => {
+    const dt = dashboardTabs;
+    if (!dt?.enabled || !Array.isArray(dt.tabs)) return widgets;
+    const all = [];
+    dt.tabs.forEach(tab => {
+      if (tab.id === activeTabId) {
+        all.push(...widgets);
+      } else {
+        all.push(...(tab.widgets || []));
+      }
+    });
+    return all;
+  }, [dashboardTabs, activeTabId, widgets]);
+
   return {
     template, widgets, parameters, computedSignals,
     loading, saving, dirty, migrated,
@@ -683,6 +929,9 @@ export function useReportCanvas(templateId) {
     addComputedSignal,
     saveLayout, updateMeta, setDirty,
     undo, redo, canUndo, canRedo,
+    dashboardTabs, activeTabId, allTabsWidgets,
+    enableDashboardTabs, disableDashboardTabs,
+    addDashboardTab, removeDashboardTab, renameDashboardTab, switchDashboardTab,
   };
 }
 
