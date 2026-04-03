@@ -605,7 +605,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         className="report-builder rb-report-scroll-container flex-1 min-h-0 overflow-y-auto overflow-x-auto overscroll-behavior-auto"
         style={{
           WebkitOverflowScrolling: 'touch',
-          background: pageMode === 'a4' ? 'linear-gradient(180deg, #0d1520 0%, #111827 100%)' : 'var(--rb-canvas)',
+          background: 'var(--rb-canvas)',
           opacity: historicalLoading ? 0.45 : 1,
           transition: 'opacity 250ms ease',
           pointerEvents: historicalLoading ? 'none' : undefined,
@@ -706,16 +706,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             <div
               ref={containerRef}
               className={`report-builder rb-canvas-perspective rb-layout-readonly ${dashboardHeader ? 'pt-0 pb-3' : 'pt-3 pb-6'} px-1`}
-              style={{
-                minHeight: '100%', width: '100%', boxSizing: 'border-box',
-                ...(pageMode === 'a4' ? {
-                  maxWidth: 1220, margin: '0 auto',
-                  background: 'var(--rb-card-bg, #ffffff)',
-                  borderRadius: 8,
-                  boxShadow: '0 2px 20px rgba(0,0,0,0.15)',
-                  padding: '12px 8px',
-                } : {}),
-              }}
+              style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}
             >
               <GridLayout
                 className="layout"
