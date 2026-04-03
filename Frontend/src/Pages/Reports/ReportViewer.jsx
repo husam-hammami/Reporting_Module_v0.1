@@ -14,6 +14,8 @@ import ReportListingPage from '../../Components/Reports/ReportListingPage';
 import PaginatedReportView from './PaginatedReportViewer';
 import TimePeriodTabs, { VIEWER_TABS } from './TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
+import AiInsightsPanel, { AiDrawer } from './AiInsightsPanel';
+import ActionsPanel from './ActionsPanel';
 import '../ReportBuilder/reportBuilderTheme.css';
 import axios from '../../API/axios';
 
@@ -599,6 +601,9 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         </div>
       )}
 
+      {/* AI drawer for full-mode dashboards */}
+      {pageMode !== 'a4' && <AiDrawer tagValues={tagValues} />}
+
       {/* ── Report content: full width; scrollable with mouse wheel ── */}
       <div
         ref={scrollContainerRef}
@@ -612,7 +617,18 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         }}
         onWheelCapture={handleWheelCapture}
       >
-        <div id="report-print-section" className="w-full min-w-0 mx-auto max-w-full">
+        {/* A4 mode: flex layout with side panels */}
+        {pageMode === 'a4' && (
+          <div className="hidden xl:flex" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+            <div style={{ width: 200, flexShrink: 0, position: 'fixed', left: 0, top: 100, bottom: 0, background: 'linear-gradient(180deg, #0a1020, #0f172a)', borderRight: '1px solid rgba(34,211,238,0.08)', overflow: 'auto' }}>
+              <AiInsightsPanel tagValues={tagValues} />
+            </div>
+            <div style={{ width: 200, flexShrink: 0, position: 'fixed', right: 0, top: 100, bottom: 0, background: 'linear-gradient(180deg, #0a1020, #0f172a)', borderLeft: '1px solid rgba(34,211,238,0.08)', overflow: 'auto' }}>
+              <ActionsPanel reportId={reportId} onExportPDF={handleExportPDF} onExportPNG={handleExportPNG} onToggleFullscreen={toggleFullscreen} />
+            </div>
+          </div>
+        )}
+        <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'xl:px-[200px]' : ''} max-w-full print:px-0`}>
           {/* Dashboard header bar is rendered in the unified chrome toolbar above */}
 
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
