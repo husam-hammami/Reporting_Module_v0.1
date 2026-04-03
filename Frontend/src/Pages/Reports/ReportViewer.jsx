@@ -169,10 +169,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     return () => ro.disconnect();
   }, [Array.isArray(widgets) ? widgets.length : 0]);
 
-  // Cap grid width to prevent widgets stretching too wide vs how they look in the builder
-  const maxGridWidth = pageMode === 'a4' ? 1200 : 1400;
-  const rawWidth = measuredGridWidth > 0 ? measuredGridWidth : (gridWidth || 1200);
-  const effectiveGridWidth = Math.min(rawWidth, maxGridWidth);
+  const effectiveGridWidth = measuredGridWidth > 0 ? measuredGridWidth : (gridWidth || 1200);
 
   const handleWheelCapture = useCallback((e) => {
     const el = scrollContainerRef.current;
@@ -709,7 +706,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             <div
               ref={containerRef}
               className={`report-builder rb-canvas-perspective rb-layout-readonly ${dashboardHeader ? 'pt-0 pb-3' : 'pt-3 pb-6'} px-1`}
-              style={{ minHeight: '100%', maxWidth: pageMode === 'a4' ? 1220 : 1420, margin: '0 auto', boxSizing: 'border-box' }}
+              style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box', ...(pageMode === 'a4' ? { maxWidth: 1220, margin: '0 auto' } : {}) }}
             >
               <GridLayout
                 className="layout"

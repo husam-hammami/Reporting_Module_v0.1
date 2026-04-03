@@ -333,7 +333,7 @@ export default function ReportBuilderPreview() {
         <motion.div
           id="report-print-section"
           className="w-full mx-auto"
-          style={{ maxWidth: pageMode === 'a4' ? 1220 : 1420 }}
+          style={pageMode === 'a4' ? { maxWidth: 1220 } : {}}
           {...pageEntrance}
         >
           {/* Unified dashboard header bar */}
