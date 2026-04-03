@@ -169,7 +169,10 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     return () => ro.disconnect();
   }, [Array.isArray(widgets) ? widgets.length : 0]);
 
-  const effectiveGridWidth = measuredGridWidth > 0 ? measuredGridWidth : (gridWidth || 1200);
+  // Cap grid width to prevent widgets stretching too wide vs how they look in the builder
+  const maxGridWidth = pageMode === 'a4' ? 1200 : 1400;
+  const rawWidth = measuredGridWidth > 0 ? measuredGridWidth : (gridWidth || 1200);
+  const effectiveGridWidth = Math.min(rawWidth, maxGridWidth);
 
   const handleWheelCapture = useCallback((e) => {
     const el = scrollContainerRef.current;
@@ -612,7 +615,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         }}
         onWheelCapture={handleWheelCapture}
       >
-        <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[min(95vw,1400px)]' : 'max-w-[min(98vw,1800px)]'}`}>
+        <div id="report-print-section" className="w-full min-w-0 mx-auto max-w-full">
           {/* Dashboard header bar is rendered in the unified chrome toolbar above */}
 
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
@@ -705,8 +708,8 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             /* ══ Grid View — original react-grid-layout rendering ══ */
             <div
               ref={containerRef}
-              className="report-builder rb-canvas-perspective rb-layout-readonly pt-0 pb-3 px-1"
-              style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}
+              className={`report-builder rb-canvas-perspective rb-layout-readonly ${dashboardHeader ? 'pt-0 pb-3' : 'pt-3 pb-6'} px-1`}
+              style={{ minHeight: '100%', maxWidth: pageMode === 'a4' ? 1220 : 1420, margin: '0 auto', boxSizing: 'border-box' }}
             >
               <GridLayout
                 className="layout"
