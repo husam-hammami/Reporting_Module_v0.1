@@ -393,7 +393,7 @@ export default function ReportBuilderPreview() {
                     : CARDLESS_WIDGET_TYPES.has(wt)
                       ? widget.config?.showCard === true
                       : widget.config?.showCard !== false;
-                  const csMap = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'};
+                  const csMap = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top','holographic':'rb-card-holographic'};
                   const cardClass = isInvisible
                     ? 'overflow-visible flex flex-col min-h-0'
                     : showCard

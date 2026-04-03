@@ -47,6 +47,7 @@ export default function ReportBuilderCanvas() {
     addDashboardTab, removeDashboardTab, renameDashboardTab, switchDashboardTab, duplicateDashboardTab,
   } = useReportCanvas(id);
 
+  const [dashboardLocked, setDashboardLocked] = useState(false);
   const { tags } = useAvailableTags();
   const { groups } = useAvailableGroups();
   const { formulas: savedFormulas } = useAvailableFormulas();
@@ -505,6 +506,20 @@ export default function ReportBuilderCanvas() {
 
           <div className="w-px h-5 bg-[#1e293b] mx-1" />
 
+          <Tooltip title={dashboardLocked ? "Unlock dashboard for editing" : "Lock dashboard to prevent changes"} placement="bottom" arrow disableInteractive>
+            <button
+              onClick={() => setDashboardLocked(!dashboardLocked)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all border ${
+                dashboardLocked
+                  ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
+                  : 'bg-[#1a2233] text-[#556677] border-[#1e293b] hover:text-[#8899ab] hover:border-[#2a3a4e]'
+              }`}
+            >
+              {dashboardLocked ? <Lock size={13} /> : <Unlock size={13} />}
+              <span className="hidden sm:inline">{dashboardLocked ? 'Locked' : ''}</span>
+            </button>
+          </Tooltip>
+
           <Tooltip title={autoSave ? "Auto-save is ON — changes save automatically" : "Auto-save is OFF — use manual Save"} placement="bottom" arrow disableInteractive>
             <button
               onClick={toggleAutoSave}
@@ -749,8 +764,8 @@ export default function ReportBuilderCanvas() {
                     containerPadding={GRID_PADDING}
                     compactType={null}
                     allowOverlap={true}
-                    isDraggable={true}
-                    isResizable={true}
+                    isDraggable={!dashboardLocked}
+                    isResizable={!dashboardLocked}
                     resizeHandles={['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne']}
                     onLayoutChange={handleLayoutChange}
                     onDragStart={handleDragStart}
@@ -778,7 +793,7 @@ export default function ReportBuilderCanvas() {
                             isInvisible
                               ? ''
                               : showCard
-                                ? `rounded rb-widget-card ${({'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'})[widget.config?.cardStyle] || ''}`
+                                ? `rounded rb-widget-card ${({'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top','holographic':'rb-card-holographic'})[widget.config?.cardStyle] || ''}`
                                 : 'rounded border border-dashed border-[var(--rb-border)]/60'
                           } ${
                             isSelected

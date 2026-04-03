@@ -688,7 +688,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
 
                 // Non-table widgets: render inline at natural size
                 const minH = wt === 'chart' || wt === 'barchart' ? '300px' : wt === 'gauge' || wt === 'silo' ? '200px' : 'auto';
-                const csMap = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'};
+                const csMap = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top','holographic':'rb-card-holographic'};
                 const cardClass = isInvisible
                   ? ''
                   : showCard
@@ -733,7 +733,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                     : CARDLESS_WIDGET_TYPES.has(wt)
                       ? widget.config?.showCard === true
                       : widget.config?.showCard !== false;
-                  const csMap2 = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top'};
+                  const csMap2 = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top','holographic':'rb-card-holographic'};
                   const cardClass = isInvisible
                     ? 'overflow-visible flex flex-col min-h-0'
                     : showCard

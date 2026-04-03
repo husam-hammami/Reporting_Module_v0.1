@@ -426,6 +426,7 @@ export const CARD_STYLES = [
   { value: 'borderless', label: 'Borderless' },
   { value: 'glass', label: 'Glass' },
   { value: 'accent-top', label: 'Accent Top' },
+  { value: 'holographic', label: 'Holographic' },
 ];
 
 /* ── DataSource defaults ───────────────────────────────────────── */

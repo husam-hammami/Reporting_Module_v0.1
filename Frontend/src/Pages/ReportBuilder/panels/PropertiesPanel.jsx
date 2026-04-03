@@ -1808,6 +1808,7 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
                         <option value="borderless">Borderless</option>
                         <option value="glass">Glass</option>
                         <option value="accent-top">Accent Top</option>
+                        <option value="holographic">Holographic</option>
                       </select>
                     </div>
                   )}
