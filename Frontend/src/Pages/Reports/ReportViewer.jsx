@@ -612,7 +612,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         }}
         onWheelCapture={handleWheelCapture}
       >
-        <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}>
+        <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[min(95vw,1400px)]' : 'max-w-[min(98vw,1800px)]'}`}>
           {/* Dashboard header bar is rendered in the unified chrome toolbar above */}
 
           {!(Array.isArray(widgets) && widgets.length > 0) ? (

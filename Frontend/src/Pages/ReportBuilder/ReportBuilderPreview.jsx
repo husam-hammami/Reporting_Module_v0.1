@@ -332,7 +332,7 @@ export default function ReportBuilderPreview() {
       >
         <motion.div
           id="report-print-section"
-          className={`w-full mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}
+          className={`w-full mx-auto ${pageMode === 'a4' ? 'max-w-[min(95vw,1400px)]' : 'max-w-[min(98vw,1800px)]'}`}
           {...pageEntrance}
         >
           {/* Unified dashboard header bar */}
