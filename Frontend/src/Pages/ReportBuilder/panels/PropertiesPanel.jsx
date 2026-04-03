@@ -946,9 +946,18 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
                   <X size={14} />
                 </button>
               </div>
-              <Field label="Label">
-                <TextInput value={s.label} onChange={(v) => updateSeriesItem(i, { label: v })} placeholder="Series label" />
-              </Field>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Field label="Label">
+                    <TextInput value={s.label} onChange={(v) => updateSeriesItem(i, { label: v })} placeholder="Series label" />
+                  </Field>
+                </div>
+                <div className="w-16">
+                  <Field label="Color">
+                    <ColorInput value={s.color || ''} onChange={(v) => updateSeriesItem(i, { color: v })} />
+                  </Field>
+                </div>
+              </div>
               <Field label="Source type">
                 <SelectInput
                   value={s.dataSource?.type || 'tag'}

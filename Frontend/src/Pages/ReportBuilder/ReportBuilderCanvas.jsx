@@ -47,7 +47,11 @@ export default function ReportBuilderCanvas() {
     addDashboardTab, removeDashboardTab, renameDashboardTab, switchDashboardTab, duplicateDashboardTab,
   } = useReportCanvas(id);
 
-  const [dashboardLocked, setDashboardLocked] = useState(false);
+  const dashboardLocked = template?.layout_config?.locked === true;
+  const toggleDashboardLock = () => {
+    const lc = template?.layout_config || {};
+    updateMeta({ layout_config: { ...lc, locked: !dashboardLocked } });
+  };
   const { tags } = useAvailableTags();
   const { groups } = useAvailableGroups();
   const { formulas: savedFormulas } = useAvailableFormulas();
@@ -508,7 +512,7 @@ export default function ReportBuilderCanvas() {
 
           <Tooltip title={dashboardLocked ? "Unlock dashboard for editing" : "Lock dashboard to prevent changes"} placement="bottom" arrow disableInteractive>
             <button
-              onClick={() => setDashboardLocked(!dashboardLocked)}
+              onClick={toggleDashboardLock}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all border ${
                 dashboardLocked
                   ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
