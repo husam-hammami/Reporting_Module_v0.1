@@ -159,6 +159,10 @@ function defaultStaticCellConfig() {
     groupTags: [],
     mappingName: '',
     formula: '',
+    colSpan: 1,
+    cellBg: '',
+    cellColor: '',
+    fontWeight: '',
   };
 }
 
@@ -290,6 +294,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const borderColor = safeConfig.borderColor || '';
   const sectionHeaderBg = safeConfig.sectionHeaderBg || '';
   const sectionHeaderColor = safeConfig.sectionHeaderColor || '';
+  const sectionHeaderBorderWidth = safeConfig.sectionHeaderBorderWidth || '1';
 
   const canEdit = Boolean(isSelected && onUpdate && widgetId);
   /** Allow horizontal scroll everywhere so wide tables remain usable. */
@@ -305,6 +310,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const drillDownGridCols = drillDown.detailGridCols || 2;
 
   /* ── Editing state ── */
+  const [editingSectionIdx, setEditingSectionIdx] = useState(null);
   const [editingCol, setEditingCol] = useState(null);
   const [draft, setDraft] = useState(null);
   const [editingStaticCell, setEditingStaticCell] = useState(null);
@@ -328,6 +334,10 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
       width: 120,
       format: 'number',
       thresholds: [],
+      group: '',
+      cellBg: '',
+      cellColor: '',
+      fontWeight: '',
     });
   }, [columns.length]);
 
@@ -397,6 +407,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
     if (!onUpdate || !widgetId) return;
     const newHeaders = [...sectionHeaders, { label: label || 'Section', beforeRowIndex: beforeRowIndex ?? staticDataRows.length }];
     onUpdate(widgetId, { config: { ...safeConfig, sectionHeaders: newHeaders } });
+    setEditingSectionIdx(newHeaders.length - 1);
   }, [onUpdate, widgetId, sectionHeaders, safeConfig, staticDataRows.length]);
 
   const removeSectionHeader = useCallback((index) => {
@@ -455,6 +466,27 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
     });
     return map;
   }, [sectionHeaders]);
+
+  /* ── Column groups for multi-level headers ── */
+  const columnGroupInfo = useMemo(() => {
+    const hasGroups = columns.some(col => col.group);
+    if (!hasGroups) return null;
+    const groups = [];
+    let i = 0;
+    while (i < columns.length) {
+      const grp = columns[i].group;
+      if (grp) {
+        let span = 1;
+        while (i + span < columns.length && columns[i + span].group === grp) span++;
+        groups.push({ label: grp, startIndex: i, span });
+        i += span;
+      } else {
+        groups.push({ label: null, startIndex: i, span: 1 });
+        i++;
+      }
+    }
+    return groups;
+  }, [columns]);
 
   /* ── Drill-down row key resolver ── */
   const getRowKeyValue = useCallback((rowType, rowIndex) => {
@@ -547,11 +579,38 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
             ...(sectionHeaderBg ? { backgroundColor: sectionHeaderBg } : {}),
             ...(sectionHeaderColor ? { color: sectionHeaderColor } : {}),
             ...(borderColor ? { borderColor } : {}),
+            borderTopWidth: `${sectionHeaderBorderWidth}px`,
+            borderBottomWidth: `${sectionHeaderBorderWidth}px`,
           }}
         >
           <span className="flex items-center gap-2">
-            {sh.label}
-            {canEdit && (
+            {canEdit && editingSectionIdx === sh._idx ? (
+              <input
+                type="text"
+                autoFocus
+                defaultValue={sh.label}
+                className="bg-transparent border-b border-current outline-none font-bold text-inherit px-0 py-0"
+                style={{ fontSize: 'inherit', lineHeight: 'inherit', minWidth: '120px' }}
+                onBlur={(e) => {
+                  const val = e.target.value.trim();
+                  if (val && val !== sh.label) updateSectionHeader(sh._idx, { label: val });
+                  setEditingSectionIdx(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.target.blur(); }
+                  if (e.key === 'Escape') { setEditingSectionIdx(null); }
+                }}
+              />
+            ) : (
+              <span
+                className={canEdit ? 'cursor-pointer hover:opacity-70' : ''}
+                onDoubleClick={canEdit ? () => setEditingSectionIdx(sh._idx) : undefined}
+                title={canEdit ? 'Double-click to rename' : undefined}
+              >
+                {sh.label}
+              </span>
+            )}
+            {canEdit && editingSectionIdx !== sh._idx && (
               <button
                 type="button"
                 onClick={() => removeSectionHeader(sh._idx)}
@@ -629,48 +688,136 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
           }}
         >
           <thead>
-            <tr
-              className="rb-table-header-row"
-              style={{
-                ...(headerBg ? { backgroundColor: headerBg } : {}),
-                ...(headerColor ? { color: headerColor } : {}),
-              }}
-            >
-              {columns.map((col, ci) => {
-                const colMinWidth = col.width || 100;
-                return (
-                <th
-                  key={ci}
-                  onDoubleClick={canEdit ? () => openEditor('edit', ci, col) : undefined}
-                  className={`text-left ${canEdit ? 'cursor-pointer hover:bg-[var(--rb-accent-subtle)]/50 transition-colors group select-none' : ''}`}
+            {columnGroupInfo ? (
+              <>
+                {/* ── Group header row ── */}
+                <tr
+                  className="rb-table-header-row"
                   style={{
-                    minWidth: Math.max(colMinWidth, 80),
-                    textAlign: col.align || 'left',
-                    ...(borderColor ? { borderColor } : {}),
+                    ...(headerBg ? { backgroundColor: headerBg } : {}),
+                    ...(headerColor ? { color: headerColor } : {}),
                   }}
-                  title={canEdit ? `${col.label || `Col ${ci + 1}`}${col.unit ? ` (${col.unit})` : ''} — Double-click to edit` : undefined}
                 >
-                  <span className="flex items-center gap-1.5 min-w-0">
-                    <span className="line-clamp-2 leading-tight">{col.label || `Col ${ci + 1}`}</span>
-                    {col.unit && <span className="text-[9px] font-normal normal-case opacity-60 flex-shrink-0 tracking-normal">({col.unit})</span>}
-                    {canEdit && <Settings2 size={12} className="opacity-0 group-hover:opacity-50 transition-opacity ml-auto flex-shrink-0" />}
-                  </span>
-                </th>
-              );
-              })}
-              {canEdit && (
-                <th className="w-[72px]" style={{ ...(borderColor ? { borderColor } : {}), ...(headerBg ? { backgroundColor: headerBg } : {}) }}>
-                  <button
-                    type="button"
-                    onClick={() => openEditor('add')}
-                    className="flex items-center justify-center w-full py-2 rb-caption text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)]/50 rounded transition-colors"
-                    title="Add column"
-                  >
-                    <Plus size={14} strokeWidth={2.5} />
-                  </button>
-                </th>
-              )}
-            </tr>
+                  {columnGroupInfo.map((g, gi) => {
+                    if (g.label) {
+                      return (
+                        <th
+                          key={`grp-${gi}`}
+                          colSpan={g.span}
+                          className="text-center font-bold"
+                          style={{
+                            ...(borderColor ? { borderColor } : {}),
+                          }}
+                        >
+                          {g.label}
+                        </th>
+                      );
+                    }
+                    const col = columns[g.startIndex];
+                    const colMinWidth = col.width || 100;
+                    return (
+                      <th
+                        key={`grp-${gi}`}
+                        rowSpan={2}
+                        onDoubleClick={canEdit ? () => openEditor('edit', g.startIndex, col) : undefined}
+                        className={`text-left ${canEdit ? 'cursor-pointer hover:bg-[var(--rb-accent-subtle)]/50 transition-colors group select-none' : ''}`}
+                        style={{
+                          minWidth: Math.max(colMinWidth, 80),
+                          textAlign: col.align || 'left',
+                          ...(borderColor ? { borderColor } : {}),
+                        }}
+                        title={canEdit ? `${col.label || `Col ${g.startIndex + 1}`}${col.unit ? ` (${col.unit})` : ''} — Double-click to edit` : undefined}
+                      >
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <span className="line-clamp-2 leading-tight">{col.label || `Col ${g.startIndex + 1}`}</span>
+                          {col.unit && <span className="text-[9px] font-normal normal-case opacity-60 flex-shrink-0 tracking-normal">({col.unit})</span>}
+                          {canEdit && <Settings2 size={12} className="opacity-0 group-hover:opacity-50 transition-opacity ml-auto flex-shrink-0" />}
+                        </span>
+                      </th>
+                    );
+                  })}
+                  {canEdit && (
+                    <th rowSpan={2} className="w-[72px]" style={{ ...(borderColor ? { borderColor } : {}), ...(headerBg ? { backgroundColor: headerBg } : {}) }}>
+                      <button type="button" onClick={() => openEditor('add')} className="flex items-center justify-center w-full py-2 rb-caption text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)]/50 rounded transition-colors" title="Add column">
+                        <Plus size={14} strokeWidth={2.5} />
+                      </button>
+                    </th>
+                  )}
+                </tr>
+                {/* ── Sub-column header row (only grouped columns) ── */}
+                <tr
+                  className="rb-table-header-row"
+                  style={{
+                    ...(headerBg ? { backgroundColor: headerBg } : {}),
+                    ...(headerColor ? { color: headerColor } : {}),
+                  }}
+                >
+                  {columnGroupInfo.filter(g => g.label).flatMap(g =>
+                    columns.slice(g.startIndex, g.startIndex + g.span).map((col, offset) => {
+                      const ci = g.startIndex + offset;
+                      const colMinWidth = col.width || 100;
+                      return (
+                        <th
+                          key={`sub-${ci}`}
+                          onDoubleClick={canEdit ? () => openEditor('edit', ci, col) : undefined}
+                          className={`text-left ${canEdit ? 'cursor-pointer hover:bg-[var(--rb-accent-subtle)]/50 transition-colors group select-none' : ''}`}
+                          style={{
+                            minWidth: Math.max(colMinWidth, 80),
+                            textAlign: col.align || 'left',
+                            ...(borderColor ? { borderColor } : {}),
+                          }}
+                          title={canEdit ? `${col.label || `Col ${ci + 1}`}${col.unit ? ` (${col.unit})` : ''} — Double-click to edit` : undefined}
+                        >
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <span className="line-clamp-2 leading-tight">{col.label || `Col ${ci + 1}`}</span>
+                            {col.unit && <span className="text-[9px] font-normal normal-case opacity-60 flex-shrink-0 tracking-normal">({col.unit})</span>}
+                            {canEdit && <Settings2 size={12} className="opacity-0 group-hover:opacity-50 transition-opacity ml-auto flex-shrink-0" />}
+                          </span>
+                        </th>
+                      );
+                    })
+                  )}
+                </tr>
+              </>
+            ) : (
+              <tr
+                className="rb-table-header-row"
+                style={{
+                  ...(headerBg ? { backgroundColor: headerBg } : {}),
+                  ...(headerColor ? { color: headerColor } : {}),
+                }}
+              >
+                {columns.map((col, ci) => {
+                  const colMinWidth = col.width || 100;
+                  return (
+                    <th
+                      key={ci}
+                      onDoubleClick={canEdit ? () => openEditor('edit', ci, col) : undefined}
+                      className={`text-left ${canEdit ? 'cursor-pointer hover:bg-[var(--rb-accent-subtle)]/50 transition-colors group select-none' : ''}`}
+                      style={{
+                        minWidth: Math.max(colMinWidth, 80),
+                        textAlign: col.align || 'left',
+                        ...(borderColor ? { borderColor } : {}),
+                      }}
+                      title={canEdit ? `${col.label || `Col ${ci + 1}`}${col.unit ? ` (${col.unit})` : ''} — Double-click to edit` : undefined}
+                    >
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span className="line-clamp-2 leading-tight">{col.label || `Col ${ci + 1}`}</span>
+                        {col.unit && <span className="text-[9px] font-normal normal-case opacity-60 flex-shrink-0 tracking-normal">({col.unit})</span>}
+                        {canEdit && <Settings2 size={12} className="opacity-0 group-hover:opacity-50 transition-opacity ml-auto flex-shrink-0" />}
+                      </span>
+                    </th>
+                  );
+                })}
+                {canEdit && (
+                  <th className="w-[72px]" style={{ ...(borderColor ? { borderColor } : {}), ...(headerBg ? { backgroundColor: headerBg } : {}) }}>
+                    <button type="button" onClick={() => openEditor('add')} className="flex items-center justify-center w-full py-2 rb-caption text-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)]/50 rounded transition-colors" title="Add column">
+                      <Plus size={14} strokeWidth={2.5} />
+                    </button>
+                  </th>
+                )}
+              </tr>
+            )}
           </thead>
           <tbody>
             {renderSectionHeaderRows(0)}
@@ -704,7 +851,10 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                       ...(borderColor ? { borderColor } : {}),
                       textAlign: col.align || 'left',
                       ...(thresholdColor ? { color: thresholdColor } : {}),
-                                          }}
+                      ...(col.cellBg ? { backgroundColor: col.cellBg } : {}),
+                      ...(col.cellColor ? { color: col.cellColor } : {}),
+                      ...(col.fontWeight ? { fontWeight: col.fontWeight } : {}),
+                    }}
                     title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit') : undefined}
                   >
                     {showResolvedValue && formatted.type === 'boolean' ? (
@@ -749,46 +899,56 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                     }}
                     onClick={drillDownEnabled ? () => handleRowClick(getRowKeyValue('static', ri)) : undefined}
                   >
-                    {columns.map((col, ci) => {
-                      const cellConfig = rowCells[ci];
-                      const rawValue = resolveColumnValue(cellConfig, tagValues);
-                      const formatted = formatCellDisplay(rawValue, cellConfig, showUnitsInCells);
-                      const thresholdColor = getThresholdColor(rawValue, cellConfig.thresholds);
-                      const hint = getColumnHint(cellConfig);
-                      const badge = getSourceBadge(cellConfig);
-                      const hasValue = formatted.text !== null;
-                      const showResolvedValue = !!isPreview;
-                      const displayText = showResolvedValue
-                        ? (hasValue ? formatted.text : (hint || '—'))
-                        : (hint || 'Double-click to set');
-                      const numericAlign = (cellConfig.format === 'number' || cellConfig.format === 'percentage' || cellConfig.format === 'weight') && cellConfig.sourceType !== 'static';
-                      const isNumericCell = cellConfig?.sourceType !== 'static';
-                      return (
-                        <td
-                          key={ci}
-                          onDoubleClick={canEdit ? () => openEditorForStaticCell(ri, ci) : undefined}
-                          className={`${canEdit ? 'cursor-pointer select-none' : ''}  ${isNumericCell ? 'rb-cell-numeric' : ''} ${thresholdColor ? 'rb-cell-threshold' : ''}`}
-                          style={{
-                            ...(borderColor ? { borderColor } : {}),
-                            textAlign: numericAlign ? 'right' : (col.align || 'left'),
-                            ...(thresholdColor ? { color: thresholdColor } : {}),
-                                                      }}
-                          title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit cell') : undefined}
-                        >
-                          {showResolvedValue && formatted.type === 'boolean' ? (
-                            <span className="rb-checkbox-cell inline-flex items-center justify-center w-[18px] h-[18px] rounded-[3px] border-2 border-[var(--rb-border)] bg-[var(--rb-input)] print:border-gray-400">
-                              {formatted.checked ? (
-                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--rb-accent)] print:text-blue-600" /></svg>
-                              ) : null}
-                            </span>
-                          ) : (
-                            <span className={`${hasValue || showResolvedValue ? '' : 'rb-cell-hint'}`}>
-                              {displayText}
-                            </span>
-                          )}
-                        </td>
-                      );
-                    })}
+                    {(() => {
+                      let skipCount = 0;
+                      return columns.map((col, ci) => {
+                        if (skipCount > 0) { skipCount--; return null; }
+                        const cellConfig = rowCells[ci];
+                        const cellColSpan = Math.max(1, Math.min(cellConfig?.colSpan || 1, columns.length - ci));
+                        if (cellColSpan > 1) skipCount = cellColSpan - 1;
+                        const rawValue = resolveColumnValue(cellConfig, tagValues);
+                        const formatted = formatCellDisplay(rawValue, cellConfig, showUnitsInCells);
+                        const thresholdColor = getThresholdColor(rawValue, cellConfig.thresholds);
+                        const hint = getColumnHint(cellConfig);
+                        const badge = getSourceBadge(cellConfig);
+                        const hasValue = formatted.text !== null;
+                        const showResolvedValue = !!isPreview;
+                        const displayText = showResolvedValue
+                          ? (hasValue ? formatted.text : (hint || '—'))
+                          : (hint || 'Double-click to set');
+                        const numericAlign = (cellConfig.format === 'number' || cellConfig.format === 'percentage' || cellConfig.format === 'weight') && cellConfig.sourceType !== 'static';
+                        const isNumericCell = cellConfig?.sourceType !== 'static';
+                        return (
+                          <td
+                            key={ci}
+                            colSpan={cellColSpan > 1 ? cellColSpan : undefined}
+                            onDoubleClick={canEdit ? () => openEditorForStaticCell(ri, ci) : undefined}
+                            className={`${canEdit ? 'cursor-pointer select-none' : ''}  ${isNumericCell ? 'rb-cell-numeric' : ''} ${thresholdColor ? 'rb-cell-threshold' : ''}`}
+                            style={{
+                              ...(borderColor ? { borderColor } : {}),
+                              textAlign: numericAlign ? 'right' : (col.align || 'left'),
+                              ...(thresholdColor ? { color: thresholdColor } : {}),
+                              ...(cellConfig?.cellBg ? { backgroundColor: cellConfig.cellBg } : {}),
+                              ...(cellConfig?.cellColor ? { color: cellConfig.cellColor } : {}),
+                              ...(cellConfig?.fontWeight ? { fontWeight: cellConfig.fontWeight } : {}),
+                            }}
+                            title={canEdit ? (hint ? `${badge.label}: ${hint}` : 'Double-click to edit cell') : undefined}
+                          >
+                            {showResolvedValue && formatted.type === 'boolean' ? (
+                              <span className="rb-checkbox-cell inline-flex items-center justify-center w-[18px] h-[18px] rounded-[3px] border-2 border-[var(--rb-border)] bg-[var(--rb-input)] print:border-gray-400">
+                                {formatted.checked ? (
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--rb-accent)] print:text-blue-600" /></svg>
+                                ) : null}
+                              </span>
+                            ) : (
+                              <span className={`${hasValue || showResolvedValue ? '' : 'rb-cell-hint'}`}>
+                                {displayText}
+                              </span>
+                            )}
+                          </td>
+                        );
+                      });
+                    })()}
                     {canEdit && (
                       <td className="px-2 py-1.5" style={{ ...(borderColor ? { borderColor } : {}) }}>
                         <button
@@ -805,6 +965,18 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                 </React.Fragment>
               );
             })}
+
+            {/* ── Trailing section headers (orphaned beyond last static row) ── */}
+            {(() => {
+              const maxRendered = staticDataRows.length; // indices 0..maxRendered already called
+              const trailing = [];
+              for (const key of Object.keys(sectionHeaderMap)) {
+                const idx = Number(key);
+                if (idx > maxRendered) trailing.push(idx);
+              }
+              trailing.sort((a, b) => a - b);
+              return trailing.map(idx => renderSectionHeaderRows(idx));
+            })()}
 
             {/* ── Summary / aggregation rows ── */}
             {summaryData.map((sValues, si) => {
@@ -1069,10 +1241,17 @@ function ColumnEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagVa
           {activePane === 'source' ? (
             <>
               {!isStaticCell && (
-                <div>
-                  <label className={labelCls}>Column Name</label>
-                  <input type="text" value={draft.label || ''} onChange={(e) => patch({ label: e.target.value })} placeholder="e.g. Motor Speed" autoFocus className={inputCls} />
-                </div>
+                <>
+                  <div>
+                    <label className={labelCls}>Column Name</label>
+                    <input type="text" value={draft.label || ''} onChange={(e) => patch({ label: e.target.value })} placeholder="e.g. Motor Speed" autoFocus className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Header Group <span className="font-normal opacity-60">(optional)</span></label>
+                    <input type="text" value={draft.group || ''} onChange={(e) => patch({ group: e.target.value })} placeholder="e.g. OnlineValues — groups consecutive columns" className={inputCls} />
+                    <p className="text-[10px] text-[var(--rb-text-muted)] mt-1">Consecutive columns with the same group name share a parent header row</p>
+                  </div>
+                </>
               )}
 
               <div>
@@ -1192,6 +1371,62 @@ function ColumnEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagVa
                       <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
                     </select>
                   </div>
+                </div>
+              </div>
+
+              {/* ── Cell merge & styling ── */}
+              {isStaticCell && (
+                <div>
+                  <label className={labelCls}>Cell Layout</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-[10px] text-[var(--rb-text-muted)] block mb-1">Column Span</span>
+                      <input type="number" min={1} value={draft.colSpan ?? 1} onChange={(e) => patch({ colSpan: Math.max(1, Number(e.target.value) || 1) })} className={inputCls} />
+                      <p className="text-[9px] text-[var(--rb-text-muted)] mt-1">Merge across columns (1 = no merge)</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[var(--rb-text-muted)] block mb-1">Font Weight</span>
+                      <select value={draft.fontWeight || ''} onChange={(e) => patch({ fontWeight: e.target.value })} className={inputCls}>
+                        <option value="">Default</option>
+                        <option value="normal">Normal</option>
+                        <option value="500">Medium</option>
+                        <option value="600">Semi-bold</option>
+                        <option value="bold">Bold</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className={labelCls}>Cell Styling</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[10px] text-[var(--rb-text-muted)] block mb-1">Background</span>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={draft.cellBg || '#ffffff'} onChange={(e) => patch({ cellBg: e.target.value })} className="w-8 h-8 rounded border border-[var(--rb-border)] cursor-pointer p-0 flex-shrink-0" />
+                      <input type="text" value={draft.cellBg || ''} onChange={(e) => patch({ cellBg: e.target.value })} placeholder="none" className={inputCls} />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[var(--rb-text-muted)] block mb-1">Text Color</span>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={draft.cellColor || '#000000'} onChange={(e) => patch({ cellColor: e.target.value })} className="w-8 h-8 rounded border border-[var(--rb-border)] cursor-pointer p-0 flex-shrink-0" />
+                      <input type="text" value={draft.cellColor || ''} onChange={(e) => patch({ cellColor: e.target.value })} placeholder="none" className={inputCls} />
+                    </div>
+                  </div>
+                  {!isStaticCell && (
+                    <div>
+                      <span className="text-[10px] text-[var(--rb-text-muted)] block mb-1">Font Weight</span>
+                      <select value={draft.fontWeight || ''} onChange={(e) => patch({ fontWeight: e.target.value })} className={inputCls}>
+                        <option value="">Default</option>
+                        <option value="normal">Normal</option>
+                        <option value="500">Medium</option>
+                        <option value="600">Semi-bold</option>
+                        <option value="bold">Bold</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 

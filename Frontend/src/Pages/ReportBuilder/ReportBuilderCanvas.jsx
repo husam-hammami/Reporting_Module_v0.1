@@ -39,7 +39,7 @@ export default function ReportBuilderCanvas() {
   const {
     template, widgets: rawWidgets, loading, saving, dirty,
     autoSave, toggleAutoSave,
-    addWidget, addWidgetAt, updateWidget, removeWidget, updateLayout,
+    addWidget, addWidgetAt, updateWidget, removeWidget, updateLayout, setWidgets, setDirty,
     addComputedSignal, saveLayout, updateMeta,
     undo, redo, canUndo, canRedo,
     dashboardTabs, activeTabId, allTabsWidgets,
@@ -94,6 +94,7 @@ export default function ReportBuilderCanvas() {
   const tagHistory = useTagHistory(usedTagNames, liveTagValues);
 
   const [selectedId, setSelectedId] = useState(null);
+  const [subWidgetInfo, setSubWidgetInfo] = useState(null);
   const [showToolbox, setShowToolbox] = useState(true);
   const [showProperties, setShowProperties] = useState(true);
   const [renamingTabId, setRenamingTabId] = useState(null);
@@ -127,6 +128,83 @@ export default function ReportBuilderCanvas() {
     () => widgets.find((w) => w.id === selectedId) || null,
     [widgets, selectedId],
   );
+
+  const handleSubWidgetSelect = useCallback((subWidget) => {
+    if (!subWidget) {
+      setSubWidgetInfo(null);
+      return;
+    }
+    setSubWidgetInfo({ parentId: selectedId, subWidget });
+    setShowProperties(true);
+  }, [selectedId]);
+
+  const editingSubWidget = useMemo(() => {
+    if (!subWidgetInfo || subWidgetInfo.parentId !== selectedId) return null;
+    const parent = widgets.find(w => w.id === subWidgetInfo.parentId);
+    if (!parent || parent.type !== 'tabcontainer') return null;
+    const tabsCfg = parent.config?.tabs || [];
+    const activeTab = tabsCfg.find(t => t.id === parent.config?.activeTabId) || tabsCfg[0];
+    return activeTab?.widgets?.find(w => w.id === subWidgetInfo.subWidget?.id) || null;
+  }, [subWidgetInfo, selectedId, widgets]);
+
+  const editingWidget = editingSubWidget || selectedWidget;
+
+  const updateSubWidgetViaCanvas = useCallback((subWidgetId, updates) => {
+    if (!subWidgetInfo) return;
+    const parentId = subWidgetInfo.parentId;
+    setWidgets((prev) => {
+      const parent = prev.find(w => w.id === parentId);
+      if (!parent || parent.type !== 'tabcontainer') return prev;
+      const cfg = parent.config || {};
+      const tabsCfg = cfg.tabs || [];
+      const tcActiveTabId = cfg.activeTabId || tabsCfg[0]?.id;
+      const updatedTabs = tabsCfg.map(t => {
+        if (t.id !== tcActiveTabId) return t;
+        return {
+          ...t,
+          widgets: (t.widgets || []).map(w => {
+            if (w.id !== subWidgetId) return w;
+            const next = { ...w, ...updates };
+            if (updates.config && typeof updates.config === 'object') {
+              next.config = { ...(w.config || {}), ...updates.config };
+            }
+            return next;
+          }),
+        };
+      });
+      return prev.map(w =>
+        w.id === parentId ? { ...w, config: { ...cfg, tabs: updatedTabs } } : w
+      );
+    });
+    setDirty(true);
+  }, [subWidgetInfo, setWidgets, setDirty]);
+
+  const editingOnUpdate = editingSubWidget ? updateSubWidgetViaCanvas : updateWidget;
+
+  const handleSubLayoutChangeViaCanvas = useCallback((parentWidgetId, newLayout) => {
+    setWidgets((prev) => {
+      const parent = prev.find(w => w.id === parentWidgetId);
+      if (!parent || parent.type !== 'tabcontainer') return prev;
+      const cfg = parent.config || {};
+      const tabsCfg = cfg.tabs || [];
+      const tcActiveTabId = cfg.activeTabId || tabsCfg[0]?.id;
+      const updatedTabs = tabsCfg.map(t => {
+        if (t.id !== tcActiveTabId) return t;
+        return {
+          ...t,
+          widgets: (t.widgets || []).map(w => {
+            const item = newLayout.find(l => String(l.i) === String(w.id));
+            if (!item) return w;
+            return { ...w, x: item.x, y: item.y, w: item.w, h: item.h };
+          }),
+        };
+      });
+      return prev.map(w =>
+        w.id === parentWidgetId ? { ...w, config: { ...cfg, tabs: updatedTabs } } : w
+      );
+    });
+    setDirty(true);
+  }, [setWidgets, setDirty]);
 
   /* Grid from template (per-report flexibility) or professional defaults */
   const gridCols = template?.layout_config?.grid?.cols ?? GRID_COLS_DEFAULT;
@@ -176,10 +254,11 @@ export default function ReportBuilderCanvas() {
   const handleSelect = useCallback((wid, e) => {
     e?.stopPropagation();
     setSelectedId(wid);
+    setSubWidgetInfo(null);
     setShowProperties(true);
   }, []);
 
-  const handleDeselect = useCallback(() => setSelectedId(null), []);
+  const handleDeselect = useCallback(() => { setSelectedId(null); setSubWidgetInfo(null); }, []);
 
   const handleWheelCapture = useCallback((e) => {
     /* Allow dropdowns/tag picker to handle their own scroll */
@@ -359,8 +438,11 @@ export default function ReportBuilderCanvas() {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); handleSave(); }
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && canUndo && !editingName) { e.preventDefault(); undo(); }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey)) && canRedo && !editingName) { e.preventDefault(); redo(); }
-      if (e.key === 'Delete' && selectedId && !editingName) handleDeleteWidget(selectedId);
-      if (e.key === 'Escape') { setSelectedId(null); setEditingName(false); }
+      if (e.key === 'Delete' && selectedId && !editingName) {
+        if (subWidgetInfo) { setSubWidgetInfo(null); }
+        else { handleDeleteWidget(selectedId); }
+      }
+      if (e.key === 'Escape') { if (subWidgetInfo) { setSubWidgetInfo(null); } else { setSelectedId(null); } setEditingName(false); }
       if ((e.ctrlKey || e.metaKey) && e.key === 'd' && selectedId) {
         e.preventDefault();
         const w = widgets.find((w) => w.id === selectedId);
@@ -377,7 +459,7 @@ export default function ReportBuilderCanvas() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleSave, handleDeleteWidget, selectedId, editingName, widgets, addWidget, undo, redo, canUndo, canRedo, handleZoomIn, handleZoomOut, handleZoomReset]);
+  }, [handleSave, handleDeleteWidget, selectedId, editingName, widgets, addWidget, undo, redo, canUndo, canRedo, handleZoomIn, handleZoomOut, handleZoomReset, subWidgetInfo]);
 
   /* ── Loading state ─────────────────────────────────────────── */
   if (loading) {
@@ -871,7 +953,7 @@ export default function ReportBuilderCanvas() {
                           </div>
 
                           {/* Widget body */}
-                          <div className="h-full no-drag overflow-hidden">
+                          <div className={`h-full no-drag ${wt === 'tabcontainer' ? 'overflow-visible' : 'overflow-hidden'}`}>
                             <WidgetRenderer
                               widget={widget}
                               tagValues={liveTagValues}
@@ -883,6 +965,9 @@ export default function ReportBuilderCanvas() {
                               layoutRowHeight={gridRowH}
                               tagHistory={tagHistory}
                               savedFormulas={savedFormulas}
+                              onSubWidgetSelect={wt === 'tabcontainer' ? handleSubWidgetSelect : undefined}
+                              selectedSubWidgetId={wt === 'tabcontainer' && subWidgetInfo?.parentId === widget.id ? subWidgetInfo.subWidget?.id : undefined}
+                              onSubLayoutChange={wt === 'tabcontainer' ? handleSubLayoutChangeViaCanvas : undefined}
                             />
                           </div>
 
@@ -919,15 +1004,17 @@ export default function ReportBuilderCanvas() {
               className="flex-shrink-0 rb-panel-surface border-l border-[var(--rb-border)] overflow-hidden rb-panel-right-shadow max-w-[85vw]"
             >
               <PropertiesPanel
-                widget={selectedWidget}
-                onUpdate={updateWidget}
-                onDelete={handleDeleteWidget}
-                onClose={() => setSelectedId(null)}
+                widget={editingWidget}
+                onUpdate={editingOnUpdate}
+                onDelete={editingSubWidget ? () => { /* sub-widget delete handled in tab container */ } : handleDeleteWidget}
+                onClose={() => { if (editingSubWidget) { setSubWidgetInfo(null); } else { setSelectedId(null); } }}
                 onHidePanel={() => setShowProperties(false)}
                 tags={tags}
                 tagValues={liveTagValues}
                 groups={groups}
                 savedFormulas={savedFormulas}
+                isSubWidget={!!editingSubWidget}
+                onBackToParent={editingSubWidget ? () => setSubWidgetInfo(null) : undefined}
               />
             </motion.div>
           )}

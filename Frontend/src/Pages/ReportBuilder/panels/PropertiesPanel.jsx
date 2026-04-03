@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy, Move, PanelRightClose, Layers } from 'lucide-react';
+import { X, Plus, Trash2, ChevronDown, ChevronRight, ChevronLeft, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy, Move, PanelRightClose, Layers } from 'lucide-react';
 import { uid, WIDGET_CATALOG } from '../widgets/widgetDefaults';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import FormulaEditor from '../formulas/FormulaEditor';
@@ -748,6 +748,17 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
               <input type="color" value={config.sectionHeaderColor || '#0f172a'} onChange={(e) => onUpdate({ sectionHeaderColor: e.target.value })} className="rb-color-swatch" />
             </div>
           </Field>
+          <Field label="Section header border">
+            <SelectInput
+              value={config.sectionHeaderBorderWidth || '1'}
+              onChange={(v) => onUpdate({ sectionHeaderBorderWidth: v })}
+              options={[
+                { value: '1', label: 'Thin (1px)' },
+                { value: '2', label: 'Medium (2px)' },
+                { value: '3', label: 'Thick (3px)' },
+              ]}
+            />
+          </Field>
           <Field label="Row colors">
             <div className="rb-color-group">
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
@@ -757,6 +768,85 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">border</span>
               <input type="color" value={config.borderColor || '#e2e8f0'} onChange={(e) => onUpdate({ borderColor: e.target.value })} className="rb-color-swatch" />
             </div>
+          </Field>
+        </>
+      )}
+
+      {widgetType === 'datapanel' && (
+        <>
+          <Field label="Header style">
+            <SelectInput
+              value={config.headerStyle || 'bar'}
+              onChange={(v) => onUpdate({ headerStyle: v })}
+              options={[
+                { value: 'bar', label: 'Solid bar' },
+                { value: 'inline', label: 'Inline with line' },
+                { value: 'legend', label: 'Legend (on border)' },
+              ]}
+            />
+          </Field>
+          <Field label="Header align">
+            <SelectInput
+              value={config.headerAlign || 'left'}
+              onChange={(v) => onUpdate({ headerAlign: v })}
+              options={[
+                { value: 'left', label: 'Left' },
+                { value: 'center', label: 'Center' },
+                { value: 'right', label: 'Right' },
+              ]}
+            />
+          </Field>
+          <Field label="Header text size">
+            <SelectInput
+              value={config.headerFontSize || '12px'}
+              onChange={(v) => onUpdate({ headerFontSize: v })}
+              options={[
+                { value: '9px', label: 'Small (9px)' },
+                { value: '11px', label: 'Normal (11px)' },
+                { value: '12px', label: 'Default (12px)' },
+                { value: '14px', label: 'Large (14px)' },
+                { value: '16px', label: 'X-Large (16px)' },
+                { value: '18px', label: 'XX-Large (18px)' },
+                { value: '20px', label: 'Heading (20px)' },
+              ]}
+            />
+          </Field>
+          <Field label="Header colors">
+            <div className="rb-color-group">
+              {(config.headerStyle || 'bar') === 'bar' && (
+                <>
+                  <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
+                  <input type="color" value={config.headerBg || '#e2e8f0'} onChange={(e) => onUpdate({ headerBg: e.target.value })} className="rb-color-swatch" />
+                </>
+              )}
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">text</span>
+              <input type="color" value={config.headerColor || '#0f172a'} onChange={(e) => onUpdate({ headerColor: e.target.value })} className="rb-color-swatch" />
+            </div>
+          </Field>
+          <Field label="Panel border">
+            <div className="rb-color-group">
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">color</span>
+              <input type="color" value={config.panelBorder || '#e2e8f0'} onChange={(e) => onUpdate({ panelBorder: e.target.value })} className="rb-color-swatch" />
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">width</span>
+              <SelectInput
+                value={config.panelBorderWidth || '1'}
+                onChange={(v) => onUpdate({ panelBorderWidth: v })}
+                options={[
+                  { value: '1', label: '1px' },
+                  { value: '2', label: '2px' },
+                  { value: '3', label: '3px' },
+                ]}
+              />
+            </div>
+          </Field>
+          <Field label="Panel background">
+            <div className="rb-color-group">
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
+              <input type="color" value={config.panelBg || '#ffffff'} onChange={(e) => onUpdate({ panelBg: e.target.value })} className="rb-color-swatch" />
+            </div>
+          </Field>
+          <Field label="Content padding (px)">
+            <TextInput type="number" value={config.contentPadding ?? 6} onChange={(v) => onUpdate({ contentPadding: Math.max(0, Number(v) || 0) })} />
           </Field>
         </>
       )}
@@ -1049,6 +1139,10 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
       width: 120,
       format: 'number',
       thresholds: [],
+      group: '',
+      cellBg: '',
+      cellColor: '',
+      fontWeight: '',
     }]);
     setTimeout(() => {
       addColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1128,6 +1222,10 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
               <div className="px-3 pb-3 pt-2 space-y-3 border-t border-[var(--rb-border)]">
                 <Field label="Column header">
                   <TextInput value={col.label} onChange={(v) => updateColumn(i, { label: v })} placeholder="Column name" />
+                </Field>
+
+                <Field label="Header group">
+                  <TextInput value={col.group || ''} onChange={(v) => updateColumn(i, { group: v })} placeholder="e.g. OnlineValues (groups columns under shared header)" />
                 </Field>
 
                 <Field label="Value source">
@@ -1591,7 +1689,7 @@ const HAS_TABLE_COLUMNS = new Set(['table']);
 const TAB_DATA = 'data';
 const TAB_FORMAT = 'format';
 
-export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, onHidePanel, tags, tagValues, groups = [], savedFormulas = [] }) {
+export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, onHidePanel, tags, tagValues, groups = [], savedFormulas = [], isSubWidget, onBackToParent }) {
   const [activeTab, setActiveTab] = useState(TAB_DATA);
   const prefersReducedMotion = useReducedMotion();
 
@@ -1616,6 +1714,14 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
   return (
     <div className="flex flex-col h-full">
       <div className="flex-shrink-0 border-b border-[var(--rb-border)]">
+        {isSubWidget && onBackToParent && (
+          <button
+            onClick={onBackToParent}
+            className="w-full flex items-center gap-2 px-5 py-2 text-[10px] font-semibold text-[var(--rb-accent)] bg-[var(--rb-accent-subtle)] hover:bg-[var(--rb-accent-subtle)]/80 transition-colors border-b border-[var(--rb-border)]"
+          >
+            <ChevronLeft size={12} /> Back to Tab Container
+          </button>
+        )}
         <div className="flex items-center justify-between px-5 py-3.5">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--rb-accent-subtle)] border border-[var(--rb-accent)]/20">
@@ -1624,7 +1730,7 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
             <p className="text-[13px] font-bold text-[var(--rb-text)] truncate">{widgetTitle}</p>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={onClose} className="rb-btn-ghost p-2 hover:bg-[var(--rb-surface)] rounded-md transition-colors" title="Deselect widget">
+            <button onClick={onClose} className="rb-btn-ghost p-2 hover:bg-[var(--rb-surface)] rounded-md transition-colors" title={isSubWidget ? 'Back to container' : 'Deselect widget'}>
               <X size={16} className="text-[var(--rb-text-muted)]" />
             </button>
             {onHidePanel && (

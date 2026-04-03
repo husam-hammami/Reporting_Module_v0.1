@@ -228,6 +228,7 @@ export const WIDGET_CATALOG = [
       borderColor: '',
       sectionHeaderBg: '',
       sectionHeaderColor: '',
+      sectionHeaderBorderWidth: '1',
       drillDown: {
         enabled: false,
         keyColumn: 0,
@@ -235,6 +236,29 @@ export const WIDGET_CATALOG = [
         detailWidgets: [],
         detailGridCols: 2,
       },
+    },
+  },
+
+  {
+    type: 'datapanel',
+    category: 'data',
+    label: 'Data Panel',
+    lucideIcon: 'LayoutGrid',
+    description: 'Freeform panel with positioned fields for labels, tags and values',
+    defaultW: 4,
+    defaultH: 3,
+    defaultConfig: {
+      title: 'Data Panel',
+      headerStyle: 'bar',
+      headerAlign: 'left',
+      headerBg: '#e2e8f0',
+      headerColor: '#0f172a',
+      panelBg: '',
+      panelBorder: '#e2e8f0',
+      panelBorderWidth: '1',
+      contentPadding: 6,
+      showCard: true,
+      fields: [],
     },
   },
 

@@ -15,6 +15,7 @@ import ProgressWidget from './ProgressWidget';
 import HopperWidget from './HopperWidget';
 import StatusBarWidget from './StatusBarWidget';
 import TabContainerWidget from './TabContainerWidget';
+import DataPanelWidget from './DataPanelWidget';
 
 /* ── Error Boundary — catches widget render crashes ── */
 class WidgetErrorBoundary extends React.Component {
@@ -67,6 +68,7 @@ const RENDERERS = {
   hopper: HopperWidget,
   statusbar: StatusBarWidget,
   tabcontainer: TabContainerWidget,
+  datapanel: DataPanelWidget,
 };
 
 export const CARDLESS_WIDGET_TYPES = new Set(['image', 'text', 'logo']);
@@ -79,7 +81,7 @@ function getKpiSparklineTag(config) {
   return config?.tagName ?? null;
 }
 
-export default function WidgetRenderer({ widget, tagValues, isPreview, isSelected, onUpdateWidget, widgetId, tags, isReportBuilderWorkspace, layoutRowHeight, tagHistory, savedFormulas = [] }) {
+export default function WidgetRenderer({ widget, tagValues, isPreview, isSelected, onUpdateWidget, widgetId, tags, isReportBuilderWorkspace, layoutRowHeight, tagHistory, savedFormulas = [], onSubWidgetSelect, selectedSubWidgetId, onSubLayoutChange }) {
   const Component = RENDERERS[widget.type];
   if (!Component) return null;
   const tableProps = widget.type === 'table'
@@ -88,17 +90,26 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
   const tabContainerProps = widget.type === 'tabcontainer'
     ? {
         isSelected, onUpdate: onUpdateWidget, widgetId, tags, savedFormulas, tagHistory,
-        renderWidget: (subWidget) => (
+        onSubWidgetSelect, selectedSubWidgetId, onSubLayoutChange,
+        renderWidget: (subWidget, editCtx) => (
           <WidgetRenderer
             widget={subWidget}
             tagValues={tagValues}
-            isPreview={isPreview || !isSelected}
+            isPreview={false}
+            isSelected={editCtx?.isSubSelected || false}
+            onUpdateWidget={editCtx?.onUpdateSubWidget}
+            widgetId={subWidget.id}
             tags={tags}
             tagHistory={tagHistory}
             savedFormulas={savedFormulas}
+            isReportBuilderWorkspace
+            layoutRowHeight={layoutRowHeight}
           />
         ),
       }
+    : {};
+  const dataPanelProps = widget.type === 'datapanel'
+    ? { isSelected, onUpdate: onUpdateWidget, widgetId, tags, isReportBuilderWorkspace }
     : {};
   const siloProps = widget.type === 'silo' ? { isReportBuilderWorkspace } : {};
   const sparklineTag = widget.type === 'kpi' ? getKpiSparklineTag(widget.config) : null;
@@ -114,13 +125,14 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
 
   return (
     <WidgetErrorBoundary widgetType={widget.type} key={widget.id || widgetId}>
-      <div className={isInvisible ? 'h-full w-full' : 'h-full w-full flex flex-col min-h-0 overflow-hidden'}>
+      <div className={isInvisible ? 'h-full w-full' : `h-full w-full flex flex-col min-h-0 ${widget.type === 'tabcontainer' ? 'overflow-visible' : 'overflow-hidden'}`}>
         <Component
           config={widget.config || {}}
           tagValues={tagValues || {}}
           isPreview={isPreview}
           {...tableProps}
           {...tabContainerProps}
+          {...dataPanelProps}
           {...siloProps}
           {...kpiProps}
           {...chartProps}

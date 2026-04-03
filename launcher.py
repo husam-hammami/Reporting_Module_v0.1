@@ -198,6 +198,7 @@ BRANCH_FILE = os.path.join(BASE_DIR, "backend", "release_branch.txt")
 PG_CTL = os.path.join(PG_BIN, "pg_ctl.exe")
 INITDB = os.path.join(PG_BIN, "initdb.exe")
 PG_ISREADY = os.path.join(PG_BIN, "pg_isready.exe")
+PSQL_EXE = os.path.join(PG_BIN, "psql.exe")
 
 PORT = "5434"
 BACKEND_PORT = "5004"
@@ -375,20 +376,128 @@ def wait_for_db(timeout_sec=60):
 
 
 def run_setup():
-    """Run setup_local_db.py (create DB, migrations, default user). Uses portable DB port."""
-    log.info("Running DB setup...")
-    env = get_venv_env()
+    """Create DB, run SQL migrations, and ensure default admin user — using psql directly.
+
+    This mirrors the Electron desktop app's runInitDb() approach so that the launcher
+    works with the frozen hercules-backend.exe bundle (which does NOT include
+    setup_local_db.py but DOES ship _internal/migrations/*.sql).
+    Falls back to the old python setup_local_db.py path for local development.
+    """
+    if os.path.exists(SETUP_SCRIPT) and not os.path.exists(BACKEND_EXE):
+        log.info("Dev mode: running setup_local_db.py...")
+        env = get_venv_env()
+        env["DB_HOST"] = "127.0.0.1"
+        env["DB_PORT"] = PORT
+        env["POSTGRES_DB"] = "dynamic_db_hercules"
+        env["POSTGRES_USER"] = "postgres"
+        env["POSTGRES_PASSWORD"] = ""
+        python = get_python()
+        run_checked(
+            [python, SETUP_SCRIPT, "--no-seed"],
+            label="DB setup",
+            env=env,
+        )
+        return
+
+    log.info("Running DB setup via psql (frozen backend mode)...")
+    env = os.environ.copy()
     env["DB_HOST"] = "127.0.0.1"
     env["DB_PORT"] = PORT
     env["POSTGRES_DB"] = "dynamic_db_hercules"
     env["POSTGRES_USER"] = "postgres"
     env["POSTGRES_PASSWORD"] = ""
-    python = get_python()
-    run_checked(
-        [python, SETUP_SCRIPT, "--no-seed"],
-        label="DB setup",
-        env=env,
+
+    db_name = "dynamic_db_hercules"
+
+    # Step 1: Create database if it doesn't exist
+    result = subprocess.run(
+        [PSQL_EXE, "-h", "127.0.0.1", "-p", PORT, "-U", "postgres", "-d", "postgres",
+         "-tAc", f"SELECT 1 FROM pg_database WHERE datname = '{db_name}'"],
+        capture_output=True, text=True, env=env, startupinfo=_hidden_si(),
     )
+    if result.stdout.strip() != "1":
+        run_checked(
+            [PSQL_EXE, "-h", "127.0.0.1", "-p", PORT, "-U", "postgres", "-d", "postgres",
+             "-c", f"CREATE DATABASE {db_name}"],
+            label="Create database", env=env,
+        )
+        log.info("Created database: %s", db_name)
+    else:
+        log.info("Database already exists: %s", db_name)
+
+    # Step 2: Run SQL migration files (same order as desktop/main.js runInitDb)
+    migrations_dir = os.path.join(BACKEND_DIR, "_internal", "migrations")
+    if not os.path.isdir(migrations_dir):
+        migrations_dir = os.path.join(BACKEND_DIR, "migrations")
+
+    migration_order = [
+        "create_tags_tables.sql",
+        "create_users_table.sql",
+        "create_bins_and_materials_tables.sql",
+        "create_report_builder_tables.sql",
+        "create_tag_history_tables.sql",
+        "create_kpi_engine_tables.sql",
+        "add_is_counter_to_tags.sql",
+        "add_bin_activation_fields.sql",
+        "add_value_formula_field.sql",
+        "add_layout_config_field.sql",
+        "add_line_running_tag_fields.sql",
+        "add_dynamic_monitoring_tables.sql",
+        "alter_tag_history_nullable_layout.sql",
+        "create_licenses_table.sql",
+        "create_mappings_table.sql",
+        "add_tag_history_archive_unique_universal.sql",
+        "add_license_machine_info.sql",
+        "add_site_and_license_name.sql",
+        "create_distribution_rules_table.sql",
+        "add_archive_granularity.sql",
+        "create_report_execution_log.sql",
+        "add_must_change_password.sql",
+        "create_hercules_ai_tables.sql",
+        "add_ai_summary_to_distribution.sql",
+    ]
+
+    for sql_file in migration_order:
+        file_path = os.path.join(migrations_dir, sql_file)
+        if not os.path.exists(file_path):
+            log.info("SKIP migration: %s (not found)", sql_file)
+            continue
+        result = subprocess.run(
+            [PSQL_EXE, "-h", "127.0.0.1", "-p", PORT, "-U", "postgres",
+             "-d", db_name, "-f", file_path],
+            capture_output=True, text=True, env=env, startupinfo=_hidden_si(),
+        )
+        if result.returncode == 0:
+            log.info("OK migration: %s", sql_file)
+        else:
+            log.info("SKIP migration: %s (%s)", sql_file,
+                     (result.stderr or "").split("\n")[0])
+
+    # Step 3: Create default admin user if it doesn't exist
+    result = subprocess.run(
+        [PSQL_EXE, "-h", "127.0.0.1", "-p", PORT, "-U", "postgres", "-d", db_name,
+         "-tAc", "SELECT 1 FROM users WHERE username = 'admin'"],
+        capture_output=True, text=True, env=env, startupinfo=_hidden_si(),
+    )
+    if result.stdout.strip() != "1":
+        admin_sql = os.path.join(BASE_DIR, "_admin_init.sql")
+        with open(admin_sql, "w", encoding="utf-8") as f:
+            f.write(
+                "INSERT INTO users (username, password_hash, role) VALUES "
+                "('admin', '$2b$12$LJ3m4ys3Lk0TSwMBQWJxaeflIOwnGGkahJCsOvn/F9JDOaFf1liGu', 'admin');\n"
+            )
+        subprocess.run(
+            [PSQL_EXE, "-h", "127.0.0.1", "-p", PORT, "-U", "postgres",
+             "-d", db_name, "-f", admin_sql],
+            capture_output=True, text=True, env=env, startupinfo=_hidden_si(),
+        )
+        try:
+            os.remove(admin_sql)
+        except OSError:
+            pass
+        log.info("Created default admin user (admin/admin)")
+    else:
+        log.info("Admin user already exists")
 
 
 def ensure_pkg_resources():
@@ -464,7 +573,12 @@ def kill_previous_instances():
     if _port_in_use(int(BACKEND_PORT)):
         log.info("Port %s in use — killing previous backend...", BACKEND_PORT)
         subprocess.run(
-            ["taskkill", "/F", "/FI", f"IMAGENAME eq python.exe"],
+            ["taskkill", "/F", "/FI", "IMAGENAME eq hercules-backend.exe"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            startupinfo=_hidden_si(),
+        )
+        subprocess.run(
+            ["taskkill", "/F", "/FI", "IMAGENAME eq python.exe"],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             startupinfo=_hidden_si(),
         )
