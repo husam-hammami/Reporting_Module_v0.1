@@ -946,17 +946,19 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
                   <X size={14} />
                 </button>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-end gap-2">
                 <div className="flex-1">
                   <Field label="Label">
                     <TextInput value={s.label} onChange={(v) => updateSeriesItem(i, { label: v })} placeholder="Series label" />
                   </Field>
                 </div>
-                <div className="w-16">
-                  <Field label="Color">
-                    <ColorInput value={s.color || ''} onChange={(v) => updateSeriesItem(i, { color: v })} />
-                  </Field>
-                </div>
+                <input
+                  type="color"
+                  value={s.color || ['#2563eb','#7c3aed','#059669','#d97706','#dc2626','#ec4899','#8b5cf6','#06b6d4'][i % 8]}
+                  onChange={(e) => updateSeriesItem(i, { color: e.target.value })}
+                  title="Series color"
+                  className="w-8 h-8 rounded-md border border-[var(--rb-border)] cursor-pointer bg-transparent p-0 hover:border-[var(--rb-accent)] transition-all flex-shrink-0 mb-0.5"
+                />
               </div>
               <Field label="Source type">
                 <SelectInput
