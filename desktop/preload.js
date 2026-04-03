@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('hercules', {
   saveConfig: (config) => ipcRenderer.invoke('save-config', config),
   onDbProgress: (callback) => ipcRenderer.on('db-progress', (_event, msg) => callback(msg)),
   restartForUpdate: () => ipcRenderer.invoke('restart-for-update'),
+  restartApp: () => ipcRenderer.invoke('restart-app'),
 });

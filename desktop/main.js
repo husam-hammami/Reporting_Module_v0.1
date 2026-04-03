@@ -909,6 +909,15 @@ ipcMain.handle('restart-for-update', async () => {
   app.exit(0);
 });
 
+// ─── IPC: Clean restart (from UI) ───────────────────────────────────────────
+ipcMain.handle('restart-app', async () => {
+  console.log('[Electron] Clean restart requested by user...');
+  stopBackend();
+  stopPostgres();
+  app.relaunch();
+  app.exit(0);
+});
+
 // ─── Setup wizard ────────────────────────────────────────────────────────────
 function showSetupWizard() {
   return new Promise((resolve) => {
