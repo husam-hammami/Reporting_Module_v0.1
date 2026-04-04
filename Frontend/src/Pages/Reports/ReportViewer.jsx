@@ -620,10 +620,10 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         {/* A4 mode: flex layout with side panels */}
         {pageMode === 'a4' && (
           <div className="hidden xl:flex" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-            <div style={{ width: 200, flexShrink: 0, position: 'fixed', left: 0, top: 100, bottom: 0, background: 'linear-gradient(180deg, #0a1020, #0f172a)', borderRight: '1px solid rgba(34,211,238,0.08)', overflow: 'auto' }}>
+            <div style={{ width: 200, flexShrink: 0, position: 'fixed', left: 0, top: 100, bottom: 0, background: 'linear-gradient(180deg, #0f1b2d 0%, #1a2744 30%, #f3f4f6 100%)', borderRight: '1px solid rgba(100,116,139,0.12)', overflow: 'auto' }}>
               <AiInsightsPanel tagValues={tagValues} />
             </div>
-            <div style={{ width: 200, flexShrink: 0, position: 'fixed', right: 0, top: 100, bottom: 0, background: 'linear-gradient(180deg, #0a1020, #0f172a)', borderLeft: '1px solid rgba(34,211,238,0.08)', overflow: 'auto' }}>
+            <div style={{ width: 200, flexShrink: 0, position: 'fixed', right: 0, top: 100, bottom: 0, background: 'linear-gradient(180deg, #0f1b2d 0%, #1a2744 30%, #f3f4f6 100%)', borderLeft: '1px solid rgba(100,116,139,0.12)', overflow: 'auto' }}>
               <ActionsPanel reportId={reportId} onExportPDF={handleExportPDF} onExportPNG={handleExportPNG} onToggleFullscreen={toggleFullscreen} />
             </div>
           </div>

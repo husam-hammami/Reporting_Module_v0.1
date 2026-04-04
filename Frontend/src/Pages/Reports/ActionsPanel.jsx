@@ -13,14 +13,14 @@ function ActionButton({ icon: Icon, label, onClick, active }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         width: '100%', padding: '7px 10px', border: 'none', borderRadius: 6,
-        background: active ? 'rgba(34,211,238,0.1)' : 'transparent',
-        color: active ? '#22d3ee' : '#94a3b8',
+        background: active ? 'rgba(34,211,238,0.12)' : 'transparent',
+        color: active ? '#22d3ee' : '#c1cdd9',
         cursor: 'pointer', fontSize: 11, fontWeight: 600,
         transition: 'background 0.15s, color 0.15s',
         textAlign: 'left',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e2e8f0'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = active ? 'rgba(34,211,238,0.1)' : 'transparent'; e.currentTarget.style.color = active ? '#22d3ee' : '#94a3b8'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#f0f4f8'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = active ? 'rgba(34,211,238,0.12)' : 'transparent'; e.currentTarget.style.color = active ? '#22d3ee' : '#c1cdd9'; }}
     >
       <Icon size={14} />
       <span>{label}</span>
@@ -49,7 +49,7 @@ export default function ActionsPanel({ reportId, onExportPDF, onExportPNG, onTog
       ...style,
     }}>
       {/* Header */}
-      <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', marginBottom: 4, paddingLeft: 10 }}>
+      <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#8899ab', marginBottom: 4, paddingLeft: 10 }}>
         Actions
       </span>
 
