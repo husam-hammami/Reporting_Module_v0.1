@@ -617,16 +617,16 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         }}
         onWheelCapture={handleWheelCapture}
       >
-        {/* A4 mode: flex layout with side panels */}
+        {/* A4 mode: fixed side panels flush with chrome bar */}
         {pageMode === 'a4' && (
-          <div className="hidden xl:flex" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-            <div style={{ width: 200, flexShrink: 0, position: 'fixed', left: 0, top: 100, bottom: 0, background: 'linear-gradient(180deg, #0f1b2d 0%, #1a2744 30%, #f3f4f6 100%)', borderRight: '1px solid rgba(100,116,139,0.12)', overflow: 'auto' }}>
+          <>
+            <div className="hidden xl:block" style={{ width: 200, position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 30, background: '#0f1b2d', borderRight: '1px solid rgba(255,255,255,0.06)', overflow: 'auto', paddingTop: 48 }}>
               <AiInsightsPanel tagValues={tagValues} />
             </div>
-            <div style={{ width: 200, flexShrink: 0, position: 'fixed', right: 0, top: 100, bottom: 0, background: 'linear-gradient(180deg, #0f1b2d 0%, #1a2744 30%, #f3f4f6 100%)', borderLeft: '1px solid rgba(100,116,139,0.12)', overflow: 'auto' }}>
+            <div className="hidden xl:block" style={{ width: 200, position: 'fixed', right: 0, top: 0, bottom: 0, zIndex: 30, background: '#0f1b2d', borderLeft: '1px solid rgba(255,255,255,0.06)', overflow: 'auto', paddingTop: 48 }}>
               <ActionsPanel reportId={reportId} onExportPDF={handleExportPDF} onExportPNG={handleExportPNG} onToggleFullscreen={toggleFullscreen} />
             </div>
-          </div>
+          </>
         )}
         <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'xl:px-[200px]' : ''} max-w-full print:px-0`}>
           {/* Dashboard header bar is rendered in the unified chrome toolbar above */}
