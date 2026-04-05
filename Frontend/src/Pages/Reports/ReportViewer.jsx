@@ -620,7 +620,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         {/* A4 mode: fixed side panels flush with chrome bar */}
         {pageMode === 'a4' && (
           <>
-            <div className="hidden xl:block" style={{ width: 200, position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 30, background: '#0f1b2d', borderRight: '1px solid rgba(255,255,255,0.06)', overflow: 'auto', paddingTop: 48 }}>
+            <div className="hidden xl:block" style={{ width: 200, position: 'fixed', left: 'var(--sidebar-width, 220px)', top: 0, bottom: 0, zIndex: 30, background: '#0f1b2d', borderRight: '1px solid rgba(255,255,255,0.06)', overflow: 'auto', paddingTop: 48 }}>
               <AiInsightsPanel tagValues={tagValues} />
             </div>
             <div className="hidden xl:block" style={{ width: 200, position: 'fixed', right: 0, top: 0, bottom: 0, zIndex: 30, background: '#0f1b2d', borderLeft: '1px solid rgba(255,255,255,0.06)', overflow: 'auto', paddingTop: 48 }}>
@@ -628,7 +628,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             </div>
           </>
         )}
-        <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'xl:px-[200px]' : ''} max-w-full print:px-0`}>
+        <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'xl:pl-[200px] xl:pr-[200px]' : ''} max-w-full print:px-0 print:pl-0 print:pr-0`}>
           {/* Dashboard header bar is rendered in the unified chrome toolbar above */}
 
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
