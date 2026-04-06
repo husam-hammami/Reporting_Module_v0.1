@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { loadAndMigrateConfig, EMPTY_LAYOUT_CONFIG, CURRENT_SCHEMA_VERSION } from '../Pages/ReportBuilder/state/templateSchema';
+import { effectiveRangeForDataPanelTimeScope } from '../Pages/ReportBuilder/utils/dataPanelTimeScope';
 import { buildGrainSilosTemplate } from '../Pages/ReportBuilder/seed/grainSilosTemplate';
 import { reportBuilderApi } from '../API/reportBuilderApi';
 import axios, { isExplicitRemoteApi } from '../API/axios';
@@ -234,10 +235,13 @@ export function collectWidgetTagAggregations(widgets) {
     if (c.capacityTag) setAgg(c.capacityTag, 'last');
     if (c.tonsTag) setAgg(c.tonsTag, 'last');
 
-    // Data Panel fields
+    // Data Panel fields — only "inherit" uses the global report window + this aggregation map
     if (Array.isArray(c.fields)) {
       c.fields.forEach((f) => {
-        if (f.sourceType === 'tag' && f.tagName) setAgg(f.tagName, f.aggregation || 'last');
+        if (f.sourceType === 'tag' && f.tagName) {
+          const ts = f.timeScope || 'inherit';
+          if (ts === 'inherit') setAgg(f.tagName, f.aggregation || 'last');
+        }
       });
     }
 
@@ -293,6 +297,44 @@ export function collectWidgetTagAggregations(widgets) {
   });
 
   return tagAgg;
+}
+
+/**
+ * Data Panel tag inputs with timeScope !== 'inherit' need their own historian window.
+ * @param {Array} widgets
+ * @param {Date} anchorDate  Report range end (historical) or "now" (live)
+ * @returns {Array<{ fieldId: string, tagName: string, aggregation: string, from: Date, to: Date }>}
+ */
+export function collectDataPanelScopedHistorianRequests(widgets, anchorDate) {
+  const out = [];
+  function walk(ws) {
+    if (!Array.isArray(ws)) return;
+    ws.forEach((w) => {
+      const c = w.config || {};
+      if (w.type === 'datapanel' && Array.isArray(c.fields)) {
+        c.fields.forEach((f) => {
+          if (f.sourceType !== 'tag' || !f.tagName || !f.id) return;
+          const ts = f.timeScope || 'inherit';
+          if (ts === 'inherit') return;
+          const { from, to } = effectiveRangeForDataPanelTimeScope(ts, anchorDate);
+          if (from && to) {
+            out.push({
+              fieldId: f.id,
+              tagName: f.tagName,
+              aggregation: f.aggregation || 'last',
+              from,
+              to,
+            });
+          }
+        });
+      }
+      if (w.type === 'tabcontainer' && Array.isArray(c.tabs)) {
+        c.tabs.forEach((tab) => walk(tab.widgets));
+      }
+    });
+  }
+  walk(widgets);
+  return out;
 }
 
 /* ── useReportTemplates (Manager page) — API-first, fallback to localStorage ── */

@@ -5,7 +5,11 @@ import { Tooltip } from '@mui/material';
 import { motion, useReducedMotion } from 'framer-motion';
 import { exportAsPNG, exportAsPDF } from '../../utils/exportReport';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
-import { useReportCanvas, useAvailableTags, collectWidgetTagNames } from '../../Hooks/useReportBuilder';
+import { useReportCanvas, useAvailableTags, collectWidgetTagNames, collectDataPanelScopedHistorianRequests } from '../../Hooks/useReportBuilder';
+import {
+  groupDataPanelScopedHistorianRequests,
+  fetchDataPanelScopedHistorianValues,
+} from './utils/dataPanelTimeScope';
 import TabSelector from '../../Components/ui/TabSelector';
 import { useTagHistory } from '../../Hooks/useTagHistory';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from './widgets/WidgetRenderer';
@@ -30,6 +34,7 @@ export default function ReportBuilderPreview() {
   const { template, widgets, loading, dashboardTabs, activeTabId, allTabsWidgets, switchDashboardTab } = useReportCanvas(id);
   const { tags: availableTags } = useAvailableTags();
   const [liveTagValues, setLiveTagValues] = useState({});
+  const [liveScopedTagValues, setLiveScopedTagValues] = useState({});
   const [lastDataUpdate, setLastDataUpdate] = useState(Date.now());
   const [fullscreen, setFullscreen] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -66,6 +71,27 @@ export default function ReportBuilderPreview() {
   const usedTagNames = useMemo(() => collectWidgetTagNames(allTabsWidgets || widgets), [allTabsWidgets, widgets]);
 
   useEffect(() => {
+    const ws = allTabsWidgets || widgets;
+    let cancelled = false;
+    const run = async () => {
+      const scopedReqs = collectDataPanelScopedHistorianRequests(ws, new Date());
+      if (scopedReqs.length === 0) {
+        if (!cancelled) setLiveScopedTagValues({});
+        return;
+      }
+      const groups = groupDataPanelScopedHistorianRequests(scopedReqs);
+      const scopedValues = await fetchDataPanelScopedHistorianValues(axios, groups);
+      if (!cancelled) setLiveScopedTagValues(scopedValues);
+    };
+    run();
+    const scopedInterval = setInterval(run, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(scopedInterval);
+    };
+  }, [allTabsWidgets, widgets]);
+
+  useEffect(() => {
     if (usedTagNames.length === 0) return;
     const fetchValues = async () => {
       try {
@@ -100,7 +126,7 @@ export default function ReportBuilderPreview() {
 
   const tagValues = useMemo(() => {
     if (emulatorOn && emulatorValues) {
-      const base = { ...emulatorValues };
+      const base = { ...emulatorValues, ...liveScopedTagValues };
       const t = Date.now() / 1000;
       for (const tag of usedTagNames) {
         if (tag && !(tag in base)) {
@@ -109,8 +135,8 @@ export default function ReportBuilderPreview() {
       }
       return base;
     }
-    return { ...liveTagValues };
-  }, [liveTagValues, emulatorOn, emulatorValues, usedTagNames]);
+    return { ...liveTagValues, ...liveScopedTagValues };
+  }, [liveTagValues, liveScopedTagValues, emulatorOn, emulatorValues, usedTagNames]);
 
   useEffect(() => {
     if (emulatorOn && emulatorValues) {

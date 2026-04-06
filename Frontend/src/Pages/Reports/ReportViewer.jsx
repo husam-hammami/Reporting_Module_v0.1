@@ -3,7 +3,18 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FaChevronLeft, FaPrint, FaExpand, FaCompress, FaClock, FaFilePdf, FaImage } from 'react-icons/fa';
 import { exportAsPNG, exportAsPDF } from '../../utils/exportReport';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
-import { useReportCanvas, useReportTemplates, useAvailableTags, collectWidgetTagNames, collectWidgetTagAggregations } from '../../Hooks/useReportBuilder';
+import {
+  useReportCanvas,
+  useReportTemplates,
+  useAvailableTags,
+  collectWidgetTagNames,
+  collectWidgetTagAggregations,
+  collectDataPanelScopedHistorianRequests,
+} from '../../Hooks/useReportBuilder';
+import {
+  groupDataPanelScopedHistorianRequests,
+  fetchDataPanelScopedHistorianValues,
+} from '../ReportBuilder/utils/dataPanelTimeScope';
 import { useTagHistory } from '../../Hooks/useTagHistory';
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
@@ -153,6 +164,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   const [liveTagValues, setLiveTagValues] = useState({});
   const [liveError, setLiveError] = useState(null);
   const [historicalTagValues, setHistoricalTagValues] = useState({});
+  const [liveScopedTagValues, setLiveScopedTagValues] = useState({});
   const [historicalTagHistory, setHistoricalTagHistory] = useState(null);
   const [historicalLoading, setHistoricalLoading] = useState(false);
   const [historicalError, setHistoricalError] = useState(null);
@@ -272,11 +284,18 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
           )
         );
 
+        const merged = {};
+        results.forEach((data) => Object.assign(merged, data));
+
+        const scopedReqs = collectDataPanelScopedHistorianRequests(
+          allTabsWidgets || widgets,
+          dateRange.to,
+        );
+        const scopedGroups = groupDataPanelScopedHistorianRequests(scopedReqs);
+        const scopedValues = await fetchDataPanelScopedHistorianValues(axios, scopedGroups);
+
         if (!cancelled) {
-          // Merge all results into a single object
-          const merged = {};
-          results.forEach((data) => Object.assign(merged, data));
-          setHistoricalTagValues(merged);
+          setHistoricalTagValues({ ...merged, ...scopedValues });
           setHistoricalLoading(false);
         }
       } catch (err) {
@@ -290,7 +309,34 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
 
     fetchHistorical();
     return () => { cancelled = true; };
-  }, [timePeriod.tab, usedTagNames, tagAggregations, dateRange]);
+  }, [timePeriod.tab, usedTagNames, tagAggregations, dateRange, allTabsWidgets, widgets]);
+
+  // Live mode: Data Panel fields with their own time scope use historian (rolling window ending at now).
+  React.useEffect(() => {
+    if (timePeriod.tab !== 'live') {
+      setLiveScopedTagValues({});
+      return;
+    }
+    const ws = allTabsWidgets || widgets;
+    let cancelled = false;
+    const run = async () => {
+      const anchor = new Date();
+      const scopedReqs = collectDataPanelScopedHistorianRequests(ws, anchor);
+      if (scopedReqs.length === 0) {
+        if (!cancelled) setLiveScopedTagValues({});
+        return;
+      }
+      const groups = groupDataPanelScopedHistorianRequests(scopedReqs);
+      const scopedValues = await fetchDataPanelScopedHistorianValues(axios, groups);
+      if (!cancelled) setLiveScopedTagValues(scopedValues);
+    };
+    run();
+    const interval = setInterval(run, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [timePeriod.tab, allTabsWidgets, widgets]);
 
   // Historical mode: fetch time-series data for chart widgets.
   // Charts need arrays of {t, v} per tag (not single aggregated values).
@@ -354,10 +400,10 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
 
   const tagValues = useMemo(() => {
     if (timePeriod.tab !== 'live') return historicalTagValues;
-    const base = { ...liveTagValues };
+    const base = { ...liveTagValues, ...liveScopedTagValues };
     if (emulatorOn && emulatorValues) Object.assign(base, emulatorValues);
     return base;
-  }, [timePeriod.tab, liveTagValues, emulatorOn, emulatorValues, historicalTagValues]);
+  }, [timePeriod.tab, liveTagValues, liveScopedTagValues, emulatorOn, emulatorValues, historicalTagValues]);
 
   const liveTagHistory = useTagHistory(usedTagNames, tagValues);
   // In historical mode, prefer backend time-series data for charts (full timeframe);

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Plus, X, Trash2 } from 'lucide-react';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import FormulaEditor from '../formulas/FormulaEditor';
+import { dataPanelScopedValueKey, DATA_PANEL_TIME_SCOPE_LABELS } from '../utils/dataPanelTimeScope';
 
 let _fid = Date.now();
 const fieldId = () => `dpf-${_fid++}-${Math.random().toString(36).slice(2, 6)}`;
@@ -37,7 +38,10 @@ function resolveFieldValue(field, tagValues) {
   const src = field.sourceType || 'static';
   if (src === 'static') return field.staticValue ?? '';
   if (src === 'tag') {
-    const raw = tagValues?.[field.tagName];
+    const scoped = field.timeScope && field.timeScope !== 'inherit' && field.id;
+    const key = scoped ? dataPanelScopedValueKey(field.id) : field.tagName;
+    let raw = tagValues?.[key];
+    if (raw == null && scoped) raw = tagValues?.[field.tagName];
     if (raw == null) return null;
     const num = Number(raw);
     return isNaN(num) ? raw : num;
@@ -81,6 +85,7 @@ function defaultField(index = 0) {
     tagName: '',
     formula: '',
     aggregation: 'last',
+    timeScope: 'inherit',
     unit: '',
     decimals: 1,
     format: 'number',
@@ -714,6 +719,26 @@ function FieldEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagVal
                 <option value="max">Max</option>
                 <option value="count">Count</option>
               </select>
+            </div>
+          )}
+
+          {draft.sourceType === 'tag' && (
+            <div>
+              <label className={labelCls}>Time range</label>
+              <select
+                value={draft.timeScope || 'inherit'}
+                onChange={(e) => patch({ timeScope: e.target.value })}
+                className={inputCls}
+              >
+                {Object.entries(DATA_PANEL_TIME_SCOPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-[var(--rb-text-muted)] mt-1.5 leading-relaxed">
+                Daily / Weekly / Monthly / Yearly use the calendar period ending at the report&apos;s selected end time (viewer) or current time (live / builder preview).
+              </p>
             </div>
           )}
 

@@ -10,7 +10,18 @@ import {
 } from 'lucide-react';
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { useReportCanvas, useAvailableTags, useAvailableGroups, useAvailableFormulas, collectWidgetTagNames } from '../../Hooks/useReportBuilder';
+import {
+  useReportCanvas,
+  useAvailableTags,
+  useAvailableGroups,
+  useAvailableFormulas,
+  collectWidgetTagNames,
+  collectDataPanelScopedHistorianRequests,
+} from '../../Hooks/useReportBuilder';
+import {
+  groupDataPanelScopedHistorianRequests,
+  fetchDataPanelScopedHistorianValues,
+} from './utils/dataPanelTimeScope';
 import TabSelector from '../../Components/ui/TabSelector';
 import { useTagHistory } from '../../Hooks/useTagHistory';
 import WidgetToolbox from './panels/WidgetToolbox';
@@ -62,6 +73,29 @@ export default function ReportBuilderCanvas() {
   const widgets = rawWidgets;
   const usedTagNames = useMemo(() => collectWidgetTagNames(allTabsWidgets || widgets), [allTabsWidgets, widgets]);
   const [polledTagValues, setPolledTagValues] = useState({});
+  const [liveScopedTagValues, setLiveScopedTagValues] = useState({});
+
+  useEffect(() => {
+    const ws = allTabsWidgets || widgets;
+    let cancelled = false;
+    const run = async () => {
+      const scopedReqs = collectDataPanelScopedHistorianRequests(ws, new Date());
+      if (scopedReqs.length === 0) {
+        if (!cancelled) setLiveScopedTagValues({});
+        return;
+      }
+      const groups = groupDataPanelScopedHistorianRequests(scopedReqs);
+      const scopedValues = await fetchDataPanelScopedHistorianValues(axios, groups);
+      if (!cancelled) setLiveScopedTagValues(scopedValues);
+    };
+    run();
+    const id = setInterval(run, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [allTabsWidgets, widgets]);
+
   useEffect(() => {
     if (emulatorOn || usedTagNames.length === 0) return;
     let cancelled = false;
@@ -80,7 +114,7 @@ export default function ReportBuilderCanvas() {
 
   const liveTagValues = useMemo(() => {
     if (emulatorOn && emulatorValues) {
-      const base = { ...emulatorValues };
+      const base = { ...emulatorValues, ...liveScopedTagValues };
       const t = Date.now() / 1000;
       for (const tag of usedTagNames) {
         if (tag && !(tag in base)) {
@@ -89,8 +123,8 @@ export default function ReportBuilderCanvas() {
       }
       return base;
     }
-    return polledTagValues;
-  }, [emulatorOn, emulatorValues, usedTagNames, polledTagValues]);
+    return { ...polledTagValues, ...liveScopedTagValues };
+  }, [emulatorOn, emulatorValues, usedTagNames, polledTagValues, liveScopedTagValues]);
   const tagHistory = useTagHistory(usedTagNames, liveTagValues);
 
   const [selectedId, setSelectedId] = useState(null);
