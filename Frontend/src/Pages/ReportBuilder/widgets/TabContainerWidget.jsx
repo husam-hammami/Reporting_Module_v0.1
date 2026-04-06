@@ -24,7 +24,7 @@ const WIDGET_LABEL_MAP = {
   tabcontainer: 'Tab Container',
 };
 
-const TC_GRID_COLS = 6;
+const TC_GRID_COLS = 12;
 const TC_ROW_H = 36;
 const TC_MARGIN = [4, 4];
 const TC_PADDING = [4, 4];

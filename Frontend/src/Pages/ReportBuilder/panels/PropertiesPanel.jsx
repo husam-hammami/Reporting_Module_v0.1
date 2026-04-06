@@ -1766,12 +1766,12 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
         </div>
         <div className="grid grid-cols-4 gap-1.5">
           {[
-            { key: 'x', label: 'X', min: 0, max: isSubWidget ? 5 : 11 },
+            { key: 'x', label: 'X', min: 0, max: 11 },
             { key: 'y', label: 'Y', min: 0, max: 999 },
-            { key: 'w', label: 'W', min: 1, max: isSubWidget ? 6 : 12 },
+            { key: 'w', label: 'W', min: 1, max: 12 },
             { key: 'h', label: 'H', min: 1, max: 999 },
           ].map(({ key, label, min, max }) => {
-            const gridCols = isSubWidget ? 6 : 12;
+            const gridCols = 12;
             return (
             <div key={key}>
               <label className="block text-[8px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.1em] mb-0.5 text-center">{label}</label>
