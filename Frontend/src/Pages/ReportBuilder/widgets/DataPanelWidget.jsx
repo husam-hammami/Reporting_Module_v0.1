@@ -79,6 +79,7 @@ function defaultField(index = 0) {
     staticValue: '',
     tagName: '',
     formula: '',
+    aggregation: 'last',
     unit: '',
     decimals: 1,
     format: 'number',
@@ -694,6 +695,26 @@ function FieldEditor({ draft, setDraft, onSave, onCancel, onDelete, tags }) {
                 autoFocus
                 className={inputCls}
               />
+            </div>
+          )}
+
+          {(draft.sourceType === 'tag' || draft.sourceType === 'formula') && (
+            <div>
+              <label className={labelCls}>Aggregation</label>
+              <select
+                value={draft.aggregation || 'last'}
+                onChange={(e) => patch({ aggregation: e.target.value })}
+                className={inputCls}
+              >
+                <option value="last">Last</option>
+                <option value="first">First (Start)</option>
+                <option value="delta">Delta (End−Start)</option>
+                <option value="avg">Average</option>
+                <option value="sum">Sum</option>
+                <option value="min">Min</option>
+                <option value="max">Max</option>
+                <option value="count">Count</option>
+              </select>
             </div>
           )}
 

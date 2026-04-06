@@ -86,6 +86,13 @@ export function collectWidgetTagNames(widgets) {
     if (c.capacityTag) names.add(c.capacityTag);
     if (c.tonsTag) names.add(c.tonsTag);
 
+    // Data Panel fields
+    if (Array.isArray(c.fields)) {
+      c.fields.forEach((f) => {
+        if (f.sourceType === 'tag' && f.tagName) names.add(f.tagName);
+      });
+    }
+
     // Tab container: recursively collect from all tabs' sub-widgets
     if (w.type === 'tabcontainer' && Array.isArray(c.tabs)) {
       c.tabs.forEach((tab) => {
@@ -226,6 +233,13 @@ export function collectWidgetTagAggregations(widgets) {
     // Silo capacity/tons tags
     if (c.capacityTag) setAgg(c.capacityTag, 'last');
     if (c.tonsTag) setAgg(c.tonsTag, 'last');
+
+    // Data Panel fields
+    if (Array.isArray(c.fields)) {
+      c.fields.forEach((f) => {
+        if (f.sourceType === 'tag' && f.tagName) setAgg(f.tagName, f.aggregation || 'last');
+      });
+    }
 
     // Tab container: recursively collect aggregations from all tabs' sub-widgets
     if (w.type === 'tabcontainer' && Array.isArray(c.tabs)) {
