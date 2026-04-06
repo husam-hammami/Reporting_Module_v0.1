@@ -275,8 +275,8 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
         )}
       </div>
 
-      {/* Sub-widgets content area */}
-      <div ref={gridContainerRef} className="flex-1 min-h-0 overflow-auto" onClick={() => selectSubWidget(null)}>
+      {/* Sub-widgets content area — stopPropagation prevents parent grid from capturing drag */}
+      <div ref={gridContainerRef} className="flex-1 min-h-0 overflow-auto" onClick={() => selectSubWidget(null)} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
         {activeWidgets.length === 0 && !canEdit && (
           <div className="flex items-center justify-center h-full text-[var(--rb-text-muted)] text-[11px]">
             No widgets in this tab
