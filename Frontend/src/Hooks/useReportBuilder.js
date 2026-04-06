@@ -442,6 +442,9 @@ export function useReportCanvas(templateId) {
   const [historyState, setHistoryState] = useState({ pastCount: 0, futureCount: 0 });
   const autosaveTimer = useRef(null);
   const templateRef = useRef(null);
+  const widgetsRef = useRef([]);
+  const parametersRef = useRef([]);
+  const computedSignalsRef = useRef([]);
   const pastRef = useRef([]);
   const futureRef = useRef([]);
   const layoutDebounceRef = useRef({ timer: null, pendingPrev: null });
@@ -451,12 +454,15 @@ export function useReportCanvas(templateId) {
   const [dashboardTabs, setDashboardTabs] = useState(null);
   const [activeTabId, setActiveTabId] = useState(null);
   const tabsRef = useRef(null);
-  useEffect(() => { tabsRef.current = dashboardTabs; }, [dashboardTabs]);
+
+  // Keep all refs synchronously up-to-date so performSave never uses stale closures
+  templateRef.current = template;
+  tabsRef.current = dashboardTabs;
+  widgetsRef.current = widgets;
+  parametersRef.current = parameters;
+  computedSignalsRef.current = computedSignals;
 
   const tabsEnabled = !!dashboardTabs?.enabled;
-
-  // Keep templateRef always up-to-date so performSave never uses stale closures
-  useEffect(() => { templateRef.current = template; }, [template]);
 
   const toggleAutoSave = useCallback(() => {
     setAutoSave((prev) => {
@@ -572,13 +578,17 @@ export function useReportCanvas(templateId) {
     if (!autoSave || !dirty || !templateId) return;
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
-      performSave(widgets, parameters, computedSignals);
+      performSave();
     }, 2000);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
   }, [autoSave, dirty, widgets, parameters, computedSignals, templateId]);
 
-  const performSave = useCallback(async (w, p, cs) => {
+  const performSave = useCallback(async () => {
     if (!templateId) return;
+    // Always read the absolute latest state from synchronous refs
+    const w = widgetsRef.current;
+    const p = parametersRef.current;
+    const cs = computedSignalsRef.current;
     const currentTemplate = templateRef.current;
     const existingLC = currentTemplate?.layout_config || {};
 
@@ -599,7 +609,7 @@ export function useReportCanvas(templateId) {
     const layout_config = {
       ...existingLC,
       schemaVersion: CURRENT_SCHEMA_VERSION,
-      widgets: savedTabs?.enabled ? [] : w,
+      widgets: savedTabs?.enabled ? [] : JSON.parse(JSON.stringify(w)),
       parameters: p,
       computedSignals: cs,
       grid: existingLC.grid || { cols: 12, rowHeight: 40 },
@@ -628,11 +638,11 @@ export function useReportCanvas(templateId) {
   const saveLayout = useCallback(async () => {
     setSaving(true);
     try {
-      await performSave(widgets, parameters, computedSignals);
+      await performSave();
     } finally {
       setSaving(false);
     }
-  }, [widgets, parameters, computedSignals, performSave]);
+  }, [performSave]);
 
   // Update template name/description/status/layout_config — persists to API
   const updateMeta = useCallback(async (updates) => {
