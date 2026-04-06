@@ -14,6 +14,8 @@ import ReportListingPage from '../../Components/Reports/ReportListingPage';
 import PaginatedReportView from './PaginatedReportViewer';
 import TimePeriodTabs, { VIEWER_TABS } from './TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
+import AiInsightsPanel, { AiDrawer } from './AiInsightsPanel';
+import ActionsPanel from './ActionsPanel';
 import '../ReportBuilder/reportBuilderTheme.css';
 import axios from '../../API/axios';
 
@@ -599,6 +601,9 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         </div>
       )}
 
+      {/* AI drawer for full-mode dashboards */}
+      {pageMode !== 'a4' && <AiDrawer tagValues={tagValues} />}
+
       {/* ── Report content: full width; scrollable with mouse wheel ── */}
       <div
         ref={scrollContainerRef}
@@ -612,7 +617,18 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         }}
         onWheelCapture={handleWheelCapture}
       >
-        <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}>
+        {/* A4 mode: fixed side panels flush with chrome bar */}
+        {pageMode === 'a4' && (
+          <>
+            <div className="hidden xl:block" style={{ width: 200, position: 'fixed', left: 'var(--sidebar-width, 220px)', top: 0, bottom: 0, zIndex: 30, background: '#0f1b2d', borderRight: '1px solid rgba(255,255,255,0.06)', overflow: 'auto', paddingTop: 48 }}>
+              <AiInsightsPanel tagValues={tagValues} />
+            </div>
+            <div className="hidden xl:block" style={{ width: 200, position: 'fixed', right: 0, top: 0, bottom: 0, zIndex: 30, background: '#0f1b2d', borderLeft: '1px solid rgba(255,255,255,0.06)', overflow: 'auto', paddingTop: 48 }}>
+              <ActionsPanel reportId={reportId} onExportPDF={handleExportPDF} onExportPNG={handleExportPNG} onToggleFullscreen={toggleFullscreen} />
+            </div>
+          </>
+        )}
+        <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'xl:pl-[200px] xl:pr-[200px]' : ''} max-w-full print:px-0 print:pl-0 print:pr-0`}>
           {/* Dashboard header bar is rendered in the unified chrome toolbar above */}
 
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
@@ -705,7 +721,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             /* ══ Grid View — original react-grid-layout rendering ══ */
             <div
               ref={containerRef}
-              className="report-builder rb-canvas-perspective rb-layout-readonly pt-0 pb-3 px-1"
+              className={`report-builder rb-canvas-perspective rb-layout-readonly ${dashboardHeader ? 'pt-0 pb-3' : 'pt-3 pb-6'} px-1`}
               style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}
             >
               <GridLayout

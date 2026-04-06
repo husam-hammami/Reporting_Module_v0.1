@@ -146,12 +146,12 @@ export default function PieChartWidget({ config, tagValues }) {
     <div className="h-full w-full flex flex-col overflow-hidden">
       {config.showTitle !== false && config.title && (
         <div className="px-3 pt-2.5 pb-1 flex-shrink-0">
-          <p className="font-semibold text-[var(--rb-text)] truncate" style={{ fontSize: titleSize }}>{config.title}</p>
+          <p className="rb-widget-title" style={{ fontSize: titleSize }}>{config.title}</p>
         </div>
       )}
 
       <div className="flex-1 flex items-center justify-center min-h-0 px-2 pb-2 gap-2">
-        <div className="relative flex-shrink-0" style={{ width: '55%', maxWidth: 200 }}>
+        <div className="relative flex-shrink-0" style={{ width: '60%', maxWidth: 260 }}>
           <svg ref={svgRef} viewBox="0 0 200 200" className="w-full h-full drop-shadow-lg" onMouseLeave={handleMouseLeave}>
             <defs>
               {arcs.map((arc, i) => (
