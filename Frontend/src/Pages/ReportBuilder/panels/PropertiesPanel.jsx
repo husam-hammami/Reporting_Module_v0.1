@@ -1766,11 +1766,13 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
         </div>
         <div className="grid grid-cols-4 gap-1.5">
           {[
-            { key: 'x', label: 'X', min: 0, max: 11 },
+            { key: 'x', label: 'X', min: 0, max: isSubWidget ? 5 : 11 },
             { key: 'y', label: 'Y', min: 0, max: 999 },
-            { key: 'w', label: 'W', min: 1, max: 12 },
+            { key: 'w', label: 'W', min: 1, max: isSubWidget ? 6 : 12 },
             { key: 'h', label: 'H', min: 1, max: 999 },
-          ].map(({ key, label, min, max }) => (
+          ].map(({ key, label, min, max }) => {
+            const gridCols = isSubWidget ? 6 : 12;
+            return (
             <div key={key}>
               <label className="block text-[8px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.1em] mb-0.5 text-center">{label}</label>
               <input
@@ -1782,15 +1784,16 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
                   let v = parseInt(e.target.value, 10);
                   if (isNaN(v)) return;
                   v = Math.max(min, Math.min(max, v));
-                  if (key === 'x' && v + (widget.w || 1) > 12) v = 12 - (widget.w || 1);
-                  if (key === 'w' && (widget.x || 0) + v > 12) v = 12 - (widget.x || 0);
+                  if (key === 'x' && v + (widget.w || 1) > gridCols) v = gridCols - (widget.w || 1);
+                  if (key === 'w' && (widget.x || 0) + v > gridCols) v = gridCols - (widget.x || 0);
                   onUpdate(widget.id, { [key]: v });
                 }}
                 className="rb-input-base w-full text-center font-mono tabular-nums text-[11px] font-bold"
                 style={{ padding: '4px 2px' }}
               />
             </div>
-          ))}
+          );
+          })}
         </div>
       </div>
 

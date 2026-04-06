@@ -95,14 +95,14 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
           <WidgetRenderer
             widget={subWidget}
             tagValues={tagValues}
-            isPreview={false}
+            isPreview={isPreview}
             isSelected={editCtx?.isSubSelected || false}
             onUpdateWidget={editCtx?.onUpdateSubWidget}
             widgetId={subWidget.id}
             tags={tags}
             tagHistory={tagHistory}
             savedFormulas={savedFormulas}
-            isReportBuilderWorkspace
+            isReportBuilderWorkspace={!isPreview}
             layoutRowHeight={layoutRowHeight}
           />
         ),
