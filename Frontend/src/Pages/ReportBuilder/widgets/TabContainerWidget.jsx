@@ -333,8 +333,8 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
                       </button>
                     </div>
                   )}
-                  {/* Widget body — no extra title, rendered same as outside */}
-                  <div className="no-drag h-full overflow-hidden">
+                  {/* Widget body */}
+                  <div className="h-full overflow-hidden">
                     {renderWidget ? renderWidget(sw, { isSubSelected: isSubSel, onUpdateSubWidget: updateSubWidget }) : (
                       <div className="flex items-center justify-center h-full text-[9px] text-[var(--rb-text-muted)]">
                         {sw.type} widget
