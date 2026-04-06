@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom';
 import { Plus, X, Trash2 } from 'lucide-react';
 import { evaluateFormula } from '../formulas/formulaEngine';
+import FormulaEditor from '../formulas/FormulaEditor';
 
 let _fid = Date.now();
 const fieldId = () => `dpf-${_fid++}-${Math.random().toString(36).slice(2, 6)}`;
@@ -525,7 +526,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
 
 /* ── Field Editor Modal ─────────────────────────────────────────── */
 
-function FieldEditor({ draft, setDraft, onSave, onCancel, onDelete, tags }) {
+function FieldEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagValues }) {
   const safeTags = Array.isArray(tags) ? tags : [];
   const [tagSearch, setTagSearch] = useState('');
   const patch = (u) => setDraft((d) => ({ ...d, ...u }));
@@ -687,13 +688,11 @@ function FieldEditor({ draft, setDraft, onSave, onCancel, onDelete, tags }) {
           {draft.sourceType === 'formula' && (
             <div>
               <label className={labelCls}>Formula</label>
-              <input
-                type="text"
+              <FormulaEditor
                 value={draft.formula || ''}
-                onChange={(e) => patch({ formula: e.target.value })}
-                placeholder="e.g. {tag1} + {tag2}"
-                autoFocus
-                className={inputCls}
+                onChange={(v) => patch({ formula: v })}
+                tags={tags}
+                tagValues={tagValues}
               />
             </div>
           )}
