@@ -55,11 +55,35 @@ function usePortalDropdown(show, anchorRef, placement = 'below') {
 export default function TabContainerWidget({ config, tagValues, isPreview, isSelected, onUpdate, widgetId, tags, savedFormulas = [], tagHistory, renderWidget, onSubWidgetSelect, selectedSubWidgetId: externalSubId, onSubLayoutChange }) {
   const safeConfig = config || {};
   const tabs = Array.isArray(safeConfig.tabs) ? safeConfig.tabs : [];
-  const activeTabId = safeConfig.activeTabId || tabs[0]?.id || null;
-  const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0] || null;
-  const activeWidgets = activeTab?.widgets || [];
 
   const canEdit = Boolean(isSelected && onUpdate && widgetId);
+
+  /** Saved / default tab from template — used when persisting to config or as fallback for read-only. */
+  const configDerivedActiveTabId = useMemo(() => {
+    const saved = safeConfig.activeTabId;
+    if (saved && tabs.some((t) => t.id === saved)) return saved;
+    return tabs[0]?.id ?? null;
+  }, [safeConfig.activeTabId, tabs]);
+
+  /**
+   * Preview / viewer (and nested tabs when not sub-selected): no config write path — keep selection in state.
+   * Builder with this widget selected: persist activeTabId via onUpdate.
+   */
+  const [localActiveTabId, setLocalActiveTabId] = useState(null);
+
+  useEffect(() => {
+    if (canEdit) return;
+    setLocalActiveTabId(configDerivedActiveTabId);
+  }, [widgetId, configDerivedActiveTabId, canEdit]);
+
+  const activeTabId = canEdit
+    ? configDerivedActiveTabId
+    : (localActiveTabId != null && tabs.some((t) => t.id === localActiveTabId)
+        ? localActiveTabId
+        : configDerivedActiveTabId);
+
+  const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0] || null;
+  const activeWidgets = activeTab?.widgets || [];
   const [showAddWidget, setShowAddWidget] = useState(false);
   const [showAddTab, setShowAddTab] = useState(false);
   const [renamingId, setRenamingId] = useState(null);
@@ -91,9 +115,13 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
   }, [onUpdate, widgetId]);
 
   const setActiveTab = useCallback((tabId) => {
-    updateConfig({ activeTabId: tabId });
+    if (canEdit) {
+      updateConfig({ activeTabId: tabId });
+    } else {
+      setLocalActiveTabId(tabId);
+    }
     selectSubWidget(null);
-  }, [updateConfig, selectSubWidget]);
+  }, [canEdit, updateConfig, selectSubWidget]);
 
   const addTab = useCallback((label, sourceTabId) => {
     const newId = `tc-${uid()}`;
