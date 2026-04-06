@@ -67,14 +67,14 @@ function getFieldHint(field) {
 }
 
 function defaultField(index = 0) {
-  const left = clampPct(5 + (index * 7) % 55);
-  const top = clampPct(5 + (index * 11) % 45);
+  const left = snapPct(clampPct(5 + (index * 7) % 55));
+  const top = snapPct(clampPct(5 + (index * 11) % 45));
   return {
     id: fieldId(),
     left,
     top,
     width: 20,
-    height: 10,
+    height: SNAP_STEP,
     sourceType: 'static',
     staticValue: '',
     tagName: '',
@@ -96,8 +96,14 @@ function defaultField(index = 0) {
   };
 }
 
+const SNAP_STEP = 5; // snap to 5% grid increments
+
 function roundPct(n) {
   return Math.round(n * 10) / 10;
+}
+
+function snapPct(n) {
+  return Math.round(n / SNAP_STEP) * SNAP_STEP;
 }
 
 function PanelHeader({ title, headerStyle, headerAlign, headerBg, headerColor, headerFontSize, panelBorder, panelBorderWidth }) {
@@ -236,12 +242,12 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
       const dxPct = ((e.clientX - d.startX) / rect.width) * 100;
       const dyPct = ((e.clientY - d.startY) / rect.height) * 100;
       if (d.mode === 'move') {
-        const left = clampPct(roundPct(d.origLeft + dxPct), 0, 100 - d.origW);
-        const top = clampPct(roundPct(d.origTop + dyPct), 0, 100 - d.origH);
+        const left = clampPct(snapPct(d.origLeft + dxPct), 0, 100 - d.origW);
+        const top = clampPct(snapPct(d.origTop + dyPct), 0, 100 - d.origH);
         setDragGeom({ id: d.id, left, top, width: d.origW, height: d.origH });
       } else if (d.mode === 'resize') {
-        const w = clampPct(roundPct(d.origW + dxPct), 4, 100 - d.origL);
-        const h = clampPct(roundPct(d.origH + dyPct), 4, 100 - d.origT);
+        const w = clampPct(snapPct(d.origW + dxPct), SNAP_STEP, 100 - d.origL);
+        const h = clampPct(snapPct(d.origH + dyPct), SNAP_STEP, 100 - d.origT);
         setDragGeom({ id: d.id, left: d.origL, top: d.origT, width: w, height: h });
       }
     };
@@ -460,6 +466,20 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
             }
           }}
         >
+          {/* Snap grid lines — visible when editing */}
+          {canEdit && (
+            <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.25 }}>
+              {Array.from({ length: Math.floor(100 / SNAP_STEP) - 1 }, (_, i) => {
+                const pct = (i + 1) * SNAP_STEP;
+                return (
+                  <React.Fragment key={pct}>
+                    <div className="absolute top-0 bottom-0" style={{ left: `${pct}%`, width: '1px', background: 'var(--rb-border)' }} />
+                    <div className="absolute left-0 right-0" style={{ top: `${pct}%`, height: '1px', background: 'var(--rb-border)' }} />
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          )}
           {emptyBuilder && (
             <div
               data-dp-bg
