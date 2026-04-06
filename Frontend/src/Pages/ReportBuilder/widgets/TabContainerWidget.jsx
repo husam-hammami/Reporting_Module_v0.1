@@ -131,7 +131,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
       type: catalogEntry.type,
       x: 0,
       y: maxY,
-      w: Math.min(catalogEntry.defaultW || 3, TC_GRID_COLS),
+      w: TC_GRID_COLS,
       h: catalogEntry.defaultH || 2,
       config: JSON.parse(JSON.stringify(catalogEntry.defaultConfig)),
     };
