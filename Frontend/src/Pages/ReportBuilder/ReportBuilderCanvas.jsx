@@ -401,8 +401,8 @@ export default function ReportBuilderCanvas() {
 
   /* ── Save / Publish ────────────────────────────────────────── */
 
-  const handleSave = useCallback(() => {
-    saveLayout();
+  const handleSave = useCallback(async () => {
+    await saveLayout();
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
   }, [saveLayout]);

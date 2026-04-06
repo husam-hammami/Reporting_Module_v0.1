@@ -83,7 +83,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
   const gridWidth = gridMeasuredWidth > 0 ? gridMeasuredWidth : 400;
 
   const configRef = useRef(safeConfig);
-  useEffect(() => { configRef.current = safeConfig; });
+  configRef.current = safeConfig;
 
   const updateConfig = useCallback((patch) => {
     if (!onUpdate || !widgetId) return;
@@ -182,6 +182,24 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
   const handleSubInteractionEnd = useCallback((layout) => {
     if (onSubLayoutChange && widgetId) {
       onSubLayoutChange(widgetId, layout);
+    }
+    // Eagerly update configRef so any subsequent updateConfig call before the
+    // parent re-renders won't overwrite the new positions with stale data.
+    const curTabs = configRef.current?.tabs;
+    const curActive = configRef.current?.activeTabId || (Array.isArray(curTabs) && curTabs[0]?.id);
+    if (Array.isArray(curTabs) && curActive) {
+      const patched = curTabs.map(t => {
+        if (t.id !== curActive) return t;
+        return {
+          ...t,
+          widgets: (t.widgets || []).map(w => {
+            const item = layout.find(l => String(l.i) === String(w.id));
+            if (!item) return w;
+            return { ...w, x: item.x, y: item.y, w: item.w, h: item.h };
+          }),
+        };
+      });
+      configRef.current = { ...configRef.current, tabs: patched };
     }
   }, [onSubLayoutChange, widgetId]);
 

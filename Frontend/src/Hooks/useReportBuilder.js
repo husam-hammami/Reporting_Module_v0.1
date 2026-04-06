@@ -625,10 +625,13 @@ export function useReportCanvas(templateId) {
   }, [templateId]);
 
   // Manual save
-  const saveLayout = useCallback(() => {
+  const saveLayout = useCallback(async () => {
     setSaving(true);
-    performSave(widgets, parameters, computedSignals);
-    setSaving(false);
+    try {
+      await performSave(widgets, parameters, computedSignals);
+    } finally {
+      setSaving(false);
+    }
   }, [widgets, parameters, computedSignals, performSave]);
 
   // Update template name/description/status/layout_config — persists to API
