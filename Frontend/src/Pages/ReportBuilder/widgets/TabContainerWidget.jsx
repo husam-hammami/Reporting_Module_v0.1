@@ -84,17 +84,18 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
         : configDerivedActiveTabId);
 
   const tableTabLinkCtx = useReportTableTabLinkOptional();
-  const [tableDrivenTabId, setTableDrivenTabId] = useState(null);
+  /** Last table row match: drives which machine tab stays in the strip (not cleared by clicking tabs). */
+  const [rowLinkMachineTabId, setRowLinkMachineTabId] = useState(null);
 
   useEffect(() => {
-    setTableDrivenTabId(null);
+    setRowLinkMachineTabId(null);
   }, [widgetId]);
 
   useEffect(() => {
-    if (tableDrivenTabId && !tabs.some((t) => t.id === tableDrivenTabId)) {
-      setTableDrivenTabId(null);
+    if (rowLinkMachineTabId && !tabs.some((t) => t.id === rowLinkMachineTabId)) {
+      setRowLinkMachineTabId(null);
     }
-  }, [tabs, tableDrivenTabId]);
+  }, [tabs, rowLinkMachineTabId]);
 
   const pulse = tableTabLinkCtx.pulse;
   useEffect(() => {
@@ -102,11 +103,11 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
     const rk = (pulse.rowKey || '').trim().toLowerCase();
     if (!rk) return;
     const hit = tabs.find((t) => (t.label || '').trim().toLowerCase() === rk);
-    if (hit) setTableDrivenTabId(hit.id);
-  }, [pulse?.seq, pulse?.targetWidgetId, pulse?.rowKey, widgetId, tabs]);
-
-  const tabOverrideValid = tableDrivenTabId != null && tabs.some((t) => t.id === tableDrivenTabId);
-  const resolvedActiveTabId = tabOverrideValid ? tableDrivenTabId : baseActiveTabId;
+    if (hit) {
+      setRowLinkMachineTabId(hit.id);
+      if (!canEdit) setLocalActiveTabId(hit.id);
+    }
+  }, [pulse?.seq, pulse?.targetWidgetId, pulse?.rowKey, widgetId, tabs, canEdit]);
 
   /** Default on when unset so row-link reports hide sibling machine tabs without a migration. */
   const hideNonMatchingTabsOnRowLink = safeConfig.hideNonMatchingTabsOnTableRowLink !== false;
@@ -116,18 +117,45 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
     return new Set(raw.map(String).filter(Boolean));
   }, [safeConfig.tableRowLinkAlwaysVisibleTabIds]);
 
-  /** Filter tab strip when a table row drives this container; show all tabs while this container is selected on the canvas. */
+  const rowLinkMachineValid =
+    rowLinkMachineTabId != null && tabs.some((t) => t.id === rowLinkMachineTabId);
+
+  /** Filter tab strip when a table row has targeted this container; show all tabs while this container is selected on the canvas. */
   const filterTabBarForRowLink =
-    tabOverrideValid && hideNonMatchingTabsOnRowLink && !isSelected;
+    rowLinkMachineValid && hideNonMatchingTabsOnRowLink && !isSelected;
 
   const tabsForTabBar = useMemo(() => {
     if (!filterTabBarForRowLink) return tabs;
-    const activeStr = resolvedActiveTabId != null ? String(resolvedActiveTabId) : '';
+    const machineStr = String(rowLinkMachineTabId);
     return tabs.filter(
       (t) =>
-        String(t.id) === activeStr || alwaysVisibleTabIdSet.has(String(t.id)),
+        String(t.id) === machineStr || alwaysVisibleTabIdSet.has(String(t.id)),
     );
-  }, [filterTabBarForRowLink, tabs, resolvedActiveTabId, alwaysVisibleTabIdSet]);
+  }, [filterTabBarForRowLink, tabs, rowLinkMachineTabId, alwaysVisibleTabIdSet]);
+
+  /** Which tab’s content is shown: among row-link strip tabs, or saved selection when filter off. */
+  const resolvedActiveTabId = useMemo(() => {
+    if (!filterTabBarForRowLink) return baseActiveTabId;
+    const allowed = new Set(
+      tabs
+        .filter(
+          (t) =>
+            String(t.id) === String(rowLinkMachineTabId) ||
+            alwaysVisibleTabIdSet.has(String(t.id)),
+        )
+        .map((t) => String(t.id)),
+    );
+    if (baseActiveTabId != null && allowed.has(String(baseActiveTabId))) {
+      return baseActiveTabId;
+    }
+    return rowLinkMachineTabId;
+  }, [
+    filterTabBarForRowLink,
+    tabs,
+    rowLinkMachineTabId,
+    alwaysVisibleTabIdSet,
+    baseActiveTabId,
+  ]);
 
   const resolvedActiveTabIdRef = useRef(resolvedActiveTabId);
   resolvedActiveTabIdRef.current = resolvedActiveTabId;
@@ -164,18 +192,50 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
     onUpdate(widgetId, { config: { ...configRef.current, ...patch } });
   }, [onUpdate, widgetId]);
 
-  const setActiveTab = useCallback((tabId) => {
-    setTableDrivenTabId(null);
-    if (canEdit) {
-      updateConfig({ activeTabId: tabId });
-    } else {
-      setLocalActiveTabId(tabId);
-    }
-    selectSubWidget(null);
-  }, [canEdit, updateConfig, selectSubWidget]);
+  const setActiveTab = useCallback(
+    (tabId) => {
+      const rowStripEngaged =
+        rowLinkMachineTabId != null &&
+        hideNonMatchingTabsOnRowLink &&
+        !isSelected &&
+        tabs.some((t) => t.id === rowLinkMachineTabId);
+
+      if (rowStripEngaged) {
+        const idStr = String(tabId);
+        const allowed =
+          idStr === String(rowLinkMachineTabId) || alwaysVisibleTabIdSet.has(idStr);
+        if (!allowed) return;
+        if (canEdit) {
+          updateConfig({ activeTabId: tabId });
+        } else {
+          setLocalActiveTabId(tabId);
+        }
+        selectSubWidget(null);
+        return;
+      }
+
+      setRowLinkMachineTabId(null);
+      if (canEdit) {
+        updateConfig({ activeTabId: tabId });
+      } else {
+        setLocalActiveTabId(tabId);
+      }
+      selectSubWidget(null);
+    },
+    [
+      canEdit,
+      updateConfig,
+      selectSubWidget,
+      rowLinkMachineTabId,
+      hideNonMatchingTabsOnRowLink,
+      isSelected,
+      tabs,
+      alwaysVisibleTabIdSet,
+    ],
+  );
 
   const addTab = useCallback((label, sourceTabId) => {
-    setTableDrivenTabId(null);
+    setRowLinkMachineTabId(null);
     const newId = `tc-${uid()}`;
     let newWidgets = [];
     if (sourceTabId) {
@@ -194,7 +254,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
 
   const removeTab = useCallback((tabId) => {
     if (tabs.length <= 1) return;
-    setTableDrivenTabId((prev) => (prev === tabId ? null : prev));
+    setRowLinkMachineTabId((prev) => (prev === tabId ? null : prev));
     const remaining = tabs.filter(t => t.id !== tabId);
     const nextActive = tabId === resolvedActiveTabId ? remaining[0]?.id : baseActiveTabId;
     updateConfig({ tabs: remaining, activeTabId: nextActive });

@@ -2041,7 +2041,7 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
                       onChange={(v) => handleConfigUpdate({ hideNonMatchingTabsOnTableRowLink: v })}
                     />
                     <p className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed">
-                      Applies in preview and viewer when a linked data table drives this container. Other widgets on the report are unchanged. While this tab container is selected on the canvas, all tabs stay visible for editing.
+                      Applies in preview and viewer when a linked data table drives this container. The strip shows only the row-matched machine tab plus any tabs checked below; clicking those tabs switches content without bringing back hidden tabs. Other widgets on the report are unchanged. While this tab container is selected on the canvas, all tabs stay visible for editing.
                     </p>
                     <div>
                       <span className="block text-[9px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.06em] mb-2">
