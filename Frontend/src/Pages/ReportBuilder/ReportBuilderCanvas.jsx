@@ -31,6 +31,11 @@ import { WIDGET_CATALOG, createWidget, cloneWidgetTreeWithNewIds } from './widge
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useThumbnailCapture } from './ThumbnailCaptureContext';
 import { ReportTableTabLinkProvider } from './context/ReportTableTabLinkContext';
+import {
+  findWidgetDeepInTabContainer,
+  updateNestedWidgetDeep,
+  patchTabContainerSubLayout,
+} from './utils/nestedTabWidgets';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -177,9 +182,9 @@ export default function ReportBuilderCanvas() {
     if (!subWidgetInfo || subWidgetInfo.parentId !== selectedId) return null;
     const parent = widgets.find(w => w.id === subWidgetInfo.parentId);
     if (!parent || parent.type !== 'tabcontainer') return null;
-    const tabsCfg = parent.config?.tabs || [];
-    const activeTab = tabsCfg.find(t => t.id === parent.config?.activeTabId) || tabsCfg[0];
-    return activeTab?.widgets?.find(w => w.id === subWidgetInfo.subWidget?.id) || null;
+    const targetId = subWidgetInfo.subWidget?.id;
+    if (!targetId) return null;
+    return findWidgetDeepInTabContainer(parent, targetId);
   }, [subWidgetInfo, selectedId, widgets]);
 
   const editingWidget = editingSubWidget || selectedWidget;
@@ -192,21 +197,12 @@ export default function ReportBuilderCanvas() {
       if (!parent || parent.type !== 'tabcontainer') return prev;
       const cfg = parent.config || {};
       const tabsCfg = cfg.tabs || [];
-      const tcActiveTabId = cfg.activeTabId || tabsCfg[0]?.id;
-      const updatedTabs = tabsCfg.map(t => {
-        if (t.id !== tcActiveTabId) return t;
-        return {
-          ...t,
-          widgets: (t.widgets || []).map(w => {
-            if (w.id !== subWidgetId) return w;
-            const next = { ...w, ...updates };
-            if (updates.config && typeof updates.config === 'object') {
-              next.config = { ...(w.config || {}), ...updates.config };
-            }
-            return next;
-          }),
-        };
-      });
+      const updatedTabs = tabsCfg.map((t) => ({
+        ...t,
+        widgets: (t.widgets || []).map((child) =>
+          updateNestedWidgetDeep(child, subWidgetId, updates),
+        ),
+      }));
       return prev.map(w =>
         w.id === parentId ? { ...w, config: { ...cfg, tabs: updatedTabs } } : w
       );
@@ -217,27 +213,9 @@ export default function ReportBuilderCanvas() {
   const editingOnUpdate = editingSubWidget ? updateSubWidgetViaCanvas : updateWidget;
 
   const handleSubLayoutChangeViaCanvas = useCallback((parentWidgetId, newLayout) => {
-    setWidgets((prev) => {
-      const parent = prev.find(w => w.id === parentWidgetId);
-      if (!parent || parent.type !== 'tabcontainer') return prev;
-      const cfg = parent.config || {};
-      const tabsCfg = cfg.tabs || [];
-      const tcActiveTabId = cfg.activeTabId || tabsCfg[0]?.id;
-      const updatedTabs = tabsCfg.map(t => {
-        if (t.id !== tcActiveTabId) return t;
-        return {
-          ...t,
-          widgets: (t.widgets || []).map(w => {
-            const item = newLayout.find(l => String(l.i) === String(w.id));
-            if (!item) return w;
-            return { ...w, x: item.x, y: item.y, w: item.w, h: item.h };
-          }),
-        };
-      });
-      return prev.map(w =>
-        w.id === parentWidgetId ? { ...w, config: { ...cfg, tabs: updatedTabs } } : w
-      );
-    });
+    setWidgets((prev) =>
+      prev.map((w) => patchTabContainerSubLayout(w, parentWidgetId, newLayout)),
+    );
     setDirty(true);
   }, [setWidgets, setDirty]);
 

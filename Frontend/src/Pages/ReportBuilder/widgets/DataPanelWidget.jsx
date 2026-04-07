@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, X, Trash2 } from 'lucide-react';
+import { Plus, X, Trash2, Copy } from 'lucide-react';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import FormulaEditor from '../formulas/FormulaEditor';
 import { dataPanelScopedValueKey, DATA_PANEL_TIME_SCOPE_LABELS } from '../utils/dataPanelTimeScope';
@@ -113,6 +113,22 @@ function snapPct(n) {
   return Math.round(n / SNAP_STEP) * SNAP_STEP;
 }
 
+/** Place a duplicate slightly offset so it does not sit exactly on the source. */
+function offsetDuplicatePosition(base) {
+  const h = base.height ?? SNAP_STEP;
+  const w = base.width ?? 20;
+  let top = snapPct(clampPct((base.top ?? 0) + SNAP_STEP));
+  let left = base.left ?? 0;
+  if (top + h > 100) {
+    top = base.top ?? 0;
+    left = snapPct(clampPct((base.left ?? 0) + SNAP_STEP));
+  }
+  return {
+    left: clampPct(left, 0, 100 - w),
+    top: clampPct(top, 0, 100 - h),
+  };
+}
+
 function PanelHeader({ title, headerStyle, headerAlign, headerBg, headerColor, headerFontSize, panelBorder, panelBorderWidth }) {
   if (!title) return null;
   if (headerStyle === 'legend') return null;
@@ -217,6 +233,44 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
     },
     [commitFields],
   );
+
+  const duplicateField = useCallback(
+    (sourceField) => {
+      const norm = normalizeField(sourceField, gridCols);
+      const { left, top } = offsetDuplicatePosition(norm);
+      const copy = { ...norm, id: fieldId(), left, top };
+      const cur = fieldsRef.current;
+      const idx = cur.findIndex((f) => f.id === norm.id);
+      const next =
+        idx >= 0
+          ? [...cur.slice(0, idx + 1), copy, ...cur.slice(idx + 1)]
+          : [...cur, copy];
+      commitFields(next);
+      setSelectedFieldId(copy.id);
+      setEditingFieldId(null);
+      setDraft(null);
+    },
+    [gridCols, commitFields],
+  );
+
+  const duplicateFromEditor = useCallback(() => {
+    if (!draft || !editingFieldId) return;
+    const normalized = normalizeField(draft, gridCols);
+    const cur = fieldsRef.current;
+    const idx = cur.findIndex((f) => f.id === editingFieldId);
+    const withSaved =
+      idx >= 0
+        ? cur.map((f) => (f.id === editingFieldId ? normalized : f))
+        : [...cur, normalized];
+    const insertAt = idx >= 0 ? idx + 1 : withSaved.length;
+    const { left, top } = offsetDuplicatePosition(normalized);
+    const copy = { ...normalized, id: fieldId(), left, top };
+    const next = [...withSaved.slice(0, insertAt), copy, ...withSaved.slice(insertAt)];
+    commitFields(next);
+    setEditingFieldId(copy.id);
+    setDraft({ ...copy });
+    setSelectedFieldId(copy.id);
+  }, [draft, editingFieldId, gridCols, commitFields]);
 
   const saveField = useCallback(() => {
     if (!draft || !editingFieldId) return;
@@ -374,7 +428,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
         onMouseDown={(e) => {
           if (!canEdit || editingFieldId) return;
           if (e.target.closest('[data-dp-resize]')) return;
-          if (e.target.closest('button')) return;
+          if (e.target.closest('[data-dp-field-actions]')) return;
           startDrag(e, field, 'move');
         }}
         onClick={(e) => {
@@ -389,17 +443,34 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
       >
         <span className="truncate w-full min-w-0 pointer-events-none">{displayText}</span>
         {canEdit && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              removeField(field.id);
-            }}
-            className="absolute top-0 right-0 p-0.5 rounded-bl bg-[var(--rb-panel)] border border-[var(--rb-border)] text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] z-10"
-            title="Remove"
+          <div
+            data-dp-field-actions
+            className="absolute top-0 right-0 flex flex-row z-10"
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            <X size={8} />
-          </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateField(field);
+              }}
+              className="p-0.5 bg-[var(--rb-panel)] border border-[var(--rb-border)] border-r-0 text-[var(--rb-text-muted)] hover:text-[var(--rb-accent)]"
+              title="Duplicate input"
+            >
+              <Copy size={8} />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeField(field.id);
+              }}
+              className="p-0.5 rounded-bl bg-[var(--rb-panel)] border border-[var(--rb-border)] text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
+              title="Remove"
+            >
+              <X size={8} />
+            </button>
+          </div>
         )}
         {canEdit && !editingFieldId && (
           <div
@@ -521,6 +592,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
           onSave={saveField}
           onCancel={closeEditor}
           onDelete={() => removeField(editingFieldId)}
+          onDuplicate={duplicateFromEditor}
           tags={tags}
           tagValues={tagValues}
         />
@@ -531,7 +603,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
 
 /* ── Field Editor Modal ─────────────────────────────────────────── */
 
-function FieldEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagValues }) {
+function FieldEditor({ draft, setDraft, onSave, onCancel, onDelete, onDuplicate, tags, tagValues }) {
   const safeTags = Array.isArray(tags) ? tags : [];
   const [tagSearch, setTagSearch] = useState('');
   const patch = (u) => setDraft((d) => ({ ...d, ...u }));
@@ -883,6 +955,15 @@ function FieldEditor({ draft, setDraft, onSave, onCancel, onDelete, tags, tagVal
               Cancel
             </button>
           </div>
+          {onDuplicate && (
+            <button
+              type="button"
+              onClick={onDuplicate}
+              className="w-full text-[12px] font-medium text-[var(--rb-text)] border border-[var(--rb-border)] hover:bg-[var(--rb-surface)] rounded-lg py-1.5 flex items-center justify-center gap-2 transition-colors"
+            >
+              <Copy size={12} /> Duplicate input
+            </button>
+          )}
           <button
             type="button"
             onClick={onDelete}

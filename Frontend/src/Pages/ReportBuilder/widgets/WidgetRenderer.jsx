@@ -104,6 +104,9 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
             savedFormulas={savedFormulas}
             isReportBuilderWorkspace={!isPreview}
             layoutRowHeight={layoutRowHeight}
+            onSubWidgetSelect={onSubWidgetSelect}
+            selectedSubWidgetId={selectedSubWidgetId}
+            onSubLayoutChange={onSubLayoutChange}
           />
         ),
       }
