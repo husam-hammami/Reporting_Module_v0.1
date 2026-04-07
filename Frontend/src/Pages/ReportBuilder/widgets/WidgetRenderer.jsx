@@ -122,10 +122,16 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
     : {};
 
   const isInvisible = INVISIBLE_WRAPPER_TYPES.has(widget.type);
+  const drillOpen =
+    widget.type === 'table' &&
+    widget.config?.drillDown?.enabled &&
+    Array.isArray(widget.config?.drillDown?.detailWidgets) &&
+    widget.config.drillDown.detailWidgets.length > 0;
+  const overflowVisible = widget.type === 'tabcontainer' || drillOpen;
 
   return (
     <WidgetErrorBoundary widgetType={widget.type} key={widget.id || widgetId}>
-      <div className={isInvisible ? 'h-full w-full' : `h-full w-full flex flex-col min-h-0 ${widget.type === 'tabcontainer' ? 'overflow-visible' : 'overflow-hidden'}`}>
+      <div className={isInvisible ? 'h-full w-full' : `h-full w-full flex flex-col min-h-0 ${overflowVisible ? 'overflow-visible' : 'overflow-hidden'}`}>
         <Component
           config={widget.config || {}}
           tagValues={tagValues || {}}

@@ -1589,7 +1589,7 @@
   border: 1px solid var(--rb-border);
   border-radius: 8px;
   background: var(--rb-panel);
-  overflow: hidden;
+  overflow: visible;
   animation: rb-drilldown-slide 0.2s ease-out;
 }
 
@@ -1618,4 +1618,14 @@
   border-radius: 6px;
   overflow: hidden;
   background: var(--rb-panel);
+}
+
+.rb-drilldown-rgl-wrap {
+  padding: 4px 2px 8px;
+  overflow: visible;
+}
+
+.rb-drilldown-rgl-wrap .react-grid-item.react-draggable-dragging,
+.rb-drilldown-rgl-wrap .react-grid-item.resizing {
+  z-index: 20;
 }

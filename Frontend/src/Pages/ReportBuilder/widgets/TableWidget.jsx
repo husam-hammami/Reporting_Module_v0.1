@@ -1,11 +1,16 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { GridLayout, useContainerWidth } from 'react-grid-layout';
 import { Plus, Trash2, X, Settings2, GripVertical, ChevronDown } from 'lucide-react';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import FormulaEditor from '../formulas/FormulaEditor';
 import WidgetRenderer from './WidgetRenderer';
+import { previewDrillRowKey } from '../utils/drillDownTagPick';
 
 import { getCachedMappings, refreshMappingsCache } from '../../../utils/mappingsCache';
+
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 
 // Trigger initial cache load
 refreshMappingsCache();
@@ -251,6 +256,10 @@ function TagSelect({ tags, value, onChange }) {
    ══════════════════════════════════════════════════════════════════ */
 
 const LAYOUT_ROW_HEIGHT_DEFAULT = 40;
+const DD_GRID_COLS = 12;
+const DD_ROW_H = 36;
+const DD_MARGIN = [6, 6];
+const DD_PADDING = [0, 0];
 /** In preview, table body height ≈ (layoutH * rowHeight) - title - padding. Use same min in builder so dimensions match. */
 function tableBodyMinHeight(layoutH, layoutRowHeight) {
   const h = Number(layoutH);
@@ -307,7 +316,6 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const drillDownKeyCol = drillDown.keyColumn ?? 0;
   const drillDownSep = drillDown.prefixSeparator ?? '_';
   const drillDownWidgets = Array.isArray(drillDown.detailWidgets) ? drillDown.detailWidgets : [];
-  const drillDownGridCols = drillDown.detailGridCols || 2;
 
   /* ── Editing state ── */
   const [editingSectionIdx, setEditingSectionIdx] = useState(null);
@@ -317,6 +325,67 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const [draftStaticCell, setDraftStaticCell] = useState(null);
   const [showTotalsOptions, setShowTotalsOptions] = useState(false);
   const [activeRowKey, setActiveRowKey] = useState(null);
+
+  const configRef = useRef(safeConfig);
+  configRef.current = safeConfig;
+
+  const previewRowKey = useMemo(() => {
+    if (!drillDownEnabled) return null;
+    return previewDrillRowKey(safeConfig, tagValues);
+  }, [drillDownEnabled, safeConfig, tagValues]);
+
+  const effectiveRowKey = activeRowKey ?? previewRowKey ?? null;
+
+  const { containerRef: drillGridContainerRef, width: drillGridMeasuredWidth } = useContainerWidth();
+  const drillGridWidth = drillGridMeasuredWidth > 0 ? drillGridMeasuredWidth : 560;
+
+  const drillRglLayout = useMemo(() => {
+    const widgets = drillDownWidgets;
+    const allHavePos =
+      widgets.length > 0 &&
+      widgets.every((dw) => Number.isFinite(dw.x) && Number.isFinite(dw.y));
+    let cx = 0;
+    let cy = 0;
+    let rowMaxH = 2;
+    return widgets.map((dw) => {
+      const w = Math.min(Math.max(Number(dw.w) || 6, 1), DD_GRID_COLS);
+      const h = Math.max(Number(dw.h) || 2, 1);
+      let x;
+      let y;
+      if (allHavePos) {
+        x = dw.x;
+        y = dw.y;
+      } else {
+        if (cx + w > DD_GRID_COLS) {
+          cx = 0;
+          cy += rowMaxH;
+          rowMaxH = 2;
+        }
+        x = cx;
+        y = cy;
+        cx += w;
+        rowMaxH = Math.max(rowMaxH, h);
+      }
+      return { i: String(dw.id), x, y, w, h, minW: 1, minH: 1 };
+    });
+  }, [drillDownWidgets]);
+
+  const handleDrillLayoutEnd = useCallback(
+    (layout) => {
+      if (!onUpdate || !widgetId || !canEdit) return;
+      const cur = configRef.current || {};
+      const dd = cur.drillDown || {};
+      const dws = [...(dd.detailWidgets || [])];
+      const next = dws.map((w) => {
+        const item = layout.find((l) => String(l.i) === String(w.id));
+        if (!item) return w;
+        return { ...w, x: item.x, y: item.y, w: item.w, h: item.h };
+      });
+      configRef.current = { ...cur, drillDown: { ...dd, detailWidgets: next } };
+      onUpdate(widgetId, { config: { ...cur, drillDown: { ...dd, detailWidgets: next } } });
+    },
+    [onUpdate, widgetId, canEdit],
+  );
 
   const openEditor = useCallback((mode, index, colDef) => {
     setEditingCol({ mode, index });
@@ -1096,55 +1165,90 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
         </table>
       </div>}
 
-      {/* ── Drill-down detail panel ── */}
-      {drillDownEnabled && activeRowKey && drillDownWidgets.length > 0 && (
+      {/* ── Drill-down detail panel (preview row when none selected; drag layout when editing) ── */}
+      {drillDownEnabled && drillDownWidgets.length > 0 && !effectiveRowKey && (
         <div className="rb-drilldown-panel mt-2">
-          <div className="rb-drilldown-header">
-            <span className="flex items-center gap-2">
-              <ChevronDown size={14} className="text-[var(--rb-accent)]" />
-              <span className="text-[12px] font-bold text-[var(--rb-text)]">Details: {activeRowKey}</span>
+          <p className="text-[11px] text-[var(--rb-text-muted)] text-center py-4 px-2">
+            Add values in the <strong>key column</strong> (live or static rows) so drill-down can resolve{' '}
+            <code className="font-mono text-[10px]">{'{ROW_KEY}'}</code>. Detail widgets appear here once a row key is available.
+          </p>
+        </div>
+      )}
+      {drillDownEnabled && effectiveRowKey && drillDownWidgets.length > 0 && (
+        <div className="rb-drilldown-panel mt-2 flex flex-col min-h-0">
+          <div className="rb-drilldown-header flex-shrink-0">
+            <span className="flex flex-col gap-0.5 min-w-0">
+              <span className="flex items-center gap-2">
+                <ChevronDown size={14} className="text-[var(--rb-accent)] flex-shrink-0" />
+                <span className="text-[12px] font-bold text-[var(--rb-text)] truncate">
+                  {activeRowKey ? `Details: ${effectiveRowKey}` : `Preview: ${effectiveRowKey}`}
+                </span>
+              </span>
+              {!activeRowKey && (
+                <span className="text-[9px] text-[var(--rb-text-muted)] pl-6">
+                  First row key — click a table row to switch detail data
+                </span>
+              )}
             </span>
-            <button
-              type="button"
-              onClick={() => setActiveRowKey(null)}
-              className="p-1 rounded text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] transition-colors"
-              title="Close detail panel"
-            >
-              <X size={14} />
-            </button>
+            {activeRowKey && (
+              <button
+                type="button"
+                onClick={() => setActiveRowKey(null)}
+                className="p-1 rounded text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] transition-colors flex-shrink-0"
+                title="Clear row selection (show preview row again)"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
-          <div className="rb-drilldown-grid" style={{ gridTemplateColumns: `repeat(${drillDownGridCols}, 1fr)` }}>
-            {drillDownWidgets.map((dw) => {
-              const rewrittenConfig = rewriteTagsForRow(dw.config, activeRowKey, drillDownSep);
-              const rewrittenWidget = { ...dw, config: rewrittenConfig };
-              return (
-                <div
-                  key={dw.id}
-                  className="rb-drilldown-widget-cell"
-                  style={{ minHeight: `${(dw.h || 2) * 80}px` }}
-                >
-                  <WidgetRenderer
-                    widget={rewrittenWidget}
-                    tagValues={tagValues}
-                    isPreview={isPreview}
-                    tags={tags}
-                    tagHistory={tagHistory}
-                    savedFormulas={savedFormulas}
-                  />
-                </div>
-              );
-            })}
+          <div ref={drillGridContainerRef} className="rb-drilldown-rgl-wrap flex-1 min-h-[120px] w-full min-w-0 mt-2">
+            <GridLayout
+                className="layout"
+                width={drillGridWidth}
+                layout={drillRglLayout}
+                cols={DD_GRID_COLS}
+                rowHeight={DD_ROW_H}
+                margin={DD_MARGIN}
+                containerPadding={DD_PADDING}
+                compactType={canEdit ? 'vertical' : undefined}
+                allowOverlap={false}
+                isDraggable={canEdit && drillDownEnabled}
+                isResizable={canEdit && drillDownEnabled}
+                resizeHandles={['se', 'e', 's']}
+                onDragStop={handleDrillLayoutEnd}
+                onResizeStop={handleDrillLayoutEnd}
+                draggableCancel="button,a,input,textarea,select,.no-drag"
+              >
+                {drillDownWidgets.map((dw) => {
+                  const rewrittenConfig = rewriteTagsForRow(dw.config, effectiveRowKey, drillDownSep);
+                  const rewrittenWidget = { ...dw, config: rewrittenConfig };
+                  return (
+                    <div key={String(dw.id)} className="rb-drilldown-widget-cell rounded-lg overflow-hidden h-full min-h-0">
+                      <WidgetRenderer
+                        widget={rewrittenWidget}
+                        tagValues={tagValues}
+                        isPreview
+                        tags={tags}
+                        tagHistory={tagHistory}
+                        savedFormulas={savedFormulas}
+                      />
+                    </div>
+                  );
+                })}
+              </GridLayout>
           </div>
         </div>
       )}
-      {drillDownEnabled && activeRowKey && drillDownWidgets.length === 0 && canEdit && (
+      {drillDownEnabled && effectiveRowKey && drillDownWidgets.length === 0 && canEdit && (
         <div className="rb-drilldown-panel mt-2">
           <div className="rb-drilldown-header">
             <span className="flex items-center gap-2">
               <ChevronDown size={14} className="text-[var(--rb-accent)]" />
-              <span className="text-[12px] font-bold text-[var(--rb-text)]">Details: {activeRowKey}</span>
+              <span className="text-[12px] font-bold text-[var(--rb-text)]">Details: {effectiveRowKey}</span>
             </span>
-            <button type="button" onClick={() => setActiveRowKey(null)} className="p-1 rounded text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] transition-colors"><X size={14} /></button>
+            {activeRowKey && (
+              <button type="button" onClick={() => setActiveRowKey(null)} className="p-1 rounded text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] transition-colors"><X size={14} /></button>
+            )}
           </div>
           <p className="text-[11px] text-[var(--rb-text-muted)] text-center py-6">
             No detail widgets configured. Open Properties panel &rarr; Drill-Down section to add widgets.

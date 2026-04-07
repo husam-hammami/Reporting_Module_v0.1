@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { X, Plus, Trash2, ChevronDown, ChevronRight, ChevronLeft, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy, Move, PanelRightClose, Layers } from 'lucide-react';
 import { uid, WIDGET_CATALOG } from '../widgets/widgetDefaults';
+import { collectOrderedDrillRowKeys, tagToRowKeyPlaceholder } from '../utils/drillDownTagPick';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import FormulaEditor from '../formulas/FormulaEditor';
 
@@ -1402,8 +1403,60 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
 }
 
 const DRILLDOWN_WIDGET_TYPES = WIDGET_CATALOG.filter(
-  (w) => ['kpi', 'chart', 'barchart', 'gauge', 'stat', 'piechart', 'sparkline', 'progress'].includes(w.type)
+  (w) => ['kpi', 'chart', 'barchart', 'gauge', 'stat', 'piechart', 'sparkline', 'progress'].includes(w.type),
 );
+
+function DrillTagTemplatePicker({ tags, rowKeys, sep, onPick, hint }) {
+  const [q, setQ] = useState('');
+  const safeTags = Array.isArray(tags) ? tags : [];
+  const filtered = useMemo(() => {
+    let list = safeTags;
+    if (q.trim()) {
+      const qq = q.toLowerCase();
+      list = safeTags.filter(
+        (t) => t.tag_name?.toLowerCase().includes(qq) || t.display_name?.toLowerCase().includes(qq),
+      );
+    }
+    return list.slice(0, 120);
+  }, [safeTags, q]);
+
+  return (
+    <div className="space-y-1.5 mt-2">
+      <span className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed block">
+        {hint || 'Choose a tag to insert as a {ROW_KEY} pattern when it matches a row id + separator.'}
+      </span>
+      <input
+        type="text"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search tags..."
+        className="w-full text-[11px] rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] px-2 py-1.5"
+      />
+      <select
+        className="w-full text-[11px] rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] px-2 py-1.5"
+        defaultValue=""
+        onChange={(e) => {
+          const tn = e.target.value;
+          if (!tn) return;
+          onPick(tagToRowKeyPlaceholder(tn, rowKeys, sep || '_'));
+          e.target.selectedIndex = 0;
+        }}
+      >
+        <option value="">— Pick tag → {'{ROW_KEY}'} pattern —</option>
+        {filtered.map((t) => (
+          <option key={t.tag_name} value={t.tag_name}>
+            {t.display_name || t.tag_name}
+          </option>
+        ))}
+      </select>
+      {rowKeys.length === 0 && (
+        <p className="text-[9px] text-amber-600 dark:text-amber-400 leading-relaxed">
+          No row keys detected yet. Put machine ids (e.g. c32) in the key column on static or live rows.
+        </p>
+      )}
+    </div>
+  );
+}
 
 function DrillDownSection({ config, onUpdate, tags, tagValues, savedFormulas = [] }) {
   const dd = config.drillDown || { enabled: false, keyColumn: 0, prefixSeparator: '_', detailWidgets: [], detailGridCols: 2 };
@@ -1412,13 +1465,21 @@ function DrillDownSection({ config, onUpdate, tags, tagValues, savedFormulas = [
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [expandedWidget, setExpandedWidget] = useState(null);
 
+  const drillRowKeys = useMemo(() => collectOrderedDrillRowKeys(config, tagValues), [config, tagValues]);
+
   const updateDD = (patch) => onUpdate({ drillDown: { ...dd, ...patch } });
 
   const addDetailWidget = (catalogEntry) => {
+    const maxBottom = detailWidgets.reduce(
+      (m, w) => Math.max(m, (Number(w.y) || 0) + (Number(w.h) || 2)),
+      0,
+    );
     const dw = {
       id: uid(),
       type: catalogEntry.type,
-      w: catalogEntry.defaultW || 6,
+      x: 0,
+      y: maxBottom,
+      w: Math.min(catalogEntry.defaultW || 6, 12),
       h: catalogEntry.defaultH || 2,
       config: JSON.parse(JSON.stringify(catalogEntry.defaultConfig)),
     };
@@ -1472,18 +1533,9 @@ function DrillDownSection({ config, onUpdate, tags, tagValues, savedFormulas = [
             </p>
           </Field>
 
-          <Field label="Detail panel columns">
-            <SelectInput
-              value={String(dd.detailGridCols || 2)}
-              onChange={(v) => updateDD({ detailGridCols: Number(v) })}
-              options={[
-                { value: '1', label: '1 column' },
-                { value: '2', label: '2 columns' },
-                { value: '3', label: '3 columns' },
-                { value: '4', label: '4 columns' },
-              ]}
-            />
-          </Field>
+          <p className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed mt-1 mb-2">
+            Detail widgets use a <strong className="text-[var(--rb-text)]">12-column</strong> grid under the table. With the table selected, drag and resize them in the builder; positions are saved on mouse up.
+          </p>
 
           <div className="mt-3 pt-3 border-t border-[var(--rb-border)]">
             <div className="flex items-center justify-between mb-2">
@@ -1552,6 +1604,16 @@ function DrillDownSection({ config, onUpdate, tags, tagValues, savedFormulas = [
                                   onChange={(v) => updateDetailWidget(dw.id, { config: { dataSource: { ...(dwConfig.dataSource || {}), tagName: v } } })}
                                   placeholder="{ROW_KEY}_total_active_energy"
                                 />
+                                <DrillTagTemplatePicker
+                                  tags={tags}
+                                  rowKeys={drillRowKeys}
+                                  sep={dd.prefixSeparator ?? '_'}
+                                  onPick={(pattern) =>
+                                    updateDetailWidget(dw.id, {
+                                      config: { dataSource: { ...(dwConfig.dataSource || {}), tagName: pattern } },
+                                    })
+                                  }
+                                />
                               </Field>
                             )}
                             {dwConfig.dataSource?.type === 'formula' && (
@@ -1618,6 +1680,19 @@ function DrillDownSection({ config, onUpdate, tags, tagValues, savedFormulas = [
                                       updateDetailWidget(dw.id, { config: { series } });
                                     }}
                                     placeholder="{ROW_KEY}_effective_power"
+                                  />
+                                  <DrillTagTemplatePicker
+                                    tags={tags}
+                                    rowKeys={drillRowKeys}
+                                    sep={dd.prefixSeparator ?? '_'}
+                                    onPick={(pattern) => {
+                                      const series = [...(dwConfig.series || [])];
+                                      series[si] = {
+                                        ...series[si],
+                                        dataSource: { ...(series[si].dataSource || {}), type: 'tag', tagName: pattern },
+                                      };
+                                      updateDetailWidget(dw.id, { config: { series } });
+                                    }}
                                   />
                                 </Field>
                               </div>
