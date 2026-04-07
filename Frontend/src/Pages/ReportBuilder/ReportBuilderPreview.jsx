@@ -18,6 +18,7 @@ import { useSocket } from '../../Context/SocketContext';
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useThumbnailCapture } from './ThumbnailCaptureContext';
 import LiveDataIndicator from '../../Components/Common/LiveDataIndicator';
+import { ReportTableTabLinkProvider } from './context/ReportTableTabLinkContext';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -362,6 +363,7 @@ export default function ReportBuilderPreview() {
           style={pageMode === 'a4' ? { maxWidth: 1220 } : {}}
           {...pageEntrance}
         >
+          <ReportTableTabLinkProvider>
           {/* Unified dashboard header bar */}
           <div
             className="flex items-center px-4 py-2 mx-2 mt-1 mb-1 rounded-md"
@@ -452,6 +454,7 @@ export default function ReportBuilderPreview() {
               </GridLayout>
             </div>
           )}
+          </ReportTableTabLinkProvider>
         </motion.div>
       </div>
     </div>

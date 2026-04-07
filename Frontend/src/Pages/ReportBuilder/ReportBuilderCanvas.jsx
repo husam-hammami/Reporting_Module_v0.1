@@ -30,6 +30,7 @@ import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '
 import { WIDGET_CATALOG, createWidget } from './widgets/widgetDefaults';
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useThumbnailCapture } from './ThumbnailCaptureContext';
+import { ReportTableTabLinkProvider } from './context/ReportTableTabLinkContext';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -794,6 +795,7 @@ export default function ReportBuilderCanvas() {
       )}
 
       {/* ── Three-zone body: toolbox | canvas | properties ── */}
+      <ReportTableTabLinkProvider>
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
         {/* Left toolbox */}
@@ -1049,11 +1051,13 @@ export default function ReportBuilderCanvas() {
                 savedFormulas={savedFormulas}
                 isSubWidget={!!editingSubWidget}
                 onBackToParent={editingSubWidget ? () => setSubWidgetInfo(null) : undefined}
+                canvasWidgets={widgets}
               />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+      </ReportTableTabLinkProvider>
     </div>
   );
 }

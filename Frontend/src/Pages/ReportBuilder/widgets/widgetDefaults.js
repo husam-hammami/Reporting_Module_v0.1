@@ -236,6 +236,10 @@ export const WIDGET_CATALOG = [
         detailWidgets: [],
         detailGridCols: 2,
       },
+      tableRowTabLink: {
+        enabled: false,
+        tabContainerWidgetId: '',
+      },
     },
   },
 

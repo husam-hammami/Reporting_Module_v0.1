@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useReportTableTabLinkOptional } from '../context/ReportTableTabLinkContext';
 import { createPortal } from 'react-dom';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
 import { Plus, X, Copy, Trash2, Layers, Activity, Gauge, Hash, CircleDot, BarChart3, TrendingUp, PieChart, Table2, Type, Image, Stamp, LayoutGrid, Cylinder, Container } from 'lucide-react';
@@ -76,13 +77,41 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
     setLocalActiveTabId(configDerivedActiveTabId);
   }, [widgetId, configDerivedActiveTabId, canEdit]);
 
-  const activeTabId = canEdit
+  const baseActiveTabId = canEdit
     ? configDerivedActiveTabId
     : (localActiveTabId != null && tabs.some((t) => t.id === localActiveTabId)
         ? localActiveTabId
         : configDerivedActiveTabId);
 
-  const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0] || null;
+  const tableTabLinkCtx = useReportTableTabLinkOptional();
+  const [tableDrivenTabId, setTableDrivenTabId] = useState(null);
+
+  useEffect(() => {
+    setTableDrivenTabId(null);
+  }, [widgetId]);
+
+  useEffect(() => {
+    if (tableDrivenTabId && !tabs.some((t) => t.id === tableDrivenTabId)) {
+      setTableDrivenTabId(null);
+    }
+  }, [tabs, tableDrivenTabId]);
+
+  const pulse = tableTabLinkCtx.pulse;
+  useEffect(() => {
+    if (pulse == null || String(pulse.targetWidgetId) !== String(widgetId)) return;
+    const rk = (pulse.rowKey || '').trim().toLowerCase();
+    if (!rk) return;
+    const hit = tabs.find((t) => (t.label || '').trim().toLowerCase() === rk);
+    if (hit) setTableDrivenTabId(hit.id);
+  }, [pulse?.seq, pulse?.targetWidgetId, pulse?.rowKey, widgetId, tabs]);
+
+  const tabOverrideValid = tableDrivenTabId != null && tabs.some((t) => t.id === tableDrivenTabId);
+  const resolvedActiveTabId = tabOverrideValid ? tableDrivenTabId : baseActiveTabId;
+
+  const resolvedActiveTabIdRef = useRef(resolvedActiveTabId);
+  resolvedActiveTabIdRef.current = resolvedActiveTabId;
+
+  const activeTab = tabs.find(t => t.id === resolvedActiveTabId) || tabs[0] || null;
   const activeWidgets = activeTab?.widgets || [];
   const [showAddWidget, setShowAddWidget] = useState(false);
   const [showAddTab, setShowAddTab] = useState(false);
@@ -115,6 +144,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
   }, [onUpdate, widgetId]);
 
   const setActiveTab = useCallback((tabId) => {
+    setTableDrivenTabId(null);
     if (canEdit) {
       updateConfig({ activeTabId: tabId });
     } else {
@@ -124,6 +154,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
   }, [canEdit, updateConfig, selectSubWidget]);
 
   const addTab = useCallback((label, sourceTabId) => {
+    setTableDrivenTabId(null);
     const newId = `tc-${uid()}`;
     let newWidgets = [];
     if (sourceTabId) {
@@ -142,10 +173,11 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
 
   const removeTab = useCallback((tabId) => {
     if (tabs.length <= 1) return;
+    setTableDrivenTabId((prev) => (prev === tabId ? null : prev));
     const remaining = tabs.filter(t => t.id !== tabId);
-    const nextActive = tabId === activeTabId ? remaining[0]?.id : activeTabId;
+    const nextActive = tabId === resolvedActiveTabId ? remaining[0]?.id : baseActiveTabId;
     updateConfig({ tabs: remaining, activeTabId: nextActive });
-  }, [tabs, activeTabId, updateConfig]);
+  }, [tabs, resolvedActiveTabId, baseActiveTabId, updateConfig]);
 
   const renameTab = useCallback((tabId, newLabel) => {
     updateConfig({ tabs: tabs.map(t => t.id === tabId ? { ...t, label: newLabel } : t) });
@@ -164,22 +196,22 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
       config: JSON.parse(JSON.stringify(catalogEntry.defaultConfig)),
     };
     const updatedTabs = tabs.map(t =>
-      t.id === activeTabId ? { ...t, widgets: [...(t.widgets || []), newWidget] } : t
+      t.id === resolvedActiveTabId ? { ...t, widgets: [...(t.widgets || []), newWidget] } : t
     );
     updateConfig({ tabs: updatedTabs });
     setShowAddWidget(false);
-  }, [activeTab, activeTabId, activeWidgets, tabs, updateConfig]);
+  }, [activeTab, resolvedActiveTabId, activeWidgets, tabs, updateConfig]);
 
   const removeSubWidget = useCallback((subWidgetId) => {
     const updatedTabs = tabs.map(t =>
-      t.id === activeTabId ? { ...t, widgets: (t.widgets || []).filter(w => w.id !== subWidgetId) } : t
+      t.id === resolvedActiveTabId ? { ...t, widgets: (t.widgets || []).filter(w => w.id !== subWidgetId) } : t
     );
     updateConfig({ tabs: updatedTabs });
-  }, [activeTabId, tabs, updateConfig]);
+  }, [resolvedActiveTabId, tabs, updateConfig]);
 
   const updateSubWidget = useCallback((subWidgetId, updates) => {
     const updatedTabs = tabs.map(t => {
-      if (t.id !== activeTabId) return t;
+      if (t.id !== resolvedActiveTabId) return t;
       return {
         ...t,
         widgets: (t.widgets || []).map(w => {
@@ -193,7 +225,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
       };
     });
     updateConfig({ tabs: updatedTabs });
-  }, [activeTabId, tabs, updateConfig]);
+  }, [resolvedActiveTabId, tabs, updateConfig]);
 
   const propsLayout = useMemo(() =>
     activeWidgets.map(sw => ({
@@ -214,7 +246,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
     // Eagerly update configRef so any subsequent updateConfig call before the
     // parent re-renders won't overwrite the new positions with stale data.
     const curTabs = configRef.current?.tabs;
-    const curActive = configRef.current?.activeTabId || (Array.isArray(curTabs) && curTabs[0]?.id);
+    const curActive = resolvedActiveTabIdRef.current || configRef.current?.activeTabId || (Array.isArray(curTabs) && curTabs[0]?.id);
     if (Array.isArray(curTabs) && curActive) {
       const patched = curTabs.map(t => {
         if (t.id !== curActive) return t;
@@ -268,7 +300,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
                 onClick={() => setActiveTab(tab.id)}
                 onDoubleClick={canEdit ? () => { setRenameInput(tab.label); setRenamingId(tab.id); } : undefined}
                 className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg whitespace-nowrap transition-all ${
-                  tab.id === activeTabId
+                  tab.id === resolvedActiveTabId
                     ? 'bg-[var(--rb-accent)] text-white shadow-sm'
                     : 'text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:bg-[var(--rb-surface)]'
                 }`}
@@ -292,7 +324,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
             {tabs.length > 1 && (
               <button
                 type="button"
-                onClick={() => removeTab(activeTabId)}
+                onClick={() => removeTab(resolvedActiveTabId)}
                 className="p-1 rounded text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] transition-colors"
                 title="Remove active tab"
               >

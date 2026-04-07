@@ -21,6 +21,7 @@ import { useSocket } from '../../Context/SocketContext';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '../ReportBuilder/widgets/WidgetRenderer';
 import TabSelector from '../../Components/ui/TabSelector';
 import ReportThumbnail from '../ReportBuilder/ReportThumbnail';
+import { ReportTableTabLinkProvider } from '../ReportBuilder/context/ReportTableTabLinkContext';
 import ReportListingPage from '../../Components/Reports/ReportListingPage';
 import PaginatedReportView from './PaginatedReportViewer';
 import TimePeriodTabs, { VIEWER_TABS } from './TimePeriodTabs';
@@ -674,6 +675,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             </div>
           </>
         )}
+        <ReportTableTabLinkProvider>
         <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'xl:pl-[200px] xl:pr-[200px]' : ''} max-w-full print:px-0 print:pl-0 print:pr-0`}>
           {/* Dashboard header bar is rendered in the unified chrome toolbar above */}
 
@@ -819,6 +821,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             </div>
           )}
         </div>
+        </ReportTableTabLinkProvider>
       </div>
     </div>
   );

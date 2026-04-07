@@ -1458,6 +1458,67 @@ function DrillTagTemplatePicker({ tags, rowKeys, sep, onPick, hint }) {
   );
 }
 
+function TableRowTabLinkSection({ config, onUpdate, canvasWidgets = [], currentWidgetId }) {
+  const link = config.tableRowTabLink || { enabled: false, tabContainerWidgetId: '' };
+  const dd = config.drillDown || {};
+  const columns = Array.isArray(config.tableColumns) ? config.tableColumns : [];
+  const tabContainers = useMemo(
+    () => (canvasWidgets || []).filter((w) => w && w.type === 'tabcontainer' && w.id !== currentWidgetId),
+    [canvasWidgets, currentWidgetId],
+  );
+
+  const updateLink = (patch) => onUpdate({ tableRowTabLink: { ...link, ...patch } });
+  const updateDD = (patch) => onUpdate({ drillDown: { ...dd, ...patch } });
+
+  return (
+    <Section icon={ArrowRightLeft} title="Row → tab container" defaultOpen={false}>
+      <Toggle
+        label="Link row click to tab container"
+        value={!!link.enabled}
+        onChange={(v) => updateLink({ enabled: v })}
+      />
+      {link.enabled && (
+        <>
+          <Field label="Tab container">
+            <select
+              className="w-full text-[11px] rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] px-2 py-1.5"
+              value={link.tabContainerWidgetId || ''}
+              onChange={(e) => updateLink({ tabContainerWidgetId: e.target.value })}
+            >
+              <option value="">— Select —</option>
+              {tabContainers.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {(w.config?.title || 'Tab container')} · {w.id}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {!dd.enabled && (
+            <Field label="Row key column">
+              <SelectInput
+                value={String(dd.keyColumn ?? 0)}
+                onChange={(v) => updateDD({ keyColumn: Number(v) })}
+                options={columns.length > 0
+                  ? columns.map((col, i) => ({ value: String(i), label: col.label || `Column ${i + 1}` }))
+                  : [{ value: '0', label: 'No columns yet' }]
+                }
+              />
+            </Field>
+          )}
+          <p className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed">
+            {dd.enabled
+              ? 'Uses the drill-down key column for the row id. Tab labels must match that id (case-insensitive), e.g. C32 and c32.'
+              : 'Choose which column holds the machine id. Tab labels must match that value (case-insensitive).'}
+          </p>
+          {tabContainers.length === 0 && (
+            <p className="text-[9px] text-amber-600 dark:text-amber-400">Add a Tab Container widget on the canvas to select a target.</p>
+          )}
+        </>
+      )}
+    </Section>
+  );
+}
+
 function DrillDownSection({ config, onUpdate, tags, tagValues, savedFormulas = [] }) {
   const dd = config.drillDown || { enabled: false, keyColumn: 0, prefixSeparator: '_', detailWidgets: [], detailGridCols: 2 };
   const columns = Array.isArray(config.tableColumns) ? config.tableColumns : [];
@@ -1764,7 +1825,7 @@ const HAS_TABLE_COLUMNS = new Set(['table']);
 const TAB_DATA = 'data';
 const TAB_FORMAT = 'format';
 
-export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, onHidePanel, tags, tagValues, groups = [], savedFormulas = [], isSubWidget, onBackToParent }) {
+export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, onHidePanel, tags, tagValues, groups = [], savedFormulas = [], isSubWidget, onBackToParent, canvasWidgets = [] }) {
   const [activeTab, setActiveTab] = useState(TAB_DATA);
   const prefersReducedMotion = useReducedMotion();
 
@@ -1890,6 +1951,14 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
               )}
               {HAS_TABLE_COLUMNS.has(widget.type) && (
                 <TableColumnsSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
+              )}
+              {HAS_TABLE_COLUMNS.has(widget.type) && (
+                <TableRowTabLinkSection
+                  config={config}
+                  onUpdate={handleConfigUpdate}
+                  canvasWidgets={canvasWidgets}
+                  currentWidgetId={widget.id}
+                />
               )}
               {HAS_TABLE_COLUMNS.has(widget.type) && (
                 <DrillDownSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />

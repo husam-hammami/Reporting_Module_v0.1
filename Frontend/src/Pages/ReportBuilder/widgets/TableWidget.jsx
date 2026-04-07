@@ -6,6 +6,7 @@ import { evaluateFormula } from '../formulas/formulaEngine';
 import FormulaEditor from '../formulas/FormulaEditor';
 import WidgetRenderer from './WidgetRenderer';
 import { previewDrillRowKey } from '../utils/drillDownTagPick';
+import { useReportTableTabLinkOptional } from '../context/ReportTableTabLinkContext';
 
 import { getCachedMappings, refreshMappingsCache } from '../../../utils/mappingsCache';
 
@@ -316,6 +317,11 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   const drillDownKeyCol = drillDown.keyColumn ?? 0;
   const drillDownSep = drillDown.prefixSeparator ?? '_';
   const drillDownWidgets = Array.isArray(drillDown.detailWidgets) ? drillDown.detailWidgets : [];
+  const tableRowTabLink = safeConfig.tableRowTabLink || {};
+  const tabLinkTargetId = tableRowTabLink.tabContainerWidgetId;
+  const tabLinkEnabled = !!tableRowTabLink.enabled && !!tabLinkTargetId;
+  const rowKeyResolutionEnabled = drillDownEnabled || tabLinkEnabled;
+  const tableTabLinkCtx = useReportTableTabLinkOptional();
 
   /* ── Editing state ── */
   const [editingSectionIdx, setEditingSectionIdx] = useState(null);
@@ -330,9 +336,9 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
   configRef.current = safeConfig;
 
   const previewRowKey = useMemo(() => {
-    if (!drillDownEnabled) return null;
+    if (!rowKeyResolutionEnabled) return null;
     return previewDrillRowKey(safeConfig, tagValues);
-  }, [drillDownEnabled, safeConfig, tagValues]);
+  }, [rowKeyResolutionEnabled, safeConfig, tagValues]);
 
   const effectiveRowKey = activeRowKey ?? previewRowKey ?? null;
 
@@ -559,7 +565,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
 
   /* ── Drill-down row key resolver ── */
   const getRowKeyValue = useCallback((rowType, rowIndex) => {
-    if (!drillDownEnabled) return null;
+    if (!rowKeyResolutionEnabled) return null;
     if (rowType === 'live') {
       const col = columns[drillDownKeyCol];
       if (!col) return null;
@@ -573,12 +579,19 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
       return val != null ? String(val) : null;
     }
     return null;
-  }, [drillDownEnabled, columns, drillDownKeyCol, staticDataRows, tagValues]);
+  }, [rowKeyResolutionEnabled, columns, drillDownKeyCol, staticDataRows, tagValues]);
 
   const handleRowClick = useCallback((rowKey) => {
-    if (!drillDownEnabled || !rowKey) return;
-    setActiveRowKey((prev) => (prev === rowKey ? null : rowKey));
-  }, [drillDownEnabled]);
+    if (!rowKey) return;
+    if (tabLinkEnabled) {
+      tableTabLinkCtx.notifyRowKeyForTabContainer(tabLinkTargetId, rowKey);
+    }
+    if (drillDownEnabled) {
+      setActiveRowKey((prev) => (prev === rowKey ? null : rowKey));
+    }
+  }, [drillDownEnabled, tabLinkEnabled, tabLinkTargetId, tableTabLinkCtx]);
+
+  const rowClickEnabled = drillDownEnabled || tabLinkEnabled;
 
   /* ── Compute one row of live values ── */
   const rowValues = useMemo(() => {
@@ -892,11 +905,11 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
             {renderSectionHeaderRows(0)}
             {/* ── Live data row ── */}
             <tr
-              className={`rb-table-body-row ${striped ? 'rb-row-striped' : ''} ${drillDownEnabled ? 'rb-table-row-clickable' : ''} ${activeRowKey && activeRowKey === getRowKeyValue('live') ? 'rb-table-row-active' : ''}`}
+              className={`rb-table-body-row ${striped ? 'rb-row-striped' : ''} ${rowClickEnabled ? 'rb-table-row-clickable' : ''} ${activeRowKey && activeRowKey === getRowKeyValue('live') ? 'rb-table-row-active' : ''}`}
               style={{
                 ...(rowBg ? { backgroundColor: rowBg } : {}),
               }}
-              onClick={drillDownEnabled ? () => handleRowClick(getRowKeyValue('live')) : undefined}
+              onClick={rowClickEnabled ? () => handleRowClick(getRowKeyValue('live')) : undefined}
             >
               {columns.map((col, ci) => {
                 const rawValue = rowValues[ci];
@@ -960,13 +973,13 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                 <React.Fragment key={`static-group-${ri}`}>
                   {renderSectionHeaderRows(rowIndex)}
                   <tr
-                    className={`rb-table-body-row ${isStriped ? 'rb-row-striped' : ''} ${drillDownEnabled ? 'rb-table-row-clickable' : ''} ${activeRowKey && activeRowKey === getRowKeyValue('static', ri) ? 'rb-table-row-active' : ''}`}
+                    className={`rb-table-body-row ${isStriped ? 'rb-row-striped' : ''} ${rowClickEnabled ? 'rb-table-row-clickable' : ''} ${activeRowKey && activeRowKey === getRowKeyValue('static', ri) ? 'rb-table-row-active' : ''}`}
                     style={{
                       ...(isStriped && stripedRowBg ? { backgroundColor: stripedRowBg } : {}),
                       ...(!isStriped && rowBg ? { backgroundColor: rowBg } : {}),
                       ...(borderColor ? { borderColor } : {}),
                     }}
-                    onClick={drillDownEnabled ? () => handleRowClick(getRowKeyValue('static', ri)) : undefined}
+                    onClick={rowClickEnabled ? () => handleRowClick(getRowKeyValue('static', ri)) : undefined}
                   >
                     {(() => {
                       let skipCount = 0;
