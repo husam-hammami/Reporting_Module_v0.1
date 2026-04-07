@@ -493,3 +493,49 @@ export function createWidget(catalogEntry, x = 0, y = Infinity) {
     config: JSON.parse(JSON.stringify(catalogEntry.defaultConfig)),
   };
 }
+
+/**
+ * Deep-clone a report widget (root or nested) with fresh ids.
+ * Remaps tabcontainer tabs + sub-widgets and table drill-down detailWidgets recursively.
+ */
+export function cloneWidgetTreeWithNewIds(widget) {
+  if (!widget || typeof widget !== 'object') return widget;
+
+  function remap(wgt) {
+    if (!wgt || typeof wgt !== 'object') return wgt;
+    const raw = JSON.parse(JSON.stringify(wgt));
+    raw.id = uid();
+
+    const cfg = raw.config && typeof raw.config === 'object' ? { ...raw.config } : raw.config;
+    raw.config = cfg;
+
+    if (raw.type === 'tabcontainer' && cfg && Array.isArray(cfg.tabs)) {
+      const tabIdMap = {};
+      cfg.tabs = cfg.tabs.map((tab) => {
+        const newTabId = `tc-${uid()}`;
+        if (tab && tab.id != null) tabIdMap[String(tab.id)] = newTabId;
+        return {
+          ...tab,
+          id: newTabId,
+          widgets: Array.isArray(tab.widgets) ? tab.widgets.map(remap) : [],
+        };
+      });
+      if (cfg.activeTabId != null && tabIdMap[String(cfg.activeTabId)]) {
+        cfg.activeTabId = tabIdMap[String(cfg.activeTabId)];
+      } else if (cfg.tabs[0]) {
+        cfg.activeTabId = cfg.tabs[0].id;
+      }
+    }
+
+    if (cfg && cfg.drillDown && Array.isArray(cfg.drillDown.detailWidgets)) {
+      cfg.drillDown = {
+        ...cfg.drillDown,
+        detailWidgets: cfg.drillDown.detailWidgets.map(remap),
+      };
+    }
+
+    return raw;
+  }
+
+  return remap(widget);
+}

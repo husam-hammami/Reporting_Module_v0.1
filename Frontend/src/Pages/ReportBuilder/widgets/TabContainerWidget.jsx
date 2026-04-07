@@ -3,7 +3,7 @@ import { useReportTableTabLinkOptional } from '../context/ReportTableTabLinkCont
 import { createPortal } from 'react-dom';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
 import { Plus, X, Copy, Trash2, Layers, Activity, Gauge, Hash, CircleDot, BarChart3, TrendingUp, PieChart, Table2, Type, Image, Stamp, LayoutGrid, Cylinder, Container } from 'lucide-react';
-import { WIDGET_CATALOG, uid } from './widgetDefaults';
+import { WIDGET_CATALOG, uid, cloneWidgetTreeWithNewIds } from './widgetDefaults';
 
 const ADDABLE_TYPES = WIDGET_CATALOG.filter(
   (w) => ['kpi', 'chart', 'barchart', 'gauge', 'stat', 'piechart', 'sparkline', 'progress', 'table', 'text', 'image', 'status', 'hopper', 'silo', 'datapanel', 'tabcontainer'].includes(w.type)
@@ -290,6 +290,26 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
     updateConfig({ tabs: updatedTabs });
   }, [resolvedActiveTabId, tabs, updateConfig]);
 
+  const duplicateSubWidget = useCallback(
+    (subWidgetId) => {
+      const sw = activeWidgets.find((w) => w.id === subWidgetId);
+      if (!sw || !canEdit) return;
+      const clone = cloneWidgetTreeWithNewIds(sw);
+      const baseY = Number(sw.y) || 0;
+      const h = Number(sw.h) || 2;
+      clone.y = baseY + h;
+      clone.x = Number.isFinite(sw.x) ? sw.x : 0;
+      const updatedTabs = tabs.map((t) =>
+        t.id === resolvedActiveTabId
+          ? { ...t, widgets: [...(t.widgets || []), clone] }
+          : t,
+      );
+      updateConfig({ tabs: updatedTabs });
+      selectSubWidget(clone);
+    },
+    [activeWidgets, canEdit, resolvedActiveTabId, tabs, updateConfig, selectSubWidget],
+  );
+
   const updateSubWidget = useCallback((subWidgetId, updates) => {
     const updatedTabs = tabs.map(t => {
       if (t.id !== resolvedActiveTabId) return t;
@@ -467,7 +487,15 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
                 >
                   {/* Delete button */}
                   {canEdit && (
-                    <div className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-1 right-1 z-10 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); duplicateSubWidget(sw.id); }}
+                        className="no-drag p-1 rounded bg-[var(--rb-surface)]/80 text-[var(--rb-text-muted)] hover:text-[var(--rb-accent)] transition-colors"
+                        title="Duplicate widget"
+                      >
+                        <Copy size={11} />
+                      </button>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); removeSubWidget(sw.id); if (isSubSel) selectSubWidget(null); }}

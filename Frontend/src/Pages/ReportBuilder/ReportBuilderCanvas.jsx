@@ -27,7 +27,7 @@ import { useTagHistory } from '../../Hooks/useTagHistory';
 import WidgetToolbox from './panels/WidgetToolbox';
 import PropertiesPanel from './panels/PropertiesPanel';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from './widgets/WidgetRenderer';
-import { WIDGET_CATALOG, createWidget } from './widgets/widgetDefaults';
+import { WIDGET_CATALOG, createWidget, cloneWidgetTreeWithNewIds } from './widgets/widgetDefaults';
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useThumbnailCapture } from './ThumbnailCaptureContext';
 import { ReportTableTabLinkProvider } from './context/ReportTableTabLinkContext';
@@ -327,7 +327,9 @@ export default function ReportBuilderCanvas() {
   const handleDuplicate = useCallback((widgetId) => {
     const w = widgets.find((w) => w.id === widgetId);
     if (!w) return;
-    const dup = { ...JSON.parse(JSON.stringify(w)), id: `w-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, y: (w.y ?? 0) + (w.h ?? 2) };
+    const dup = cloneWidgetTreeWithNewIds(w);
+    dup.y = (w.y ?? 0) + (w.h ?? 2);
+    dup.x = Number.isFinite(w.x) ? w.x : dup.x;
     addWidget(dup);
     setSelectedId(dup.id);
   }, [widgets, addWidget]);
