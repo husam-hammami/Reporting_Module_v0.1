@@ -1,8 +1,8 @@
-# Tab Container Widget Fixes & Data Panel Enhancements
+# 2026-04-06 — Tab Container, Data Panel, and Report Viewer updates
 
 **Date:** 2026-04-06
 **Branch:** Salalah_Mill_B
-**Commits:** 1fbbb44 → cb60c43
+**Commits:** 1fbbb44 → cb60c43 (earlier batch); further frontend updates documented below may be additional commits or local changes.
 
 ---
 
@@ -10,9 +10,11 @@
 
 Fixed multiple issues with the Tab Container widget where sub-widget layout changes (width, height, position) were not being saved. Also enhanced the Data Panel widget with snap-to-grid, aggregation support, and a visual formula builder.
 
+**Later the same day:** Data Panel **per-input time range** (inherit vs daily/weekly/monthly/yearly calendar windows) wired through historian in Report Viewer and builder preview/canvas; **Tab Container tab buttons** fixed in Preview and published viewer by keeping `activeTabId` in local state whenever the widget is not in edit mode (`!canEdit`).
+
 ---
 
-## Files Changed (5)
+## Files Changed (initial batch)
 
 | File | Changes |
 |------|---------|
@@ -22,6 +24,8 @@ Fixed multiple issues with the Tab Container widget where sub-widget layout chan
 | `Frontend/src/Pages/ReportBuilder/widgets/TabContainerWidget.jsx` | configRef fix, 12-col grid, drag support |
 | `Frontend/src/Pages/ReportBuilder/widgets/DataPanelWidget.jsx` | Snap grid, aggregation, formula editor |
 | `Frontend/src/Pages/ReportBuilder/widgets/WidgetRenderer.jsx` | Preview mode fix for sub-widgets |
+
+See **§ Additional changes** below for `TabContainerWidget.jsx` (tab switching), `dataPanelTimeScope.js`, `ReportViewer.jsx`, `ReportBuilderCanvas.jsx`, and `ReportBuilderPreview.jsx`.
 
 ---
 
@@ -125,3 +129,41 @@ Fixed multiple issues with the Tab Container widget where sub-widget layout chan
 **What:** The Properties Panel LAYOUT section (X, Y, W, H inputs) used hardcoded 12-column constraints for all widgets. Since the Tab Container now also uses 12 columns, both parent and sub-widget constraints are unified at 12.
 
 **File:** `PropertiesPanel.jsx` — layout constraint grid uses `gridCols = 12` consistently.
+
+---
+
+## Additional changes (2026-04-06, later)
+
+### 10. Tab Container — Tab buttons in Preview / Report Viewer
+
+**Problem:** Clicking tab labels in Report Builder Preview (or on a published dashboard) did not switch tabs. The UI stayed on `config.activeTabId` from the saved template.
+
+**Root cause:** `TabContainerWidget` only updated selection via `updateConfig` → `onUpdate(widgetId, …)`. Preview and `ReportViewer` do not pass `onUpdate` / `widgetId`, so `updateConfig` was a no-op. Nested tab containers in preview could expose an `onUpdate` that still never persisted to the server.
+
+**Fix:** When `canEdit` is false (`!isSelected || !onUpdate || !widgetId`), keep the selected tab in React state (`localActiveTabId`), initialized and resynced from `config.activeTabId` when `widgetId` or the derived default tab changes. When `canEdit` is true, behavior unchanged (persist via `onUpdate`).
+
+**File:** `Frontend/src/Pages/ReportBuilder/widgets/TabContainerWidget.jsx`
+
+### 11. Data Panel — Per-input time range (historian)
+
+**What:** Each PLC Tag input can set **Time range**: *Use report time range* (default) or *Daily / Weekly / Monthly / Yearly* (calendar period **ending at** the report’s selected end time in historical mode, or **now** in live mode).
+
+**Behavior:**
+
+- **Inherit:** Same `from`/`to` as the global report time filter; aggregation batching unchanged for that tag from Data Panel fields.
+- **Scoped:** Historian calls use a window from the start of the calendar day / week (Monday start) / month / year through the anchor date. Values are stored under `__dataPanelField:${fieldId}` so the same tag can appear in multiple fields with different windows.
+- **Live / builder preview / canvas:** Scoped fields are refreshed on a 5s interval via `/api/historian/by-tags` with anchor `new Date()`.
+- **`collectWidgetTagAggregations`:** Data Panel tag fields contribute to the global aggregation map only when `timeScope === 'inherit'`, so scoped fields do not force the wrong window for other widgets using the same tag.
+
+**Files:**
+
+| File | Role |
+|------|------|
+| `Frontend/src/Pages/ReportBuilder/utils/dataPanelTimeScope.js` | Calendar range helpers, batching, `fetchDataPanelScopedHistorianValues`, scoped value key |
+| `Frontend/src/Hooks/useReportBuilder.js` | `collectDataPanelScopedHistorianRequests`; Data Panel aggregation only for `inherit` |
+| `Frontend/src/Pages/Reports/ReportViewer.jsx` | Merge scoped historian results (historical + live) |
+| `Frontend/src/Pages/ReportBuilder/widgets/DataPanelWidget.jsx` | `timeScope` on fields; FieldEditor dropdown; `resolveFieldValue` reads scoped key |
+| `Frontend/src/Pages/ReportBuilder/ReportBuilderCanvas.jsx` | Scoped historian poll for preview data |
+| `Frontend/src/Pages/ReportBuilder/ReportBuilderPreview.jsx` | Scoped historian poll for preview data |
+
+**Note:** Time range control applies to **PLC Tag** inputs only; formulas still use the global `tagValues` map.
