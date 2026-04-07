@@ -6,7 +6,7 @@ import { Plus, X, Copy, Trash2, Layers, Activity, Gauge, Hash, CircleDot, BarCha
 import { WIDGET_CATALOG, uid } from './widgetDefaults';
 
 const ADDABLE_TYPES = WIDGET_CATALOG.filter(
-  (w) => ['kpi', 'chart', 'barchart', 'gauge', 'stat', 'piechart', 'sparkline', 'progress', 'table', 'text', 'image', 'status', 'hopper', 'silo', 'datapanel'].includes(w.type)
+  (w) => ['kpi', 'chart', 'barchart', 'gauge', 'stat', 'piechart', 'sparkline', 'progress', 'table', 'text', 'image', 'status', 'hopper', 'silo', 'datapanel', 'tabcontainer'].includes(w.type)
 );
 
 const WIDGET_ICON_MAP = {
@@ -341,8 +341,12 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
         };
       });
       configRef.current = { ...configRef.current, tabs: patched };
+      // Nested tab containers have no canvas onSubLayoutChange — persist layout via parent onUpdate.
+      if (!onSubLayoutChange && onUpdate && widgetId) {
+        updateConfig({ tabs: patched });
+      }
     }
-  }, [onSubLayoutChange, widgetId]);
+  }, [onSubLayoutChange, widgetId, onUpdate, updateConfig]);
 
   const addWidgetButton = canEdit ? (
     <button
