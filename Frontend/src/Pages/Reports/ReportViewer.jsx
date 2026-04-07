@@ -706,7 +706,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                   return (
                     <div key={widget.id} className={`${showCard ? 'rb-widget-card rounded-lg' : ''}`}>
                       <div className="overflow-x-auto">
-                        <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
+                        <WidgetRenderer widget={widget} widgetId={widget.id} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
                       </div>
                       {showPagination && (
                         <div className="rb-tabular-pagination flex items-center justify-between px-4 py-2.5 border-t border-[#e3e9f0] dark:border-gray-700 bg-white/60 dark:bg-[#0a1525]/60">
@@ -760,7 +760,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                     : 'overflow-hidden';
                 return (
                   <div key={widget.id} className={cardClass} style={{ minHeight: minH }}>
-                    <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
+                    <WidgetRenderer widget={widget} widgetId={widget.id} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
                   </div>
                 );
               })}
@@ -805,7 +805,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                       : 'overflow-hidden flex flex-col min-h-0 p-0.5';
                   return (
                     <div key={item.i} className={`${cardClass} flex flex-col min-h-0 relative`} style={{ '--widget-color': widget.config?.color || undefined }}>
-                      <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
+                      <WidgetRenderer widget={widget} widgetId={widget.id} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
                       {widget.config?.showSeparator && (
                         <div
                           className="absolute left-0 right-0 bottom-0 pointer-events-none"

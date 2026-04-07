@@ -436,8 +436,11 @@ export default function ReportBuilderPreview() {
                     >
                       <WidgetRenderer
                         widget={widget}
+                        widgetId={widget.id}
                         tagValues={tagValues}
                         isPreview
+                        isSelected={false}
+                        tags={availableTags}
                         tagHistory={tagHistory}
                       />
                       {widget.config?.showSeparator && (

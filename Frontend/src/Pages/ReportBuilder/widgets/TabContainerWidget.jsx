@@ -116,15 +116,16 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
     return new Set(raw.map(String).filter(Boolean));
   }, [safeConfig.tableRowLinkAlwaysVisibleTabIds]);
 
-  /** Filter tab strip only for this widget; show all tabs while this container is selected in the builder. */
+  /** Filter tab strip when a table row drives this container; show all tabs while this container is selected on the canvas. */
   const filterTabBarForRowLink =
-    tabOverrideValid && hideNonMatchingTabsOnRowLink && !canEdit;
+    tabOverrideValid && hideNonMatchingTabsOnRowLink && !isSelected;
 
   const tabsForTabBar = useMemo(() => {
     if (!filterTabBarForRowLink) return tabs;
+    const activeStr = resolvedActiveTabId != null ? String(resolvedActiveTabId) : '';
     return tabs.filter(
       (t) =>
-        t.id === resolvedActiveTabId || alwaysVisibleTabIdSet.has(String(t.id)),
+        String(t.id) === activeStr || alwaysVisibleTabIdSet.has(String(t.id)),
     );
   }, [filterTabBarForRowLink, tabs, resolvedActiveTabId, alwaysVisibleTabIdSet]);
 
