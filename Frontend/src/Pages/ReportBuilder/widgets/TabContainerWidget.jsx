@@ -108,6 +108,26 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
   const tabOverrideValid = tableDrivenTabId != null && tabs.some((t) => t.id === tableDrivenTabId);
   const resolvedActiveTabId = tabOverrideValid ? tableDrivenTabId : baseActiveTabId;
 
+  /** Default on when unset so row-link reports hide sibling machine tabs without a migration. */
+  const hideNonMatchingTabsOnRowLink = safeConfig.hideNonMatchingTabsOnTableRowLink !== false;
+  const alwaysVisibleTabIdSet = useMemo(() => {
+    const raw = safeConfig.tableRowLinkAlwaysVisibleTabIds;
+    if (!Array.isArray(raw)) return new Set();
+    return new Set(raw.map(String).filter(Boolean));
+  }, [safeConfig.tableRowLinkAlwaysVisibleTabIds]);
+
+  /** Filter tab strip only for this widget; show all tabs while this container is selected in the builder. */
+  const filterTabBarForRowLink =
+    tabOverrideValid && hideNonMatchingTabsOnRowLink && !canEdit;
+
+  const tabsForTabBar = useMemo(() => {
+    if (!filterTabBarForRowLink) return tabs;
+    return tabs.filter(
+      (t) =>
+        t.id === resolvedActiveTabId || alwaysVisibleTabIdSet.has(String(t.id)),
+    );
+  }, [filterTabBarForRowLink, tabs, resolvedActiveTabId, alwaysVisibleTabIdSet]);
+
   const resolvedActiveTabIdRef = useRef(resolvedActiveTabId);
   resolvedActiveTabIdRef.current = resolvedActiveTabId;
 
@@ -279,7 +299,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
       {/* Tab bar */}
       <div className="flex items-center gap-1 mb-2 flex-shrink-0 border-b border-[var(--rb-border)] pb-2">
         <div className="flex items-center gap-0.5 flex-1 min-w-0 overflow-x-auto">
-          {tabs.map(tab => (
+          {tabsForTabBar.map(tab => (
             renamingId === tab.id ? (
               <input
                 key={tab.id}

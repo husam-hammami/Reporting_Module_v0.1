@@ -2034,6 +2034,51 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
                     Click the tab container on the canvas to manage tabs and add widgets.
                     Double-click a tab label to rename it. Use the + button inside the widget to add tabs and sub-widgets.
                   </p>
+                  <div className="pt-3 mt-3 border-t border-[var(--rb-border)] space-y-3">
+                    <Toggle
+                      label="Hide other tabs when a table row selects a tab"
+                      value={config.hideNonMatchingTabsOnTableRowLink !== false}
+                      onChange={(v) => handleConfigUpdate({ hideNonMatchingTabsOnTableRowLink: v })}
+                    />
+                    <p className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed">
+                      Applies in preview and viewer when a linked data table drives this container. Other widgets on the report are unchanged. While this tab container is selected on the canvas, all tabs stay visible for editing.
+                    </p>
+                    <div>
+                      <span className="block text-[9px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.06em] mb-2">
+                        Always show tabs (with selected machine)
+                      </span>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        {(Array.isArray(config.tabs) ? config.tabs : []).map((tab) => {
+                          const ids = Array.isArray(config.tableRowLinkAlwaysVisibleTabIds)
+                            ? config.tableRowLinkAlwaysVisibleTabIds.map(String)
+                            : [];
+                          const checked = ids.includes(String(tab.id));
+                          return (
+                            <label
+                              key={tab.id}
+                              className="flex items-center gap-2 text-[11px] text-[var(--rb-text)] cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                className="rounded border-[var(--rb-border)]"
+                                checked={checked}
+                                onChange={(e) => {
+                                  const next = new Set(ids);
+                                  if (e.target.checked) next.add(String(tab.id));
+                                  else next.delete(String(tab.id));
+                                  handleConfigUpdate({ tableRowLinkAlwaysVisibleTabIds: [...next] });
+                                }}
+                              />
+                              <span className="truncate">{tab.label || tab.id}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {(!config.tabs || config.tabs.length === 0) && (
+                        <p className="text-[9px] text-[var(--rb-text-muted)] italic">No tabs yet.</p>
+                      )}
+                    </div>
+                  </div>
                 </Section>
               )}
               {!HAS_DATA_SOURCE.has(widget.type) && !HAS_SERIES.has(widget.type) && !HAS_TABLE_COLUMNS.has(widget.type) && widget.type !== 'tabcontainer' && (

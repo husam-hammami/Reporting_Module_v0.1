@@ -332,6 +332,10 @@ export const WIDGET_CATALOG = [
       ],
       activeTabId: 'tc-tab-1',
       showCard: true,
+      /** When a data table row selects a tab, hide other tabs in this container (viewer / non-edit only). */
+      hideNonMatchingTabsOnTableRowLink: true,
+      /** Tab ids that stay visible in the tab bar while a row drives selection (e.g. config / details tab). */
+      tableRowLinkAlwaysVisibleTabIds: [],
     },
   },
 
