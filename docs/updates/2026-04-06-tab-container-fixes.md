@@ -1,8 +1,10 @@
 # 2026-04-06 — Tab Container, Data Panel, and Report Viewer updates
 
-**Date:** 2026-04-06
-**Branch:** Salalah_Mill_B
+**Date:** 2026-04-06  
+**Branch:** Salalah_Mill_B  
 **Commits:** 1fbbb44 → cb60c43 (earlier batch); further frontend updates documented below may be additional commits or local changes.
+
+**See also:** [`2026-04-06-nested-tabs-datapanel-clone-viewer-loading.md`](./2026-04-06-nested-tabs-datapanel-clone-viewer-loading.md) — nested Tab Container Properties/layout, Data Panel duplicate input, and Report Viewer `historicalLoading` / click fix (same day).
 
 ---
 
