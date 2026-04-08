@@ -197,12 +197,24 @@ export default function ReportBuilderCanvas() {
       if (!parent || parent.type !== 'tabcontainer') return prev;
       const cfg = parent.config || {};
       const tabsCfg = cfg.tabs || [];
-      const updatedTabs = tabsCfg.map((t) => ({
-        ...t,
-        widgets: (t.widgets || []).map((child) =>
-          updateNestedWidgetDeep(child, subWidgetId, updates),
-        ),
-      }));
+      if (tabsCfg.length === 0) return prev;
+      // Only patch the tab that is currently active on the canvas. Applying
+      // updateNestedWidgetDeep across every tab used to sync duplicate widget
+      // ids created by older "copy tab" behavior (same id in C32/M30/M31).
+      const activeMatches = cfg.activeTabId != null
+        && tabsCfg.some((t) => String(t.id) === String(cfg.activeTabId));
+      const resolvedActiveTabId = activeMatches
+        ? String(cfg.activeTabId)
+        : String(tabsCfg[0].id);
+      const updatedTabs = tabsCfg.map((t) => {
+        if (String(t.id) !== resolvedActiveTabId) return t;
+        return {
+          ...t,
+          widgets: (t.widgets || []).map((child) =>
+            updateNestedWidgetDeep(child, subWidgetId, updates),
+          ),
+        };
+      });
       return prev.map(w =>
         w.id === parentId ? { ...w, config: { ...cfg, tabs: updatedTabs } } : w
       );
