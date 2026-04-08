@@ -4,6 +4,14 @@ import { Plus, X, Trash2, Copy } from 'lucide-react';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import FormulaEditor from '../formulas/FormulaEditor';
 import { dataPanelScopedValueKey, DATA_PANEL_TIME_SCOPE_LABELS } from '../utils/dataPanelTimeScope';
+import { useReportBuilderDark } from '../hooks/useReportBuilderDark';
+import {
+  resolveDataPanelBorderCss,
+  resolveDataPanelFieldBorderCss,
+  resolveDataPanelHeaderBgForDark,
+  resolveDataPanelHeaderColorForDark,
+  resolveDataPanelPanelBgForDark,
+} from '../utils/themeChrome';
 
 let _fid = Date.now();
 const fieldId = () => `dpf-${_fid++}-${Math.random().toString(36).slice(2, 6)}`;
@@ -183,6 +191,7 @@ function PanelHeader({
 }
 
 export default function DataPanelWidget({ config, tagValues, isPreview, isSelected, onUpdate, widgetId, tags }) {
+  const isDark = useReportBuilderDark();
   const safeConfig = config || {};
   const title = safeConfig.title || '';
   const headerBg = safeConfig.headerBg ?? '';
@@ -192,10 +201,10 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
   const headerFontSize = safeConfig.headerFontSize || '12px';
   const panelBg = safeConfig.panelBg ?? '';
   const panelBorderRaw = safeConfig.panelBorder;
-  const panelBorderCss =
-    panelBorderRaw != null && String(panelBorderRaw).trim() !== ''
-      ? panelBorderRaw
-      : 'var(--rb-border)';
+  const panelBorderCss = resolveDataPanelBorderCss(panelBorderRaw, isDark);
+  const headerBgChrome = resolveDataPanelHeaderBgForDark(headerBg, isDark);
+  const headerColorChrome = resolveDataPanelHeaderColorForDark(headerColor, isDark);
+  const panelBgChrome = resolveDataPanelPanelBgForDark(panelBg, isDark);
   const panelBorderWidth = safeConfig.panelBorderWidth || '1';
   const contentPadding = safeConfig.contentPadding ?? 6;
   const gridCols = safeConfig.gridCols || LEGACY_GRID_COLS;
@@ -390,8 +399,8 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
             title,
             headerStyle,
             headerAlign,
-            headerBg,
-            headerColor,
+            headerBg: headerBgChrome,
+            headerColor: headerColorChrome,
             headerFontSize,
             panelBorderCss,
             panelBorderWidth,
@@ -419,7 +428,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
     const vAlign = field.verticalAlign || 'center';
     const alignItems = vAlign === 'top' ? 'flex-start' : vAlign === 'bottom' ? 'flex-end' : 'center';
     const bw = field.borderWidth || '1';
-    const bc = field.borderColor || panelBorderCss;
+    const bc = resolveDataPanelFieldBorderCss(field.borderColor, panelBorderCss, isDark);
     const br = field.borderRadius || '2';
 
     return (
@@ -522,8 +531,8 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
             title,
             headerStyle,
             headerAlign,
-            headerBg,
-            headerColor,
+            headerBg: headerBgChrome,
+            headerColor: headerColorChrome,
             headerFontSize,
             panelBorderCss,
             panelBorderWidth,
@@ -535,7 +544,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
         className="flex-1 min-h-0 flex flex-col rb-datapanel-content"
         style={{
           position: 'relative',
-          ...(panelBg ? { backgroundColor: panelBg } : {}),
+          ...(panelBgChrome !== undefined ? { backgroundColor: panelBgChrome } : {}),
           border: `${bw} solid ${panelBorderCss}`,
           ...(removeBorderTop ? { borderTop: 'none' } : {}),
           padding: `${contentPadding}px`,
@@ -552,7 +561,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
                 : headerAlign === 'right'
                   ? { right: '12px' }
                   : { left: '12px' }),
-              backgroundColor: panelBg || 'var(--rb-card-bg)',
+              backgroundColor: panelBgChrome !== undefined ? panelBgChrome : 'var(--rb-card-bg)',
               padding: '0 6px',
               zIndex: 3,
             }}
@@ -561,7 +570,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
               className="rb-datapanel-title whitespace-nowrap"
               style={{
                 fontSize: headerFontSize || '12px',
-                ...(headerColor ? { color: headerColor } : {}),
+                ...(headerColorChrome ? { color: headerColorChrome } : {}),
               }}
             >
               {title}

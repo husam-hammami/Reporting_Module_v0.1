@@ -88,6 +88,11 @@
   --rb-widget-padding-lg: var(--rb-pad-lg);
 
   --rb-silo-card-bg: #ffffff;
+
+  /* ── Selected widget ring (canvas + tab sub-widgets) ── */
+  --rb-selection-border: var(--rb-accent);
+  --rb-selection-shadow: 0 0 0 2px color-mix(in srgb, var(--rb-accent) 18%, transparent);
+  --rb-selection-outline: var(--rb-accent);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -131,6 +136,12 @@
   --rb-elevation-4: none;
 
   --rb-silo-card-bg: #111827;
+
+  --rb-selection-border: color-mix(in srgb, var(--rb-accent) 32%, var(--rb-border));
+  --rb-selection-shadow:
+    0 0 0 1px color-mix(in srgb, var(--rb-accent) 38%, transparent),
+    0 0 0 5px color-mix(in srgb, var(--rb-accent) 7%, transparent);
+  --rb-selection-outline: color-mix(in srgb, var(--rb-accent) 48%, var(--rb-border));
 }
 
 
@@ -398,13 +409,14 @@
 
 .report-builder .rb-widget-card.rb-widget-selected,
 .report-builder .rb-widget-selected {
-  border-color: var(--rb-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--rb-accent) 18%, transparent);
+  border-color: var(--rb-selection-border);
+  box-shadow: var(--rb-selection-shadow);
 }
-.dark .report-builder .rb-widget-card.rb-widget-selected,
-.dark .report-builder .rb-widget-selected {
-  border-color: var(--rb-accent);
-  box-shadow: 0 0 0 1px var(--rb-accent), 0 0 20px rgba(91, 155, 213, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+
+/* Text / invisible widgets — outline only, no filled ring */
+.report-builder .rb-canvas-invisible-selected {
+  outline: 2px solid var(--rb-selection-outline);
+  outline-offset: 1px;
 }
 
 .report-builder .rb-widget-card.rb-widget-dragging {

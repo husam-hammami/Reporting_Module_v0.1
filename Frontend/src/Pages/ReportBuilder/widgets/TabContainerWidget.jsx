@@ -483,7 +483,6 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
                       ? 'rb-widget-card rb-widget-selected'
                       : 'rb-widget-card hover:border-[var(--rb-accent)]'
                   }`}
-                  style={isSubSel ? { borderColor: 'var(--rb-accent)', boxShadow: '0 0 0 2px var(--rb-accent)' } : undefined}
                 >
                   {/* Delete button */}
                   {canEdit && (

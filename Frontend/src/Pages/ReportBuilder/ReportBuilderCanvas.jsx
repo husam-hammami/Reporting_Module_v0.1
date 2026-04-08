@@ -900,20 +900,16 @@ export default function ReportBuilderCanvas() {
                           } ${
                             isSelected
                               ? isInvisible
-                                ? 'outline outline-2 outline-[var(--rb-accent)] outline-offset-1 rounded rb-widget-selected'
+                                ? 'rb-canvas-invisible-selected rounded'
                                 : 'rb-widget-selected'
                               : isInvisible
-                                ? 'hover:outline hover:outline-1 hover:outline-[var(--rb-accent)]/30 hover:outline-offset-1 rounded'
+                                ? 'hover:outline hover:outline-1 hover:outline-[var(--rb-border)] hover:outline-offset-1 rounded'
                                 : showCard
                                   ? 'border-[var(--rb-border)] hover:border-[var(--rb-accent)]'
                                   : 'hover:border-[var(--rb-accent)]/50'
                           }`}
                           style={{
                             '--widget-color': widget.config?.color || undefined,
-                            ...(isSelected && !isInvisible ? {
-                              borderColor: 'var(--rb-accent)',
-                              boxShadow: '0 0 0 2px var(--rb-accent)',
-                            } : {}),
                           }}
                         >
                           {/* Selection handles (4 corners) */}
