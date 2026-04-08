@@ -184,7 +184,9 @@ export default function ReportBuilderCanvas() {
     if (!parent || parent.type !== 'tabcontainer') return null;
     const targetId = subWidgetInfo.subWidget?.id;
     if (!targetId) return null;
-    return findWidgetDeepInTabContainer(parent, targetId);
+    const cfg = parent.config || {};
+    const activeTabId = cfg.activeTabId || cfg.tabs?.[0]?.id;
+    return findWidgetDeepInTabContainer(parent, targetId, activeTabId);
   }, [subWidgetInfo, selectedId, widgets]);
 
   const editingWidget = editingSubWidget || selectedWidget;

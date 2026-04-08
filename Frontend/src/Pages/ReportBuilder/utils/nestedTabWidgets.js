@@ -5,11 +5,31 @@
 /**
  * @param {object} tabContainerWidget — widget with type 'tabcontainer'
  * @param {string} targetId
+ * @param {string} [preferActiveTabId] — search this tab first to avoid
+ *   returning a duplicate from a sibling tab when legacy data shares ids
+ *   across machine tabs (C32 / M30 / M31).
  * @returns {object|null}
  */
-export function findWidgetDeepInTabContainer(tabContainerWidget, targetId) {
+export function findWidgetDeepInTabContainer(tabContainerWidget, targetId, preferActiveTabId) {
   if (!tabContainerWidget || tabContainerWidget.type !== 'tabcontainer' || !targetId) return null;
   const tabs = tabContainerWidget.config?.tabs || [];
+
+  if (preferActiveTabId) {
+    const activeTab = tabs.find((t) => String(t.id) === String(preferActiveTabId));
+    if (activeTab) {
+      for (const w of activeTab.widgets || []) {
+        if (String(w.id) === String(targetId)) return w;
+        if (w.type === 'tabcontainer') {
+          const nested = w.config || {};
+          const nestedActiveId = nested.activeTabId || nested.tabs?.[0]?.id;
+          const hit = findWidgetDeepInTabContainer(w, targetId, nestedActiveId);
+          if (hit) return hit;
+        }
+      }
+    }
+  }
+
+  // Fallback: search all tabs (works correctly when ids are unique).
   for (const tab of tabs) {
     for (const w of tab.widgets || []) {
       if (String(w.id) === String(targetId)) return w;
