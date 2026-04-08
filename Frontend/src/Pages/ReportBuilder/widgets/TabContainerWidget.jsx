@@ -335,8 +335,9 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
       w: sw.w >= 1 ? Math.min(sw.w, TC_GRID_COLS) : 3,
       h: sw.h >= 1 ? sw.h : 2,
       minW: 1, minH: 1,
+      ...(canEdit ? {} : { static: true }),
     })),
-    [activeWidgets],
+    [activeWidgets, canEdit],
   );
 
   const handleSubInteractionEnd = useCallback((layout) => {
