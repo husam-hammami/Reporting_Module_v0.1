@@ -57,7 +57,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
   const safeConfig = config || {};
   const tabs = Array.isArray(safeConfig.tabs) ? safeConfig.tabs : [];
 
-  const canEdit = Boolean(isSelected && onUpdate && widgetId);
+  const canEdit = Boolean(!isPreview && isSelected && onUpdate && widgetId);
 
   /** Saved / default tab from template — used when persisting to config or as fallback for read-only. */
   const configDerivedActiveTabId = useMemo(() => {
@@ -241,8 +241,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
     if (sourceTabId) {
       const src = tabs.find(t => t.id === sourceTabId);
       if (src) {
-        newWidgets = JSON.parse(JSON.stringify(src.widgets || []));
-        newWidgets.forEach(w => { w.id = uid(); });
+        newWidgets = (src.widgets || []).map((w) => cloneWidgetTreeWithNewIds(w));
       }
     }
     updateConfig({
@@ -507,7 +506,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
                   )}
                   {/* Widget body */}
                   <div className="h-full overflow-hidden">
-                    {renderWidget ? renderWidget(sw, { isSubSelected: isSubSel, onUpdateSubWidget: updateSubWidget }) : (
+                    {renderWidget ? renderWidget(sw, { isSubSelected: isSubSel, ...(canEdit ? { onUpdateSubWidget: updateSubWidget } : {}) }) : (
                       <div className="flex items-center justify-center h-full text-[9px] text-[var(--rb-text-muted)]">
                         {sw.type} widget
                       </div>
