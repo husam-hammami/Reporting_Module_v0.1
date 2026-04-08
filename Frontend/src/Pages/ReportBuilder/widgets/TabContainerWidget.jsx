@@ -373,14 +373,14 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
       ref={addWidgetBtnRef}
       type="button"
       onClick={() => setShowAddWidget(v => !v)}
-      className="w-full py-2.5 text-[11px] font-medium text-[var(--rb-accent)] border-2 border-dashed border-[var(--rb-border)] rounded-lg hover:border-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] transition-all flex items-center justify-center gap-2"
+      className="w-full py-2.5 text-[11px] font-medium text-[var(--rb-accent)] border-2 border-dashed border-[var(--rb-border)] rounded-[var(--rb-radius-lg)] hover:border-[var(--rb-accent)] hover:bg-[var(--rb-accent-subtle)] transition-all flex items-center justify-center gap-2"
     >
       <Plus size={14} /> Add Widget
     </button>
   ) : null;
 
   return (
-    <div className="flex flex-col h-full" style={{ padding: '4px 6px' }}>
+    <div className="flex flex-col h-full rb-tabcontainer-root">
       {/* Tab bar */}
       <div className="flex items-center gap-1 mb-2 flex-shrink-0 border-b border-[var(--rb-border)] pb-2">
         <div className="flex items-center gap-0.5 flex-1 min-w-0 overflow-x-auto">
@@ -396,7 +396,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
                   if (e.key === 'Enter') { if (renameInput.trim()) renameTab(tab.id, renameInput.trim()); setRenamingId(null); }
                   if (e.key === 'Escape') setRenamingId(null);
                 }}
-                className="px-2 py-1 text-[11px] font-semibold rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-accent)] text-[var(--rb-text)] outline-none w-24"
+                className="px-2 py-1 text-[11px] font-semibold rounded-[var(--rb-radius-lg)] bg-[var(--rb-surface)] border border-[var(--rb-accent)] text-[var(--rb-text)] outline-none w-24"
               />
             ) : (
               <button
@@ -404,7 +404,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 onDoubleClick={canEdit ? () => { setRenameInput(tab.label); setRenamingId(tab.id); } : undefined}
-                className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg whitespace-nowrap transition-all ${
+                className={`px-3 py-1.5 text-[11px] font-semibold rounded-[var(--rb-radius-lg)] whitespace-nowrap transition-all ${
                   tab.id === resolvedActiveTabId
                     ? 'bg-[var(--rb-accent)] text-white shadow-sm'
                     : 'text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:bg-[var(--rb-surface)]'
@@ -478,7 +478,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
                 <div
                   key={String(sw.id)}
                   onClick={(e) => { e.stopPropagation(); selectSubWidget(sw); }}
-                  className={`rounded-lg group overflow-visible ${
+                  className={`rounded-[var(--rb-radius-lg)] group overflow-visible ${
                     isSubSel
                       ? 'rb-widget-card rb-widget-selected'
                       : 'rb-widget-card hover:border-[var(--rb-accent)]'
@@ -567,7 +567,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setShowAddTab(false)} />
           <div
-            className="fixed z-[9999] w-48 rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] shadow-xl overflow-hidden"
+            className="fixed z-[9999] w-48 rounded-[var(--rb-radius-lg)] border border-[var(--rb-border)] bg-[var(--rb-panel)] shadow-xl overflow-hidden"
             style={{ top: addTabPos.top, left: addTabPos.left }}
           >
             <button

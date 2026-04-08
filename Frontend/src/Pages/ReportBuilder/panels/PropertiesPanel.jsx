@@ -817,17 +817,17 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
               {(config.headerStyle || 'bar') === 'bar' && (
                 <>
                   <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
-                  <input type="color" value={config.headerBg || '#e2e8f0'} onChange={(e) => onUpdate({ headerBg: e.target.value })} className="rb-color-swatch" />
+                  <input type="color" value={config.headerBg || '#f9fafb'} onChange={(e) => onUpdate({ headerBg: e.target.value })} className="rb-color-swatch" />
                 </>
               )}
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">text</span>
-              <input type="color" value={config.headerColor || '#0f172a'} onChange={(e) => onUpdate({ headerColor: e.target.value })} className="rb-color-swatch" />
+              <input type="color" value={config.headerColor || '#111827'} onChange={(e) => onUpdate({ headerColor: e.target.value })} className="rb-color-swatch" />
             </div>
           </Field>
           <Field label="Panel border">
             <div className="rb-color-group">
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">color</span>
-              <input type="color" value={config.panelBorder || '#e2e8f0'} onChange={(e) => onUpdate({ panelBorder: e.target.value })} className="rb-color-swatch" />
+              <input type="color" value={config.panelBorder || '#e5e7eb'} onChange={(e) => onUpdate({ panelBorder: e.target.value })} className="rb-color-swatch" />
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">width</span>
               <SelectInput
                 value={config.panelBorderWidth || '1'}

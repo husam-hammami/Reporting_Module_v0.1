@@ -129,44 +129,52 @@ function offsetDuplicatePosition(base) {
   };
 }
 
-function PanelHeader({ title, headerStyle, headerAlign, headerBg, headerColor, headerFontSize, panelBorder, panelBorderWidth }) {
+function PanelHeader({
+  title,
+  headerStyle,
+  headerAlign,
+  headerBg,
+  headerColor,
+  headerFontSize,
+  panelBorderCss,
+  panelBorderWidth,
+}) {
   if (!title) return null;
   if (headerStyle === 'legend') return null;
   const align = headerAlign || 'left';
   const fs = headerFontSize || '12px';
+  const bw = `${panelBorderWidth || 1}px`;
   if (headerStyle === 'inline') {
     const justify = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
-    const borderClr = panelBorder || '#e2e8f0';
-    const bw = `${panelBorderWidth || 1}px`;
     return (
       <div
         className="flex items-center gap-2 flex-shrink-0 px-1"
         style={{ justifyContent: justify, margin: '0 0 -0.5px 0' }}
       >
         {(align === 'center' || align === 'right') && (
-          <div className="flex-1 min-w-[12px]" style={{ borderBottom: `${bw} solid ${borderClr}` }} />
+          <div className="flex-1 min-w-[12px]" style={{ borderBottom: `${bw} solid ${panelBorderCss}` }} />
         )}
         <span
-          className="font-bold whitespace-nowrap flex-shrink-0"
-          style={{ fontSize: fs, color: headerColor || '#0f172a', padding: '2px 4px' }}
+          className="rb-datapanel-title whitespace-nowrap flex-shrink-0"
+          style={{ fontSize: fs, padding: '2px 4px', ...(headerColor ? { color: headerColor } : {}) }}
         >
           {title}
         </span>
         {(align === 'center' || align === 'left') && (
-          <div className="flex-1 min-w-[12px]" style={{ borderBottom: `${bw} solid ${borderClr}` }} />
+          <div className="flex-1 min-w-[12px]" style={{ borderBottom: `${bw} solid ${panelBorderCss}` }} />
         )}
       </div>
     );
   }
   return (
     <div
-      className="px-3 py-1.5 font-bold flex-shrink-0"
+      className="px-3 py-1.5 font-bold flex-shrink-0 rb-datapanel-header-bar"
       style={{
         fontSize: fs,
-        backgroundColor: headerBg || '#e2e8f0',
-        color: headerColor || '#0f172a',
         textAlign: align,
-        ...(panelBorder ? { borderBottom: `${panelBorderWidth || 1}px solid ${panelBorder}` } : {}),
+        borderBottom: `${bw} solid ${panelBorderCss}`,
+        ...(headerBg ? { backgroundColor: headerBg } : {}),
+        ...(headerColor ? { color: headerColor } : {}),
       }}
     >
       {title}
@@ -177,13 +185,17 @@ function PanelHeader({ title, headerStyle, headerAlign, headerBg, headerColor, h
 export default function DataPanelWidget({ config, tagValues, isPreview, isSelected, onUpdate, widgetId, tags }) {
   const safeConfig = config || {};
   const title = safeConfig.title || '';
-  const headerBg = safeConfig.headerBg || '';
-  const headerColor = safeConfig.headerColor || '';
+  const headerBg = safeConfig.headerBg ?? '';
+  const headerColor = safeConfig.headerColor ?? '';
   const headerStyle = safeConfig.headerStyle || 'bar';
   const headerAlign = safeConfig.headerAlign || 'left';
   const headerFontSize = safeConfig.headerFontSize || '12px';
-  const panelBg = safeConfig.panelBg || '';
-  const panelBorder = safeConfig.panelBorder || '#e2e8f0';
+  const panelBg = safeConfig.panelBg ?? '';
+  const panelBorderRaw = safeConfig.panelBorder;
+  const panelBorderCss =
+    panelBorderRaw != null && String(panelBorderRaw).trim() !== ''
+      ? panelBorderRaw
+      : 'var(--rb-border)';
   const panelBorderWidth = safeConfig.panelBorderWidth || '1';
   const contentPadding = safeConfig.contentPadding ?? 6;
   const gridCols = safeConfig.gridCols || LEGACY_GRID_COLS;
@@ -372,8 +384,19 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
 
   if (fields.length === 0 && !canEdit) {
     return (
-      <div className="flex flex-col h-full overflow-hidden" style={{ padding: '4px' }}>
-        <PanelHeader {...{ title, headerStyle, headerAlign, headerBg, headerColor, headerFontSize, panelBorder, panelBorderWidth }} />
+      <div className="flex flex-col h-full overflow-hidden rb-datapanel-root">
+        <PanelHeader
+          {...{
+            title,
+            headerStyle,
+            headerAlign,
+            headerBg,
+            headerColor,
+            headerFontSize,
+            panelBorderCss,
+            panelBorderWidth,
+          }}
+        />
         <div className="flex-1 flex items-center justify-center text-[11px] text-[var(--rb-text-muted)]">No fields configured</div>
       </div>
     );
@@ -396,13 +419,13 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
     const vAlign = field.verticalAlign || 'center';
     const alignItems = vAlign === 'top' ? 'flex-start' : vAlign === 'bottom' ? 'flex-end' : 'center';
     const bw = field.borderWidth || '1';
-    const bc = field.borderColor || panelBorder || 'var(--rb-border)';
+    const bc = field.borderColor || panelBorderCss;
     const br = field.borderRadius || '2';
 
     return (
       <div
         key={field.id}
-        className={`group absolute flex overflow-hidden select-none ${
+        className={`group absolute flex overflow-hidden select-none rb-datapanel-field text-[var(--rb-text)] ${
           canEdit ? 'cursor-grab active:cursor-grabbing' : ''
         }`}
         style={{
@@ -412,10 +435,10 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
           height: `${fH}%`,
           textAlign: field.align || 'left',
           fontWeight: field.fontWeight || 'normal',
-          fontSize: field.fontSize || '11px',
-          color: field.cellColor || 'inherit',
+          fontSize: field.fontSize || 'var(--rb-font-sm)',
+          ...(field.cellColor ? { color: field.cellColor } : {}),
           alignItems,
-          ...(field.cellBg ? { backgroundColor: field.cellBg } : { backgroundColor: 'var(--rb-input, #f1f5f9)' }),
+          ...(field.cellBg ? { backgroundColor: field.cellBg } : {}),
           ...(field.showBorder !== false
             ? { border: `${bw}px solid ${bc}` }
             : {}),
@@ -492,22 +515,29 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
   const removeBorderTop = title && !isLegend && !isInline;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ padding: '4px' }}>
+    <div className="flex flex-col h-full overflow-hidden rb-datapanel-root">
       {!isLegend && (
-        <PanelHeader {...{ title, headerStyle, headerAlign, headerBg, headerColor, headerFontSize, panelBorder, panelBorderWidth }} />
+        <PanelHeader
+          {...{
+            title,
+            headerStyle,
+            headerAlign,
+            headerBg,
+            headerColor,
+            headerFontSize,
+            panelBorderCss,
+            panelBorderWidth,
+          }}
+        />
       )}
 
       <div
-        className="flex-1 min-h-0 flex flex-col"
+        className="flex-1 min-h-0 flex flex-col rb-datapanel-content"
         style={{
           position: 'relative',
           ...(panelBg ? { backgroundColor: panelBg } : {}),
-          ...(panelBorder
-            ? {
-                border: `${bw} solid ${panelBorder}`,
-                ...(removeBorderTop ? { borderTop: 'none' } : {}),
-              }
-            : {}),
+          border: `${bw} solid ${panelBorderCss}`,
+          ...(removeBorderTop ? { borderTop: 'none' } : {}),
           padding: `${contentPadding}px`,
         }}
       >
@@ -522,14 +552,17 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
                 : headerAlign === 'right'
                   ? { right: '12px' }
                   : { left: '12px' }),
-              backgroundColor: panelBg || 'var(--rb-panel, #ffffff)',
+              backgroundColor: panelBg || 'var(--rb-card-bg)',
               padding: '0 6px',
               zIndex: 3,
             }}
           >
             <span
-              className="font-bold whitespace-nowrap"
-              style={{ fontSize: headerFontSize || '12px', color: headerColor || '#0f172a' }}
+              className="rb-datapanel-title whitespace-nowrap"
+              style={{
+                fontSize: headerFontSize || '12px',
+                ...(headerColor ? { color: headerColor } : {}),
+              }}
             >
               {title}
             </span>
@@ -577,7 +610,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
             <button
               type="button"
               onClick={addField}
-              className="rb-body inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--rb-border)] text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:border-[var(--rb-accent)]/50 hover:bg-[var(--rb-accent-subtle)] transition-colors text-[11px]"
+              className="rb-body inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--rb-radius-lg)] border border-dashed border-[var(--rb-border)] text-[var(--rb-text-muted)] hover:text-[var(--rb-text)] hover:border-[var(--rb-accent)]/50 hover:bg-[var(--rb-accent-subtle)] transition-colors text-[11px]"
             >
               <Plus size={12} /> Add input
             </button>
@@ -617,7 +650,7 @@ function FieldEditor({ draft, setDraft, onSave, onCancel, onDelete, onDuplicate,
   }, [safeTags, tagSearch]);
 
   const inputCls =
-    'w-full text-[12px] rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] text-[var(--rb-text)] placeholder-[#8898aa] px-3 py-2 focus:outline-none focus:border-brand focus:ring-1 focus:ring-[#0e74904d] transition-colors';
+    'rb-input-base w-full text-[12px] rounded-[var(--rb-radius)] placeholder:text-[var(--rb-text-muted)]';
   const labelCls = 'text-[11px] font-medium text-[var(--rb-text-muted)] mb-1.5 block';
 
   const typeBtn = (value, label, cls) => (

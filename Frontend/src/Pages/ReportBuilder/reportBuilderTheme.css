@@ -435,6 +435,43 @@
 }
 .report-builder .rb-widget-card-transparent:hover { box-shadow: none; }
 
+/* ── Tab Container (canvas chrome) ── */
+.report-builder .rb-tabcontainer-root {
+  padding: var(--rb-pad-md);
+}
+
+/* ── Data Panel — align with rb-widget-card / rb-input tokens ── */
+.report-builder .rb-datapanel-root {
+  padding: var(--rb-pad-md);
+}
+
+.report-builder .rb-datapanel-header-bar {
+  background-color: var(--rb-surface);
+  color: var(--rb-text);
+  border-bottom: 1px solid var(--rb-border);
+}
+
+.report-builder .rb-datapanel-title {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--rb-text);
+}
+
+.dark .report-builder .rb-datapanel-title {
+  color: var(--rb-text);
+}
+
+.report-builder .rb-datapanel-content {
+  background-color: var(--rb-card-bg);
+  border-radius: var(--rb-radius-lg);
+}
+
+.report-builder .rb-datapanel-field {
+  background-color: var(--rb-input);
+  border-radius: var(--rb-radius);
+  transition: border-color var(--rb-transition-fast) ease;
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
    TABLE STYLING
