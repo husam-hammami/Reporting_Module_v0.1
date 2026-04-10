@@ -16,6 +16,8 @@ Order tracking is driven by **`report_builder_templates`** (the same table used 
 
 **Detail views:** `dynamic_orders` provides the **time window** `[start_time, end_time)`; query `tag_history` via `GET /historian/by-tags` with `from`/`to`.
 
+**Historian time semantics:** `_parse_iso_to_naive_local` treats timestamps **without** a timezone as **server-local** wall time (aligned with naive `tag_history.timestamp`). Timestamps **with** `Z` are treated as **UTC** and converted to local. Callers must not send a naive wall time with a spurious `Z`, or `from` can move **after** `to` (UTC “now”) and return empty `data`. Job Logs strips trailing `Z` on order `start_time` / `end_time` before calling `by-tags`. See [JOB_LOGS_PROGRESS.md](./JOB_LOGS_PROGRESS.md).
+
 ---
 
 ## How it works
@@ -66,6 +68,8 @@ Leave **Status Tag** empty to disable order tracking for that template.
 - `ALTER TABLE report_builder_templates ADD COLUMN order_status_tag_name, order_prefix, order_start_value, order_stop_value`
 - `ALTER TABLE dynamic_orders ADD COLUMN template_id → report_builder_templates(id)`
 - `ALTER TABLE dynamic_order_counters ADD COLUMN template_id → report_builder_templates(id)`
+- Partial unique index on `dynamic_order_counters(template_id)` where not null
+- **`ALTER ... dynamic_orders / dynamic_order_counters` — `layout_id DROP NOT NULL`** so report-template orders can insert with `template_id` only
 
 No new tables. Existing `dynamic_orders` rows with `layout_id` (from older Live Monitor path) are unaffected.
 
@@ -82,7 +86,7 @@ No new tables. Existing `dynamic_orders` rows with `layout_id` (from older Live 
 | Order worker | `backend/workers/report_order_worker.py` (new) |
 | Worker spawn | `backend/app.py` (spawns `report_order_worker`) |
 | Builder UI | `Frontend/src/Pages/ReportBuilder/PaginatedReportBuilder.jsx` (`OrderTrackingCard`) |
-| Job Logs page | `Frontend/src/Pages/JobLogs/JobLogsPage.jsx` (uses `template_id`) |
+| Job Logs page | `Frontend/src/Pages/JobLogs/JobLogsPage.jsx` (uses `template_id`; historian `from`/`to` wall-time safe) |
 | Navbar | `Frontend/src/Data/Navbar.js` (Job Logs entry) |
 | Routes | `Frontend/src/Routes/AppRoutes.jsx` (Job Logs route) |
 | i18n | `Frontend/src/i18n/{en,ar,hi,ur}.json` |
@@ -107,3 +111,5 @@ No new tables. Existing `dynamic_orders` rows with `layout_id` (from older Live 
 | Where are tag values? | **`tag_history`** (and archive). |
 | How to turn orders off? | Clear the **Status Tag** field in the Report Builder. |
 | How does the worker find templates? | Queries `report_builder_templates WHERE order_status_tag_name IS NOT NULL`. |
+| Tag panel empty but jobs load? | Check Network `by-tags`: if **`from` > `to`**, fix timezone handling (see **Historian time semantics** above). If tags OK but **`aggregation=auto`** returns `{}`, archive may not cover the window yet; see **JOB_LOGS_PROGRESS.md**. |
+| Full changelog | **[JOB_LOGS_PROGRESS.md](./JOB_LOGS_PROGRESS.md)** |

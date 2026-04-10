@@ -44,6 +44,29 @@ function formatDuration(seconds) {
   return `${m}m`;
 }
 
+/**
+ * Historian `/api/historian/by-tags` uses `_parse_iso_to_naive_local`: values **without**
+ * a timezone are treated as server-local wall time (matches `tag_history.timestamp`).
+ * If `start_time` from the API is naive local but serialized with a trailing `Z`,
+ * `new Date(...).toISOString()` treats it as UTC and shifts the instant; then
+ * `from` can be **after** `to` (now in UTC), and the query returns no rows.
+ *
+ * Strip a trailing `Z`/`z` on wall times from the DB so the historian keeps them
+ * in the naive-local path. Keep UTC `Z` on "now" for `to` when the job is running.
+ */
+function toHistorianWallTimeParam(value) {
+  if (value == null || value === '') return '';
+  const s = (typeof value === 'string' ? value : new Date(value).toISOString()).trim();
+  if (!s) return '';
+  if (/[zZ]$/i.test(s)) return s.replace(/[zZ]$/i, '');
+  return s;
+}
+
+function toHistorianToParam(endTime) {
+  if (endTime != null && endTime !== '') return toHistorianWallTimeParam(endTime);
+  return new Date().toISOString();
+}
+
 export default function JobLogsPage() {
   const theme = useTheme();
 
@@ -103,14 +126,20 @@ export default function JobLogsPage() {
       .then(tagNames => {
         if (!Array.isArray(tagNames) || tagNames.length === 0) return;
 
-        const fromISO = new Date(start_time).toISOString();
-        const toISO = end_time ? new Date(end_time).toISOString() : new Date().toISOString();
+        let fromParam = toHistorianWallTimeParam(start_time);
+        let toParam = toHistorianToParam(end_time);
+
+        const fromMs = Date.parse(fromParam.includes('T') ? fromParam : fromParam.replace(' ', 'T'));
+        const toMs = Date.parse(toParam);
+        if (!Number.isNaN(fromMs) && !Number.isNaN(toMs) && fromMs > toMs) {
+          toParam = new Date().toISOString();
+        }
 
         return axios.get('/api/historian/by-tags', {
           params: {
             tag_names: tagNames.join(','),
-            from: fromISO,
-            to: toISO,
+            from: fromParam,
+            to: toParam,
             aggregation: 'auto',
           },
         }).then(res => {
