@@ -259,6 +259,7 @@ const AppRoutes = () => {
             <Route index element={<Navigate to="/settings/tags" replace />} />
             <Route path="tags" element={<TagManager />} />
             <Route path="tag-groups" element={<TagGroupManager />} />
+            <Route path="live-monitor-layouts" element={<LiveMonitorLayoutManager />} />
             <Route path="formulas" element={<FormulaManager />} />
             <Route path="mappings" element={<MappingManager />} />
             <Route path="export-import" element={<ExportImport />} />
