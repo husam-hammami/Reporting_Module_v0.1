@@ -47,8 +47,8 @@ function formatDuration(seconds) {
 export default function JobLogsPage() {
   const theme = useTheme();
 
-  const [layouts, setLayouts] = useState([]);
-  const [selectedLayoutId, setSelectedLayoutId] = useState(null);
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -57,26 +57,25 @@ export default function JobLogsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState('');
 
-  // Load layouts with order tracking
+  // Load report templates with order tracking
   useEffect(() => {
     axios.get('/api/orders/layouts')
       .then(res => {
         const data = res.data?.data || [];
-        setLayouts(data);
-        if (data.length > 0 && !selectedLayoutId) {
-          setSelectedLayoutId(data[0].id);
+        setTemplates(data);
+        if (data.length > 0 && !selectedTemplateId) {
+          setSelectedTemplateId(data[0].id);
         }
       })
-      .catch(() => toast.error('Failed to load layouts'));
+      .catch(() => toast.error('Failed to load templates'));
   }, []);
 
-  // Load jobs when layout changes
   const loadJobs = useCallback(async () => {
-    if (!selectedLayoutId) return;
+    if (!selectedTemplateId) return;
     setLoading(true);
     try {
       const res = await axios.get('/api/orders/jobs', {
-        params: { layout_id: selectedLayoutId, limit: 100 },
+        params: { template_id: selectedTemplateId, limit: 100 },
       });
       setJobs(res.data?.data || []);
       setTotal(res.data?.total || 0);
@@ -87,7 +86,7 @@ export default function JobLogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedLayoutId]);
+  }, [selectedTemplateId]);
 
   useEffect(() => { loadJobs(); }, [loadJobs]);
 
@@ -99,7 +98,7 @@ export default function JobLogsPage() {
 
     setDetailLoading(true);
 
-    axios.get(`/api/orders/layout-tags/${selectedLayoutId}`)
+    axios.get(`/api/orders/layout-tags/${selectedTemplateId}`)
       .then(res => res.data?.data || [])
       .then(tagNames => {
         if (!Array.isArray(tagNames) || tagNames.length === 0) return;
@@ -123,11 +122,11 @@ export default function JobLogsPage() {
         console.warn('Detail load error:', err);
       })
       .finally(() => setDetailLoading(false));
-  }, [selectedJob, selectedLayoutId, layouts]);
+  }, [selectedJob, selectedTemplateId]);
 
-  const selectedLayout = useMemo(() =>
-    layouts.find(l => l.id === selectedLayoutId),
-    [layouts, selectedLayoutId],
+  const selectedTemplate = useMemo(() =>
+    templates.find(t => t.id === selectedTemplateId),
+    [templates, selectedTemplateId],
   );
 
   const filteredJobs = useMemo(() => {
@@ -152,8 +151,8 @@ export default function JobLogsPage() {
           {/* Layout selector */}
           <div className="relative">
             <select
-              value={selectedLayoutId || ''}
-              onChange={e => setSelectedLayoutId(Number(e.target.value))}
+              value={selectedTemplateId || ''}
+              onChange={e => setSelectedTemplateId(Number(e.target.value))}
               className="appearance-none pl-3 pr-8 py-2 rounded-lg text-sm font-medium cursor-pointer"
               style={{
                 background: theme.inputBg,
@@ -161,9 +160,9 @@ export default function JobLogsPage() {
                 color: theme.text,
               }}
             >
-              {layouts.map(l => (
-                <option key={l.id} value={l.id}>
-                  {l.layout_name}
+              {templates.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
                 </option>
               ))}
             </select>

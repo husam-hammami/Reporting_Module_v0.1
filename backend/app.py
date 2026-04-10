@@ -776,6 +776,7 @@ def _run_startup_migrations():
         'add_must_change_password.sql',
         'create_hercules_ai_tables.sql',
         'add_ai_summary_to_distribution.sql',
+        'add_order_tracking_to_report_templates.sql',
     ]
 
     try:
@@ -1264,6 +1265,14 @@ try:
     logger.info("Started dynamic monitor and archive workers")
 except Exception as e:
     logger.error("Could not start dynamic workers: %s", e, exc_info=True)
+
+# 5. Report-template order tracking worker (Job Logs — reads order config from report_builder_templates)
+try:
+    from workers.report_order_worker import report_order_worker
+    eventlet.spawn(report_order_worker)
+    logger.info("Started report order tracking worker")
+except Exception as e:
+    logger.error("Could not start report order worker: %s", e, exc_info=True)
 
 # Auto-seed emulator with all DB tags when in demo mode (runs regardless of entry point)
 try:

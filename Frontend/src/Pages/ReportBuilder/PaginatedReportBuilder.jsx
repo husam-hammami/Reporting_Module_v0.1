@@ -12,7 +12,7 @@ import {
   ArrowLeft, Save, Eye, Plus, Trash2, ChevronDown, ChevronUp,
   Table2, Hash, Type, Minus, Copy, X, Check,
   AlignLeft, AlignCenter, AlignRight, LayoutTemplate, PenLine,
-  Monitor, FileText, Send, Undo2, RefreshCw,
+  Monitor, FileText, Send, Undo2, RefreshCw, ClipboardList,
 } from 'lucide-react';
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1751,6 +1751,82 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
   );
 }
 
+/* ── Order Tracking Config Card (for Job Logs) ──────────────────── */
+function OrderTrackingCard({ template, tags, updateMeta }) {
+  const [expanded, setExpanded] = useState(false);
+  const statusTag = template?.order_status_tag_name || '';
+  const prefix = template?.order_prefix || '';
+  const startVal = template?.order_start_value ?? 1;
+  const stopVal = template?.order_stop_value ?? 0;
+
+  const save = (field, value) => updateMeta({ [field]: value });
+
+  return (
+    <div className="rounded-lg overflow-hidden mb-1"
+      style={{ background: 'var(--rb-panel)', border: '1px solid var(--rb-border)' }}>
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="w-full px-3 py-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider"
+        style={{ color: statusTag ? '#34d399' : 'var(--rb-text-muted)', background: 'var(--rb-surface)' }}>
+        <span className="flex items-center gap-1.5">
+          <ClipboardList size={11} />
+          Order Tracking {statusTag ? '(ON)' : '(OFF)'}
+        </span>
+        <ChevronDown size={11} style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 150ms' }} />
+      </button>
+      {expanded && (
+        <div className="px-3 py-2.5 space-y-2.5" style={{ borderTop: '1px solid var(--rb-border)' }}>
+          <div>
+            <label className="text-[9px] font-semibold uppercase tracking-wider block mb-1" style={{ color: 'var(--rb-text-muted)' }}>
+              Status Tag (numeric 0/1)
+            </label>
+            <select
+              value={statusTag}
+              onChange={e => save('order_status_tag_name', e.target.value || null)}
+              className="rb-input-base text-[10px] py-1 px-2 w-full">
+              <option value="">None (disabled)</option>
+              {(tags || []).map(t => (
+                <option key={t.tag_name || t} value={t.tag_name || t}>
+                  {t.tag_name || t} {t.data_type ? `[${t.data_type}]` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          {statusTag && (
+            <>
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-wider block mb-1" style={{ color: 'var(--rb-text-muted)' }}>
+                  Order Prefix
+                </label>
+                <input
+                  value={prefix}
+                  onChange={e => save('order_prefix', e.target.value)}
+                  className="rb-input-base text-[10px] py-1 px-2 w-full"
+                  placeholder="e.g. MILB, FCL"
+                />
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[9px] font-semibold uppercase tracking-wider block mb-1" style={{ color: 'var(--rb-text-muted)' }}>Start</label>
+                  <input type="number" value={startVal}
+                    onChange={e => save('order_start_value', parseInt(e.target.value, 10) || 0)}
+                    className="rb-input-base text-[10px] py-1 px-2 w-full" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[9px] font-semibold uppercase tracking-wider block mb-1" style={{ color: 'var(--rb-text-muted)' }}>Stop</label>
+                  <input type="number" value={stopVal}
+                    onChange={e => save('order_stop_value', parseInt(e.target.value, 10) || 0)}
+                    className="rb-input-base text-[10px] py-1 px-2 w-full" />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════════════════════════
    MAIN BUILDER COMPONENT
    ══════════════════════════════════════════════════════════════════ */
@@ -2039,6 +2115,9 @@ export default function PaginatedReportBuilder() {
         {/* Left: Section editor list (resizable) */}
         <div className="flex-shrink-0 overflow-y-auto p-2 space-y-1.5 min-w-0 relative"
           style={{ width: `${panelWidth}px`, borderRight: '1px solid var(--rb-border)', maxHeight: 'calc(100vh - 48px)' }}>
+
+          {/* ── Order Tracking config (collapsed by default) ── */}
+          <OrderTrackingCard template={template} tags={tags} updateMeta={updateMeta} />
 
           <AnimatePresence mode="popLayout">
             {sections.map((section, idx) => (

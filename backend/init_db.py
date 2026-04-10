@@ -47,6 +47,7 @@ MIGRATION_ORDER = [
     'add_must_change_password.sql',
     'create_hercules_ai_tables.sql',
     'add_ai_summary_to_distribution.sql',
+    'add_order_tracking_to_report_templates.sql',
 ]
 
 

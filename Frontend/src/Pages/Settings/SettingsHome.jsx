@@ -1,7 +1,7 @@
 import React, { useEffect, useContext } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useLenisScroll } from '../../Hooks/useLenisScroll';
-import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaSuperscript, FaEnvelope, FaClock, FaImage, FaDesktop } from 'react-icons/fa';
+import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaSuperscript, FaEnvelope, FaClock, FaImage } from 'react-icons/fa';
 import { AuthContext } from '../../Context/AuthProvider';
 import { useLanguage } from '../../Hooks/useLanguage';
 import '../ReportBuilder/reportBuilderTheme.css';
@@ -16,7 +16,6 @@ const SettingsHome = () => {
   const NAV_ITEMS = [
     { name: t('settings.tags'), icon: FaTags, link: '/settings/tags', description: t('settings.desc.tags') },
     { name: t('settings.tagGroups'), icon: FaLayerGroup, link: '/settings/tag-groups', description: t('settings.desc.tagGroups') },
-    { name: t('settings.liveMonitorLayouts'), icon: FaDesktop, link: '/settings/live-monitor-layouts', description: t('settings.desc.liveMonitorLayouts') },
     { name: t('settings.formulas'), icon: FaSuperscript, link: '/settings/formulas', description: t('settings.desc.formulas') },
     { name: t('settings.mappings'), icon: FaExchangeAlt, link: '/settings/mappings', description: t('settings.desc.mappings') },
     { name: t('settings.emailSmtp'), icon: FaEnvelope, link: '/settings/distribution', description: t('settings.desc.emailSmtp') },
