@@ -815,16 +815,17 @@ def _run_startup_migrations():
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
                     sql = f.read()
-                # Split into individual statements so one failure doesn't rollback all
-                statements = [s.strip() for s in sql.split(';') if s.strip()]
-                for stmt in statements:
-                    try:
-                        cur.execute(stmt)
-                    except Exception:
-                        pass  # "already exists" errors are expected
+                if not sql.strip():
+                    continue
+                # Run whole file in one round-trip (matches init_db.py). Naive split(';')
+                # can break valid SQL; silent per-statement swallow hid real failures.
+                cur.execute(sql)
                 logger.info(f"Migration OK: {filename}")
             except Exception as e:
-                logger.debug(f"Migration skip: {filename} ({str(e)[:80]})")
+                logger.warning(
+                    "Migration failed (non-fatal): %s — %s",
+                    filename, str(e)[:500],
+                )
         # Step 3: Ensure default admin user exists with werkzeug-compatible hash
         try:
             cur.execute("SELECT 1 FROM users WHERE username = 'admin'")

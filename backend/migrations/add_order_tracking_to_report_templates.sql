@@ -22,3 +22,8 @@ ADD COLUMN IF NOT EXISTS template_id INTEGER REFERENCES report_builder_templates
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dynamic_order_counters_template
 ON dynamic_order_counters(template_id) WHERE template_id IS NOT NULL;
+
+-- 4. Report Builder orders insert with template_id only (no Live Monitor layout).
+--    Base schema required layout_id NOT NULL; relax so worker/API rows are valid.
+ALTER TABLE dynamic_orders ALTER COLUMN layout_id DROP NOT NULL;
+ALTER TABLE dynamic_order_counters ALTER COLUMN layout_id DROP NOT NULL;
