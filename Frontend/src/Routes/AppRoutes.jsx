@@ -34,6 +34,7 @@ import MyAccount from '../Pages/Profile/MyAccount';
 import AppSettingsPage from '../Pages/AppSettings/AppSettingsPage';
 import SystemLogs from '../Pages/Settings/Logs/SystemLogs';
 import HerculesAISetup from '../Pages/HerculesAI/HerculesAISetup';
+import JobLogsPage from '../Pages/JobLogs/JobLogsPage';
 import { useContext } from 'react';
 import { AuthContext } from '../Context/AuthProvider';
 
@@ -178,6 +179,16 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
                 <TableReportViewer />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Job Logs — order-based production reports */}
+          <Route
+            path="job-logs"
+            element={
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+                <JobLogsPage />
               </ProtectedRoute>
             }
           />

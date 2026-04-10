@@ -1,4 +1,4 @@
-import { LayoutGrid, BarChart2, Settings, Table2, Send, Sparkles } from 'lucide-react';
+import { LayoutGrid, BarChart2, Settings, Table2, Send, Sparkles, ClipboardList } from 'lucide-react';
 import { Roles } from './Roles';
 
 export const getMenuItems = (t) => [
@@ -21,6 +21,13 @@ export const getMenuItems = (t) => [
     icon: Table2,
     tooltip: t('nav.tooltip.tableReports'),
     link: '/reports',
+    roles: [Roles.Admin, Roles.Manager, Roles.Operator],
+  },
+  {
+    name: t('nav.jobLogs'),
+    icon: ClipboardList,
+    tooltip: t('nav.tooltip.jobLogs'),
+    link: '/job-logs',
     roles: [Roles.Admin, Roles.Manager, Roles.Operator],
   },
   {
@@ -54,12 +61,14 @@ export const menuItems = getMenuItems((key) => {
     'nav.builder': 'Builder',
     'nav.dashboards': 'Dashboards',
     'nav.tableReports': 'Table Reports',
+    'nav.jobLogs': 'Job Logs',
     'nav.distribution': 'Distribution',
     'nav.herculesAI': 'Hercules AI',
     'nav.engineering': 'Engineering',
     'nav.tooltip.builder': 'Design and build reports',
     'nav.tooltip.dashboards': 'View released dashboards',
     'nav.tooltip.tableReports': 'View released table reports',
+    'nav.tooltip.jobLogs': 'Production order history',
     'nav.tooltip.distribution': 'Scheduled report delivery',
     'nav.tooltip.herculesAI': 'AI-powered insights and summaries',
     'nav.tooltip.engineering': 'Tags, groups, formulas, mappings',

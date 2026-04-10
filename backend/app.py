@@ -40,6 +40,7 @@ from branding_bp import branding_bp
 from distribution_bp import distribution_bp
 from updates_bp import updates_bp
 from hercules_ai_bp import hercules_ai_bp
+from orders_report_bp import orders_report_bp
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -283,6 +284,7 @@ app.register_blueprint(branding_bp, url_prefix='/api')
 app.register_blueprint(distribution_bp, url_prefix='/api')
 app.register_blueprint(updates_bp, url_prefix='/api')
 app.register_blueprint(hercules_ai_bp, url_prefix='/api')
+app.register_blueprint(orders_report_bp, url_prefix='/api')
 
 # Demo mode: single source of truth for Production vs Demo (emulator)
 @app.route('/api/settings/demo-mode', methods=['GET'])
