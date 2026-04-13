@@ -19,17 +19,15 @@ mappings_bp = Blueprint('mappings_bp', __name__)
 
 
 def _get_db_connection():
-    """Helper function to get database connection, avoiding circular imports"""
+    """Resolve get_db_connection without re-importing app (avoids double app.py load on python app.py)."""
     import sys
-    if 'app' in sys.modules:
-        app_module = sys.modules['app']
-        get_db_connection = getattr(app_module, 'get_db_connection', None)
-        if get_db_connection is None:
-            raise ImportError("get_db_connection not found in app module")
-        return get_db_connection
-    # python app.py registers the Flask app as __main__, not 'app'
-    from app import get_db_connection
-    return get_db_connection
+    for mod_name in ('app', '__main__'):
+        mod = sys.modules.get(mod_name)
+        if mod is not None:
+            fn = getattr(mod, 'get_db_connection', None)
+            if fn is not None:
+                return fn
+    raise RuntimeError('Could not get database connection function (expected app or __main__)')
 
 
 def _ensure_table_exists(cursor):
@@ -324,7 +322,12 @@ def migrate_from_local():
             imported = 0
             skipped = 0
             for m in data:
-                name = (m.get('name') or '').strip()
+                if not isinstance(m, dict):
+                    skipped += 1
+                    continue
+
+                raw_name = m.get('name')
+                name = (str(raw_name).strip() if raw_name is not None else '')
                 if not name:
                     skipped += 1
                     continue
@@ -336,8 +339,12 @@ def migrate_from_local():
                     continue
 
                 lookup = m.get('lookup', {})
+                if lookup is None:
+                    lookup = {}
                 if isinstance(lookup, str):
                     lookup = json.loads(lookup)
+                if not isinstance(lookup, (dict, list)):
+                    lookup = {}
 
                 output_type = (m.get('output_type') or 'text')
                 if isinstance(output_type, str):
@@ -357,7 +364,7 @@ def migrate_from_local():
                     (m.get('output_tag_name') or '').strip(),
                     json.dumps(lookup),
                     (m.get('fallback') or 'Unknown').strip(),
-                    m.get('is_active', True),
+                    bool(m.get('is_active', True)),
                     output_type,
                 ))
                 imported += 1
