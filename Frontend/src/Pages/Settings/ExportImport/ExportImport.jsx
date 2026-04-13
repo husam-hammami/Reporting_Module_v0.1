@@ -77,6 +77,15 @@ const ExportImport = () => {
 
   const dateSuffix = () => new Date().toISOString().split('T')[0];
 
+  /** Align with backend mappings_bp WIN1252 sanitization so template mappingName matches DB after import. */
+  const normalizeImportJsonTextForLegacyPg = (text) => {
+    if (typeof text !== 'string') return text;
+    return text
+      .replace(/\u2192/g, '->')
+      .replace(/\u2190/g, '<-')
+      .replace(/\u2194/g, '<->');
+  };
+
   // ─── Fetch helpers ───
   const fetchTags = async () => { try { return (await axios.get('/api/tags')).data?.tags || []; } catch { return []; } };
   const fetchTagGroups = async () => { try { return (await axios.get('/api/tag-groups')).data?.tag_groups || []; } catch { return []; } };
@@ -161,7 +170,7 @@ const ExportImport = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const imported = JSON.parse(e.target.result);
+          const imported = JSON.parse(normalizeImportJsonTextForLegacyPg(e.target.result));
           setImportPreview(imported);
           setImportFile(imported);
           const available = new Set();
