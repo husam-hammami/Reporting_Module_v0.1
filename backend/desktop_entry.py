@@ -20,6 +20,9 @@ from logging.handlers import RotatingFileHandler
 
 # ── 1. Desktop mode flag ──────────────────────────────────────────────────
 os.environ['HERCULES_DESKTOP'] = '1'
+# Frozen exe often runs without a UTF-8 locale; libpq/psycopg2 may otherwise use cp1252
+# and fail on Unicode in SQL parameters (e.g. mapping names with →). Set before importing app.
+os.environ.setdefault('PGCLIENTENCODING', 'UTF8')
 
 # ── 2. Frozen path resolution ─────────────────────────────────────────────
 if getattr(sys, 'frozen', False):

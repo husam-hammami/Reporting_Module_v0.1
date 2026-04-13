@@ -1,4 +1,5 @@
 import os
+os.environ.setdefault('PGCLIENTENCODING', 'UTF8')
 os.environ['EVENTLET_NO_GREENDNS'] = 'yes'
 import eventlet
 eventlet.monkey_patch()
@@ -698,6 +699,20 @@ _DB_PASS = os.getenv('POSTGRES_PASSWORD', 'Admin@123')
 _DB_HOST = os.getenv('DB_HOST', '127.0.0.1')
 _DB_PORT = int(os.getenv('DB_PORT', 5433))
 
+# Windows desktop / PyInstaller: default client encoding can be cp1252 and breaks Unicode (e.g. → in strings).
+_PG_CONNECT_KWARGS = {
+    'connect_timeout': 10,
+    'options': '-c client_encoding=UTF8',
+}
+
+
+def _set_pg_client_encoding_utf8(conn):
+    try:
+        conn.set_client_encoding('UTF8')
+    except Exception as e:
+        logger.warning('Could not set PostgreSQL client_encoding to UTF8: %s', e)
+
+
 try:
     db_pool = psycopg2.pool.ThreadedConnectionPool(
         minconn=5,
@@ -707,7 +722,7 @@ try:
         password=_DB_PASS,
         host=_DB_HOST,
         port=_DB_PORT,
-        connect_timeout=10
+        **_PG_CONNECT_KWARGS,
     )
     logger.info("Database connection pool created (5-20 connections, 10s timeout)")
 except Exception as e:
@@ -719,6 +734,7 @@ def get_db_connection():
     if db_pool:
         try:
             conn = db_pool.getconn()
+            _set_pg_client_encoding_utf8(conn)
             # Set cursor factory for this connection
             conn.cursor_factory = RealDictCursor
             # Return wrapped connection that will return to pool on close
@@ -734,8 +750,9 @@ def get_db_connection():
         host=_DB_HOST,
         port=_DB_PORT,
         cursor_factory=RealDictCursor,
-        connect_timeout=10
+        **_PG_CONNECT_KWARGS,
     )
+    _set_pg_client_encoding_utf8(conn)
     return conn
 
 
@@ -784,8 +801,9 @@ def _run_startup_migrations():
         try:
             sys_conn = psycopg2.connect(
                 dbname='postgres', user=_DB_USER, password=_DB_PASS,
-                host=_DB_HOST, port=_DB_PORT, connect_timeout=10
+                host=_DB_HOST, port=_DB_PORT, **_PG_CONNECT_KWARGS,
             )
+            _set_pg_client_encoding_utf8(sys_conn)
             sys_conn.autocommit = True
             sys_cur = sys_conn.cursor()
             sys_cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (_DB_NAME,))
@@ -800,8 +818,9 @@ def _run_startup_migrations():
         # Step 1: Connect to the app database and run migrations
         conn = psycopg2.connect(
             dbname=_DB_NAME, user=_DB_USER, password=_DB_PASS,
-            host=_DB_HOST, port=_DB_PORT, connect_timeout=10
+            host=_DB_HOST, port=_DB_PORT, **_PG_CONNECT_KWARGS,
         )
+        _set_pg_client_encoding_utf8(conn)
         conn.autocommit = True
         cur = conn.cursor()
 
