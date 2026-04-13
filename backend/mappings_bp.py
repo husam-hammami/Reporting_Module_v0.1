@@ -27,7 +27,9 @@ def _get_db_connection():
         if get_db_connection is None:
             raise ImportError("get_db_connection not found in app module")
         return get_db_connection
-    raise ImportError("app module not loaded")
+    # python app.py registers the Flask app as __main__, not 'app'
+    from app import get_db_connection
+    return get_db_connection
 
 
 def _ensure_table_exists(cursor):
@@ -337,9 +339,17 @@ def migrate_from_local():
                 if isinstance(lookup, str):
                     lookup = json.loads(lookup)
 
+                output_type = (m.get('output_type') or 'text')
+                if isinstance(output_type, str):
+                    output_type = output_type.strip() or 'text'
+                else:
+                    output_type = 'text'
+                if output_type not in ('text', 'tag_value'):
+                    output_type = 'text'
+
                 cursor.execute("""
-                    INSERT INTO mappings (name, description, input_tag, output_tag_name, lookup, fallback, is_active)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO mappings (name, description, input_tag, output_tag_name, lookup, fallback, is_active, output_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     name,
                     (m.get('description') or '').strip() or None,
@@ -347,7 +357,8 @@ def migrate_from_local():
                     (m.get('output_tag_name') or '').strip(),
                     json.dumps(lookup),
                     (m.get('fallback') or 'Unknown').strip(),
-                    m.get('is_active', True)
+                    m.get('is_active', True),
+                    output_type,
                 ))
                 imported += 1
 
