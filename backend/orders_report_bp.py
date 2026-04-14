@@ -13,6 +13,7 @@ Endpoints:
   GET /orders/layout-tags/<id>  — tag names used by a report template
 """
 
+import datetime
 import logging
 import sys
 import json
@@ -26,6 +27,30 @@ logger = logging.getLogger(__name__)
 orders_report_bp = Blueprint("orders_report_bp", __name__)
 
 _cached_get_db_connection = None
+
+
+def _order_ts_for_json(value):
+    """
+    Serialize order timestamps as naive ISO local wall time (no Z / no HTTP GMT).
+    Matches PostgreSQL `timestamp without time zone` + Job Logs `parseOrderWallTime`.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime.datetime):
+        if value.tzinfo is not None:
+            value = value.astimezone().replace(tzinfo=None)
+        if value.microsecond:
+            value = value.replace(microsecond=0)
+        return value.isoformat(sep="T")
+    return value
+
+
+def _serialize_order_row(row):
+    d = dict(row)
+    for key in ("start_time", "end_time", "created_at"):
+        if key in d:
+            d[key] = _order_ts_for_json(d[key])
+    return d
 
 
 def _get_db_connection():
@@ -151,7 +176,7 @@ def get_order_jobs():
             params.extend([limit, offset])
 
             cur.execute(sql, params)
-            rows = [dict(r) for r in cur.fetchall()]
+            rows = [_serialize_order_row(r) for r in cur.fetchall()]
 
             cur.execute(
                 "SELECT COUNT(*) AS total FROM dynamic_orders WHERE template_id = %s",
@@ -208,7 +233,7 @@ def get_order_job_detail(order_id):
 
         if not row:
             return jsonify({"error": "Order not found"}), 404
-        return jsonify({"data": dict(row)}), 200
+        return jsonify({"data": _serialize_order_row(row)}), 200
     except Exception as e:
         logger.exception("orders/jobs/<id> failed: %s", e)
         return jsonify({"error": str(e)}), 500
