@@ -17,6 +17,9 @@ from utils.tag_value_cache import get_tag_value_cache
 
 logger = logging.getLogger(__name__)
 
+# pg_advisory_xact_lock(classid, objid) — serialize next-order allocation per template_id
+_ADV_LOCK_CLASS_ID = 88142342
+
 _order_trackers = {}
 _template_config_cache = []
 _template_config_cache_ts = 0.0
@@ -36,7 +39,7 @@ class TemplateOrderTracker:
         stop_value=0,
         db_connection_func=None,
     ):
-        self.template_id = template_id
+        self.template_id = int(template_id) if template_id is not None else None
         self.template_name = template_name
         self.status_tag_name = status_tag_name
         self.order_prefix = (
@@ -111,20 +114,34 @@ class TemplateOrderTracker:
             self.current_order_number = 1
 
     def _next_number(self):
-        if not self.db_connection_func:
+        """Next order_number for this template (read-only). Prefer start_new_order's transactional path."""
+        if not self.db_connection_func or self.template_id is None:
             return 1
         try:
             with closing(self.db_connection_func()) as conn:
                 cur = conn.cursor()
                 cur.execute(
                     """
-                    SELECT MAX(order_number) FROM dynamic_orders WHERE template_id = %s
+                    SELECT COALESCE(MAX(order_number), 0) AS mx
+                    FROM dynamic_orders
+                    WHERE template_id = %s
                     """,
                     (self.template_id,),
                 )
-                mx = cur.fetchone()[0] or 0
+                row = cur.fetchone()
+                mx = int(row["mx"]) if row is not None else 0
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
                 return int(mx) + 1
-        except Exception:
+        except Exception as e:
+            logger.error(
+                "[ReportOrderWorker] _next_number failed template_id=%s: %s",
+                self.template_id,
+                e,
+                exc_info=True,
+            )
             return 1
 
     def check_trigger(self, tag_values):
@@ -150,50 +167,77 @@ class TemplateOrderTracker:
         return None
 
     def start_new_order(self):
-        if not self.db_connection_func:
+        if not self.db_connection_func or self.template_id is None:
             return
         try:
-            self.current_order_number = self._next_number()
-            self.current_order_name = f"{self.order_prefix}{self.current_order_number}"
-            self.is_running = True
             self.session_started = datetime.datetime.now()
 
             with closing(self.db_connection_func()) as conn:
                 cur = conn.cursor()
-                cur.execute(
-                    """
-                    INSERT INTO dynamic_order_counters
-                    (template_id, layout_name, current_counter, last_order_name, last_updated)
-                    VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (template_id) WHERE template_id IS NOT NULL
-                    DO UPDATE SET
-                        current_counter = EXCLUDED.current_counter,
-                        last_order_name = EXCLUDED.last_order_name,
-                        last_updated = EXCLUDED.last_updated
-                    """,
-                    (
-                        self.template_id,
-                        self.template_name,
-                        self.current_order_number,
-                        self.current_order_name,
-                        datetime.datetime.now(),
-                    ),
-                )
-                cur.execute(
-                    """
-                    INSERT INTO dynamic_orders
-                    (template_id, order_name, order_number, start_time, status)
-                    VALUES (%s, %s, %s, %s, %s)
-                    """,
-                    (
-                        self.template_id,
-                        self.current_order_name,
-                        self.current_order_number,
-                        self.session_started,
-                        "running",
-                    ),
-                )
-                conn.commit()
+                try:
+                    # One transaction: lock → MAX → insert counter row → insert order.
+                    # Avoids duplicate FCL1 when pool/txn timing made a separate _next_number
+                    # miss rows that only existed on another connection.
+                    cur.execute(
+                        "SELECT pg_advisory_xact_lock(%s, %s)",
+                        (_ADV_LOCK_CLASS_ID, self.template_id),
+                    )
+                    cur.execute(
+                        """
+                        SELECT COALESCE(MAX(order_number), 0) AS mx
+                        FROM dynamic_orders
+                        WHERE template_id = %s
+                        """,
+                        (self.template_id,),
+                    )
+                    row = cur.fetchone()
+                    mx = int(row["mx"]) if row is not None else 0
+                    self.current_order_number = mx + 1
+                    self.current_order_name = (
+                        f"{self.order_prefix}{self.current_order_number}"
+                    )
+                    self.is_running = True
+
+                    cur.execute(
+                        """
+                        INSERT INTO dynamic_order_counters
+                        (template_id, layout_name, current_counter, last_order_name, last_updated)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (template_id) WHERE template_id IS NOT NULL
+                        DO UPDATE SET
+                            current_counter = EXCLUDED.current_counter,
+                            last_order_name = EXCLUDED.last_order_name,
+                            last_updated = EXCLUDED.last_updated
+                        """,
+                        (
+                            self.template_id,
+                            self.template_name,
+                            self.current_order_number,
+                            self.current_order_name,
+                            datetime.datetime.now(),
+                        ),
+                    )
+                    cur.execute(
+                        """
+                        INSERT INTO dynamic_orders
+                        (template_id, order_name, order_number, start_time, status)
+                        VALUES (%s, %s, %s, %s, %s)
+                        """,
+                        (
+                            self.template_id,
+                            self.current_order_name,
+                            self.current_order_number,
+                            self.session_started,
+                            "running",
+                        ),
+                    )
+                    conn.commit()
+                except Exception:
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    raise
 
             logger.info(
                 "[ReportOrderWorker] Order started: %s (template %s)",
