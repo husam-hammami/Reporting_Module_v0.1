@@ -14,6 +14,35 @@ The installer auto-installs VC++ Redistributable. If it fails:
 2. Run `vc_redist.x64.exe /install /quiet /norestart`
 3. Restart the app
 
+## Salalah Mill Server
+
+### Server Info
+- **OS**: Windows Server 2022 (Build 20348.2655)
+- **User**: Administrator
+- **DNS Suffix**: mercury-mes.net
+
+### Network Interfaces
+
+| Adapter | IP Address | Subnet | Gateway | Purpose |
+|---------|-----------|--------|---------|---------|
+| ASM Network | 192.168.23.9 | 255.255.255.0 | 192.168.23.1 | Main network (MES) |
+| Plant Network | 192.168.23.241 | 255.255.255.0 | — | PLC / plant floor |
+| vEthernet (ASM Network) | 192.168.31.233 | 255.255.255.0 | — | Virtual switch |
+
+### LAN Access
+- From ASM Network: `http://192.168.23.9:5001`
+- From Plant Network: `http://192.168.23.241:5001`
+
+### Remote Access (SSH via Cloudflare Tunnel)
+- **Hostname**: `ssh-salalah.herculesv2.app`
+- **Tunnel name**: `salalah-mill` (Cloudflare Zero Trust dashboard)
+- **Server service**: `cloudflared` Windows service (auto-starts on boot)
+- **Server SSH**: OpenSSH Server on port 22, key auth enabled
+- **Connect**: Double-click `Connect-Salalah-Mill.bat` on desktop, or manually:
+  1. `cloudflared access tcp --hostname ssh-salalah.herculesv2.app --url localhost:2222`
+  2. `ssh -p 2222 Administrator@localhost`
+- **SSH key**: `C:\ProgramData\ssh\administrators_authorized_keys` on server
+
 ## Fresh Installation
 
 ### Step 1: Download Installer
