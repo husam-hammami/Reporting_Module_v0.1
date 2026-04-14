@@ -12,7 +12,7 @@ import {
   ArrowLeft, Save, Eye, Plus, Trash2, ChevronDown, ChevronUp,
   Table2, Hash, Type, Minus, Copy, X, Check,
   AlignLeft, AlignCenter, AlignRight, LayoutTemplate, PenLine,
-  Monitor, FileText, Send, Undo2, RefreshCw, ClipboardList,
+  Monitor, FileText, Send, Undo2, RefreshCw, ClipboardList, GripVertical,
 } from 'lucide-react';
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +23,9 @@ import { useBranding } from '../../Context/BrandingContext';
 import HerculesLogoPng from '../../Assets/Hercules_New.png';
 import AsmLogoPng from '../../Assets/Asm_Logo.png';
 import axios from '../../API/axios';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 refreshMappingsCache();
 
@@ -1000,8 +1003,44 @@ function KpiRowEditor({ section, tags, onChange, savedFormulas }) {
   );
 }
 
+/* Sortable wrapper for column items — provides drag handle listeners via render prop */
+function SortableColumnItem({ id, children }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative',
+    zIndex: isDragging ? 50 : undefined,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      {children({ dragListeners: listeners, isDragging })}
+    </div>
+  );
+}
+
 function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
   const [expandedRow, setExpandedRow] = React.useState(0);
+  const columnSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const handleColumnDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = section.columns.findIndex((c) => c.id === active.id);
+    const newIndex = section.columns.findIndex((c) => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reorder = (arr) => {
+      const clone = [...arr];
+      const [item] = clone.splice(oldIndex, 1);
+      clone.splice(newIndex, 0, item);
+      return clone;
+    };
+    onChange({
+      ...section,
+      columns: reorder(section.columns),
+      rows: section.rows.map((r) => ({ ...r, cells: reorder(r.cells) })),
+    });
+  };
   const updateColumn = (idx, updates) => {
     const columns = [...section.columns];
     columns[idx] = { ...columns[idx], ...updates };
@@ -1086,72 +1125,82 @@ function TableSectionEditor({ section, tags, onChange, savedFormulas }) {
             <Plus size={8} /> Add
           </button>
         </div>
-        <div className="flex flex-col gap-0.5">
-          {section.columns.map((col, i) => {
-            const smType = col.summary?.type || 'none';
-            return (
-              <div key={col.id} className="rounded overflow-hidden" style={{ border: '1px solid var(--rb-border)' }}>
-                {/* Main column row */}
-                <div className="flex items-center gap-1 py-0.5 px-1.5" style={{ background: 'var(--rb-surface)' }}>
-                  <span className="text-[9px] font-bold tabular-nums w-3 text-center flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>{i + 1}</span>
-                  <input value={col.header} onChange={(e) => updateColumn(i, { header: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0" placeholder="Name" />
-                  <div className="flex rounded overflow-hidden flex-shrink-0" style={{ border: '1px solid var(--rb-border)' }}>
-                    {['left', 'center', 'right'].map((a) => (
-                      <button key={a} onClick={() => updateColumn(i, { align: a })} className="px-1 py-0.5 transition-colors"
-                        style={{ background: col.align === a ? 'var(--rb-accent)' : 'transparent', color: col.align === a ? '#fff' : 'var(--rb-text-muted)' }}>
-                        {a === 'left' ? <AlignLeft size={8} /> : a === 'center' ? <AlignCenter size={8} /> : <AlignRight size={8} />}
-                      </button>
-                    ))}
-                  </div>
-                  <select value={smType} onChange={(e) => {
-                    const v = e.target.value;
-                    const columns = [...section.columns];
-                    columns[i] = { ...columns[i], summary: { ...(columns[i].summary || {}), type: v, enabled: v !== 'none', label: columns[i].summary?.label || '' } };
-                    // Auto-hide summary row when ALL columns are set to None
-                    const anyEnabled = columns.some((c, idx) => idx === i ? v !== 'none' : (c.summary?.type && c.summary.type !== 'none'));
-                    onChange({ ...section, columns, showSummaryRow: anyEnabled });
-                  }} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(60px, 18%, 110px)' }} title="Summary row operation">
-                    <option value="none">None</option>
-                    <option value="label">Label</option>
-                    <option value="sum">Sum</option>
-                    <option value="avg">Avg</option>
-                    <option value="min">Min</option>
-                    <option value="max">Max</option>
-                    <option value="count">Count</option>
-                    <option value="formula">Formula</option>
-                  </select>
-                  {section.columns.length > 1 && (
-                    <button onClick={() => removeColumn(i)} className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"><X size={8} className="text-red-400" /></button>
-                  )}
-                </div>
-                {/* Summary detail row — label text + unit for aggregate ops, label text for label type, formula for formula type */}
-                {smType === 'label' && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5" style={{ background: 'var(--rb-accent-subtle)', borderTop: '1px solid var(--rb-border)', borderLeft: '3px solid var(--rb-accent)' }}>
-                    <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Text:</span>
-                    <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0" placeholder="Label text" />
-                  </div>
-                )}
-                {smType === 'formula' && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5" style={{ background: 'var(--rb-accent-subtle)', borderTop: '1px solid var(--rb-border)', borderLeft: '3px solid var(--rb-accent)' }}>
-                    <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Label:</span>
-                    <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(52px, 16%, 90px)' }} placeholder="Total" />
-                    <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>ƒ:</span>
-                    <input value={col.summary?.formula || ''} onChange={(e) => updateColumnSummary(i, { formula: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0 font-mono" placeholder="{Tag1} + {Tag2}" />
-                    <input value={col.summary?.unit || ''} onChange={(e) => updateColumnSummary(i, { unit: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(36px, 12%, 60px)' }} placeholder="kg" />
-                  </div>
-                )}
-                {(smType === 'sum' || smType === 'avg' || smType === 'min' || smType === 'max' || smType === 'count') && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5" style={{ background: 'var(--rb-accent-subtle)', borderTop: '1px solid var(--rb-border)', borderLeft: '3px solid var(--rb-accent)' }}>
-                    <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Label:</span>
-                    <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0" placeholder="Total" />
-                    <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Unit:</span>
-                    <input value={col.summary?.unit || ''} onChange={(e) => updateColumnSummary(i, { unit: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(40px, 14%, 64px)' }} placeholder="kg" />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <DndContext sensors={columnSensors} collisionDetection={closestCenter} onDragEnd={handleColumnDragEnd}>
+          <SortableContext items={section.columns.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-0.5">
+              {section.columns.map((col, i) => {
+                const smType = col.summary?.type || 'none';
+                return (
+                  <SortableColumnItem key={col.id} id={col.id}>
+                    {({ dragListeners, isDragging }) => (
+                      <div className="rounded overflow-hidden" style={{ border: `1px solid ${isDragging ? 'var(--rb-accent)' : 'var(--rb-border)'}` }}>
+                        {/* Main column row */}
+                        <div className="flex items-center gap-1 py-0.5 px-1.5" style={{ background: 'var(--rb-surface)' }}>
+                          <button {...dragListeners} className="cursor-grab active:cursor-grabbing flex-shrink-0 touch-none p-0.5 rounded hover:bg-black/5" title="Drag to reorder" tabIndex={-1}>
+                            <GripVertical size={10} style={{ color: 'var(--rb-text-muted)' }} />
+                          </button>
+                          <input value={col.header} onChange={(e) => updateColumn(i, { header: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0" placeholder="Name" />
+                          <div className="flex rounded overflow-hidden flex-shrink-0" style={{ border: '1px solid var(--rb-border)' }}>
+                            {['left', 'center', 'right'].map((a) => (
+                              <button key={a} onClick={() => updateColumn(i, { align: a })} className="px-1 py-0.5 transition-colors"
+                                style={{ background: col.align === a ? 'var(--rb-accent)' : 'transparent', color: col.align === a ? '#fff' : 'var(--rb-text-muted)' }}>
+                                {a === 'left' ? <AlignLeft size={8} /> : a === 'center' ? <AlignCenter size={8} /> : <AlignRight size={8} />}
+                              </button>
+                            ))}
+                          </div>
+                          <select value={smType} onChange={(e) => {
+                            const v = e.target.value;
+                            const columns = [...section.columns];
+                            columns[i] = { ...columns[i], summary: { ...(columns[i].summary || {}), type: v, enabled: v !== 'none', label: columns[i].summary?.label || '' } };
+                            // Auto-hide summary row when ALL columns are set to None
+                            const anyEnabled = columns.some((c, idx) => idx === i ? v !== 'none' : (c.summary?.type && c.summary.type !== 'none'));
+                            onChange({ ...section, columns, showSummaryRow: anyEnabled });
+                          }} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(60px, 18%, 110px)' }} title="Summary row operation">
+                            <option value="none">None</option>
+                            <option value="label">Label</option>
+                            <option value="sum">Sum</option>
+                            <option value="avg">Avg</option>
+                            <option value="min">Min</option>
+                            <option value="max">Max</option>
+                            <option value="count">Count</option>
+                            <option value="formula">Formula</option>
+                          </select>
+                          {section.columns.length > 1 && (
+                            <button onClick={() => removeColumn(i)} className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"><X size={8} className="text-red-400" /></button>
+                          )}
+                        </div>
+                        {/* Summary detail row — label text + unit for aggregate ops, label text for label type, formula for formula type */}
+                        {smType === 'label' && (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5" style={{ background: 'var(--rb-accent-subtle)', borderTop: '1px solid var(--rb-border)', borderLeft: '3px solid var(--rb-accent)' }}>
+                            <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Text:</span>
+                            <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0" placeholder="Label text" />
+                          </div>
+                        )}
+                        {smType === 'formula' && (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5" style={{ background: 'var(--rb-accent-subtle)', borderTop: '1px solid var(--rb-border)', borderLeft: '3px solid var(--rb-accent)' }}>
+                            <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Label:</span>
+                            <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(52px, 16%, 90px)' }} placeholder="Total" />
+                            <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>ƒ:</span>
+                            <input value={col.summary?.formula || ''} onChange={(e) => updateColumnSummary(i, { formula: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0 font-mono" placeholder="{Tag1} + {Tag2}" />
+                            <input value={col.summary?.unit || ''} onChange={(e) => updateColumnSummary(i, { unit: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(36px, 12%, 60px)' }} placeholder="kg" />
+                          </div>
+                        )}
+                        {(smType === 'sum' || smType === 'avg' || smType === 'min' || smType === 'max' || smType === 'count') && (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5" style={{ background: 'var(--rb-accent-subtle)', borderTop: '1px solid var(--rb-border)', borderLeft: '3px solid var(--rb-accent)' }}>
+                            <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Label:</span>
+                            <input value={col.summary?.label || ''} onChange={(e) => updateColumnSummary(i, { label: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-1 min-w-0" placeholder="Total" />
+                            <span className="text-[9px] font-bold flex-shrink-0" style={{ color: 'var(--rb-accent)' }}>Unit:</span>
+                            <input value={col.summary?.unit || ''} onChange={(e) => updateColumnSummary(i, { unit: e.target.value })} className="rb-input-base text-[10px] py-0.5 px-1.5 flex-shrink-0" style={{ width: 'clamp(40px, 14%, 64px)' }} placeholder="kg" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </SortableColumnItem>
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
       </div>
 
       {/* ── ROWS ── */}
