@@ -29,9 +29,24 @@ function useTheme() {
   };
 }
 
+/**
+ * Parse order timestamps from the API as **plant wall time** (matches PostgreSQL naive
+ * `timestamp` / local session). If JSON wrongly appends `Z`, `new Date()` treats the
+ * value as UTC and `toLocaleString` in +04 shifts by 4h (e.g. DB 10:50 → UI 14:50).
+ */
+function parseOrderWallTime(ts) {
+  if (ts == null || ts === '') return null;
+  const s = (typeof ts === 'string' ? ts.trim() : String(ts));
+  if (!s) return null;
+  const withoutZ = /[zZ]$/i.test(s) ? s.replace(/[zZ]$/i, '') : s;
+  const normalized = withoutZ.includes('T') ? withoutZ : withoutZ.replace(' ', 'T');
+  const d = new Date(normalized);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function formatDateTime(ts) {
-  if (!ts) return '—';
-  const d = new Date(ts);
+  const d = parseOrderWallTime(ts);
+  if (!d) return '—';
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) +
     ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
