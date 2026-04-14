@@ -38,7 +38,7 @@ Chronological record of implementation, incidents, and fixes. For architecture a
 
 | Item | Notes |
 |------|--------|
-| **`JobLogsPage.jsx`** | Uses **`template_id`** for jobs; detail panel calls **`layout-tags`** then **`by-tags`**. |
+| **`JobLogsPage.jsx`** | Uses **`template_id`** for jobs; detail panel calls **`layout-tags`** then **two `by-tags` calls** (`aggregation=first` and `aggregation=last`) and shows **Start / End / Total** (Total = numeric **end − start** when both exist). |
 | **Fix: duplicate `FCL1` / order_number stuck at 1** | `start_new_order` now runs **`SELECT COALESCE(MAX(order_number),0)+1`**, counter upsert, and **`INSERT INTO dynamic_orders`** in **one transaction**, after **`pg_advisory_xact_lock(classid, template_id)`**, so `MAX` cannot miss rows due to another pooled connection. **`template_id`** is stored as **`int`**. **`_next_number`** logs errors (no silent fallback to `1`) and **`rollback()`** after read-only `SELECT` so connections are not returned **idle-in-transaction**. |
 | **Fix: empty tag values / inverted window** | Some APIs sent **`start_time` with a trailing `Z`** while the DB value is **naive local wall time**. Browsers then treated **`from`** as UTC and **`to`** as UTC “now”, producing **`from > to`** (e.g. `17:27Z` vs `13:39Z` on UTC+4 machines). Historian returned **empty `data`**. **Fix:** strip trailing **`Z`/`z`** on **`start_time` / `end_time`** before query params; keep **`toISOString()`** for running-job **`to`**; **clamp** `to` to **now** if `from` is still after `to`. |
 

@@ -67,6 +67,38 @@ function toHistorianToParam(endTime) {
   return new Date().toISOString();
 }
 
+/** Merge historian `first` + `last` maps into per-tag { start, end, total }. Total = end − start when both numeric. */
+function mergeTagStartEnd(firstMap, lastMap) {
+  const a = firstMap && typeof firstMap === 'object' ? firstMap : {};
+  const b = lastMap && typeof lastMap === 'object' ? lastMap : {};
+  const tags = new Set([...Object.keys(a), ...Object.keys(b)]);
+  const out = {};
+  for (const tag of tags) {
+    const start = a[tag];
+    const end = b[tag];
+    let total = null;
+    if (start !== undefined && end !== undefined) {
+      const ns = Number(start);
+      const ne = Number(end);
+      if (!Number.isNaN(ns) && !Number.isNaN(ne)) total = ne - ns;
+    }
+    out[tag] = { start, end, total };
+  }
+  return out;
+}
+
+function formatTagCell(v) {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'number' && !Number.isNaN(v)) {
+    return v.toLocaleString(undefined, { maximumFractionDigits: 4 });
+  }
+  const n = Number(v);
+  if (!Number.isNaN(n) && v !== '' && String(v).trim() !== '') {
+    return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
+  }
+  return String(v);
+}
+
 export default function JobLogsPage() {
   const theme = useTheme();
 
@@ -135,16 +167,18 @@ export default function JobLogsPage() {
           toParam = new Date().toISOString();
         }
 
-        return axios.get('/api/historian/by-tags', {
-          params: {
-            tag_names: tagNames.join(','),
-            from: fromParam,
-            to: toParam,
-            aggregation: 'auto',
-          },
-        }).then(res => {
-          const values = res.data?.data || res.data?.tag_values || res.data || {};
-          setDetailData(values);
+        const baseParams = {
+          tag_names: tagNames.join(','),
+          from: fromParam,
+          to: toParam,
+        };
+        return Promise.all([
+          axios.get('/api/historian/by-tags', { params: { ...baseParams, aggregation: 'first' } }),
+          axios.get('/api/historian/by-tags', { params: { ...baseParams, aggregation: 'last' } }),
+        ]).then(([resFirst, resLast]) => {
+          const firstVals = resFirst.data?.data || resFirst.data?.tag_values || {};
+          const lastVals = resLast.data?.data || resLast.data?.tag_values || {};
+          setDetailData(mergeTagStartEnd(firstVals, lastVals));
         });
       })
       .catch(err => {
@@ -303,8 +337,8 @@ export default function JobLogsPage() {
           </div>
         </div>
 
-        {/* Right: Detail panel */}
-        <div className="w-[420px] flex-shrink-0 overflow-auto"
+        {/* Right: Detail panel (wider for Start / End / Total columns) */}
+        <div className="w-[min(100%,560px)] sm:w-[560px] flex-shrink-0 overflow-auto"
           style={{ background: theme.surface }}>
           {!selectedJob ? (
             <div className="flex flex-col items-center justify-center h-full gap-2">
@@ -342,7 +376,7 @@ export default function JobLogsPage() {
               {/* Tag data */}
               <h3 className="text-xs font-bold uppercase tracking-wider mb-3"
                 style={{ color: theme.textMuted }}>
-                Tag Values ({selectedJob.status === 'running' ? 'Latest' : 'Order Period'})
+                Tag values at order start / end (historian first + last in window)
               </h3>
 
               {detailLoading ? (
@@ -355,25 +389,36 @@ export default function JobLogsPage() {
                   No tag data available for this order window.
                 </p>
               ) : (
-                <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.border}` }}>
-                  <table className="w-full text-sm">
+                <div className="rounded-lg overflow-x-auto" style={{ border: `1px solid ${theme.border}` }}>
+                  <table className="w-full text-sm min-w-[480px]">
                     <thead>
                       <tr style={{ background: theme.surfaceAlt }}>
-                        <th className="text-left px-3 py-2 font-semibold text-xs" style={{ color: theme.textSecondary }}>Tag</th>
-                        <th className="text-right px-3 py-2 font-semibold text-xs" style={{ color: theme.textSecondary }}>Value</th>
+                        <th className="text-left px-2 py-2 font-semibold text-xs" style={{ color: theme.textSecondary }}>Tag</th>
+                        <th className="text-right px-2 py-2 font-semibold text-xs" style={{ color: theme.textSecondary }}>Start</th>
+                        <th className="text-right px-2 py-2 font-semibold text-xs" style={{ color: theme.textSecondary }}>End</th>
+                        <th className="text-right px-2 py-2 font-semibold text-xs" style={{ color: theme.textSecondary }}>Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {Object.entries(detailData)
                         .sort(([a], [b]) => a.localeCompare(b))
-                        .map(([tag, value]) => (
-                          <tr key={tag} style={{ borderBottom: `1px solid ${theme.border}` }}>
-                            <td className="px-3 py-2 font-medium" style={{ color: theme.text }}>{tag}</td>
-                            <td className="px-3 py-2 text-right font-mono" style={{ color: theme.accent }}>
-                              {typeof value === 'number' ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(value ?? '—')}
-                            </td>
-                          </tr>
-                        ))}
+                        .map(([tag, row]) => {
+                          const r = row && typeof row === 'object' ? row : {};
+                          return (
+                            <tr key={tag} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                              <td className="px-2 py-2 font-medium max-w-[140px] truncate" title={tag} style={{ color: theme.text }}>{tag}</td>
+                              <td className="px-2 py-2 text-right font-mono text-xs" style={{ color: theme.textSecondary }}>
+                                {formatTagCell(r.start)}
+                              </td>
+                              <td className="px-2 py-2 text-right font-mono text-xs" style={{ color: theme.textSecondary }}>
+                                {formatTagCell(r.end)}
+                              </td>
+                              <td className="px-2 py-2 text-right font-mono text-xs" style={{ color: theme.accent }}>
+                                {r.total !== null && r.total !== undefined ? formatTagCell(r.total) : '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
