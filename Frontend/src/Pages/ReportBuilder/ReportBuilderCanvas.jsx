@@ -10,14 +10,32 @@ import {
 } from 'lucide-react';
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { useReportCanvas, useAvailableTags, useAvailableGroups, useAvailableFormulas, collectWidgetTagNames } from '../../Hooks/useReportBuilder';
+import {
+  useReportCanvas,
+  useAvailableTags,
+  useAvailableGroups,
+  useAvailableFormulas,
+  collectWidgetTagNames,
+  collectDataPanelScopedHistorianRequests,
+} from '../../Hooks/useReportBuilder';
+import {
+  groupDataPanelScopedHistorianRequests,
+  fetchDataPanelScopedHistorianValues,
+} from './utils/dataPanelTimeScope';
+import TabSelector from '../../Components/ui/TabSelector';
 import { useTagHistory } from '../../Hooks/useTagHistory';
 import WidgetToolbox from './panels/WidgetToolbox';
 import PropertiesPanel from './panels/PropertiesPanel';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from './widgets/WidgetRenderer';
-import { WIDGET_CATALOG, createWidget } from './widgets/widgetDefaults';
+import { WIDGET_CATALOG, createWidget, cloneWidgetTreeWithNewIds } from './widgets/widgetDefaults';
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useThumbnailCapture } from './ThumbnailCaptureContext';
+import { ReportTableTabLinkProvider } from './context/ReportTableTabLinkContext';
+import {
+  findWidgetDeepInTabContainer,
+  updateNestedWidgetDeep,
+  patchTabContainerSubLayout,
+} from './utils/nestedTabWidgets';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -26,8 +44,8 @@ import './reportBuilderTheme.css';
 /* ── Grid: match report viewer; compact row height for less clutter ─────── */
 const GRID_COLS_DEFAULT   = 12;
 const GRID_ROW_H_DEFAULT  = 40;   // row height (px) — compact layout
-const GRID_MARGIN         = [12, 12];
-const GRID_PADDING        = [16, 16];
+const GRID_MARGIN         = [6, 6];
+const GRID_PADDING        = [8, 8];
 
 
 /* ── Canvas Page ───────────────────────────────────────────────── */
@@ -38,11 +56,19 @@ export default function ReportBuilderCanvas() {
   const {
     template, widgets: rawWidgets, loading, saving, dirty,
     autoSave, toggleAutoSave,
-    addWidget, addWidgetAt, updateWidget, removeWidget, updateLayout,
+    addWidget, addWidgetAt, updateWidget, removeWidget, updateLayout, setWidgets, setDirty,
     addComputedSignal, saveLayout, updateMeta,
     undo, redo, canUndo, canRedo,
+    dashboardTabs, activeTabId, allTabsWidgets,
+    enableDashboardTabs, disableDashboardTabs,
+    addDashboardTab, removeDashboardTab, renameDashboardTab, switchDashboardTab, duplicateDashboardTab,
   } = useReportCanvas(id);
 
+  const dashboardLocked = template?.layout_config?.locked === true;
+  const toggleDashboardLock = () => {
+    const lc = template?.layout_config || {};
+    updateMeta({ layout_config: { ...lc, locked: !dashboardLocked } });
+  };
   const { tags } = useAvailableTags();
   const { groups } = useAvailableGroups();
   const { formulas: savedFormulas } = useAvailableFormulas();
@@ -51,8 +77,31 @@ export default function ReportBuilderCanvas() {
   const isCapturing = useThumbnailCapture();
   const skipAnimations = prefersReducedMotion || isCapturing;
   const widgets = rawWidgets;
-  const usedTagNames = useMemo(() => collectWidgetTagNames(widgets), [widgets]);
+  const usedTagNames = useMemo(() => collectWidgetTagNames(allTabsWidgets || widgets), [allTabsWidgets, widgets]);
   const [polledTagValues, setPolledTagValues] = useState({});
+  const [liveScopedTagValues, setLiveScopedTagValues] = useState({});
+
+  useEffect(() => {
+    const ws = allTabsWidgets || widgets;
+    let cancelled = false;
+    const run = async () => {
+      const scopedReqs = collectDataPanelScopedHistorianRequests(ws, new Date());
+      if (scopedReqs.length === 0) {
+        if (!cancelled) setLiveScopedTagValues({});
+        return;
+      }
+      const groups = groupDataPanelScopedHistorianRequests(scopedReqs);
+      const scopedValues = await fetchDataPanelScopedHistorianValues(axios, groups);
+      if (!cancelled) setLiveScopedTagValues(scopedValues);
+    };
+    run();
+    const id = setInterval(run, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [allTabsWidgets, widgets]);
+
   useEffect(() => {
     if (emulatorOn || usedTagNames.length === 0) return;
     let cancelled = false;
@@ -71,7 +120,7 @@ export default function ReportBuilderCanvas() {
 
   const liveTagValues = useMemo(() => {
     if (emulatorOn && emulatorValues) {
-      const base = { ...emulatorValues };
+      const base = { ...emulatorValues, ...liveScopedTagValues };
       const t = Date.now() / 1000;
       for (const tag of usedTagNames) {
         if (tag && !(tag in base)) {
@@ -80,13 +129,18 @@ export default function ReportBuilderCanvas() {
       }
       return base;
     }
-    return polledTagValues;
-  }, [emulatorOn, emulatorValues, usedTagNames, polledTagValues]);
+    return { ...polledTagValues, ...liveScopedTagValues };
+  }, [emulatorOn, emulatorValues, usedTagNames, polledTagValues, liveScopedTagValues]);
   const tagHistory = useTagHistory(usedTagNames, liveTagValues);
 
   const [selectedId, setSelectedId] = useState(null);
+  const [subWidgetInfo, setSubWidgetInfo] = useState(null);
   const [showToolbox, setShowToolbox] = useState(true);
   const [showProperties, setShowProperties] = useState(true);
+  const [renamingTabId, setRenamingTabId] = useState(null);
+  const [tabNameInput, setTabNameInput] = useState('');
+  const tabNameRef = useRef(null);
+  const [showAddTabMenu, setShowAddTabMenu] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
@@ -114,6 +168,70 @@ export default function ReportBuilderCanvas() {
     () => widgets.find((w) => w.id === selectedId) || null,
     [widgets, selectedId],
   );
+
+  const handleSubWidgetSelect = useCallback((subWidget) => {
+    if (!subWidget) {
+      setSubWidgetInfo(null);
+      return;
+    }
+    setSubWidgetInfo({ parentId: selectedId, subWidget });
+    setShowProperties(true);
+  }, [selectedId]);
+
+  const editingSubWidget = useMemo(() => {
+    if (!subWidgetInfo || subWidgetInfo.parentId !== selectedId) return null;
+    const parent = widgets.find(w => w.id === subWidgetInfo.parentId);
+    if (!parent || parent.type !== 'tabcontainer') return null;
+    const targetId = subWidgetInfo.subWidget?.id;
+    if (!targetId) return null;
+    const cfg = parent.config || {};
+    const activeTabId = cfg.activeTabId || cfg.tabs?.[0]?.id;
+    return findWidgetDeepInTabContainer(parent, targetId, activeTabId);
+  }, [subWidgetInfo, selectedId, widgets]);
+
+  const editingWidget = editingSubWidget || selectedWidget;
+
+  const updateSubWidgetViaCanvas = useCallback((subWidgetId, updates) => {
+    if (!subWidgetInfo) return;
+    const parentId = subWidgetInfo.parentId;
+    setWidgets((prev) => {
+      const parent = prev.find(w => w.id === parentId);
+      if (!parent || parent.type !== 'tabcontainer') return prev;
+      const cfg = parent.config || {};
+      const tabsCfg = cfg.tabs || [];
+      if (tabsCfg.length === 0) return prev;
+      // Only patch the tab that is currently active on the canvas. Applying
+      // updateNestedWidgetDeep across every tab used to sync duplicate widget
+      // ids created by older "copy tab" behavior (same id in C32/M30/M31).
+      const activeMatches = cfg.activeTabId != null
+        && tabsCfg.some((t) => String(t.id) === String(cfg.activeTabId));
+      const resolvedActiveTabId = activeMatches
+        ? String(cfg.activeTabId)
+        : String(tabsCfg[0].id);
+      const updatedTabs = tabsCfg.map((t) => {
+        if (String(t.id) !== resolvedActiveTabId) return t;
+        return {
+          ...t,
+          widgets: (t.widgets || []).map((child) =>
+            updateNestedWidgetDeep(child, subWidgetId, updates),
+          ),
+        };
+      });
+      return prev.map(w =>
+        w.id === parentId ? { ...w, config: { ...cfg, tabs: updatedTabs } } : w
+      );
+    });
+    setDirty(true);
+  }, [subWidgetInfo, setWidgets, setDirty]);
+
+  const editingOnUpdate = editingSubWidget ? updateSubWidgetViaCanvas : updateWidget;
+
+  const handleSubLayoutChangeViaCanvas = useCallback((parentWidgetId, newLayout) => {
+    setWidgets((prev) =>
+      prev.map((w) => patchTabContainerSubLayout(w, parentWidgetId, newLayout)),
+    );
+    setDirty(true);
+  }, [setWidgets, setDirty]);
 
   /* Grid from template (per-report flexibility) or professional defaults */
   const gridCols = template?.layout_config?.grid?.cols ?? GRID_COLS_DEFAULT;
@@ -163,10 +281,11 @@ export default function ReportBuilderCanvas() {
   const handleSelect = useCallback((wid, e) => {
     e?.stopPropagation();
     setSelectedId(wid);
+    setSubWidgetInfo(null);
     setShowProperties(true);
   }, []);
 
-  const handleDeselect = useCallback(() => setSelectedId(null), []);
+  const handleDeselect = useCallback(() => { setSelectedId(null); setSubWidgetInfo(null); }, []);
 
   const handleWheelCapture = useCallback((e) => {
     /* Allow dropdowns/tag picker to handle their own scroll */
@@ -200,7 +319,9 @@ export default function ReportBuilderCanvas() {
   const handleDuplicate = useCallback((widgetId) => {
     const w = widgets.find((w) => w.id === widgetId);
     if (!w) return;
-    const dup = { ...JSON.parse(JSON.stringify(w)), id: `w-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, y: (w.y ?? 0) + (w.h ?? 2) };
+    const dup = cloneWidgetTreeWithNewIds(w);
+    dup.y = (w.y ?? 0) + (w.h ?? 2);
+    dup.x = Number.isFinite(w.x) ? w.x : dup.x;
     addWidget(dup);
     setSelectedId(dup.id);
   }, [widgets, addWidget]);
@@ -309,8 +430,8 @@ export default function ReportBuilderCanvas() {
 
   /* ── Save / Publish ────────────────────────────────────────── */
 
-  const handleSave = useCallback(() => {
-    saveLayout();
+  const handleSave = useCallback(async () => {
+    await saveLayout();
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
   }, [saveLayout]);
@@ -346,8 +467,11 @@ export default function ReportBuilderCanvas() {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); handleSave(); }
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && canUndo && !editingName) { e.preventDefault(); undo(); }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey)) && canRedo && !editingName) { e.preventDefault(); redo(); }
-      if (e.key === 'Delete' && selectedId && !editingName) handleDeleteWidget(selectedId);
-      if (e.key === 'Escape') { setSelectedId(null); setEditingName(false); }
+      if (e.key === 'Delete' && selectedId && !editingName) {
+        if (subWidgetInfo) { setSubWidgetInfo(null); }
+        else { handleDeleteWidget(selectedId); }
+      }
+      if (e.key === 'Escape') { if (subWidgetInfo) { setSubWidgetInfo(null); } else { setSelectedId(null); } setEditingName(false); }
       if ((e.ctrlKey || e.metaKey) && e.key === 'd' && selectedId) {
         e.preventDefault();
         const w = widgets.find((w) => w.id === selectedId);
@@ -364,7 +488,7 @@ export default function ReportBuilderCanvas() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleSave, handleDeleteWidget, selectedId, editingName, widgets, addWidget, undo, redo, canUndo, canRedo, handleZoomIn, handleZoomOut, handleZoomReset]);
+  }, [handleSave, handleDeleteWidget, selectedId, editingName, widgets, addWidget, undo, redo, canUndo, canRedo, handleZoomIn, handleZoomOut, handleZoomReset, subWidgetInfo]);
 
   /* ── Loading state ─────────────────────────────────────────── */
   if (loading) {
@@ -474,6 +598,18 @@ export default function ReportBuilderCanvas() {
             </button>
           </div>
 
+          {!dashboardTabs?.enabled && (
+            <Tooltip title="Enable dashboard tabs" placement="bottom" arrow disableInteractive>
+              <button
+                onClick={enableDashboardTabs}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium text-[#556677] hover:text-[#8899ab] hover:bg-[#1a2233] border border-[#1e293b] transition-all"
+              >
+                <Copy size={13} />
+                <span className="hidden sm:inline">Tabs</span>
+              </button>
+            </Tooltip>
+          )}
+
           <div className="w-px h-5 bg-[#1e293b] mx-1" />
 
           <Tooltip title="Preview report" placement="bottom" arrow disableInteractive>
@@ -484,6 +620,20 @@ export default function ReportBuilderCanvas() {
           </Tooltip>
 
           <div className="w-px h-5 bg-[#1e293b] mx-1" />
+
+          <Tooltip title={dashboardLocked ? "Unlock dashboard for editing" : "Lock dashboard to prevent changes"} placement="bottom" arrow disableInteractive>
+            <button
+              onClick={toggleDashboardLock}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all border ${
+                dashboardLocked
+                  ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
+                  : 'bg-[#1a2233] text-[#556677] border-[#1e293b] hover:text-[#8899ab] hover:border-[#2a3a4e]'
+              }`}
+            >
+              {dashboardLocked ? <Lock size={13} /> : <Unlock size={13} />}
+              <span className="hidden sm:inline">{dashboardLocked ? 'Locked' : ''}</span>
+            </button>
+          </Tooltip>
 
           <Tooltip title={autoSave ? "Auto-save is ON — changes save automatically" : "Auto-save is OFF — use manual Save"} placement="bottom" arrow disableInteractive>
             <button
@@ -530,7 +680,116 @@ export default function ReportBuilderCanvas() {
         </div>
       </div>
 
+      {/* ── Dashboard Tabs Bar ── */}
+      {dashboardTabs?.enabled && (
+        <div className="h-10 flex items-center gap-2 px-4 bg-[#0d1117] border-b border-[#1e293b] flex-shrink-0">
+          {renamingTabId ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={tabNameRef}
+                autoFocus
+                value={tabNameInput}
+                onChange={(e) => setTabNameInput(e.target.value)}
+                onBlur={() => { if (tabNameInput.trim()) renameDashboardTab(renamingTabId, tabNameInput.trim()); setRenamingTabId(null); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { if (tabNameInput.trim()) renameDashboardTab(renamingTabId, tabNameInput.trim()); setRenamingTabId(null); }
+                  if (e.key === 'Escape') setRenamingTabId(null);
+                }}
+                className="bg-[#1a2233] border border-[#22d3ee] rounded px-2 py-1 text-[12px] text-[#f0f4f8] outline-none w-32"
+              />
+            </div>
+          ) : (
+            <TabSelector
+              tabs={(dashboardTabs.tabs || []).map(t => ({ id: t.id, label: t.label }))}
+              activeId={activeTabId}
+              onChange={(tabId) => { switchDashboardTab(tabId); setSelectedId(null); }}
+              size="sm"
+            />
+          )}
+          <div className="relative">
+            <Tooltip title="Add new tab" placement="bottom" arrow disableInteractive>
+              <button
+                onClick={() => setShowAddTabMenu(v => !v)}
+                className="p-1.5 rounded-md text-[#556677] hover:text-[#22d3ee] hover:bg-[#1a2233] transition-colors"
+              >
+                <Plus size={14} />
+              </button>
+            </Tooltip>
+            {showAddTabMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowAddTabMenu(false)} />
+                <div className="absolute z-50 mt-1 left-0 w-52 rounded-lg border border-[#1e293b] bg-[#111827] shadow-xl overflow-hidden">
+                  <button
+                    onClick={() => {
+                      addDashboardTab(`Tab ${(dashboardTabs.tabs || []).length + 1}`);
+                      setShowAddTabMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2.5 text-[12px] text-[#f0f4f8] hover:bg-[#1a2233] transition-colors flex items-center gap-2"
+                  >
+                    <Plus size={12} className="text-[#22d3ee]" /> Empty tab
+                  </button>
+                  {(dashboardTabs.tabs || []).length > 0 && (
+                    <div className="border-t border-[#1e293b]">
+                      <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-[#556677]">Copy from...</div>
+                      {(dashboardTabs.tabs || []).map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => {
+                            duplicateDashboardTab(tab.id, `${tab.label} (copy)`);
+                            setShowAddTabMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-[12px] text-[#8899ab] hover:text-[#f0f4f8] hover:bg-[#1a2233] transition-colors flex items-center gap-2"
+                        >
+                          <Copy size={11} className="text-[#556677]" /> {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          {dashboardTabs.tabs?.length > 0 && (
+            <Tooltip title="Rename active tab (double-click tab to rename)" placement="bottom" arrow disableInteractive>
+              <button
+                onClick={() => {
+                  const tab = dashboardTabs.tabs?.find(t => t.id === activeTabId);
+                  if (!tab) return;
+                  setTabNameInput(tab.label);
+                  setRenamingTabId(activeTabId);
+                  setTimeout(() => tabNameRef.current?.focus(), 50);
+                }}
+                className="p-1.5 rounded-md text-[#556677] hover:text-[#f0f4f8] hover:bg-[#1a2233] transition-colors"
+              >
+                <Pencil size={12} />
+              </button>
+            </Tooltip>
+          )}
+          {dashboardTabs.tabs?.length > 1 && (
+            <Tooltip title="Remove active tab" placement="bottom" arrow disableInteractive>
+              <button
+                onClick={() => removeDashboardTab(activeTabId)}
+                className="p-1.5 rounded-md text-[#556677] hover:text-[#ef4444] hover:bg-[#1a2233] transition-colors"
+              >
+                <Trash2 size={12} />
+              </button>
+            </Tooltip>
+          )}
+          <div className="ml-auto">
+            <Tooltip title="Disable tabs (merge active tab to main)" placement="bottom" arrow disableInteractive>
+              <button
+                onClick={() => disableDashboardTabs()}
+                className="text-[9px] font-medium px-2 py-1 rounded text-[#556677] hover:text-[#f0f4f8] hover:bg-[#1a2233] transition-colors"
+              >
+                Disable Tabs
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+      )}
+
       {/* ── Three-zone body: toolbox | canvas | properties ── */}
+      <ReportTableTabLinkProvider>
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
         {/* Left toolbox */}
@@ -621,8 +880,8 @@ export default function ReportBuilderCanvas() {
                     containerPadding={GRID_PADDING}
                     compactType={null}
                     allowOverlap={true}
-                    isDraggable={true}
-                    isResizable={true}
+                    isDraggable={!dashboardLocked}
+                    isResizable={!dashboardLocked}
                     resizeHandles={['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne']}
                     onLayoutChange={handleLayoutChange}
                     onDragStart={handleDragStart}
@@ -646,27 +905,26 @@ export default function ReportBuilderCanvas() {
                           key={String(widget.id)}
                           data-widget-id={widget.id}
                           onClick={(e) => handleSelect(widget.id, e)}
-                          className={`group transition-shadow overflow-visible ${
+                          className={`group overflow-visible ${
                             isInvisible
                               ? ''
                               : showCard
-                                ? 'rounded rb-widget-card'
+                                ? `rounded rb-widget-card ${({'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top','holographic':'rb-card-holographic'})[widget.config?.cardStyle] || ''}`
                                 : 'rounded border border-dashed border-[var(--rb-border)]/60'
                           } ${
                             isSelected
                               ? isInvisible
-                                ? 'outline outline-2 outline-[var(--rb-accent)] outline-offset-1 rounded rb-widget-selected'
+                                ? 'rb-canvas-invisible-selected rounded'
                                 : 'rb-widget-selected'
                               : isInvisible
-                                ? 'hover:outline hover:outline-1 hover:outline-[var(--rb-accent)]/30 hover:outline-offset-1 rounded'
+                                ? 'hover:outline hover:outline-1 hover:outline-[var(--rb-border)] hover:outline-offset-1 rounded'
                                 : showCard
                                   ? 'border-[var(--rb-border)] hover:border-[var(--rb-accent)]'
                                   : 'hover:border-[var(--rb-accent)]/50'
                           }`}
-                          style={isSelected && !isInvisible ? {
-                            borderColor: 'var(--rb-accent)',
-                            boxShadow: '0 0 0 2px var(--rb-accent)',
-                          } : undefined}
+                          style={{
+                            '--widget-color': widget.config?.color || undefined,
+                          }}
                         >
                           {/* Selection handles (4 corners) */}
                           {isSelected && (
@@ -721,7 +979,7 @@ export default function ReportBuilderCanvas() {
                           </div>
 
                           {/* Widget body */}
-                          <div className="h-full no-drag overflow-hidden">
+                          <div className={`h-full no-drag ${wt === 'tabcontainer' ? 'overflow-visible' : 'overflow-hidden'}`}>
                             <WidgetRenderer
                               widget={widget}
                               tagValues={liveTagValues}
@@ -733,6 +991,9 @@ export default function ReportBuilderCanvas() {
                               layoutRowHeight={gridRowH}
                               tagHistory={tagHistory}
                               savedFormulas={savedFormulas}
+                              onSubWidgetSelect={wt === 'tabcontainer' ? handleSubWidgetSelect : undefined}
+                              selectedSubWidgetId={wt === 'tabcontainer' && subWidgetInfo?.parentId === widget.id ? subWidgetInfo.subWidget?.id : undefined}
+                              onSubLayoutChange={wt === 'tabcontainer' ? handleSubLayoutChangeViaCanvas : undefined}
                             />
                           </div>
 
@@ -769,20 +1030,24 @@ export default function ReportBuilderCanvas() {
               className="flex-shrink-0 rb-panel-surface border-l border-[var(--rb-border)] overflow-hidden rb-panel-right-shadow max-w-[85vw]"
             >
               <PropertiesPanel
-                widget={selectedWidget}
-                onUpdate={updateWidget}
-                onDelete={handleDeleteWidget}
-                onClose={() => setSelectedId(null)}
+                widget={editingWidget}
+                onUpdate={editingOnUpdate}
+                onDelete={editingSubWidget ? () => { /* sub-widget delete handled in tab container */ } : handleDeleteWidget}
+                onClose={() => { if (editingSubWidget) { setSubWidgetInfo(null); } else { setSelectedId(null); } }}
                 onHidePanel={() => setShowProperties(false)}
                 tags={tags}
                 tagValues={liveTagValues}
                 groups={groups}
                 savedFormulas={savedFormulas}
+                isSubWidget={!!editingSubWidget}
+                onBackToParent={editingSubWidget ? () => setSubWidgetInfo(null) : undefined}
+                canvasWidgets={widgets}
               />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+      </ReportTableTabLinkProvider>
     </div>
   );
 }

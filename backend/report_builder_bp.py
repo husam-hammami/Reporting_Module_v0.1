@@ -95,7 +95,8 @@ def list_templates():
             cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 SELECT id, name, description, thumbnail, is_active, is_default, status,
-                       layout_config, created_at, updated_at
+                       layout_config, created_at, updated_at,
+                       order_status_tag_name, order_prefix, order_start_value, order_stop_value
                 FROM report_builder_templates
                 ORDER BY updated_at DESC
             """)
@@ -171,7 +172,8 @@ def get_template(template_id):
             cursor = actual_conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
                 SELECT id, name, description, thumbnail, is_active, is_default, status,
-                       layout_config, created_at, updated_at
+                       layout_config, created_at, updated_at,
+                       order_status_tag_name, order_prefix, order_start_value, order_stop_value
                 FROM report_builder_templates
                 WHERE id = %s
             """, (template_id,))
@@ -209,7 +211,8 @@ def update_template(template_id):
             # Build dynamic SET clause
             fields = []
             values = []
-            for key in ['name', 'description', 'thumbnail', 'is_active', 'is_default', 'status']:
+            for key in ['name', 'description', 'thumbnail', 'is_active', 'is_default', 'status',
+                        'order_status_tag_name', 'order_prefix', 'order_start_value', 'order_stop_value']:
                 if key in data:
                     fields.append(f"{key} = %s")
                     values.append(data[key])
@@ -228,7 +231,8 @@ def update_template(template_id):
                 SET {', '.join(fields)}
                 WHERE id = %s
                 RETURNING id, name, description, thumbnail, is_active, is_default, status,
-                          layout_config, created_at, updated_at
+                          layout_config, created_at, updated_at,
+                          order_status_tag_name, order_prefix, order_start_value, order_stop_value
             """
             cursor.execute(query, values)
             row = cursor.fetchone()

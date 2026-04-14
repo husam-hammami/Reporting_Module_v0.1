@@ -240,30 +240,35 @@ def seed_production_data():
         print(f'  WARN  Could not seed Mil B data: {e}')
 
 
+# ── Step 4b: Seed Power Consumption tags (always runs) ────────────────────
+def seed_power_data():
+    print_header('Step 4b — Seed Power Consumption tags (C32, M30, M31)')
+    if SCRIPT_DIR not in sys.path:
+        sys.path.insert(0, SCRIPT_DIR)
+    try:
+        from seed_power_tags import seed as power_seed
+        conn = connect(DB_NAME)
+        conn.autocommit = False
+        power_seed(conn)
+        conn.close()
+    except Exception as e:
+        print(f'  WARN  Could not seed power tags: {e}')
+
+
 # ── Step 5: Seed demo data ───────────────────────────────────────────────
 def seed_demo_data():
-    print_header('Step 5 — Seed demo data')
+    print_header('Step 5 — Seed demo data (layout + report templates)')
 
-    seed_tags = os.path.join(SCRIPT_DIR, 'seed_demo_tags.py')
     seed_layout = os.path.join(SCRIPT_DIR, 'seed_demo_layout.py')
     seed_reports = os.path.join(SCRIPT_DIR, 'seed_report_templates.py')
 
-    if not os.path.exists(seed_tags):
-        print(f'  SKIP  seed_demo_tags.py not found')
-        return
-    if not os.path.exists(seed_layout):
+    if os.path.exists(seed_layout):
+        print('  Running seed_demo_layout.py ...')
+        result = os.system(f'"{sys.executable}" "{seed_layout}"')
+        if result != 0:
+            print('  WARN  seed_demo_layout.py returned non-zero exit code')
+    else:
         print(f'  SKIP  seed_demo_layout.py not found')
-        return
-
-    print('  Running seed_demo_tags.py ...')
-    result = os.system(f'"{sys.executable}" "{seed_tags}"')
-    if result != 0:
-        print('  WARN  seed_demo_tags.py returned non-zero exit code')
-
-    print('  Running seed_demo_layout.py ...')
-    result = os.system(f'"{sys.executable}" "{seed_layout}"')
-    if result != 0:
-        print('  WARN  seed_demo_layout.py returned non-zero exit code')
 
     if os.path.exists(seed_reports):
         print('  Running seed_report_templates.py (from docs/report-templates/) ...')
@@ -310,6 +315,7 @@ def main():
     run_migrations()
     create_default_user()
     seed_production_data()
+    seed_power_data()
 
     if not args.no_seed:
         seed_demo_data()

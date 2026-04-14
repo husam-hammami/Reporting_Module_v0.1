@@ -32,8 +32,10 @@ def _ensure_tables():
     try:
         get_conn = _get_db_connection()
         conn = get_conn()
-        conn.autocommit = True
-        with conn.cursor() as cur:
+        # Get the real psycopg2 connection (not the PooledConnection wrapper)
+        actual = conn._conn if hasattr(conn, '_conn') else conn
+        actual.autocommit = True
+        with actual.cursor() as cur:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS hercules_ai_tag_profiles (
                     id SERIAL PRIMARY KEY,
@@ -64,7 +66,7 @@ def _ensure_tables():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_hai_profiles_line ON hercules_ai_tag_profiles(line_name)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_hai_profiles_reviewed ON hercules_ai_tag_profiles(is_reviewed)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_hai_profiles_tracked ON hercules_ai_tag_profiles(is_tracked)")
-            # Triggers — ignore if already exist
+            # Triggers — ignore if already exist (each in its own savepoint so failures don't abort)
             for tbl in ('hercules_ai_tag_profiles', 'hercules_ai_config'):
                 try:
                     cur.execute(f"""
@@ -73,9 +75,12 @@ def _ensure_tables():
                             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
                     """)
                 except Exception:
-                    pass  # trigger already exists
+                    pass  # trigger already exists or function missing — non-critical
             # distribution column
-            cur.execute("ALTER TABLE distribution_rules ADD COLUMN IF NOT EXISTS include_ai_summary BOOLEAN DEFAULT false")
+            try:
+                cur.execute("ALTER TABLE distribution_rules ADD COLUMN IF NOT EXISTS include_ai_summary BOOLEAN DEFAULT false")
+            except Exception:
+                pass  # table may not exist yet
         conn.close()
         _tables_ensured = True
         logger.info("Hercules AI tables ensured.")
@@ -455,6 +460,13 @@ def scan_reports():
                             WHERE id = %s
                         """, (prof['id'],))
 
+            # Auto-clean stale deleted profiles older than 30 days
+            cur.execute("""
+                DELETE FROM hercules_ai_tag_profiles
+                WHERE data_status = 'deleted' AND source = 'auto'
+                  AND updated_at < NOW() - INTERVAL '30 days'
+            """)
+
             # Revival: tags re-added
             for tag_name, prof in existing.items():
                 if prof['data_status'] == 'deleted' and tag_name in all_tags:
@@ -585,6 +597,26 @@ def bulk_update_profiles():
         actual.commit()
 
     return jsonify({'updated': updated})
+
+
+@hercules_ai_bp.route('/hercules-ai/profiles/bulk', methods=['DELETE'])
+@login_required
+def bulk_delete_profiles():
+    """Permanently delete profiles by ID list."""
+    data = request.get_json()
+    ids = data.get('ids', [])
+    if not ids:
+        return jsonify({'error': 'No IDs provided'}), 400
+
+    get_conn = _get_db_connection()
+    with closing(get_conn()) as conn:
+        actual = conn._conn if hasattr(conn, '_conn') else conn
+        cur = actual.cursor()
+        cur.execute("DELETE FROM hercules_ai_tag_profiles WHERE id = ANY(%s)", (ids,))
+        deleted = cur.rowcount
+        actual.commit()
+
+    return jsonify({'deleted': deleted})
 
 
 @hercules_ai_bp.route('/hercules-ai/profiles/<int:profile_id>', methods=['PUT'])

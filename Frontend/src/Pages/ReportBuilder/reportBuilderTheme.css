@@ -27,7 +27,7 @@
   --rb-space-8: 2rem;
   --rb-pad-xs: 5px;
   --rb-pad-sm: 7px;
-  --rb-pad-md: 10px;
+  --rb-pad-md: 6px;
   --rb-pad-lg: 14px;
 
   /* ── Light mode surfaces ── */
@@ -66,7 +66,7 @@
   /* ── Radius ── */
   --rb-radius-sm: 4px;
   --rb-radius: 6px;
-  --rb-radius-lg: 8px;
+  --rb-radius-lg: 6px;
   --rb-radius-xl: 12px;
 
   /* ── Elevation ── */
@@ -88,6 +88,11 @@
   --rb-widget-padding-lg: var(--rb-pad-lg);
 
   --rb-silo-card-bg: #ffffff;
+
+  /* ── Selected widget ring (canvas + tab sub-widgets) ── */
+  --rb-selection-border: var(--rb-accent);
+  --rb-selection-shadow: 0 0 0 2px color-mix(in srgb, var(--rb-accent) 18%, transparent);
+  --rb-selection-outline: var(--rb-accent);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -131,6 +136,12 @@
   --rb-elevation-4: none;
 
   --rb-silo-card-bg: #111827;
+
+  --rb-selection-border: color-mix(in srgb, var(--rb-accent) 32%, var(--rb-border));
+  --rb-selection-shadow:
+    0 0 0 1px color-mix(in srgb, var(--rb-accent) 38%, transparent),
+    0 0 0 5px color-mix(in srgb, var(--rb-accent) 7%, transparent);
+  --rb-selection-outline: color-mix(in srgb, var(--rb-accent) 48%, var(--rb-border));
 }
 
 
@@ -321,42 +332,91 @@
 /* ═══════════════════════════════════════════════════════════════
    WIDGET CARD SYSTEM
    ═══════════════════════════════════════════════════════════════ */
+/* Default card */
 .report-builder .rb-widget-card {
   position: relative;
   background: var(--rb-card-bg);
   border: 1px solid var(--rb-card-border);
   border-radius: var(--rb-radius-lg);
   padding: var(--rb-pad-md);
-  transition: border-color var(--rb-transition-normal) ease,
-              box-shadow var(--rb-transition-normal) ease,
-              transform var(--rb-transition-normal) ease;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 .dark .report-builder .rb-widget-card {
-  background: linear-gradient(160deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 20, 32, 0.98) 100%);
+  background: rgba(17, 24, 39, 0.95);
   border-color: rgba(91, 155, 213, 0.12);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
-.report-builder .rb-widget-card:hover {
-  border-color: color-mix(in srgb, var(--rb-accent) 40%, var(--rb-card-border));
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+/* Borderless — clean, no decoration */
+.report-builder .rb-card-borderless {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
-.dark .report-builder .rb-widget-card:hover {
-  border-color: rgba(91, 155, 213, 0.25);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(91, 155, 213, 0.06), inset 0 1px 0 rgba(255,255,255,0.04);
-  transform: translateY(-1px);
+
+/* Glass — subtle frosted effect with tinted background */
+.report-builder .rb-card-glass {
+  background: rgba(248,250,252,0.85) !important;
+  border: 1px solid rgba(226,232,240,0.6) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+}
+.dark .report-builder .rb-card-glass {
+  background: rgba(15,23,42,0.65) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25) !important;
+}
+
+/* Accent top — colored top border from widget color */
+.report-builder .rb-card-accent-top {
+  border: none !important;
+  border-top: 3px solid var(--widget-color, #0369a1) !important;
+  border-radius: 2px 2px var(--rb-radius-lg) var(--rb-radius-lg) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+}
+.dark .report-builder .rb-card-accent-top {
+  background: rgba(15,23,42,0.85) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+}
+
+/* Holographic — subtle iridescent border shimmer */
+.report-builder .rb-card-holographic {
+  border: 1px solid transparent !important;
+  background: var(--rb-card-bg) !important;
+  background-clip: padding-box !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(99,102,241,0.08) !important;
+  position: relative;
+}
+.report-builder .rb-card-holographic::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: calc(var(--rb-radius-lg) + 1px);
+  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(34,211,238,0.12), rgba(168,85,247,0.1), rgba(59,130,246,0.08));
+  z-index: -1;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+.report-builder .rb-card-holographic:hover::before {
+  opacity: 1;
+}
+.dark .report-builder .rb-card-holographic {
+  background: rgba(15,23,42,0.9) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(99,102,241,0.12) !important;
+}
+.dark .report-builder .rb-card-holographic::before {
+  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(34,211,238,0.15), rgba(168,85,247,0.12), rgba(59,130,246,0.1));
 }
 
 .report-builder .rb-widget-card.rb-widget-selected,
 .report-builder .rb-widget-selected {
-  border-color: var(--rb-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--rb-accent) 18%, transparent);
+  border-color: var(--rb-selection-border);
+  box-shadow: var(--rb-selection-shadow);
 }
-.dark .report-builder .rb-widget-card.rb-widget-selected,
-.dark .report-builder .rb-widget-selected {
-  border-color: var(--rb-accent);
-  box-shadow: 0 0 0 1px var(--rb-accent), 0 0 20px rgba(91, 155, 213, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+
+/* Text / invisible widgets — outline only, no filled ring */
+.report-builder .rb-canvas-invisible-selected {
+  outline: 2px solid var(--rb-selection-outline);
+  outline-offset: 1px;
 }
 
 .report-builder .rb-widget-card.rb-widget-dragging {
@@ -386,6 +446,43 @@
   box-shadow: none;
 }
 .report-builder .rb-widget-card-transparent:hover { box-shadow: none; }
+
+/* ── Tab Container (canvas chrome) ── */
+.report-builder .rb-tabcontainer-root {
+  padding: var(--rb-pad-md);
+}
+
+/* ── Data Panel — align with rb-widget-card / rb-input tokens ── */
+.report-builder .rb-datapanel-root {
+  padding: var(--rb-pad-md);
+}
+
+.report-builder .rb-datapanel-header-bar {
+  background-color: var(--rb-surface);
+  color: var(--rb-text);
+  border-bottom: 1px solid var(--rb-border);
+}
+
+.report-builder .rb-datapanel-title {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--rb-text);
+}
+
+.dark .report-builder .rb-datapanel-title {
+  color: var(--rb-text);
+}
+
+.report-builder .rb-datapanel-content {
+  background-color: var(--rb-card-bg);
+  border-radius: var(--rb-radius-lg);
+}
+
+.report-builder .rb-datapanel-field {
+  background-color: var(--rb-input);
+  border-radius: var(--rb-radius);
+  transition: border-color var(--rb-transition-fast) ease;
+}
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1512,4 +1609,72 @@
 }
 .dark .rb-chart-empty-text {
   color: #8899ab;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Drill-Down Panel — master-detail for table rows
+   ═══════════════════════════════════════════════════════════════ */
+
+.rb-table-row-clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.rb-table-row-clickable:hover {
+  background-color: rgba(14, 116, 144, 0.06) !important;
+}
+.dark .rb-table-row-clickable:hover {
+  background-color: rgba(34, 211, 238, 0.06) !important;
+}
+
+.rb-table-row-active {
+  background-color: rgba(14, 116, 144, 0.1) !important;
+  box-shadow: inset 3px 0 0 var(--rb-accent);
+}
+.dark .rb-table-row-active {
+  background-color: rgba(34, 211, 238, 0.08) !important;
+}
+
+.rb-drilldown-panel {
+  border: 1px solid var(--rb-border);
+  border-radius: 8px;
+  background: var(--rb-panel);
+  overflow: visible;
+  animation: rb-drilldown-slide 0.2s ease-out;
+}
+
+@keyframes rb-drilldown-slide {
+  from { opacity: 0; max-height: 0; transform: translateY(-8px); }
+  to   { opacity: 1; max-height: 2000px; transform: translateY(0); }
+}
+
+.rb-drilldown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rb-border);
+  background: var(--rb-surface);
+}
+
+.rb-drilldown-grid {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.rb-drilldown-widget-cell {
+  border: 1px solid var(--rb-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--rb-panel);
+}
+
+.rb-drilldown-rgl-wrap {
+  padding: 4px 2px 8px;
+  overflow: visible;
+}
+
+.rb-drilldown-rgl-wrap .react-grid-item.react-draggable-dragging,
+.rb-drilldown-rgl-wrap .react-grid-item.resizing {
+  z-index: 20;
 }

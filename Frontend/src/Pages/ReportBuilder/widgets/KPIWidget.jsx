@@ -93,7 +93,7 @@ function useAnimatedNumber(target, decimals, skipAnimation) {
   useEffect(() => { fromRef.current = display; }, [display]);
 
   if (target == null) return '\u2014';
-  return Number(display).toFixed(decimals);
+  return Number(display).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 export default function KPIWidget({ config, tagValues, sparklineData, layout }) {
@@ -194,7 +194,7 @@ export default function KPIWidget({ config, tagValues, sparklineData, layout }) 
         height: '100%',
         justifyContent: 'center',
         alignItems,
-        padding: '8px 12px',
+        padding: '4px 8px',
         minHeight: 0,
         position: 'relative',
         overflow: 'hidden',
@@ -225,7 +225,7 @@ export default function KPIWidget({ config, tagValues, sparklineData, layout }) 
           className="rb-value-primary"
           style={{
             color: activeColor,
-            fontSize: valueFontSize || 'clamp(24px, 4vw, 42px)',
+            fontSize: valueFontSize || (displayValue.length > 10 ? 'clamp(18px, 3vw, 28px)' : displayValue.length > 7 ? 'clamp(20px, 3.5vw, 34px)' : 'clamp(24px, 4vw, 42px)'),
             fontWeight: 800,
             letterSpacing: '-0.03em',
           }}

@@ -25,6 +25,7 @@ function VizIcon({ type, isActive }) {
     case 'stat': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="2" /><text x="16" y="21" textAnchor="middle" fill={p} fontSize="12" fontWeight="bold" fontFamily="monospace">42</text></svg>;
     case 'image': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="6" width="24" height="20" rx="3" stroke={m} strokeWidth="1.8" /><circle cx="12" cy="13" r="2.5" stroke={p} strokeWidth="1.5" /><path d="M4 22l6-5 4 3 5-6 9 8" stroke={p} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
     case 'status': return <svg viewBox="0 0 32 32" className={s} fill="none"><circle cx="16" cy="16" r="9" stroke={m} strokeWidth="2" /><circle cx="16" cy="16" r="5" fill={isActive ? '#10b981' : p} /><circle cx="16" cy="16" r="9" stroke={isActive ? '#10b981' : m} strokeWidth="2" opacity="0.3" /></svg>;
+    case 'statusbar': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="3" y="11" width="26" height="10" rx="3" stroke={m} strokeWidth="1.6" /><circle cx="9" cy="16" r="2.5" fill={isActive ? '#10b981' : p} /><circle cx="16" cy="16" r="2.5" fill={isActive ? '#fbbf24' : l} /><circle cx="23" cy="16" r="2.5" fill={isActive ? '#10b981' : p} /></svg>;
     case 'sparkline': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M4 20l4-3 4 5 4-8 4 4 4-6 4 3" stroke={p} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /><path d="M4 20l4-3 4 5 4-8 4 4 4-6 4 3v8H4z" fill={l} opacity="0.3" /></svg>;
     case 'progress': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="12" width="24" height="8" rx="4" stroke={m} strokeWidth="1.8" /><rect x="5" y="13" width="15" height="6" rx="3" fill={p} /></svg>;
     case 'hopper': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M6 6h20l-5 20H11z" stroke={m} strokeWidth="1.8" strokeLinejoin="round" /><path d="M8 12h16l-3.5 14h-9z" fill={l} opacity="0.4" /><rect x="13" y="26" width="6" height="2" rx="1" fill={m} /></svg>;
@@ -32,6 +33,8 @@ function VizIcon({ type, isActive }) {
     case 'piechart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M16 4a12 12 0 0 1 0 24A12 12 0 0 1 16 4z" stroke={m} strokeWidth="2" /><path d="M16 4a12 12 0 0 1 10.4 6L16 16V4z" fill={p} /><path d="M26.4 10A12 12 0 0 1 16 28V16l10.4-6z" fill={l} /></svg>;
     case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="6" y="22" fill={p} fontSize="16" fontWeight="bold" fontFamily="serif">T</text><path d="M18 10h8M18 16h6M18 22h4" stroke={m} strokeWidth="1.6" strokeLinecap="round" /></svg>;
     case 'logo': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="7" width="24" height="18" rx="3" stroke={m} strokeWidth="1.8" /><path d="M10 16h12" stroke={p} strokeWidth="2" strokeLinecap="round" /><path d="M14 12h4v8h-4z" fill={l} rx="1" /><circle cx="16" cy="16" r="4" stroke={p} strokeWidth="1.5" fill="none" /></svg>;
+    case 'tabcontainer': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="24" height="18" rx="3" stroke={m} strokeWidth="1.8" /><rect x="5" y="8" width="9" height="5" rx="1.5" fill={p} /><rect x="15" y="8" width="9" height="5" rx="1.5" fill={l} /><path d="M4 13h24" stroke={m} strokeWidth="1" /></svg>;
+    case 'datapanel': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="5" width="24" height="22" rx="3" stroke={m} strokeWidth="1.8" /><rect x="4" y="5" width="24" height="6" rx="3" fill={p} opacity="0.3" /><rect x="7" y="14" width="8" height="3" rx="1" fill={l} /><rect x="17" y="14" width="8" height="3" rx="1" fill={m} /><rect x="7" y="19" width="8" height="3" rx="1" fill={l} /><rect x="17" y="19" width="8" height="3" rx="1" fill={m} /></svg>;
     default: return null;
   }
 }
@@ -57,6 +60,8 @@ function SmallVizIcon({ type }) {
     case 'piechart': return <svg viewBox="0 0 32 32" className={s} fill="none"><path d="M16 4a12 12 0 0 1 0 24A12 12 0 0 1 16 4z" stroke={m} strokeWidth="2" /><path d="M16 4a12 12 0 0 1 10.4 6L16 16V4z" fill={p} /><path d="M26.4 10A12 12 0 0 1 16 28V16l10.4-6z" fill={l} /></svg>;
     case 'text': return <svg viewBox="0 0 32 32" className={s} fill="none"><text x="8" y="22" fill={p} fontSize="18" fontWeight="bold" fontFamily="serif">T</text></svg>;
     case 'logo': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="7" width="24" height="18" rx="3" stroke={m} strokeWidth="2" /><circle cx="16" cy="16" r="4" stroke={p} strokeWidth="2" fill="none" /></svg>;
+    case 'tabcontainer': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="8" width="24" height="18" rx="3" stroke={m} strokeWidth="2.5" /><rect x="5" y="8" width="10" height="5" rx="1.5" fill={p} /><rect x="16" y="8" width="10" height="5" rx="1.5" fill={l} /></svg>;
+    case 'datapanel': return <svg viewBox="0 0 32 32" className={s} fill="none"><rect x="4" y="5" width="24" height="22" rx="3" stroke={m} strokeWidth="2" /><rect x="7" y="14" width="8" height="3" rx="1" fill={l} /><rect x="17" y="14" width="8" height="3" rx="1" fill={p} /></svg>;
     default: return null;
   }
 }
@@ -65,7 +70,7 @@ const COMPONENTS = [
   { section: 'Data', type: 'kpi', label: 'KPI Card' },
   { section: 'Data', type: 'gauge', label: 'Gauge' },
   { section: 'Data', type: 'stat', label: 'Stat Panel' },
-  { section: 'Data', type: 'status', label: 'Status Indicator' },
+  { section: 'Data', type: 'statusbar', label: 'Status Bar' },
   { section: 'Data', type: 'progress', label: 'Progress Bar' },
   { section: 'Data', type: 'silo', label: 'Silo Visual' },
   { section: 'Data', type: 'hopper', label: 'Hopper' },
@@ -74,12 +79,14 @@ const COMPONENTS = [
   { section: 'Charts', type: 'piechart', label: 'Pie Chart' },
   { section: 'Charts', type: 'sparkline', label: 'Sparkline' },
   { section: 'Tables', type: 'table', label: 'Data Table' },
+  { section: 'Tables', type: 'datapanel', label: 'Data Panel' },
   { section: 'Layout', type: 'text', label: 'Text Block' },
   { section: 'Layout', type: 'image', label: 'Image' },
   { section: 'Layout', type: 'logo', label: 'Client Logo' },
+  { section: 'Layout', type: 'tabcontainer', label: 'Tab Container' },
 ];
 
-const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', status: 'Status', sparkline: 'Spark', progress: 'Progress', hopper: 'Hopper' };
+const TYPE_LABELS = { kpi: 'KPI', table: 'Table', chart: 'Chart', barchart: 'Bar', gauge: 'Gauge', silo: 'Silo', stat: 'Stat', piechart: 'Pie', text: 'Text', image: 'Image', logo: 'Logo', status: 'Status', statusbar: 'Status', sparkline: 'Spark', progress: 'Progress', hopper: 'Hopper', tabcontainer: 'Tabs', datapanel: 'Panel' };
 
 const SECTIONS = ['Data', 'Charts', 'Tables', 'Layout', 'Tag Groups', 'Widgets'];
 
@@ -164,6 +171,13 @@ function extractWidgetDataSources(widget) {
       if (Array.isArray(col?.groupTags)) {
         col.groupTags.forEach((t) => { if (t) tags.push(t); });
       }
+    });
+  }
+
+  if (Array.isArray(c.fields)) {
+    c.fields.forEach((f) => {
+      if (f?.tagName) tags.push(f.tagName);
+      if (f?.formula) formulas.push(f.formula);
     });
   }
 

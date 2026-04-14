@@ -49,19 +49,17 @@ export default function ChartWidget({ config, tagValues, tagHistory, isPreview =
   }
 
   return (
-    <div className="relative flex flex-col h-full w-full" style={{ padding: 0 }}>
+    <div className="flex flex-col h-full w-full" style={{ padding: 0 }}>
       {config.title && (
         <div
-          className="rb-widget-title absolute z-10"
+          className="rb-widget-title flex-shrink-0 truncate"
           style={{
-            top: 6,
-            left: 8,
-            fontSize: '9px',
+            padding: '4px 8px 0',
+            fontSize: '10px',
             fontWeight: 700,
             textTransform: 'uppercase',
-            letterSpacing: '0.10em',
+            letterSpacing: '0.06em',
             color: 'var(--rb-text-muted)',
-            pointerEvents: 'none',
           }}
         >
           {config.title}
@@ -96,6 +94,15 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
     const barColors = series.length > 0
       ? series.map((s, i) => s.color || colors[i % colors.length])
       : [colors[0]];
+    // Create gradient fills for 3D effect
+    const createGradient = (ctx, color) => {
+      if (!ctx) return color;
+      const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+      gradient.addColorStop(0, color + 'ee');
+      gradient.addColorStop(0.5, color);
+      gradient.addColorStop(1, color + '88');
+      return gradient;
+    };
     const datasets = [{
       label: config.title || 'Values',
       data: series.length > 0
@@ -105,10 +112,14 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
             return v != null ? Number(v) : 0;
           })
         : [30, 45, 60],
-      backgroundColor: barColors,
-      borderColor: barColors,
-      borderWidth: 0,
-      borderRadius: 6,
+      backgroundColor: (ctx) => {
+        const chart = ctx.chart;
+        if (!chart?.ctx) return barColors;
+        return barColors.map(c => createGradient(chart.ctx, c));
+      },
+      borderColor: barColors.map(c => c + 'cc'),
+      borderWidth: 1,
+      borderRadius: 8,
       borderSkipped: false,
     }];
     return { labels, datasets };
@@ -225,19 +236,17 @@ function BarChartView({ config, series, colors, tagValues, isPreview, isCapturin
   }), [config, isCapturing, annotationObjs, isDark]);
 
   return (
-    <div className="relative flex flex-col h-full w-full" style={{ padding: 0 }}>
+    <div className="flex flex-col h-full w-full" style={{ padding: 0 }}>
       {config.title && (
         <div
-          className="rb-widget-title absolute z-10"
+          className="rb-widget-title flex-shrink-0 truncate"
           style={{
-            top: 6,
-            left: 8,
-            fontSize: '9px',
+            padding: '4px 8px 0',
+            fontSize: '10px',
             fontWeight: 700,
             textTransform: 'uppercase',
-            letterSpacing: '0.10em',
+            letterSpacing: '0.06em',
             color: 'var(--rb-text-muted)',
-            pointerEvents: 'none',
           }}
         >
           {config.title}

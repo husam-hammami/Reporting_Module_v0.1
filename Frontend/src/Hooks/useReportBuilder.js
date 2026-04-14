@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { loadAndMigrateConfig, EMPTY_LAYOUT_CONFIG, CURRENT_SCHEMA_VERSION } from '../Pages/ReportBuilder/state/templateSchema';
+import { effectiveRangeForDataPanelTimeScope } from '../Pages/ReportBuilder/utils/dataPanelTimeScope';
 import { buildGrainSilosTemplate } from '../Pages/ReportBuilder/seed/grainSilosTemplate';
 import { reportBuilderApi } from '../API/reportBuilderApi';
 import axios, { isExplicitRemoteApi } from '../API/axios';
@@ -85,6 +86,73 @@ export function collectWidgetTagNames(widgets) {
     }
     if (c.capacityTag) names.add(c.capacityTag);
     if (c.tonsTag) names.add(c.tonsTag);
+
+    // Data Panel fields
+    if (Array.isArray(c.fields)) {
+      c.fields.forEach((f) => {
+        if (f.sourceType === 'tag' && f.tagName) names.add(f.tagName);
+      });
+    }
+
+    // Tab container: recursively collect from all tabs' sub-widgets
+    if (w.type === 'tabcontainer' && Array.isArray(c.tabs)) {
+      c.tabs.forEach((tab) => {
+        if (Array.isArray(tab.widgets)) {
+          collectWidgetTagNames(tab.widgets).forEach((t) => names.add(t));
+        }
+      });
+    }
+
+    // Drill-down detail widgets: expand {ROW_KEY} templates for every known row key
+    const dd = c.drillDown;
+    if (dd?.enabled && Array.isArray(dd.detailWidgets) && dd.detailWidgets.length > 0) {
+      const keyCol = dd.keyColumn ?? 0;
+      const rowKeys = new Set();
+      // Collect row key values from the live row key column and static rows
+      const liveCol = Array.isArray(c.tableColumns) ? c.tableColumns[keyCol] : null;
+      if (liveCol?.sourceType === 'static' && liveCol.staticValue) rowKeys.add(liveCol.staticValue);
+      if (liveCol?.tagName) rowKeys.add(liveCol.tagName);
+      if (Array.isArray(c.staticDataRows)) {
+        c.staticDataRows.forEach((row) => {
+          if (!Array.isArray(row)) return;
+          const cell = row[keyCol];
+          if (cell && typeof cell === 'object') {
+            if (cell.sourceType === 'static' && cell.staticValue) rowKeys.add(String(cell.staticValue));
+            else if (cell.tagName) rowKeys.add(cell.tagName);
+          } else if (cell != null) {
+            rowKeys.add(String(cell));
+          }
+        });
+      }
+      // For each detail widget, collect tag names with {ROW_KEY} expanded
+      dd.detailWidgets.forEach((dw) => {
+        const dc = dw.config || {};
+        const collectFromConfig = (cfg) => {
+          const json = JSON.stringify(cfg);
+          if (!json.includes('{ROW_KEY}')) {
+            // No placeholder — collect tags directly
+            if (cfg.dataSource?.tagName) names.add(cfg.dataSource.tagName);
+            if (Array.isArray(cfg.series)) cfg.series.forEach((s) => {
+              const tag = s?.dataSource?.tagName ?? s?.tagName;
+              if (tag) names.add(tag);
+            });
+            return;
+          }
+          rowKeys.forEach((rk) => {
+            const resolved = json.replace(/\{ROW_KEY\}/g, rk);
+            try {
+              const rc = JSON.parse(resolved);
+              if (rc.dataSource?.tagName) names.add(rc.dataSource.tagName);
+              if (Array.isArray(rc.series)) rc.series.forEach((s) => {
+                const tag = s?.dataSource?.tagName ?? s?.tagName;
+                if (tag) names.add(tag);
+              });
+            } catch { /* skip malformed */ }
+          });
+        };
+        collectFromConfig(dc);
+      });
+    }
   });
   return [...names];
 }
@@ -166,9 +234,107 @@ export function collectWidgetTagAggregations(widgets) {
     // Silo capacity/tons tags
     if (c.capacityTag) setAgg(c.capacityTag, 'last');
     if (c.tonsTag) setAgg(c.tonsTag, 'last');
+
+    // Data Panel fields — only "inherit" uses the global report window + this aggregation map
+    if (Array.isArray(c.fields)) {
+      c.fields.forEach((f) => {
+        if (f.sourceType === 'tag' && f.tagName) {
+          const ts = f.timeScope || 'inherit';
+          if (ts === 'inherit') setAgg(f.tagName, f.aggregation || 'last');
+        }
+      });
+    }
+
+    // Tab container: recursively collect aggregations from all tabs' sub-widgets
+    if (w.type === 'tabcontainer' && Array.isArray(c.tabs)) {
+      c.tabs.forEach((tab) => {
+        if (Array.isArray(tab.widgets)) {
+          const subAgg = collectWidgetTagAggregations(tab.widgets);
+          Object.entries(subAgg).forEach(([tag, agg]) => setAgg(tag, agg));
+        }
+      });
+    }
+
+    // Drill-down detail widgets: expand {ROW_KEY} and assign aggregations
+    const dd = c.drillDown;
+    if (dd?.enabled && Array.isArray(dd.detailWidgets) && dd.detailWidgets.length > 0) {
+      const keyCol = dd.keyColumn ?? 0;
+      const rowKeys = new Set();
+      const liveCol = Array.isArray(c.tableColumns) ? c.tableColumns[keyCol] : null;
+      if (liveCol?.sourceType === 'static' && liveCol.staticValue) rowKeys.add(liveCol.staticValue);
+      if (liveCol?.tagName) rowKeys.add(liveCol.tagName);
+      if (Array.isArray(c.staticDataRows)) {
+        c.staticDataRows.forEach((row) => {
+          if (!Array.isArray(row)) return;
+          const cell = row[keyCol];
+          if (cell && typeof cell === 'object') {
+            if (cell.sourceType === 'static' && cell.staticValue) rowKeys.add(String(cell.staticValue));
+            else if (cell.tagName) rowKeys.add(cell.tagName);
+          } else if (cell != null) rowKeys.add(String(cell));
+        });
+      }
+      dd.detailWidgets.forEach((dw) => {
+        const dc = dw.config || {};
+        const json = JSON.stringify(dc);
+        const expand = (rk) => {
+          try {
+            const rc = JSON.parse(json.replace(/\{ROW_KEY\}/g, rk));
+            const dds = rc.dataSource;
+            if (dds?.tagName) setAgg(dds.tagName, dds.aggregation || 'last');
+            if (Array.isArray(rc.series)) rc.series.forEach((s) => {
+              const tag = s?.dataSource?.tagName ?? s?.tagName;
+              if (tag) setAgg(tag, 'last');
+            });
+          } catch { /* skip */ }
+        };
+        if (json.includes('{ROW_KEY}')) {
+          rowKeys.forEach(expand);
+        } else {
+          expand(''); // no placeholder, collect as-is
+        }
+      });
+    }
   });
 
   return tagAgg;
+}
+
+/**
+ * Data Panel tag inputs with timeScope !== 'inherit' need their own historian window.
+ * @param {Array} widgets
+ * @param {Date} anchorDate  Report range end (historical) or "now" (live)
+ * @returns {Array<{ fieldId: string, tagName: string, aggregation: string, from: Date, to: Date }>}
+ */
+export function collectDataPanelScopedHistorianRequests(widgets, anchorDate) {
+  const out = [];
+  function walk(ws) {
+    if (!Array.isArray(ws)) return;
+    ws.forEach((w) => {
+      const c = w.config || {};
+      if (w.type === 'datapanel' && Array.isArray(c.fields)) {
+        c.fields.forEach((f) => {
+          if (f.sourceType !== 'tag' || !f.tagName || !f.id) return;
+          const ts = f.timeScope || 'inherit';
+          if (ts === 'inherit') return;
+          const { from, to } = effectiveRangeForDataPanelTimeScope(ts, anchorDate);
+          if (from && to) {
+            out.push({
+              fieldId: f.id,
+              tagName: f.tagName,
+              aggregation: f.aggregation || 'last',
+              from,
+              to,
+            });
+          }
+        });
+      }
+      if (w.type === 'tabcontainer' && Array.isArray(c.tabs)) {
+        c.tabs.forEach((tab) => walk(tab.widgets));
+      }
+    });
+  }
+  walk(widgets);
+  return out;
 }
 
 /* ── useReportTemplates (Manager page) — API-first, fallback to localStorage ── */
@@ -332,14 +498,27 @@ export function useReportCanvas(templateId) {
   const [historyState, setHistoryState] = useState({ pastCount: 0, futureCount: 0 });
   const autosaveTimer = useRef(null);
   const templateRef = useRef(null);
+  const widgetsRef = useRef([]);
+  const parametersRef = useRef([]);
+  const computedSignalsRef = useRef([]);
   const pastRef = useRef([]);
   const futureRef = useRef([]);
   const layoutDebounceRef = useRef({ timer: null, pendingPrev: null });
   const lastUndoRedoAt = useRef(0);
 
+  /* ── Dashboard Tabs state ── */
+  const [dashboardTabs, setDashboardTabs] = useState(null);
+  const [activeTabId, setActiveTabId] = useState(null);
+  const tabsRef = useRef(null);
 
-  // Keep templateRef always up-to-date so performSave never uses stale closures
-  useEffect(() => { templateRef.current = template; }, [template]);
+  // Keep all refs synchronously up-to-date so performSave never uses stale closures
+  templateRef.current = template;
+  tabsRef.current = dashboardTabs;
+  widgetsRef.current = widgets;
+  parametersRef.current = parameters;
+  computedSignalsRef.current = computedSignals;
+
+  const tabsEnabled = !!dashboardTabs?.enabled;
 
   const toggleAutoSave = useCallback(() => {
     setAutoSave((prev) => {
@@ -373,7 +552,16 @@ export function useReportCanvas(templateId) {
           const found = mapApiTemplate(data);
           const { config, migrated: wasMigrated, repaired } = loadAndMigrateConfig(found.layout_config || {});
           setTemplate(found);
-          setWidgets(config.widgets || []);
+          const dt = config.dashboardTabs || null;
+          setDashboardTabs(dt);
+          if (dt?.enabled && Array.isArray(dt.tabs) && dt.tabs.length > 0) {
+            const firstTab = dt.tabs.find(t => t.id === dt.activeTabId) || dt.tabs[0];
+            setActiveTabId(firstTab.id);
+            setWidgets(firstTab.widgets || []);
+          } else {
+            setActiveTabId(null);
+            setWidgets(config.widgets || []);
+          }
           setParameters(config.parameters || []);
           setComputedSignals(config.computedSignals || []);
           setMigrated(wasMigrated || repaired);
@@ -402,7 +590,16 @@ export function useReportCanvas(templateId) {
       if (!cancelled && found) {
         const { config, migrated: wasMigrated, repaired } = loadAndMigrateConfig(found.layout_config);
         setTemplate(found);
-        setWidgets(config.widgets || []);
+        const dt = config.dashboardTabs || null;
+        setDashboardTabs(dt);
+        if (dt?.enabled && Array.isArray(dt.tabs) && dt.tabs.length > 0) {
+          const firstTab = dt.tabs.find(t => t.id === dt.activeTabId) || dt.tabs[0];
+          setActiveTabId(firstTab.id);
+          setWidgets(firstTab.widgets || []);
+        } else {
+          setActiveTabId(null);
+          setWidgets(config.widgets || []);
+        }
         setParameters(config.parameters || []);
         setComputedSignals(config.computedSignals || []);
         setMigrated(wasMigrated || repaired);
@@ -437,25 +634,42 @@ export function useReportCanvas(templateId) {
     if (!autoSave || !dirty || !templateId) return;
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
-      performSave(widgets, parameters, computedSignals);
+      performSave();
     }, 2000);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
   }, [autoSave, dirty, widgets, parameters, computedSignals, templateId]);
 
-  const performSave = useCallback(async (w, p, cs) => {
+  const performSave = useCallback(async () => {
     if (!templateId) return;
-    // Use ref to always get the latest template (avoids stale closure issues)
+    // Always read the absolute latest state from synchronous refs
+    const w = widgetsRef.current;
+    const p = parametersRef.current;
+    const cs = computedSignalsRef.current;
     const currentTemplate = templateRef.current;
-    // Preserve all existing layout_config keys (reportType, paginatedSections, pageMode, etc.)
-    // and merge in the updated widgets/parameters/signals/grid
     const existingLC = currentTemplate?.layout_config || {};
+
+    // When tabs are enabled, persist current widgets into the active tab
+    const currentTabs = tabsRef.current;
+    const currentActiveTabId = currentTabs?.activeTabId;
+    let savedTabs = currentTabs;
+    if (currentTabs?.enabled && currentActiveTabId && Array.isArray(currentTabs.tabs)) {
+      savedTabs = {
+        ...currentTabs,
+        activeTabId: currentActiveTabId,
+        tabs: currentTabs.tabs.map((tab) =>
+          tab.id === currentActiveTabId ? { ...tab, widgets: JSON.parse(JSON.stringify(w)) } : tab
+        ),
+      };
+    }
+
     const layout_config = {
       ...existingLC,
       schemaVersion: CURRENT_SCHEMA_VERSION,
-      widgets: w,
+      widgets: savedTabs?.enabled ? [] : JSON.parse(JSON.stringify(w)),
       parameters: p,
       computedSignals: cs,
       grid: existingLC.grid || { cols: 12, rowHeight: 40 },
+      dashboardTabs: savedTabs || null,
     };
 
     const payload = { layout_config };
@@ -477,11 +691,14 @@ export function useReportCanvas(templateId) {
   }, [templateId]);
 
   // Manual save
-  const saveLayout = useCallback(() => {
+  const saveLayout = useCallback(async () => {
     setSaving(true);
-    performSave(widgets, parameters, computedSignals);
-    setSaving(false);
-  }, [widgets, parameters, computedSignals, performSave]);
+    try {
+      await performSave();
+    } finally {
+      setSaving(false);
+    }
+  }, [performSave]);
 
   // Update template name/description/status/layout_config — persists to API
   const updateMeta = useCallback(async (updates) => {
@@ -674,6 +891,162 @@ export function useReportCanvas(templateId) {
     setDirty(true);
   }, []);
 
+  /* ── Dashboard Tab operations ── */
+
+  const _tabUid = () => `tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+  const enableDashboardTabs = useCallback(() => {
+    const tabId = _tabUid();
+    const dt = {
+      enabled: true,
+      activeTabId: tabId,
+      tabs: [{ id: tabId, label: 'Tab 1', widgets: [...widgets] }],
+    };
+    setDashboardTabs(dt);
+    setActiveTabId(tabId);
+    setDirty(true);
+  }, [widgets]);
+
+  const disableDashboardTabs = useCallback(() => {
+    const dt = tabsRef.current;
+    const activeW = dt?.tabs?.find(t => t.id === activeTabId)?.widgets || widgets;
+    setDashboardTabs(null);
+    setActiveTabId(null);
+    setWidgets(activeW);
+    setDirty(true);
+  }, [activeTabId, widgets]);
+
+  const addDashboardTab = useCallback((label) => {
+    const dt = tabsRef.current;
+    if (!dt?.enabled) return;
+    pushToHistory(widgets);
+    const newId = _tabUid();
+    const savedCurrentWidgets = JSON.parse(JSON.stringify(widgets));
+    const updatedTabs = {
+      ...dt,
+      activeTabId: newId,
+      tabs: [
+        ...dt.tabs.map(t => t.id === activeTabId ? { ...t, widgets: savedCurrentWidgets } : t),
+        { id: newId, label: label || `Tab ${dt.tabs.length + 1}`, widgets: [] },
+      ],
+    };
+    tabsRef.current = updatedTabs;
+    setDashboardTabs(updatedTabs);
+    setActiveTabId(newId);
+    setWidgets([]);
+    pastRef.current = [];
+    futureRef.current = [];
+    setHistoryState({ pastCount: 0, futureCount: 0 });
+    setDirty(true);
+    return newId;
+  }, [widgets, activeTabId, pushToHistory]);
+
+  const removeDashboardTab = useCallback((tabId) => {
+    const dt = tabsRef.current;
+    if (!dt?.enabled || dt.tabs.length <= 1) return;
+    const savedCurrentWidgets = JSON.parse(JSON.stringify(widgets));
+    const remaining = dt.tabs
+      .map(t => t.id === activeTabId ? { ...t, widgets: savedCurrentWidgets } : t)
+      .filter(t => t.id !== tabId);
+    if (remaining.length === 0) return;
+    const switchTo = tabId === activeTabId ? remaining[0] : remaining.find(t => t.id === activeTabId) || remaining[0];
+    const updatedTabs = {
+      ...dt,
+      tabs: remaining,
+      activeTabId: switchTo.id,
+    };
+    tabsRef.current = updatedTabs;
+    setDashboardTabs(updatedTabs);
+    if (tabId === activeTabId) {
+      setActiveTabId(switchTo.id);
+      setWidgets(switchTo.widgets || []);
+      pastRef.current = [];
+      futureRef.current = [];
+      setHistoryState({ pastCount: 0, futureCount: 0 });
+    }
+    setDirty(true);
+  }, [activeTabId, widgets]);
+
+  const renameDashboardTab = useCallback((tabId, newLabel) => {
+    const dt = tabsRef.current;
+    if (!dt?.enabled) return;
+    setDashboardTabs({
+      ...dt,
+      tabs: dt.tabs.map(t => t.id === tabId ? { ...t, label: newLabel } : t),
+    });
+    setDirty(true);
+  }, []);
+
+  const duplicateDashboardTab = useCallback((sourceTabId, newLabel) => {
+    const dt = tabsRef.current;
+    if (!dt?.enabled) return;
+    pushToHistory(widgets);
+    const savedCurrentWidgets = JSON.parse(JSON.stringify(widgets));
+    const sourceTab = sourceTabId === activeTabId
+      ? { ...dt.tabs.find(t => t.id === sourceTabId), widgets: savedCurrentWidgets }
+      : dt.tabs.find(t => t.id === sourceTabId);
+    if (!sourceTab) return;
+    const newId = _tabUid();
+    const clonedWidgets = JSON.parse(JSON.stringify(sourceTab.widgets || []));
+    clonedWidgets.forEach(w => { w.id = `w-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; });
+    const updatedTabs = {
+      ...dt,
+      activeTabId: newId,
+      tabs: [
+        ...dt.tabs.map(t => t.id === activeTabId ? { ...t, widgets: savedCurrentWidgets } : t),
+        { id: newId, label: newLabel || `${sourceTab.label} (copy)`, widgets: clonedWidgets },
+      ],
+    };
+    tabsRef.current = updatedTabs;
+    setDashboardTabs(updatedTabs);
+    setActiveTabId(newId);
+    setWidgets(clonedWidgets);
+    pastRef.current = [];
+    futureRef.current = [];
+    setHistoryState({ pastCount: 0, futureCount: 0 });
+    setDirty(true);
+    return newId;
+  }, [widgets, activeTabId, pushToHistory]);
+
+  const switchDashboardTab = useCallback((newTabId) => {
+    const dt = tabsRef.current;
+    if (!dt?.enabled || newTabId === activeTabId) return;
+    // Deep-copy current widgets into the active tab before switching
+    const savedCurrentWidgets = JSON.parse(JSON.stringify(widgets));
+    const updatedTabs = {
+      ...dt,
+      activeTabId: newTabId,
+      tabs: dt.tabs.map(t =>
+        t.id === activeTabId ? { ...t, widgets: savedCurrentWidgets } : t
+      ),
+    };
+    // Read target tab from the UPDATED structure (not old dt)
+    const targetTab = updatedTabs.tabs.find(t => t.id === newTabId);
+    tabsRef.current = updatedTabs;
+    setDashboardTabs(updatedTabs);
+    setActiveTabId(newTabId);
+    setWidgets(targetTab?.widgets || []);
+    pastRef.current = [];
+    futureRef.current = [];
+    setHistoryState({ pastCount: 0, futureCount: 0 });
+    setDirty(true);
+  }, [activeTabId, widgets]);
+
+  // Collect all widgets across all tabs (for tag subscription)
+  const allTabsWidgets = useMemo(() => {
+    const dt = dashboardTabs;
+    if (!dt?.enabled || !Array.isArray(dt.tabs)) return widgets;
+    const all = [];
+    dt.tabs.forEach(tab => {
+      if (tab.id === activeTabId) {
+        all.push(...widgets);
+      } else {
+        all.push(...(tab.widgets || []));
+      }
+    });
+    return all;
+  }, [dashboardTabs, activeTabId, widgets]);
+
   return {
     template, widgets, parameters, computedSignals,
     loading, saving, dirty, migrated,
@@ -683,6 +1056,9 @@ export function useReportCanvas(templateId) {
     addComputedSignal,
     saveLayout, updateMeta, setDirty,
     undo, redo, canUndo, canRedo,
+    dashboardTabs, activeTabId, allTabsWidgets,
+    enableDashboardTabs, disableDashboardTabs,
+    addDashboardTab, removeDashboardTab, renameDashboardTab, switchDashboardTab, duplicateDashboardTab,
   };
 }
 

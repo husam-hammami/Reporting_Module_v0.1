@@ -20,6 +20,9 @@ from logging.handlers import RotatingFileHandler
 
 # ── 1. Desktop mode flag ──────────────────────────────────────────────────
 os.environ['HERCULES_DESKTOP'] = '1'
+# Frozen exe often runs without a UTF-8 locale; libpq/psycopg2 may otherwise use cp1252
+# and fail on Unicode in SQL parameters (e.g. mapping names with →). Set before importing app.
+os.environ.setdefault('PGCLIENTENCODING', 'UTF8')
 
 # ── 2. Frozen path resolution ─────────────────────────────────────────────
 if getattr(sys, 'frozen', False):
@@ -106,9 +109,10 @@ def main():
     start_scheduler()
     logger.info("Distribution scheduler started")
 
+    host = os.environ.get('FLASK_HOST', '0.0.0.0')
     port = int(os.environ.get('FLASK_PORT', 5001))
-    logger.info("Starting Flask-SocketIO on 127.0.0.1:%d", port)
-    socketio.run(app, host='127.0.0.1', port=port, debug=False, use_reloader=False)
+    logger.info("Starting Flask-SocketIO on %s:%d", host, port)
+    socketio.run(app, host=host, port=port, debug=False, use_reloader=False)
 
 
 if __name__ == '__main__':

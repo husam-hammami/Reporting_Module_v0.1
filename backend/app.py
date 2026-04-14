@@ -1,4 +1,5 @@
 import os
+os.environ.setdefault('PGCLIENTENCODING', 'UTF8')
 os.environ['EVENTLET_NO_GREENDNS'] = 'yes'
 import eventlet
 eventlet.monkey_patch()
@@ -40,6 +41,7 @@ from branding_bp import branding_bp
 from distribution_bp import distribution_bp
 from updates_bp import updates_bp
 from hercules_ai_bp import hercules_ai_bp
+from orders_report_bp import orders_report_bp
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -103,7 +105,7 @@ ALLOWED_ORIGINS = {
 # Initialize SocketIO with credentials support for cookie/session auth
 socketio = SocketIO(
     app,
-    cors_allowed_origins=list(ALLOWED_ORIGINS),
+    cors_allowed_origins="*",
     async_mode="eventlet",
     supports_credentials=True,
 )
@@ -179,11 +181,29 @@ def _normalize_origin(origin):
     return origin.rstrip("/")
 
 
+_PRIVATE_IP_RE = re.compile(
+    r'^https?://(10\.\d{1,3}\.\d{1,3}\.\d{1,3}'
+    r'|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}'
+    r'|192\.168\.\d{1,3}\.\d{1,3})'
+    r'(:\d+)?$'
+)
+
+
+def _is_allowed_origin(origin):
+    """Return True if origin is in the whitelist OR is a private-network IP."""
+    if not origin:
+        return False
+    normalized = _normalize_origin(origin)
+    if normalized in ALLOWED_ORIGINS:
+        return True
+    return bool(_PRIVATE_IP_RE.match(normalized))
+
+
 @app.before_request
 def handle_options_preflight():
     if request.method == "OPTIONS":
         origin = request.headers.get("Origin")
-        if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
+        if origin and _is_allowed_origin(origin):
             from flask import Response
             r = Response("", status=200)
             r.headers["Access-Control-Allow-Origin"] = origin
@@ -202,7 +222,7 @@ def log_request_info():
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get("Origin")
-    if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
+    if origin and _is_allowed_origin(origin):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
@@ -214,7 +234,7 @@ def add_cors_headers(response):
 def options_handler(path):
     response = jsonify({})
     origin = request.headers.get("Origin")
-    if origin and _normalize_origin(origin) in ALLOWED_ORIGINS:
+    if origin and _is_allowed_origin(origin):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
@@ -265,6 +285,7 @@ app.register_blueprint(branding_bp, url_prefix='/api')
 app.register_blueprint(distribution_bp, url_prefix='/api')
 app.register_blueprint(updates_bp, url_prefix='/api')
 app.register_blueprint(hercules_ai_bp, url_prefix='/api')
+app.register_blueprint(orders_report_bp, url_prefix='/api')
 
 # Demo mode: single source of truth for Production vs Demo (emulator)
 @app.route('/api/settings/demo-mode', methods=['GET'])
@@ -416,7 +437,10 @@ def delete_emulator_custom_offset_route():
 def get_network_info():
     """Return the host machine's LAN IP and access URL."""
     import socket
-    port = int(os.environ.get('FLASK_PORT', 5001))
+    # Use the actual port from the incoming request so it works regardless of
+    # which entry point started the server (dev 5001 vs desktop launcher 5004).
+    req_host = request.host  # e.g. "localhost:5004" or "192.168.23.9:5004"
+    port = int(req_host.split(':')[1]) if ':' in req_host else 80
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -675,6 +699,20 @@ _DB_PASS = os.getenv('POSTGRES_PASSWORD', 'Admin@123')
 _DB_HOST = os.getenv('DB_HOST', '127.0.0.1')
 _DB_PORT = int(os.getenv('DB_PORT', 5433))
 
+# Windows desktop / PyInstaller: default client encoding can be cp1252 and breaks Unicode (e.g. → in strings).
+_PG_CONNECT_KWARGS = {
+    'connect_timeout': 10,
+    'options': '-c client_encoding=UTF8',
+}
+
+
+def _set_pg_client_encoding_utf8(conn):
+    try:
+        conn.set_client_encoding('UTF8')
+    except Exception as e:
+        logger.warning('Could not set PostgreSQL client_encoding to UTF8: %s', e)
+
+
 try:
     db_pool = psycopg2.pool.ThreadedConnectionPool(
         minconn=5,
@@ -684,7 +722,7 @@ try:
         password=_DB_PASS,
         host=_DB_HOST,
         port=_DB_PORT,
-        connect_timeout=10
+        **_PG_CONNECT_KWARGS,
     )
     logger.info("Database connection pool created (5-20 connections, 10s timeout)")
 except Exception as e:
@@ -696,6 +734,7 @@ def get_db_connection():
     if db_pool:
         try:
             conn = db_pool.getconn()
+            _set_pg_client_encoding_utf8(conn)
             # Set cursor factory for this connection
             conn.cursor_factory = RealDictCursor
             # Return wrapped connection that will return to pool on close
@@ -711,9 +750,135 @@ def get_db_connection():
         host=_DB_HOST,
         port=_DB_PORT,
         cursor_factory=RealDictCursor,
-        connect_timeout=10
+        **_PG_CONNECT_KWARGS,
     )
+    _set_pg_client_encoding_utf8(conn)
     return conn
+
+
+# ─── Run migrations via Python (fallback when psql.exe is unavailable) ────────
+def _run_startup_migrations():
+    """Run all SQL migration files through psycopg2 on app startup."""
+    migrations_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'migrations')
+    # Also check PyInstaller _internal path
+    if not os.path.isdir(migrations_dir):
+        internal = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_internal', 'migrations')
+        if os.path.isdir(internal):
+            migrations_dir = internal
+    if not os.path.isdir(migrations_dir):
+        return
+
+    migration_order = [
+        'create_tags_tables.sql',
+        'create_users_table.sql',
+        'create_bins_and_materials_tables.sql',
+        'create_report_builder_tables.sql',
+        'create_tag_history_tables.sql',
+        'create_kpi_engine_tables.sql',
+        'add_is_counter_to_tags.sql',
+        'add_bin_activation_fields.sql',
+        'add_value_formula_field.sql',
+        'add_layout_config_field.sql',
+        'add_line_running_tag_fields.sql',
+        'add_dynamic_monitoring_tables.sql',
+        'alter_tag_history_nullable_layout.sql',
+        'create_licenses_table.sql',
+        'create_mappings_table.sql',
+        'add_tag_history_archive_unique_universal.sql',
+        'add_license_machine_info.sql',
+        'add_site_and_license_name.sql',
+        'create_distribution_rules_table.sql',
+        'add_archive_granularity.sql',
+        'create_report_execution_log.sql',
+        'add_must_change_password.sql',
+        'create_hercules_ai_tables.sql',
+        'add_ai_summary_to_distribution.sql',
+        'add_order_tracking_to_report_templates.sql',
+    ]
+
+    try:
+        # Step 0: Create database if it doesn't exist (connect to 'postgres' system DB)
+        try:
+            sys_conn = psycopg2.connect(
+                dbname='postgres', user=_DB_USER, password=_DB_PASS,
+                host=_DB_HOST, port=_DB_PORT, **_PG_CONNECT_KWARGS,
+            )
+            _set_pg_client_encoding_utf8(sys_conn)
+            sys_conn.autocommit = True
+            sys_cur = sys_conn.cursor()
+            sys_cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (_DB_NAME,))
+            if not sys_cur.fetchone():
+                sys_cur.execute(f'CREATE DATABASE "{_DB_NAME}"')
+                logger.info(f"Created database: {_DB_NAME}")
+            sys_cur.close()
+            sys_conn.close()
+        except Exception as e:
+            logger.debug(f"Database creation check: {e}")
+
+        # Step 1: Connect to the app database and run migrations
+        conn = psycopg2.connect(
+            dbname=_DB_NAME, user=_DB_USER, password=_DB_PASS,
+            host=_DB_HOST, port=_DB_PORT, **_PG_CONNECT_KWARGS,
+        )
+        _set_pg_client_encoding_utf8(conn)
+        conn.autocommit = True
+        cur = conn.cursor()
+
+        # Step 2: Create default admin user if users table exists but no admin
+        # (this runs after migrations create the users table)
+
+        for filename in migration_order:
+            filepath = os.path.join(migrations_dir, filename)
+            if not os.path.isfile(filepath):
+                continue
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    sql = f.read()
+                if not sql.strip():
+                    continue
+                # Run whole file in one round-trip (matches init_db.py). Naive split(';')
+                # can break valid SQL; silent per-statement swallow hid real failures.
+                cur.execute(sql)
+                logger.info(f"Migration OK: {filename}")
+            except Exception as e:
+                logger.warning(
+                    "Migration failed (non-fatal): %s — %s",
+                    filename, str(e)[:500],
+                )
+        # Step 3: Ensure default admin user exists with werkzeug-compatible hash
+        try:
+            cur.execute("SELECT 1 FROM users WHERE username = 'admin'")
+            if not cur.fetchone():
+                from werkzeug.security import generate_password_hash as _gen_hash
+                cur.execute(
+                    "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
+                    ('admin', _gen_hash('admin'), 'admin')
+                )
+                logger.info("Created default admin user (admin/admin)")
+            else:
+                # Fix existing admin with incompatible bcrypt hash
+                cur.execute("SELECT password_hash FROM users WHERE username = 'admin'")
+                row = cur.fetchone()
+                if row and row[0] and row[0].startswith('$2b$'):
+                    from werkzeug.security import generate_password_hash as _gen_hash
+                    cur.execute(
+                        "UPDATE users SET password_hash = %s WHERE username = 'admin'",
+                        (_gen_hash('admin'),)
+                    )
+                    logger.info("Fixed admin password hash (bcrypt → werkzeug)")
+        except Exception as e:
+            logger.debug(f"Admin user check: {e}")
+
+        cur.close()
+        conn.close()
+        logger.info("Startup migrations complete.")
+    except Exception as e:
+        logger.warning(f"Startup migrations failed (non-blocking): {e}")
+
+try:
+    _run_startup_migrations()
+except Exception:
+    pass
 
 
 # Initialize Flask-Login
@@ -1120,6 +1285,14 @@ try:
     logger.info("Started dynamic monitor and archive workers")
 except Exception as e:
     logger.error("Could not start dynamic workers: %s", e, exc_info=True)
+
+# 5. Report-template order tracking worker (Job Logs — reads order config from report_builder_templates)
+try:
+    from workers.report_order_worker import report_order_worker
+    eventlet.spawn(report_order_worker)
+    logger.info("Started report order tracking worker")
+except Exception as e:
+    logger.error("Could not start report order worker: %s", e, exc_info=True)
 
 # Auto-seed emulator with all DB tags when in demo mode (runs regardless of entry point)
 try:

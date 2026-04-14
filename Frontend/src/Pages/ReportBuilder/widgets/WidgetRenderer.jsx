@@ -13,6 +13,9 @@ import StatusWidget from './StatusWidget';
 import SparklineWidget from './SparklineWidget';
 import ProgressWidget from './ProgressWidget';
 import HopperWidget from './HopperWidget';
+import StatusBarWidget from './StatusBarWidget';
+import TabContainerWidget from './TabContainerWidget';
+import DataPanelWidget from './DataPanelWidget';
 
 /* ── Error Boundary — catches widget render crashes ── */
 class WidgetErrorBoundary extends React.Component {
@@ -63,6 +66,9 @@ const RENDERERS = {
   sparkline: SparklineWidget,
   progress: ProgressWidget,
   hopper: HopperWidget,
+  statusbar: StatusBarWidget,
+  tabcontainer: TabContainerWidget,
+  datapanel: DataPanelWidget,
 };
 
 export const CARDLESS_WIDGET_TYPES = new Set(['image', 'text', 'logo']);
@@ -75,11 +81,38 @@ function getKpiSparklineTag(config) {
   return config?.tagName ?? null;
 }
 
-export default function WidgetRenderer({ widget, tagValues, isPreview, isSelected, onUpdateWidget, widgetId, tags, isReportBuilderWorkspace, layoutRowHeight, tagHistory, savedFormulas = [] }) {
+export default function WidgetRenderer({ widget, tagValues, isPreview, isSelected, onUpdateWidget, widgetId, tags, isReportBuilderWorkspace, layoutRowHeight, tagHistory, savedFormulas = [], onSubWidgetSelect, selectedSubWidgetId, onSubLayoutChange }) {
   const Component = RENDERERS[widget.type];
   if (!Component) return null;
   const tableProps = widget.type === 'table'
-    ? { isSelected, onUpdate: onUpdateWidget, widgetId, tags, layoutH: widget.h, layoutRowHeight, isReportBuilderWorkspace, savedFormulas }
+    ? { isSelected, onUpdate: onUpdateWidget, widgetId, tags, layoutH: widget.h, layoutRowHeight, isReportBuilderWorkspace, savedFormulas, tagHistory }
+    : {};
+  const tabContainerProps = widget.type === 'tabcontainer'
+    ? {
+        isSelected, onUpdate: onUpdateWidget, widgetId, tags, savedFormulas, tagHistory,
+        onSubWidgetSelect, selectedSubWidgetId, onSubLayoutChange,
+        renderWidget: (subWidget, editCtx) => (
+          <WidgetRenderer
+            widget={subWidget}
+            tagValues={tagValues}
+            isPreview={isPreview}
+            isSelected={editCtx?.isSubSelected || false}
+            onUpdateWidget={editCtx?.onUpdateSubWidget}
+            widgetId={subWidget.id}
+            tags={tags}
+            tagHistory={tagHistory}
+            savedFormulas={savedFormulas}
+            isReportBuilderWorkspace={!isPreview}
+            layoutRowHeight={layoutRowHeight}
+            onSubWidgetSelect={onSubWidgetSelect}
+            selectedSubWidgetId={selectedSubWidgetId}
+            onSubLayoutChange={onSubLayoutChange}
+          />
+        ),
+      }
+    : {};
+  const dataPanelProps = widget.type === 'datapanel'
+    ? { isSelected, onUpdate: onUpdateWidget, widgetId, tags, isReportBuilderWorkspace }
     : {};
   const siloProps = widget.type === 'silo' ? { isReportBuilderWorkspace } : {};
   const sparklineTag = widget.type === 'kpi' ? getKpiSparklineTag(widget.config) : null;
@@ -92,15 +125,23 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
     : {};
 
   const isInvisible = INVISIBLE_WRAPPER_TYPES.has(widget.type);
+  const drillOpen =
+    widget.type === 'table' &&
+    widget.config?.drillDown?.enabled &&
+    Array.isArray(widget.config?.drillDown?.detailWidgets) &&
+    widget.config.drillDown.detailWidgets.length > 0;
+  const overflowVisible = widget.type === 'tabcontainer' || drillOpen;
 
   return (
     <WidgetErrorBoundary widgetType={widget.type} key={widget.id || widgetId}>
-      <div className={isInvisible ? 'h-full w-full' : 'h-full w-full flex flex-col min-h-0 overflow-hidden'}>
+      <div className={isInvisible ? 'h-full w-full' : `h-full w-full flex flex-col min-h-0 ${overflowVisible ? 'overflow-visible' : 'overflow-hidden'}`}>
         <Component
           config={widget.config || {}}
           tagValues={tagValues || {}}
           isPreview={isPreview}
           {...tableProps}
+          {...tabContainerProps}
+          {...dataPanelProps}
           {...siloProps}
           {...kpiProps}
           {...chartProps}

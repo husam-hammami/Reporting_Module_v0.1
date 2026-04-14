@@ -1,5 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, ChevronDown, ChevronRight, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy, Move, PanelRightClose } from 'lucide-react';
+import { X, Plus, Trash2, ChevronDown, ChevronRight, ChevronLeft, Database, Palette, AlertTriangle, Sliders, MousePointer, Tag, FunctionSquare, Grid3x3, Type, SeparatorHorizontal, ArrowRightLeft, Copy, Move, PanelRightClose, Layers } from 'lucide-react';
+import { uid, WIDGET_CATALOG } from '../widgets/widgetDefaults';
+import { collectOrderedDrillRowKeys, tagToRowKeyPlaceholder } from '../utils/drillDownTagPick';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import FormulaEditor from '../formulas/FormulaEditor';
 
@@ -747,6 +749,17 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
               <input type="color" value={config.sectionHeaderColor || '#0f172a'} onChange={(e) => onUpdate({ sectionHeaderColor: e.target.value })} className="rb-color-swatch" />
             </div>
           </Field>
+          <Field label="Section header border">
+            <SelectInput
+              value={config.sectionHeaderBorderWidth || '1'}
+              onChange={(v) => onUpdate({ sectionHeaderBorderWidth: v })}
+              options={[
+                { value: '1', label: 'Thin (1px)' },
+                { value: '2', label: 'Medium (2px)' },
+                { value: '3', label: 'Thick (3px)' },
+              ]}
+            />
+          </Field>
           <Field label="Row colors">
             <div className="rb-color-group">
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
@@ -756,6 +769,85 @@ function DisplaySection({ widgetType, config, onUpdate, tags = [] }) {
               <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">border</span>
               <input type="color" value={config.borderColor || '#e2e8f0'} onChange={(e) => onUpdate({ borderColor: e.target.value })} className="rb-color-swatch" />
             </div>
+          </Field>
+        </>
+      )}
+
+      {widgetType === 'datapanel' && (
+        <>
+          <Field label="Header style">
+            <SelectInput
+              value={config.headerStyle || 'bar'}
+              onChange={(v) => onUpdate({ headerStyle: v })}
+              options={[
+                { value: 'bar', label: 'Solid bar' },
+                { value: 'inline', label: 'Inline with line' },
+                { value: 'legend', label: 'Legend (on border)' },
+              ]}
+            />
+          </Field>
+          <Field label="Header align">
+            <SelectInput
+              value={config.headerAlign || 'left'}
+              onChange={(v) => onUpdate({ headerAlign: v })}
+              options={[
+                { value: 'left', label: 'Left' },
+                { value: 'center', label: 'Center' },
+                { value: 'right', label: 'Right' },
+              ]}
+            />
+          </Field>
+          <Field label="Header text size">
+            <SelectInput
+              value={config.headerFontSize || '12px'}
+              onChange={(v) => onUpdate({ headerFontSize: v })}
+              options={[
+                { value: '9px', label: 'Small (9px)' },
+                { value: '11px', label: 'Normal (11px)' },
+                { value: '12px', label: 'Default (12px)' },
+                { value: '14px', label: 'Large (14px)' },
+                { value: '16px', label: 'X-Large (16px)' },
+                { value: '18px', label: 'XX-Large (18px)' },
+                { value: '20px', label: 'Heading (20px)' },
+              ]}
+            />
+          </Field>
+          <Field label="Header colors">
+            <div className="rb-color-group">
+              {(config.headerStyle || 'bar') === 'bar' && (
+                <>
+                  <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
+                  <input type="color" value={config.headerBg || '#f9fafb'} onChange={(e) => onUpdate({ headerBg: e.target.value })} className="rb-color-swatch" />
+                </>
+              )}
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">text</span>
+              <input type="color" value={config.headerColor || '#111827'} onChange={(e) => onUpdate({ headerColor: e.target.value })} className="rb-color-swatch" />
+            </div>
+          </Field>
+          <Field label="Panel border">
+            <div className="rb-color-group">
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">color</span>
+              <input type="color" value={config.panelBorder || '#e5e7eb'} onChange={(e) => onUpdate({ panelBorder: e.target.value })} className="rb-color-swatch" />
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">width</span>
+              <SelectInput
+                value={config.panelBorderWidth || '1'}
+                onChange={(v) => onUpdate({ panelBorderWidth: v })}
+                options={[
+                  { value: '1', label: '1px' },
+                  { value: '2', label: '2px' },
+                  { value: '3', label: '3px' },
+                ]}
+              />
+            </div>
+          </Field>
+          <Field label="Panel background">
+            <div className="rb-color-group">
+              <span className="text-[9px] text-[var(--rb-text-muted)] mr-1">bg</span>
+              <input type="color" value={config.panelBg || '#ffffff'} onChange={(e) => onUpdate({ panelBg: e.target.value })} className="rb-color-swatch" />
+            </div>
+          </Field>
+          <Field label="Content padding (px)">
+            <TextInput type="number" value={config.contentPadding ?? 6} onChange={(v) => onUpdate({ contentPadding: Math.max(0, Number(v) || 0) })} />
           </Field>
         </>
       )}
@@ -945,9 +1037,20 @@ function ChartSeriesSection({ config, onUpdate, tags, tagValues, savedFormulas =
                   <X size={14} />
                 </button>
               </div>
-              <Field label="Label">
-                <TextInput value={s.label} onChange={(v) => updateSeriesItem(i, { label: v })} placeholder="Series label" />
-              </Field>
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Field label="Label">
+                    <TextInput value={s.label} onChange={(v) => updateSeriesItem(i, { label: v })} placeholder="Series label" />
+                  </Field>
+                </div>
+                <input
+                  type="color"
+                  value={s.color || ['#2563eb','#7c3aed','#059669','#d97706','#dc2626','#ec4899','#8b5cf6','#06b6d4'][i % 8]}
+                  onChange={(e) => updateSeriesItem(i, { color: e.target.value })}
+                  title="Series color"
+                  className="w-8 h-8 rounded-md border border-[var(--rb-border)] cursor-pointer bg-transparent p-0 hover:border-[var(--rb-accent)] transition-all flex-shrink-0 mb-0.5"
+                />
+              </div>
               <Field label="Source type">
                 <SelectInput
                   value={s.dataSource?.type || 'tag'}
@@ -1037,6 +1140,10 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
       width: 120,
       format: 'number',
       thresholds: [],
+      group: '',
+      cellBg: '',
+      cellColor: '',
+      fontWeight: '',
     }]);
     setTimeout(() => {
       addColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1116,6 +1223,10 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
               <div className="px-3 pb-3 pt-2 space-y-3 border-t border-[var(--rb-border)]">
                 <Field label="Column header">
                   <TextInput value={col.label} onChange={(v) => updateColumn(i, { label: v })} placeholder="Column name" />
+                </Field>
+
+                <Field label="Header group">
+                  <TextInput value={col.group || ''} onChange={(v) => updateColumn(i, { group: v })} placeholder="e.g. OnlineValues (groups columns under shared header)" />
                 </Field>
 
                 <Field label="Value source">
@@ -1291,6 +1402,421 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
   );
 }
 
+const DRILLDOWN_WIDGET_TYPES = WIDGET_CATALOG.filter(
+  (w) => ['kpi', 'chart', 'barchart', 'gauge', 'stat', 'piechart', 'sparkline', 'progress'].includes(w.type),
+);
+
+function DrillTagTemplatePicker({ tags, rowKeys, sep, onPick, hint }) {
+  const [q, setQ] = useState('');
+  const safeTags = Array.isArray(tags) ? tags : [];
+  const filtered = useMemo(() => {
+    let list = safeTags;
+    if (q.trim()) {
+      const qq = q.toLowerCase();
+      list = safeTags.filter(
+        (t) => t.tag_name?.toLowerCase().includes(qq) || t.display_name?.toLowerCase().includes(qq),
+      );
+    }
+    return list.slice(0, 120);
+  }, [safeTags, q]);
+
+  return (
+    <div className="space-y-1.5 mt-2">
+      <span className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed block">
+        {hint || 'Choose a tag to insert as a {ROW_KEY} pattern when it matches a row id + separator.'}
+      </span>
+      <input
+        type="text"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search tags..."
+        className="w-full text-[11px] rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] px-2 py-1.5"
+      />
+      <select
+        className="w-full text-[11px] rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] px-2 py-1.5"
+        defaultValue=""
+        onChange={(e) => {
+          const tn = e.target.value;
+          if (!tn) return;
+          onPick(tagToRowKeyPlaceholder(tn, rowKeys, sep || '_'));
+          e.target.selectedIndex = 0;
+        }}
+      >
+        <option value="">— Pick tag → {'{ROW_KEY}'} pattern —</option>
+        {filtered.map((t) => (
+          <option key={t.tag_name} value={t.tag_name}>
+            {t.display_name || t.tag_name}
+          </option>
+        ))}
+      </select>
+      {rowKeys.length === 0 && (
+        <p className="text-[9px] text-amber-600 dark:text-amber-400 leading-relaxed">
+          No row keys detected yet. Put machine ids (e.g. c32) in the key column on static or live rows.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function TableRowTabLinkSection({ config, onUpdate, canvasWidgets = [], currentWidgetId }) {
+  const link = config.tableRowTabLink || { enabled: false, tabContainerWidgetId: '' };
+  const dd = config.drillDown || {};
+  const columns = Array.isArray(config.tableColumns) ? config.tableColumns : [];
+  const tabContainers = useMemo(
+    () => (canvasWidgets || []).filter((w) => w && w.type === 'tabcontainer' && w.id !== currentWidgetId),
+    [canvasWidgets, currentWidgetId],
+  );
+
+  const updateLink = (patch) => onUpdate({ tableRowTabLink: { ...link, ...patch } });
+  const updateDD = (patch) => onUpdate({ drillDown: { ...dd, ...patch } });
+
+  return (
+    <Section icon={ArrowRightLeft} title="Row → tab container" defaultOpen={false}>
+      <Toggle
+        label="Link row click to tab container"
+        value={!!link.enabled}
+        onChange={(v) => updateLink({ enabled: v })}
+      />
+      {link.enabled && (
+        <>
+          <Field label="Tab container">
+            <select
+              className="w-full text-[11px] rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] px-2 py-1.5"
+              value={link.tabContainerWidgetId || ''}
+              onChange={(e) => updateLink({ tabContainerWidgetId: e.target.value })}
+            >
+              <option value="">— Select —</option>
+              {tabContainers.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {(w.config?.title || 'Tab container')} · {w.id}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {!dd.enabled && (
+            <Field label="Row key column">
+              <SelectInput
+                value={String(dd.keyColumn ?? 0)}
+                onChange={(v) => updateDD({ keyColumn: Number(v) })}
+                options={columns.length > 0
+                  ? columns.map((col, i) => ({ value: String(i), label: col.label || `Column ${i + 1}` }))
+                  : [{ value: '0', label: 'No columns yet' }]
+                }
+              />
+            </Field>
+          )}
+          <p className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed">
+            {dd.enabled
+              ? 'Uses the drill-down key column for the row id. Tab labels must match that id (case-insensitive), e.g. C32 and c32.'
+              : 'Choose which column holds the machine id. Tab labels must match that value (case-insensitive).'}
+          </p>
+          {tabContainers.length === 0 && (
+            <p className="text-[9px] text-amber-600 dark:text-amber-400">Add a Tab Container widget on the canvas to select a target.</p>
+          )}
+        </>
+      )}
+    </Section>
+  );
+}
+
+function DrillDownSection({ config, onUpdate, tags, tagValues, savedFormulas = [] }) {
+  const dd = config.drillDown || { enabled: false, keyColumn: 0, prefixSeparator: '_', detailWidgets: [], detailGridCols: 2 };
+  const columns = Array.isArray(config.tableColumns) ? config.tableColumns : [];
+  const detailWidgets = Array.isArray(dd.detailWidgets) ? dd.detailWidgets : [];
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [expandedWidget, setExpandedWidget] = useState(null);
+
+  const drillRowKeys = useMemo(() => collectOrderedDrillRowKeys(config, tagValues), [config, tagValues]);
+
+  const updateDD = (patch) => onUpdate({ drillDown: { ...dd, ...patch } });
+
+  const addDetailWidget = (catalogEntry) => {
+    const maxBottom = detailWidgets.reduce(
+      (m, w) => Math.max(m, (Number(w.y) || 0) + (Number(w.h) || 2)),
+      0,
+    );
+    const dw = {
+      id: uid(),
+      type: catalogEntry.type,
+      x: 0,
+      y: maxBottom,
+      w: Math.min(catalogEntry.defaultW || 6, 12),
+      h: catalogEntry.defaultH || 2,
+      config: JSON.parse(JSON.stringify(catalogEntry.defaultConfig)),
+    };
+    updateDD({ detailWidgets: [...detailWidgets, dw] });
+    setShowAddMenu(false);
+    setExpandedWidget(dw.id);
+  };
+
+  const removeDetailWidget = (id) => {
+    updateDD({ detailWidgets: detailWidgets.filter((w) => w.id !== id) });
+    if (expandedWidget === id) setExpandedWidget(null);
+  };
+
+  const updateDetailWidget = (id, patch) => {
+    updateDD({
+      detailWidgets: detailWidgets.map((w) => {
+        if (w.id !== id) return w;
+        const next = { ...w, ...patch };
+        if (patch.config && typeof patch.config === 'object') {
+          next.config = { ...(w.config || {}), ...patch.config };
+        }
+        return next;
+      }),
+    });
+  };
+
+  const HAS_DS = new Set(['kpi', 'gauge', 'stat', 'sparkline', 'progress']);
+  const HAS_SR = new Set(['chart', 'barchart', 'piechart']);
+
+  return (
+    <Section icon={Layers} title="Drill-Down" defaultOpen={false}>
+      <Toggle label="Enable row drill-down" value={dd.enabled} onChange={(v) => updateDD({ enabled: v })} />
+
+      {dd.enabled && (
+        <>
+          <Field label="Key column (row identifier)">
+            <SelectInput
+              value={String(dd.keyColumn ?? 0)}
+              onChange={(v) => updateDD({ keyColumn: Number(v) })}
+              options={columns.length > 0
+                ? columns.map((col, i) => ({ value: String(i), label: col.label || `Column ${i + 1}` }))
+                : [{ value: '0', label: 'No columns yet' }]
+              }
+            />
+          </Field>
+
+          <Field label="Tag prefix separator">
+            <TextInput value={dd.prefixSeparator ?? '_'} onChange={(v) => updateDD({ prefixSeparator: v })} placeholder="_" />
+            <p className="text-[9px] text-[var(--rb-text-muted)] mt-1">
+              Tags use <code className="font-mono bg-[var(--rb-surface)] px-1 rounded">{'{ROW_KEY}'}</code> placeholder, e.g. <code className="font-mono bg-[var(--rb-surface)] px-1 rounded">{'{ROW_KEY}_total_active_energy'}</code>
+            </p>
+          </Field>
+
+          <p className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed mt-1 mb-2">
+            Detail widgets use a <strong className="text-[var(--rb-text)]">12-column</strong> grid under the table. With the table selected, drag and resize them in the builder; positions are saved on mouse up.
+          </p>
+
+          <div className="mt-3 pt-3 border-t border-[var(--rb-border)]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--rb-text-muted)]">
+                Detail Widgets ({detailWidgets.length})
+              </span>
+            </div>
+
+            {detailWidgets.length === 0 && (
+              <p className="text-[9px] text-[var(--rb-text-muted)] mb-3">
+                Add widgets that appear when a row is clicked. Use <code className="font-mono bg-[var(--rb-surface)] px-1 rounded">{'{ROW_KEY}'}</code> in tag names.
+              </p>
+            )}
+
+            <div className="space-y-2">
+              {detailWidgets.map((dw) => {
+                const isExpanded = expandedWidget === dw.id;
+                const dwConfig = dw.config || {};
+                const catEntry = WIDGET_CATALOG.find((c) => c.type === dw.type);
+
+                return (
+                  <div key={dw.id} className="rounded-lg bg-[var(--rb-surface)] border border-[var(--rb-border)] overflow-hidden">
+                    <div
+                      className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none"
+                      onClick={() => setExpandedWidget(isExpanded ? null : dw.id)}
+                    >
+                      <ChevronRight size={12} className={`text-[var(--rb-text-muted)] transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                      <span className="flex-1 text-[12px] font-medium text-[var(--rb-text)] truncate">
+                        {dwConfig.title || catEntry?.label || dw.type}
+                      </span>
+                      <span className="text-[9px] text-[var(--rb-text-muted)] flex-shrink-0">{dw.type}</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeDetailWidget(dw.id); }}
+                        className="rb-btn-ghost p-1 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="px-3 pb-3 pt-1 space-y-3 border-t border-[var(--rb-border)]">
+                        <Field label="Title">
+                          <TextInput
+                            value={dwConfig.title || ''}
+                            onChange={(v) => updateDetailWidget(dw.id, { config: { title: v } })}
+                            placeholder="{ROW_KEY} Energy Chart"
+                          />
+                        </Field>
+
+                        {HAS_DS.has(dw.type) && (
+                          <>
+                            <Field label="Source type">
+                              <SelectInput
+                                value={dwConfig.dataSource?.type || 'tag'}
+                                onChange={(v) => updateDetailWidget(dw.id, { config: { dataSource: { ...(dwConfig.dataSource || {}), type: v } } })}
+                                options={[
+                                  { value: 'tag', label: 'Single Tag' },
+                                  { value: 'formula', label: 'Custom Formula' },
+                                ]}
+                              />
+                            </Field>
+                            {(dwConfig.dataSource?.type || 'tag') === 'tag' && (
+                              <Field label="Tag name (use {ROW_KEY})">
+                                <TextInput
+                                  value={dwConfig.dataSource?.tagName || ''}
+                                  onChange={(v) => updateDetailWidget(dw.id, { config: { dataSource: { ...(dwConfig.dataSource || {}), tagName: v } } })}
+                                  placeholder="{ROW_KEY}_total_active_energy"
+                                />
+                                <DrillTagTemplatePicker
+                                  tags={tags}
+                                  rowKeys={drillRowKeys}
+                                  sep={dd.prefixSeparator ?? '_'}
+                                  onPick={(pattern) =>
+                                    updateDetailWidget(dw.id, {
+                                      config: { dataSource: { ...(dwConfig.dataSource || {}), tagName: pattern } },
+                                    })
+                                  }
+                                />
+                              </Field>
+                            )}
+                            {dwConfig.dataSource?.type === 'formula' && (
+                              <Field label="Formula (use {ROW_KEY})">
+                                <TextInput
+                                  value={dwConfig.dataSource?.formula || ''}
+                                  onChange={(v) => updateDetailWidget(dw.id, { config: { dataSource: { ...(dwConfig.dataSource || {}), formula: v } } })}
+                                  placeholder="{'{ROW_KEY}_power'} * 2"
+                                />
+                              </Field>
+                            )}
+                          </>
+                        )}
+
+                        {HAS_SR.has(dw.type) && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--rb-text-muted)]">Series</span>
+                              <button
+                                onClick={() => {
+                                  const series = [...(dwConfig.series || []), {
+                                    dataSource: { type: 'tag', tagName: '', formula: '' },
+                                    label: `Series ${(dwConfig.series || []).length + 1}`,
+                                    color: '',
+                                  }];
+                                  updateDetailWidget(dw.id, { config: { series } });
+                                }}
+                                className="text-[9px] font-medium text-[var(--rb-accent)] hover:underline"
+                              >
+                                + Add series
+                              </button>
+                            </div>
+                            {(dwConfig.series || []).map((s, si) => (
+                              <div key={si} className="p-2 rounded border border-[var(--rb-border)] space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-medium text-[var(--rb-text-muted)]">Series {si + 1}</span>
+                                  <button
+                                    onClick={() => {
+                                      const series = (dwConfig.series || []).filter((_, j) => j !== si);
+                                      updateDetailWidget(dw.id, { config: { series } });
+                                    }}
+                                    className="p-0.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
+                                  >
+                                    <X size={10} />
+                                  </button>
+                                </div>
+                                <Field label="Label">
+                                  <TextInput
+                                    value={s.label || ''}
+                                    onChange={(v) => {
+                                      const series = [...(dwConfig.series || [])];
+                                      series[si] = { ...series[si], label: v };
+                                      updateDetailWidget(dw.id, { config: { series } });
+                                    }}
+                                    placeholder="Series label"
+                                  />
+                                </Field>
+                                <Field label="Tag name (use {ROW_KEY})">
+                                  <TextInput
+                                    value={s.dataSource?.tagName || s.tagName || ''}
+                                    onChange={(v) => {
+                                      const series = [...(dwConfig.series || [])];
+                                      series[si] = { ...series[si], dataSource: { ...(series[si].dataSource || {}), type: 'tag', tagName: v } };
+                                      updateDetailWidget(dw.id, { config: { series } });
+                                    }}
+                                    placeholder="{ROW_KEY}_effective_power"
+                                  />
+                                  <DrillTagTemplatePicker
+                                    tags={tags}
+                                    rowKeys={drillRowKeys}
+                                    sep={dd.prefixSeparator ?? '_'}
+                                    onPick={(pattern) => {
+                                      const series = [...(dwConfig.series || [])];
+                                      series[si] = {
+                                        ...series[si],
+                                        dataSource: { ...(series[si].dataSource || {}), type: 'tag', tagName: pattern },
+                                      };
+                                      updateDetailWidget(dw.id, { config: { series } });
+                                    }}
+                                  />
+                                </Field>
+                              </div>
+                            ))}
+                          </>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <Field label="Unit">
+                            <TextInput
+                              value={dwConfig.unit || ''}
+                              onChange={(v) => updateDetailWidget(dw.id, { config: { unit: v } })}
+                              placeholder="kWh"
+                            />
+                          </Field>
+                          <Field label="Decimals">
+                            <TextInput
+                              type="number"
+                              value={dwConfig.decimals ?? 1}
+                              onChange={(v) => updateDetailWidget(dw.id, { config: { decimals: v } })}
+                            />
+                          </Field>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="relative mt-2">
+              <button
+                onClick={() => setShowAddMenu(!showAddMenu)}
+                className="inline-flex items-center gap-1.5 text-[9px] font-medium text-[var(--rb-accent)] hover:underline"
+              >
+                <Plus size={12} />
+                Add detail widget
+              </button>
+              {showAddMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)} />
+                  <div className="absolute z-50 mt-1 left-0 w-48 rounded-lg border border-[var(--rb-border)] bg-[var(--rb-panel)] shadow-xl overflow-hidden">
+                    {DRILLDOWN_WIDGET_TYPES.map((cat) => (
+                      <button
+                        key={cat.type}
+                        type="button"
+                        onClick={() => addDetailWidget(cat)}
+                        className="w-full text-left px-3 py-2 text-[12px] hover:bg-[var(--rb-accent-subtle)] transition-colors text-[var(--rb-text)]"
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </Section>
+  );
+}
+
 const HAS_DATA_SOURCE = new Set(['kpi', 'gauge', 'stat', 'silo', 'status', 'sparkline', 'progress', 'hopper']);
 const HAS_THRESHOLDS = new Set(['kpi', 'gauge', 'stat', 'table', 'silo', 'status', 'progress', 'hopper']);
 const HAS_SERIES = new Set(['chart', 'barchart', 'piechart']);
@@ -1299,7 +1825,7 @@ const HAS_TABLE_COLUMNS = new Set(['table']);
 const TAB_DATA = 'data';
 const TAB_FORMAT = 'format';
 
-export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, onHidePanel, tags, tagValues, groups = [], savedFormulas = [] }) {
+export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, onHidePanel, tags, tagValues, groups = [], savedFormulas = [], isSubWidget, onBackToParent, canvasWidgets = [] }) {
   const [activeTab, setActiveTab] = useState(TAB_DATA);
   const prefersReducedMotion = useReducedMotion();
 
@@ -1324,6 +1850,14 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
   return (
     <div className="flex flex-col h-full">
       <div className="flex-shrink-0 border-b border-[var(--rb-border)]">
+        {isSubWidget && onBackToParent && (
+          <button
+            onClick={onBackToParent}
+            className="w-full flex items-center gap-2 px-5 py-2 text-[10px] font-semibold text-[var(--rb-accent)] bg-[var(--rb-accent-subtle)] hover:bg-[var(--rb-accent-subtle)]/80 transition-colors border-b border-[var(--rb-border)]"
+          >
+            <ChevronLeft size={12} /> Back to Tab Container
+          </button>
+        )}
         <div className="flex items-center justify-between px-5 py-3.5">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--rb-accent-subtle)] border border-[var(--rb-accent)]/20">
@@ -1332,7 +1866,7 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
             <p className="text-[13px] font-bold text-[var(--rb-text)] truncate">{widgetTitle}</p>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={onClose} className="rb-btn-ghost p-2 hover:bg-[var(--rb-surface)] rounded-md transition-colors" title="Deselect widget">
+            <button onClick={onClose} className="rb-btn-ghost p-2 hover:bg-[var(--rb-surface)] rounded-md transition-colors" title={isSubWidget ? 'Back to container' : 'Deselect widget'}>
               <X size={16} className="text-[var(--rb-text-muted)]" />
             </button>
             {onHidePanel && (
@@ -1372,7 +1906,9 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
             { key: 'y', label: 'Y', min: 0, max: 999 },
             { key: 'w', label: 'W', min: 1, max: 12 },
             { key: 'h', label: 'H', min: 1, max: 999 },
-          ].map(({ key, label, min, max }) => (
+          ].map(({ key, label, min, max }) => {
+            const gridCols = 12;
+            return (
             <div key={key}>
               <label className="block text-[8px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.1em] mb-0.5 text-center">{label}</label>
               <input
@@ -1384,15 +1920,16 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
                   let v = parseInt(e.target.value, 10);
                   if (isNaN(v)) return;
                   v = Math.max(min, Math.min(max, v));
-                  if (key === 'x' && v + (widget.w || 1) > 12) v = 12 - (widget.w || 1);
-                  if (key === 'w' && (widget.x || 0) + v > 12) v = 12 - (widget.x || 0);
+                  if (key === 'x' && v + (widget.w || 1) > gridCols) v = gridCols - (widget.w || 1);
+                  if (key === 'w' && (widget.x || 0) + v > gridCols) v = gridCols - (widget.x || 0);
                   onUpdate(widget.id, { [key]: v });
                 }}
                 className="rb-input-base w-full text-center font-mono tabular-nums text-[11px] font-bold"
                 style={{ padding: '4px 2px' }}
               />
             </div>
-          ))}
+          );
+          })}
         </div>
       </div>
 
@@ -1415,7 +1952,136 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
               {HAS_TABLE_COLUMNS.has(widget.type) && (
                 <TableColumnsSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
               )}
-              {!HAS_DATA_SOURCE.has(widget.type) && !HAS_SERIES.has(widget.type) && !HAS_TABLE_COLUMNS.has(widget.type) && (
+              {HAS_TABLE_COLUMNS.has(widget.type) && (
+                <TableRowTabLinkSection
+                  config={config}
+                  onUpdate={handleConfigUpdate}
+                  canvasWidgets={canvasWidgets}
+                  currentWidgetId={widget.id}
+                />
+              )}
+              {HAS_TABLE_COLUMNS.has(widget.type) && (
+                <DrillDownSection config={config} onUpdate={handleConfigUpdate} tags={tags} tagValues={tagValues} savedFormulas={savedFormulas} />
+              )}
+              {widget.type === 'statusbar' && (
+                <Section icon={Database} title="Status Tags" defaultOpen={true}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--rb-text-muted)]">Tags</span>
+                    <button
+                      onClick={() => handleConfigUpdate({ tags: [...(config.tags || []), { tagName: '', label: '', onLabel: 'ON', offLabel: 'OFF', onColor: '#10b981', offColor: '#6b7280' }] })}
+                      className="text-[9px] font-medium text-[var(--rb-accent)] hover:underline"
+                    >+ Add tag</button>
+                  </div>
+                  {(config.tags || []).map((tag, i) => (
+                    <div key={i} className="p-2 rounded border border-[var(--rb-border)] space-y-1.5 mb-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-medium text-[var(--rb-text-muted)]">Tag {i + 1}</span>
+                        <button
+                          onClick={() => {
+                            const newTags = (config.tags || []).filter((_, j) => j !== i);
+                            handleConfigUpdate({ tags: newTags });
+                          }}
+                          className="p-0.5 text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)]"
+                        ><X size={10} /></button>
+                      </div>
+                      <TagPicker
+                        tags={tags}
+                        value={tag.tagName || ''}
+                        onChange={(v) => {
+                          const newTags = [...(config.tags || [])];
+                          const picked = tags.find(t => t.tag_name === v);
+                          newTags[i] = { ...newTags[i], tagName: v, label: newTags[i].label || picked?.display_name || v };
+                          handleConfigUpdate({ tags: newTags });
+                        }}
+                      />
+                      <div className="grid grid-cols-2 gap-1">
+                        <Field label="Label">
+                          <TextInput value={tag.label || ''} onChange={(v) => {
+                            const newTags = [...(config.tags || [])];
+                            newTags[i] = { ...newTags[i], label: v };
+                            handleConfigUpdate({ tags: newTags });
+                          }} />
+                        </Field>
+                        <Field label="ON Text">
+                          <TextInput value={tag.onLabel || 'ON'} onChange={(v) => {
+                            const newTags = [...(config.tags || [])];
+                            newTags[i] = { ...newTags[i], onLabel: v };
+                            handleConfigUpdate({ tags: newTags });
+                          }} />
+                        </Field>
+                        <Field label="OFF Text">
+                          <TextInput value={tag.offLabel || 'OFF'} onChange={(v) => {
+                            const newTags = [...(config.tags || [])];
+                            newTags[i] = { ...newTags[i], offLabel: v };
+                            handleConfigUpdate({ tags: newTags });
+                          }} />
+                        </Field>
+                        <Field label="ON Color">
+                          <ColorInput value={tag.onColor || '#10b981'} onChange={(v) => {
+                            const newTags = [...(config.tags || [])];
+                            newTags[i] = { ...newTags[i], onColor: v };
+                            handleConfigUpdate({ tags: newTags });
+                          }} />
+                        </Field>
+                      </div>
+                    </div>
+                  ))}
+                </Section>
+              )}
+              {widget.type === 'tabcontainer' && (
+                <Section icon={Layers} title="Tab Container" defaultOpen={true}>
+                  <p className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed">
+                    Click the tab container on the canvas to manage tabs and add widgets.
+                    Double-click a tab label to rename it. Use the + button inside the widget to add tabs and sub-widgets.
+                  </p>
+                  <div className="pt-3 mt-3 border-t border-[var(--rb-border)] space-y-3">
+                    <Toggle
+                      label="Hide other tabs when a table row selects a tab"
+                      value={config.hideNonMatchingTabsOnTableRowLink !== false}
+                      onChange={(v) => handleConfigUpdate({ hideNonMatchingTabsOnTableRowLink: v })}
+                    />
+                    <p className="text-[9px] text-[var(--rb-text-muted)] leading-relaxed">
+                      Applies in preview and viewer when a linked data table drives this container. The strip shows only the row-matched machine tab plus any tabs checked below; clicking those tabs switches content without bringing back hidden tabs. Other widgets on the report are unchanged. While this tab container is selected on the canvas, all tabs stay visible for editing.
+                    </p>
+                    <div>
+                      <span className="block text-[9px] font-bold text-[var(--rb-text-muted)] uppercase tracking-[0.06em] mb-2">
+                        Always show tabs (with selected machine)
+                      </span>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        {(Array.isArray(config.tabs) ? config.tabs : []).map((tab) => {
+                          const ids = Array.isArray(config.tableRowLinkAlwaysVisibleTabIds)
+                            ? config.tableRowLinkAlwaysVisibleTabIds.map(String)
+                            : [];
+                          const checked = ids.includes(String(tab.id));
+                          return (
+                            <label
+                              key={tab.id}
+                              className="flex items-center gap-2 text-[11px] text-[var(--rb-text)] cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                className="rounded border-[var(--rb-border)]"
+                                checked={checked}
+                                onChange={(e) => {
+                                  const next = new Set(ids);
+                                  if (e.target.checked) next.add(String(tab.id));
+                                  else next.delete(String(tab.id));
+                                  handleConfigUpdate({ tableRowLinkAlwaysVisibleTabIds: [...next] });
+                                }}
+                              />
+                              <span className="truncate">{tab.label || tab.id}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {(!config.tabs || config.tabs.length === 0) && (
+                        <p className="text-[9px] text-[var(--rb-text-muted)] italic">No tabs yet.</p>
+                      )}
+                    </div>
+                  </div>
+                </Section>
+              )}
+              {!HAS_DATA_SOURCE.has(widget.type) && !HAS_SERIES.has(widget.type) && !HAS_TABLE_COLUMNS.has(widget.type) && widget.type !== 'tabcontainer' && (
                 <div className="px-5 py-6 text-[9px] text-[var(--rb-text-muted)]">
                   {widget.type === 'text' || widget.type === 'logo'
                     ? 'Use the Format tab to configure this element.'
@@ -1432,15 +2098,32 @@ export default function PropertiesPanel({ widget, onUpdate, onDelete, onClose, o
               exit={prefersReducedMotion ? undefined : { opacity: 0, x: -8 }}
               transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
             >
-              {['kpi', 'gauge', 'silo', 'stat', 'chart', 'barchart', 'piechart', 'table', 'image'].includes(widget.type) && (
+              {['kpi', 'gauge', 'silo', 'stat', 'chart', 'barchart', 'piechart', 'table', 'image', 'status', 'sparkline', 'progress', 'hopper', 'statusbar', 'tabcontainer'].includes(widget.type) && (
                 <Section icon={Palette} title="Card Appearance" defaultOpen={true} isFirst>
                   <Toggle
                     label="Show card (border & background)"
                     value={config.showCard !== false}
                     onChange={(v) => handleConfigUpdate({ showCard: v })}
                   />
+                  {config.showCard !== false && (
+                    <div className="mt-1">
+                      <label className="rb-label block mb-1">Card Style</label>
+                      <select
+                        value={config.cardStyle || 'default'}
+                        onChange={(e) => handleConfigUpdate({ cardStyle: e.target.value })}
+                        className="rb-input-base w-full text-[11px] py-1 px-2"
+                      >
+                        <option value="default">Default</option>
+                        <option value="borderless">Borderless</option>
+                        <option value="glass">Glass</option>
+                        <option value="accent-top">Accent Top</option>
+                        <option value="holographic">Holographic</option>
+                      </select>
+                    </div>
+                  )}
                 </Section>
               )}
+              {/* StatusBar tags are in the Data tab, not here */}
               <Section icon={SeparatorHorizontal} title="Separator Line" defaultOpen={false}>
                 <Toggle
                   label="Show bottom separator"
