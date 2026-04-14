@@ -389,15 +389,27 @@ def _resolve_cell(cell, tag_data):
         return ''
     src = cell.get('sourceType', 'static')
     decimals = cell.get('decimals', 1) if cell.get('decimals') is not None else 1
+    is_checkbox = cell.get('unit') == '__checkbox__'
     unit = cell.get('unit', '')
     if unit == '__checkbox__':
         unit = ''
     elif unit == '__custom__':
         unit = cell.get('customUnit', '')
 
+    def _fmt_check(val):
+        """Format a value as checkbox: ✓ for truthy, empty for falsy."""
+        if val is None:
+            return ''
+        try:
+            return '✓' if float(val) == 1 else ''
+        except (TypeError, ValueError):
+            return '✓' if str(val).strip().lower() in ('1', 'true', 'yes') else ''
+
     def _fmt(val):
         if val is None:
             return '—'
+        if is_checkbox:
+            return _fmt_check(val)
         try:
             n = float(val)
             formatted = f"{n:,.{decimals}f}"
@@ -443,16 +455,27 @@ def _resolve_cell_raw(cell, tag_data):
     """Resolve a single cell to a raw (value, unit, decimals) tuple for Excel output.
     Returns: (value: float|str|None, unit: str, decimals: int)
     - value is a raw float for numeric cells (no formatting), str for static, None for missing
+    - Checkbox cells return '✓' or '' as string values
     """
     if not cell:
         return (None, '', 1)
     src = cell.get('sourceType', 'static')
     decimals = cell.get('decimals', 1) if cell.get('decimals') is not None else 1
+    is_checkbox = cell.get('unit') == '__checkbox__'
     unit = cell.get('unit', '')
     if unit == '__checkbox__':
         unit = ''
     elif unit == '__custom__':
         unit = cell.get('customUnit', '')
+
+    def _to_check(val):
+        """Convert value to checkbox string for Excel."""
+        if val is None:
+            return ''
+        try:
+            return '✓' if float(val) == 1 else ''
+        except (TypeError, ValueError):
+            return '✓' if str(val).strip().lower() in ('1', 'true', 'yes') else ''
 
     def _to_num(val):
         if val is None:
@@ -474,10 +497,14 @@ def _resolve_cell_raw(cell, tag_data):
         agg = cell.get('aggregation', 'last')
         key = f'{agg}::{tag_name}' if agg and agg != 'last' else tag_name
         raw = tag_data.get(key)
+        if is_checkbox:
+            return (_to_check(raw), '', 0)
         return (_to_num(raw), unit, decimals)
 
     if src == 'formula':
         result = _evaluate_formula(cell.get('formula', ''), tag_data, aggregation=cell.get('aggregation'))
+        if is_checkbox:
+            return (_to_check(result), '', 0)
         return (_to_num(result), unit, decimals)
 
     if src == 'group':
@@ -495,6 +522,8 @@ def _resolve_cell_raw(cell, tag_data):
             n = len(vals)
         else:
             n = sum(vals) / len(vals)
+        if is_checkbox:
+            return (_to_check(n), '', 0)
         return (n, unit, decimals)
 
     return (None, '', 1)

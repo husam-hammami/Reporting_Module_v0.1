@@ -332,7 +332,50 @@ function resolveTagKey(tagName, aggregation) {
   return `${aggregation}::${tagName}`;
 }
 
-function resolveCellValue(cell, tagValues, rowContext = null) {
+function clampDecimals0to10(n) {
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(10, Math.round(n)));
+}
+
+/** @returns {number|null} null = property unset (use tag metadata / default) */
+function readExplicitDecimals(cell) {
+  if (!cell) return null;
+  const v = cell.decimals;
+  if (v === undefined || v === null || v === '') return null;
+  const num = Number(v);
+  return Number.isFinite(num) ? clampDecimals0to10(num) : null;
+}
+
+function decimalsFromTagName(tagName, tagDecimalByName) {
+  if (!tagName || !tagDecimalByName || typeof tagDecimalByName !== 'object') return null;
+  const d = tagDecimalByName[tagName];
+  return d != null && Number.isFinite(Number(d)) ? clampDecimals0to10(Number(d)) : null;
+}
+
+/** Resolve display decimal count: explicit cell.decimals wins, else tag metadata, else 0. */
+function resolveFormattingDecimals(cell, tagDecimalByName, { primaryTag, weightTagName, groupTags } = {}) {
+  const explicit = readExplicitDecimals(cell);
+  if (explicit !== null) return explicit;
+  if (primaryTag) {
+    const fromTag = decimalsFromTagName(primaryTag, tagDecimalByName);
+    if (fromTag !== null) return fromTag;
+  }
+  if (weightTagName) {
+    const fromW = decimalsFromTagName(weightTagName, tagDecimalByName);
+    if (fromW !== null) return fromW;
+  }
+  if (Array.isArray(groupTags) && groupTags.length && tagDecimalByName) {
+    let maxD = null;
+    for (const tn of groupTags) {
+      const d = decimalsFromTagName(tn, tagDecimalByName);
+      if (d !== null) maxD = maxD === null ? d : Math.max(maxD, d);
+    }
+    if (maxD !== null) return maxD;
+  }
+  return 0;
+}
+
+function resolveCellValue(cell, tagValues, rowContext = null, tagDecimalByName = null) {
   if (!cell) return '—';
   if (cell.sourceType === 'static') return cell.value ?? '';
   if (cell.sourceType === 'tag') {
@@ -342,7 +385,7 @@ function resolveCellValue(cell, tagValues, rowContext = null) {
     const n = Number(raw);
     if (isNaN(n)) return raw;
     if (cell.unit === '__checkbox__') return { type: 'boolean', checked: n === 1 || n === '1' };
-    const d = cell.decimals ?? 0;
+    const d = resolveFormattingDecimals(cell, tagDecimalByName, { primaryTag: cell.tagName });
     const formatted = n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
     const suffix = effectiveUnit(cell);
     return suffix ? `${formatted} ${suffix}` : formatted;
@@ -353,7 +396,7 @@ function resolveCellValue(cell, tagValues, rowContext = null) {
     const n = Number(result);
     if (isNaN(n)) return result;
     if (cell.unit === '__checkbox__') return { type: 'boolean', checked: n === 1 || n === '1' };
-    const d = cell.decimals ?? 0;
+    const d = resolveFormattingDecimals(cell, tagDecimalByName, {});
     const formatted = n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
     const suffix = effectiveUnit(cell);
     return suffix ? `${formatted} ${suffix}` : formatted;
@@ -369,7 +412,7 @@ function resolveCellValue(cell, tagValues, rowContext = null) {
     else if (agg === 'count') n = vals.length;
     else n = vals.reduce((a, b) => a + b, 0) / vals.length;
     if (cell.unit === '__checkbox__') return { type: 'boolean', checked: n === 1 || n === '1' };
-    const d = cell.decimals ?? 0;
+    const d = resolveFormattingDecimals(cell, tagDecimalByName, { groupTags: cell.groupTags });
     const formatted = Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
     const suffix = effectiveUnit(cell);
     return suffix ? `${formatted} ${suffix}` : formatted;
@@ -392,7 +435,7 @@ function resolveCellValue(cell, tagValues, rowContext = null) {
       if (weightRaw == null) return '—';
       const n = Number(weightRaw);
       if (isNaN(n)) return weightRaw;
-      const d = cell.decimals ?? 0;
+      const d = resolveFormattingDecimals(cell, tagDecimalByName, { weightTagName });
       const formatted = n.toLocaleString(undefined, {
         minimumFractionDigits: d,
         maximumFractionDigits: d,
@@ -408,7 +451,7 @@ function resolveCellValue(cell, tagValues, rowContext = null) {
   return '—';
 }
 
-function resolveKpiValue(kpi, tagValues) {
+function resolveKpiValue(kpi, tagValues, tagDecimalByName = null) {
   return resolveCellValue({
     sourceType: kpi.sourceType || 'tag',
     tagName: kpi.tagName,
@@ -419,7 +462,7 @@ function resolveKpiValue(kpi, tagValues) {
     groupTags: kpi.groupTags,
     aggregation: kpi.aggregation,
     mappingName: kpi.mappingName,
-  }, tagValues);
+  }, tagValues, null, tagDecimalByName);
 }
 
 /** Build a cell-like object from header section status fields (for resolveCellValue). */
@@ -447,17 +490,33 @@ function renderResolvedValue(resolved) {
 
 /* ── Check if a row should be hidden (bin inactive) ──────────────── */
 
-function isRowHidden(row, section, tagValues) {
+function isRowHidden(row, section, tagValues, tagDecimalByName = null) {
   if (!row.hideWhenInactive) return false;
   const refCol = row.hideReferenceCol ?? 0;
   const cell = row.cells?.[refCol];
   if (!cell) return false;
-  const resolved = resolveCellValue(cell, tagValues);
+  const resolved = resolveCellValue(cell, tagValues, null, tagDecimalByName);
   if (resolved && typeof resolved === 'object' && resolved.type === 'boolean') return false;
   // Hide when resolved value is 0, "0", "0.0", or dash (no data)
   if (resolved === '—' || resolved === '') return true;
   const num = Number(String(resolved).replace(/[^0-9.\-]/g, ''));
   return !isNaN(num) && num === 0;
+}
+
+/** tag_name → decimal_places for paginated numeric formatting when a cell has no explicit decimals. */
+export function buildTagDecimalLookup(tags) {
+  if (!Array.isArray(tags) || tags.length === 0) return null;
+  const m = Object.create(null);
+  for (const t of tags) {
+    const name = t?.tag_name;
+    if (!name) continue;
+    const raw = t?.decimal_places;
+    if (raw === undefined || raw === null || raw === '') continue;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) continue;
+    m[name] = clampDecimals0to10(n);
+  }
+  return Object.keys(m).length ? m : null;
 }
 
 /* ── Collect all tag names from paginated config ─────────────────── */
@@ -753,6 +812,34 @@ function InlineTagSelect({ tags, value, onChange }) {
   );
 }
 
+function DecimalsCellInput({ cell, onChange }) {
+  const val = cell.decimals;
+  const displayVal = val === undefined || val === null || val === '' ? '' : String(val);
+  return (
+    <div className="flex items-center gap-1.5 flex-shrink-0">
+      <span className="text-[10px] font-semibold" style={{ color: 'var(--rb-text-muted)' }} title="Decimal places. Empty uses each tag’s setting from Tag Management.">Dec:</span>
+      <input
+        type="number"
+        min={0}
+        max={10}
+        placeholder="Auto"
+        title="Decimal places (empty = tag default)"
+        value={displayVal}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === '') onChange({ ...cell, decimals: undefined });
+          else {
+            const n = Number(raw);
+            onChange({ ...cell, decimals: Number.isFinite(n) ? clampDecimals0to10(n) : undefined });
+          }
+        }}
+        className="rb-input-base text-[11px] py-0.5 px-1"
+        style={{ width: '52px' }}
+      />
+    </div>
+  );
+}
+
 /* ── Inline cell editor for table rows ────────────────────────────── */
 function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
   const srcType = cell.sourceType || 'static';
@@ -825,7 +912,7 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
 
       {/* Options row: Unit + Aggregation — compact single line */}
       {needsUnit && (
-        <div className="flex items-center gap-4 mt-0.5 pt-1" style={{ borderTop: '1px dashed var(--rb-border)' }}>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-0.5 pt-1" style={{ borderTop: '1px dashed var(--rb-border)' }}>
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-semibold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Unit:</span>
             <UnitSelector cell={cell} onChange={onChange} className="text-[11px]" />
@@ -845,6 +932,9 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
                 <option value="count">Count</option>
               </select>
             </div>
+          )}
+          {cell.unit !== '__checkbox__' && (srcType === 'tag' || srcType === 'formula' || srcType === 'group') && (
+            <DecimalsCellInput cell={cell} onChange={onChange} />
           )}
         </div>
       )}
@@ -877,8 +967,12 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
         return m?.output_type === 'tag_value' ? (
           <>
             <span />
-            <div style={{ gridColumn: '2 / -1' }}>
-              <UnitSelector cell={cell} onChange={onChange} className="text-[11px]" />
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5" style={{ borderTop: '1px dashed var(--rb-border)', gridColumn: '2 / -1' }}>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold" style={{ color: 'var(--rb-text-muted)' }}>Unit:</span>
+                <UnitSelector cell={cell} onChange={onChange} className="text-[11px]" />
+              </div>
+              {cell.unit !== '__checkbox__' && <DecimalsCellInput cell={cell} onChange={onChange} />}
             </div>
           </>
         ) : null;
@@ -1466,7 +1560,7 @@ function ReportLogoHeader({ clientLogo }) {
   );
 }
 
-export function PaginatedReportPreview({ sections, tagValues, dateRange, compact = false, isPreviewMode = false }) {
+export function PaginatedReportPreview({ sections, tagValues, dateRange, compact = false, isPreviewMode = false, tagDecimalByName = null }) {
   const containerRef = useRef(null);
   const [pageBreaks, setPageBreaks] = useState([]);
   const { clientLogo } = useBranding();
@@ -1498,7 +1592,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
     // Only update if changed to avoid infinite loops
     const key = breaks.join(',');
     setPageBreaks((prev) => prev.join(',') === key ? prev : breaks);
-  }, [compact, sections, tagValues]);
+  }, [compact, sections, tagValues, tagDecimalByName]);
 
   const totalRows = (sections || []).filter((s) => s.type === 'table').reduce((sum, s) => sum + (s.rows?.length || 0), 0);
 
@@ -1510,7 +1604,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
         const statusLabel = section.statusLabel || 'Status';
         const statusCell = getHeaderStatusCell(section);
         const resolvedStatus = isPreviewMode
-          ? (statusCell ? renderResolvedValue(resolveCellValue(statusCell, tagValues)) : '')
+          ? (statusCell ? renderResolvedValue(resolveCellValue(statusCell, tagValues, null, tagDecimalByName)) : '')
           : (statusCell ? resolveCellConfigLabel(statusCell) : '');
         const hasStatusConfig = section.statusSourceType === 'static' ? (section.statusValue != null && section.statusValue !== '') : (section.statusSourceType === 'tag' && section.statusTagName) || (section.statusSourceType === 'mapping' && section.statusMappingName) || (section.statusSourceType === 'formula' && section.statusFormula) || (section.statusSourceType === 'group' && Array.isArray(section.statusGroupTags) && section.statusGroupTags.some((t) => t));
         const showStatus = hasStatusConfig && resolvedStatus !== '' && resolvedStatus !== '—';
@@ -1545,7 +1639,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
             <div className="flex justify-end gap-4 flex-wrap">
               {(section.kpis || []).map((kpi) => {
                 const displayValue = isPreviewMode
-                  ? renderResolvedValue(resolveKpiValue(kpi, tagValues))
+                  ? renderResolvedValue(resolveKpiValue(kpi, tagValues, tagDecimalByName))
                   : resolveCellConfigLabel(kpi);
                 return (
                   <div key={kpi.id} className="text-right">
@@ -1580,11 +1674,11 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                 </tr>
               </thead>
               <tbody>
-                {(section.rows || []).filter((row) => !isRowHidden(row, section, tagValues)).map((row, ri) => {
+                {(section.rows || []).filter((row) => !isRowHidden(row, section, tagValues, tagDecimalByName)).map((row, ri) => {
                   // Build row context from the reference column (same as hideReferenceCol)
                   const refColIdx = row.hideReferenceCol ?? 0;
                   const refCell = row.cells?.[refColIdx];
-                  const resolvedRef = refCell ? resolveCellValue(refCell, tagValues) : null;
+                  const resolvedRef = refCell ? resolveCellValue(refCell, tagValues, null, tagDecimalByName) : null;
                   let resolvedRefValue = null;
                   if (resolvedRef != null && resolvedRef !== '—') {
                     const num = Number(String(resolvedRef).replace(/[^0-9.\-]/g, ''));
@@ -1597,7 +1691,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                       {(row.cells || []).map((cell, ci) => {
                         const col = section.columns[ci];
                         const displayValue = isPreviewMode
-                          ? renderResolvedValue(resolveCellValue(cell, tagValues, rowContext))
+                          ? renderResolvedValue(resolveCellValue(cell, tagValues, rowContext, tagDecimalByName))
                           : renderCellConfigBadge(cell);
                         return (
                           <td
@@ -1631,7 +1725,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                           if (ci === (section.columns || []).length - 1 && section.summaryFormula) {
                             return (
                               <td key={ci} className="px-2 py-1 border border-[#d1d5db] text-right tabular-nums">
-                                {renderResolvedValue(resolveCellValue({ sourceType: 'formula', formula: section.summaryFormula, unit: section.summaryUnit, decimals: 1 }, tagValues))}
+                                {renderResolvedValue(resolveCellValue({ sourceType: 'formula', formula: section.summaryFormula, unit: section.summaryUnit, decimals: 1 }, tagValues, null, tagDecimalByName))}
                               </td>
                             );
                           }
@@ -1649,7 +1743,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                       if (sm.type === 'formula') {
                         return (
                           <td key={ci} className="px-2 py-1 border border-[#d1d5db] tabular-nums" style={{ textAlign: col.align || 'right' }}>
-                            {renderResolvedValue(resolveCellValue({ sourceType: 'formula', formula: sm.formula || '', unit: sm.unit || '', decimals: 1 }, tagValues))}
+                            {renderResolvedValue(resolveCellValue({ sourceType: 'formula', formula: sm.formula || '', unit: sm.unit || '', decimals: 1 }, tagValues, null, tagDecimalByName))}
                           </td>
                         );
                       }
@@ -1657,7 +1751,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                       const colTagValues = section.rows.map((r) => {
                         const cell = r.cells[ci];
                         if (!cell) return null;
-                        const rv = resolveCellValue(cell, tagValues);
+                        const rv = resolveCellValue(cell, tagValues, null, tagDecimalByName);
                         if (rv && typeof rv === 'object') return null;
                         const n = parseFloat(String(rv).replace(/[^0-9.\-]/g, ''));
                         return isNaN(n) ? null : n;
@@ -1886,6 +1980,7 @@ export default function PaginatedReportBuilder() {
   const { template, loading, saving, dirty, saveLayout, updateMeta, autoSave, toggleAutoSave } = useReportCanvas(templateId);
   const { tags } = useAvailableTags();
   const { formulas: savedFormulas } = useAvailableFormulas();
+  const tagDecimalByName = useMemo(() => buildTagDecimalLookup(tags), [tags]);
 
   // Paginated sections stored in layout_config.paginatedSections
   const [sections, setSections] = useState([]);
@@ -2096,6 +2191,7 @@ export default function PaginatedReportBuilder() {
             dateRange={{ from: new Date().toISOString(), to: new Date().toISOString() }}
             compact={pageMode === 'full'}
             isPreviewMode={true}
+            tagDecimalByName={tagDecimalByName}
           />
         </div>
       </div>
@@ -2236,6 +2332,7 @@ export default function PaginatedReportBuilder() {
               tagValues={liveTagValues}
               dateRange={{ from: new Date().toISOString(), to: new Date().toISOString() }}
               compact={pageMode === 'full'}
+              tagDecimalByName={tagDecimalByName}
             />
           </div>
           <div className="rb-floating-toolbar">

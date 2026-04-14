@@ -13,7 +13,7 @@ import {
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
 import { useReportCanvas, useAvailableTags } from '../../Hooks/useReportBuilder';
-import { PaginatedReportPreview, collectPaginatedTagNames, collectPaginatedTagAggregations } from '../ReportBuilder/PaginatedReportBuilder';
+import { PaginatedReportPreview, collectPaginatedTagNames, collectPaginatedTagAggregations, buildTagDecimalLookup } from '../ReportBuilder/PaginatedReportBuilder';
 import TimePeriodTabs, { PAGINATED_TABS } from './TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
 import axios from '../../API/axios';
@@ -54,6 +54,8 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
     const lc = typeof template.layout_config === 'string' ? JSON.parse(template.layout_config) : (template.layout_config || {});
     return lc.grid?.pageMode || 'a4';
   }, [template]);
+
+  const tagDecimalByName = useMemo(() => buildTagDecimalLookup(tags), [tags]);
 
   // Collect all tag names needed
   const tagNames = useMemo(() => collectPaginatedTagNames(sections), [sections]);
@@ -432,6 +434,7 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
             dateRange={dateRange}
             compact={pageMode === 'full'}
             isPreviewMode={true}
+            tagDecimalByName={tagDecimalByName}
           />
         </div>
       </div>

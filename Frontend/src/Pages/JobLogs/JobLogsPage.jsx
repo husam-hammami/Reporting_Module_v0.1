@@ -31,11 +31,14 @@ function useTheme() {
 
 /**
  * Remove suffixes that wrongly label naive plant wall time as UTC (common JSON artifacts).
+ * Includes HTTP-date ` GMT` / ` UTC` (Flask/json defaults) and ISO `Z` / `±00:00`.
  * Does not strip real zones like +04:00.
  */
 function stripMisleadingUtcLabel(s) {
   let t = String(s).trim();
   if (!t) return t;
+  t = t.replace(/\s+GMT$/i, '');
+  t = t.replace(/\s+UTC$/i, '');
   t = t.replace(/[zZ]$/i, '');
   t = t.replace(/\+00:?00$/i, '');
   t = t.replace(/-00:?00$/i, '');
@@ -52,7 +55,10 @@ function parseOrderWallTime(ts) {
   const s = (typeof ts === 'string' ? ts.trim() : String(ts));
   if (!s) return null;
   const stripped = stripMisleadingUtcLabel(s);
-  const normalized = stripped.includes('T') ? stripped : stripped.replace(' ', 'T');
+  // Only insert `T` for ISO date forms (YYYY-MM-DD …); avoid matching weekday "Tue".
+  const isoDate = /^\d{4}-\d{2}-\d{2}/.test(stripped);
+  const normalized =
+    isoDate && !stripped.includes('T') ? stripped.replace(' ', 'T') : stripped;
   const d = new Date(normalized);
   return Number.isNaN(d.getTime()) ? null : d;
 }

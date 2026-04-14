@@ -146,7 +146,7 @@ MILB_LAYOUT_CONFIG = {
                 {"id": "ps-1774433617781-2pgf", "cells": [{"value": "Dampening_On", "sourceType": "static"}, {"unit": "__checkbox__", "value": "", "tagName": "mil_b_dampening_on", "sourceType": "tag"}]},
                 {"id": "ps-1774433617782-nito", "cells": [{"value": "Vitamin_Feeder_On", "sourceType": "static"}, {"unit": "__checkbox__", "value": "", "tagName": "mil_b_vitamin_feeder_on", "sourceType": "tag"}]},
                 {"id": "ps-1774433617783-yrgp", "cells": [{"value": "Vitamin_Feeder_Percentage", "sourceType": "static"}, {"unit": "%", "value": "", "tagName": "mil_b_vitamin_feeder_percentage", "sourceType": "tag"}]},
-                {"id": "ps-1774433617784-n6ou", "cells": [{"value": "JobFlowRate", "sourceType": "static"}, {"unit": "t/h", "value": "", "tagName": "mil_b_job_flowrate", "sourceType": "tag"}]},
+                {"id": "ps-1774433617784-n6ou", "cells": [{"value": "JobFlowRate", "sourceType": "static"}, {"unit": "t/h", "value": "", "tagName": "mil_b_job_flowrate", "decimals": 1, "sourceType": "tag"}]},
             ],
             "type": "table",
             "label": "Setpoint",
