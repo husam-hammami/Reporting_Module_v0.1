@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { Plus, X, Trash2, Copy } from 'lucide-react';
 import { evaluateFormula } from '../formulas/formulaEngine';
 import FormulaEditor from '../formulas/FormulaEditor';
@@ -190,7 +190,7 @@ function PanelHeader({
   );
 }
 
-export default function DataPanelWidget({ config, tagValues, isPreview, isSelected, onUpdate, widgetId, tags }) {
+export default function DataPanelWidget({ config, tagValues, isPreview, isSelected, onUpdate, widgetId, tags, onRequestSelect }) {
   const isDark = useReportBuilderDark();
   const safeConfig = config || {};
   const title = safeConfig.title || '';
@@ -216,6 +216,8 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
   );
 
   const canEdit = Boolean(isSelected && onUpdate && widgetId);
+  const isSelectedRef = useRef(isSelected);
+  isSelectedRef.current = isSelected;
 
   const canvasRef = useRef(null);
   const [editingFieldId, setEditingFieldId] = useState(null);
@@ -366,7 +368,11 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
   }, [dragGeom]);
 
   const startDrag = useCallback((e, field, mode) => {
-    if (!canEdit || editingFieldId) return;
+    if (editingFieldId || !onUpdate || !widgetId) return;
+    if (!isSelectedRef.current && onRequestSelect) {
+      flushSync(() => onRequestSelect());
+    }
+    if (!isSelectedRef.current) return;
     e.preventDefault();
     e.stopPropagation();
     const d = {
@@ -389,7 +395,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
       document.addEventListener('mouseup', h.handleUp);
     }
     setSelectedFieldId(field.id);
-  }, [canEdit, editingFieldId]);
+  }, [editingFieldId, onUpdate, widgetId, onRequestSelect]);
 
   if (fields.length === 0 && !canEdit) {
     return (
@@ -418,7 +424,8 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
     const hint = getFieldHint(field);
     const displayText = showResolved ? ((formatted ?? hint) || '—') : (hint || 'Double-click');
     const isModalOpen = editingFieldId === field.id;
-    const isSel = selectedFieldId === field.id && canEdit;
+    const canFieldTarget = Boolean(onUpdate && widgetId && (isSelected || onRequestSelect));
+    const isSel = selectedFieldId === field.id && canFieldTarget;
     const isDragging = dragGeom && dragGeom.id === field.id;
     const fLeft = isDragging ? dragGeom.left : field.left;
     const fTop = isDragging ? dragGeom.top : field.top;
@@ -435,7 +442,7 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
       <div
         key={field.id}
         className={`group absolute flex overflow-hidden select-none rb-datapanel-field text-[var(--rb-text)] ${
-          canEdit ? 'cursor-grab active:cursor-grabbing' : ''
+          canFieldTarget ? 'cursor-grab active:cursor-grabbing' : ''
         }`}
         style={{
           left: `${fLeft}%`,
@@ -458,20 +465,30 @@ export default function DataPanelWidget({ config, tagValues, isPreview, isSelect
           ...(isSel || isModalOpen ? { outline: '2px solid var(--rb-accent)', outlineOffset: '0px', zIndex: 2 } : { zIndex: 1 }),
         }}
         onMouseDown={(e) => {
-          if (!canEdit || editingFieldId) return;
+          if (editingFieldId) return;
+          if (!onUpdate || !widgetId) return;
           if (e.target.closest('[data-dp-resize]')) return;
           if (e.target.closest('[data-dp-field-actions]')) return;
+          e.stopPropagation();
           startDrag(e, field, 'move');
         }}
         onClick={(e) => {
           e.stopPropagation();
-          if (canEdit) setSelectedFieldId(field.id);
+          if (!isSelectedRef.current && onRequestSelect) {
+            flushSync(() => onRequestSelect());
+          }
+          if (!isSelectedRef.current) return;
+          setSelectedFieldId(field.id);
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          if (canEdit) openEditor(field);
+          if (!isSelectedRef.current && onRequestSelect) {
+            flushSync(() => onRequestSelect());
+          }
+          if (!isSelectedRef.current) return;
+          openEditor(field);
         }}
-        title={canEdit ? 'Drag to move · Double-click to edit' : undefined}
+        title={canFieldTarget ? 'Drag to move · Double-click to edit' : undefined}
       >
         <span className="truncate w-full min-w-0 pointer-events-none">{displayText}</span>
         {canEdit && (

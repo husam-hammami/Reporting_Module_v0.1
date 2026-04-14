@@ -30,16 +30,29 @@ function useTheme() {
 }
 
 /**
+ * Remove suffixes that wrongly label naive plant wall time as UTC (common JSON artifacts).
+ * Does not strip real zones like +04:00.
+ */
+function stripMisleadingUtcLabel(s) {
+  let t = String(s).trim();
+  if (!t) return t;
+  t = t.replace(/[zZ]$/i, '');
+  t = t.replace(/\+00:?00$/i, '');
+  t = t.replace(/-00:?00$/i, '');
+  return t;
+}
+
+/**
  * Parse order timestamps from the API as **plant wall time** (matches PostgreSQL naive
- * `timestamp` / local session). If JSON wrongly appends `Z`, `new Date()` treats the
- * value as UTC and `toLocaleString` in +04 shifts by 4h (e.g. DB 10:50 → UI 14:50).
+ * `timestamp` / local session). If JSON wrongly appends `Z` or `+00:00`, `new Date()`
+ * treats the value as UTC and `toLocaleString` in +04 shifts by 4h (e.g. DB 10:50 → UI 14:50).
  */
 function parseOrderWallTime(ts) {
   if (ts == null || ts === '') return null;
   const s = (typeof ts === 'string' ? ts.trim() : String(ts));
   if (!s) return null;
-  const withoutZ = /[zZ]$/i.test(s) ? s.replace(/[zZ]$/i, '') : s;
-  const normalized = withoutZ.includes('T') ? withoutZ : withoutZ.replace(' ', 'T');
+  const stripped = stripMisleadingUtcLabel(s);
+  const normalized = stripped.includes('T') ? stripped : stripped.replace(' ', 'T');
   const d = new Date(normalized);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -48,7 +61,7 @@ function formatDateTime(ts) {
   const d = parseOrderWallTime(ts);
   if (!d) return '—';
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) +
-    ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    ' ' + d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 function formatDuration(seconds) {
@@ -62,19 +75,18 @@ function formatDuration(seconds) {
 /**
  * Historian `/api/historian/by-tags` uses `_parse_iso_to_naive_local`: values **without**
  * a timezone are treated as server-local wall time (matches `tag_history.timestamp`).
- * If `start_time` from the API is naive local but serialized with a trailing `Z`,
- * `new Date(...).toISOString()` treats it as UTC and shifts the instant; then
- * `from` can be **after** `to` (now in UTC), and the query returns no rows.
+ * If `start_time` from the API is naive local but serialized with `Z` / `+00:00`,
+ * passing that through to the query shifts the window; strip those so the historian
+ * stays on the naive-local path (same as {@link parseOrderWallTime}).
  *
- * Strip a trailing `Z`/`z` on wall times from the DB so the historian keeps them
- * in the naive-local path. Keep UTC `Z` on "now" for `to` when the job is running.
+ * `toHistorianToParam` still returns real UTC ISO (with `Z`) for "now" on running jobs
+ * so the backend converts a true instant to server-local.
  */
 function toHistorianWallTimeParam(value) {
   if (value == null || value === '') return '';
   const s = (typeof value === 'string' ? value : new Date(value).toISOString()).trim();
   if (!s) return '';
-  if (/[zZ]$/i.test(s)) return s.replace(/[zZ]$/i, '');
-  return s;
+  return stripMisleadingUtcLabel(s);
 }
 
 function toHistorianToParam(endTime) {
@@ -176,8 +188,11 @@ export default function JobLogsPage() {
         let fromParam = toHistorianWallTimeParam(start_time);
         let toParam = toHistorianToParam(end_time);
 
-        const fromMs = Date.parse(fromParam.includes('T') ? fromParam : fromParam.replace(' ', 'T'));
-        const toMs = Date.parse(toParam);
+        const fromMs = parseOrderWallTime(start_time)?.getTime() ?? NaN;
+        const toMs =
+          end_time != null && end_time !== ''
+            ? (parseOrderWallTime(end_time)?.getTime() ?? NaN)
+            : Date.now();
         if (!Number.isNaN(fromMs) && !Number.isNaN(toMs) && fromMs > toMs) {
           toParam = new Date().toISOString();
         }

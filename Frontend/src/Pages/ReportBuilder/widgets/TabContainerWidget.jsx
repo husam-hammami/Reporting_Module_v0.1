@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
 import { Plus, X, Copy, Trash2, Layers, Activity, Gauge, Hash, CircleDot, BarChart3, TrendingUp, PieChart, Table2, Type, Image, Stamp, LayoutGrid, Cylinder, Container } from 'lucide-react';
 import { WIDGET_CATALOG, uid, cloneWidgetTreeWithNewIds } from './widgetDefaults';
+import { containsWidgetIdDeepInActiveTabs } from '../utils/nestedTabWidgets';
 
 const ADDABLE_TYPES = WIDGET_CATALOG.filter(
   (w) => ['kpi', 'chart', 'barchart', 'gauge', 'stat', 'piechart', 'sparkline', 'progress', 'table', 'text', 'image', 'status', 'hopper', 'silo', 'datapanel', 'tabcontainer'].includes(w.type)
@@ -162,6 +163,12 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
 
   const activeTab = tabs.find(t => t.id === resolvedActiveTabId) || tabs[0] || null;
   const activeWidgets = activeTab?.widgets || [];
+  /** Canvas may select a nested descendant (e.g. Data Panel); keep sub-grid + selection alive. */
+  const descendantSubSelected = useMemo(() => {
+    if (isPreview || externalSubId == null) return false;
+    return containsWidgetIdDeepInActiveTabs(activeWidgets, externalSubId);
+  }, [isPreview, externalSubId, activeWidgets]);
+  const subGridInteractive = canEdit || descendantSubSelected;
   const [showAddWidget, setShowAddWidget] = useState(false);
   const [showAddTab, setShowAddTab] = useState(false);
   const [renamingId, setRenamingId] = useState(null);
@@ -171,10 +178,12 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
   const selectedSubWidgetId = externalSubId !== undefined ? externalSubId : localSubId;
 
   const selectSubWidget = useCallback((sw) => {
-    if (!canEdit) return;
-    setLocalSubId(sw?.id || null);
+    if (isPreview) return;
+    if (subGridInteractive) {
+      setLocalSubId(sw?.id || null);
+    }
     onSubWidgetSelect?.(sw || null);
-  }, [canEdit, onSubWidgetSelect]);
+  }, [isPreview, subGridInteractive, onSubWidgetSelect]);
 
   const addWidgetBtnRef = useRef(null);
   const addTabBtnRef = useRef(null);
@@ -292,7 +301,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
   const duplicateSubWidget = useCallback(
     (subWidgetId) => {
       const sw = activeWidgets.find((w) => w.id === subWidgetId);
-      if (!sw || !canEdit) return;
+      if (!sw || !subGridInteractive) return;
       const clone = cloneWidgetTreeWithNewIds(sw);
       const baseY = Number(sw.y) || 0;
       const h = Number(sw.h) || 2;
@@ -306,7 +315,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
       updateConfig({ tabs: updatedTabs });
       selectSubWidget(clone);
     },
-    [activeWidgets, canEdit, resolvedActiveTabId, tabs, updateConfig, selectSubWidget],
+    [activeWidgets, subGridInteractive, resolvedActiveTabId, tabs, updateConfig, selectSubWidget],
   );
 
   const updateSubWidget = useCallback((subWidgetId, updates) => {
@@ -335,9 +344,9 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
       w: sw.w >= 1 ? Math.min(sw.w, TC_GRID_COLS) : 3,
       h: sw.h >= 1 ? sw.h : 2,
       minW: 1, minH: 1,
-      ...(canEdit ? {} : { static: true }),
+      ...(subGridInteractive ? {} : { static: true }),
     })),
-    [activeWidgets, canEdit],
+    [activeWidgets, subGridInteractive],
   );
 
   const handleSubInteractionEnd = useCallback((layout) => {
@@ -465,8 +474,8 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
             margin={TC_MARGIN}
             containerPadding={TC_PADDING}
             compactType="vertical"
-            isDraggable={canEdit}
-            isResizable={canEdit}
+            isDraggable={subGridInteractive}
+            isResizable={subGridInteractive}
             resizeHandles={['se', 'e', 's']}
             onDragStop={handleSubInteractionEnd}
             onResizeStop={handleSubInteractionEnd}
@@ -507,7 +516,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
                   )}
                   {/* Widget body */}
                   <div className="h-full overflow-hidden">
-                    {renderWidget ? renderWidget(sw, { isSubSelected: isSubSel, ...(canEdit ? { onUpdateSubWidget: updateSubWidget } : {}) }) : (
+                    {renderWidget ? renderWidget(sw, { isSubSelected: isSubSel, ...(subGridInteractive ? { onUpdateSubWidget: updateSubWidget } : {}) }) : (
                       <div className="flex items-center justify-center h-full text-[9px] text-[var(--rb-text-muted)]">
                         {sw.type} widget
                       </div>

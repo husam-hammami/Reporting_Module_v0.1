@@ -112,7 +112,14 @@ export default function WidgetRenderer({ widget, tagValues, isPreview, isSelecte
       }
     : {};
   const dataPanelProps = widget.type === 'datapanel'
-    ? { isSelected, onUpdate: onUpdateWidget, widgetId, tags, isReportBuilderWorkspace }
+    ? {
+        isSelected,
+        onUpdate: onUpdateWidget,
+        widgetId,
+        tags,
+        isReportBuilderWorkspace,
+        ...(onSubWidgetSelect ? { onRequestSelect: () => onSubWidgetSelect(widget) } : {}),
+      }
     : {};
   const siloProps = widget.type === 'silo' ? { isReportBuilderWorkspace } : {};
   const sparklineTag = widget.type === 'kpi' ? getKpiSparklineTag(widget.config) : null;

@@ -43,6 +43,30 @@ export function findWidgetDeepInTabContainer(tabContainerWidget, targetId, prefe
 }
 
 /**
+ * True if `widgets` contains a widget with id `targetId`, recursing into nested
+ * `tabcontainer` nodes using each container's active tab only (matches builder canvas).
+ * @param {object[]|undefined} widgets
+ * @param {string|number} targetId
+ * @returns {boolean}
+ */
+export function containsWidgetIdDeepInActiveTabs(widgets, targetId) {
+  if (targetId == null || !Array.isArray(widgets)) return false;
+  const tid = String(targetId);
+  for (const w of widgets) {
+    if (!w) continue;
+    if (String(w.id) === tid) return true;
+    if (w.type === 'tabcontainer') {
+      const cfg = w.config || {};
+      const tabs = cfg.tabs || [];
+      const aid = cfg.activeTabId != null ? cfg.activeTabId : tabs[0]?.id;
+      const activeTab = tabs.find((t) => String(t.id) === String(aid));
+      if (activeTab && containsWidgetIdDeepInActiveTabs(activeTab.widgets || [], targetId)) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * @param {object} w — widget node (may be tabcontainer)
  * @param {string} targetId
  * @param {object} updates — partial widget patch (may include config)
