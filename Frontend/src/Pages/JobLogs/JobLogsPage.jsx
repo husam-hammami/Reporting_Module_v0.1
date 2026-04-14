@@ -61,7 +61,7 @@ function formatDateTime(ts) {
   const d = parseOrderWallTime(ts);
   if (!d) return '—';
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) +
-    ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    ' ' + d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 function formatDuration(seconds) {
