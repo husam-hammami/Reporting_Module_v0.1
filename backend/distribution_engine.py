@@ -388,7 +388,9 @@ def _resolve_cell(cell, tag_data):
     if not cell:
         return ''
     src = cell.get('sourceType', 'static')
-    decimals = cell.get('decimals', 1) if cell.get('decimals') is not None else 1
+    raw_dec = cell.get('decimals')
+    decimals = int(raw_dec) if raw_dec is not None and raw_dec != '' else 0
+    decimals = max(0, min(10, decimals))
     is_checkbox = cell.get('unit') == '__checkbox__'
     unit = cell.get('unit', '')
     if unit == '__checkbox__':
@@ -458,9 +460,11 @@ def _resolve_cell_raw(cell, tag_data):
     - Checkbox cells return '✓' or '' as string values
     """
     if not cell:
-        return (None, '', 1)
+        return (None, '', 0)
     src = cell.get('sourceType', 'static')
-    decimals = cell.get('decimals', 1) if cell.get('decimals') is not None else 1
+    raw_dec = cell.get('decimals')
+    decimals = int(raw_dec) if raw_dec is not None and raw_dec != '' else 0
+    decimals = max(0, min(10, decimals))
     is_checkbox = cell.get('unit') == '__checkbox__'
     unit = cell.get('unit', '')
     if unit == '__checkbox__':
@@ -1015,21 +1019,34 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                         )
                     elif sm_type == 'formula':
                         result = _evaluate_formula(sm.get('formula', ''), tag_data)
-                        unit = sm.get('unit', '')
-                        val_str = f"{result:,.1f}" if isinstance(result, (int, float)) and result is not None else '—'
-                        if unit and val_str != '—':
-                            val_str = f"{val_str} {unit}"
+                        sm_unit = sm.get('unit', '')
+                        # Derive decimals from first data cell in this column
+                        col_dec = 0
+                        for row in rows:
+                            c0 = row.get('cells', [None] * (ci + 1))[ci] if ci < len(row.get('cells', [])) else None
+                            if c0:
+                                rd = c0.get('decimals')
+                                col_dec = int(rd) if rd is not None and rd != '' else 0
+                                break
+                        val_str = f"{result:,.{col_dec}f}" if isinstance(result, (int, float)) and result is not None else '—'
+                        if sm_unit and val_str != '—':
+                            val_str = f"{val_str} {sm_unit}"
                         summary_cells.append(
                             f'<td class="summary-row" style="text-align:{_esc(col.get("align", "right"))}">{_esc(val_str)}</td>'
                         )
                     elif sm_type in ('sum', 'avg', 'min', 'max', 'count'):
                         # Aggregate from visible row values in this column
                         col_vals = []
+                        col_dec = 0
                         for row in rows:
                             if _is_row_hidden(row, tag_data):
                                 continue
                             cell = row.get('cells', [None] * (ci + 1))[ci] if ci < len(row.get('cells', [])) else None
                             if cell:
+                                # Pick up decimals from first valid cell
+                                if not col_vals:
+                                    rd = cell.get('decimals')
+                                    col_dec = int(rd) if rd is not None and rd != '' else 0
                                 rv = _resolve_cell(cell, tag_data)
                                 cleaned = re.sub(r'[^0-9.\-]', '', str(rv))
                                 if cleaned:
@@ -1050,7 +1067,7 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                                 agg = len(col_vals)
                             else:
                                 agg = None
-                            val_str = f"{agg:,.1f}" if agg is not None else '—'
+                            val_str = f"{agg:,.{col_dec}f}" if agg is not None else '—'
                             sm_unit = sm.get('unit', '')
                             if sm_unit and val_str != '—':
                                 val_str = f"{val_str} {sm_unit}"
@@ -1071,7 +1088,15 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                         elif ci == len(columns) - 1 and s.get('summaryFormula'):
                             result = _evaluate_formula(s['summaryFormula'], tag_data)
                             su = s.get('summaryUnit', '')
-                            val_str = f"{result:,.1f}" if isinstance(result, (int, float)) and result is not None else '—'
+                            # Derive decimals from first data cell in last column
+                            col_dec = 0
+                            for row in rows:
+                                c0 = row.get('cells', [])[-1] if row.get('cells') else None
+                                if c0:
+                                    rd = c0.get('decimals')
+                                    col_dec = int(rd) if rd is not None and rd != '' else 0
+                                    break
+                            val_str = f"{result:,.{col_dec}f}" if isinstance(result, (int, float)) and result is not None else '—'
                             if su and val_str != '—':
                                 val_str = f"{val_str} {su}"
                             summary_cells.append(
