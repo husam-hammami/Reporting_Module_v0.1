@@ -1304,25 +1304,31 @@ table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11p
 /* ── Dashboard grid ── */
 .dashboard-section { margin-bottom: 8px; }
 .report-section-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
-  margin: 14px 0 8px 0;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #e2e8f0;
+  color: #1a5276;
+  margin: 14px 0 6px 0;
+  padding: 4px 0;
+  border-bottom: 2px solid #1a5276;
 }
 .dashboard-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 8px 12px;
-  margin-bottom: 6px;
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  overflow: hidden;
 }
-.widget-label { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
-.widget-value { font-size: 20px; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
-.widget-unit  { font-size: 12px; font-weight: 500; color: #94a3b8; margin-left: 4px; }
-.widget-silo  { font-size: 13px; color: #334155; }
-.widget-chart-note { font-size: 10px; color: #94a3b8; font-style: italic; padding: 4px 0; }
+.dashboard-card img { max-width: 100%; height: auto; display: block; }
+.widget-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+.widget-value { font-size: 16px; font-weight: 700; color: #0f172a; }
+.widget-unit  { font-size: 10px; font-weight: 500; color: #94a3b8; margin-left: 3px; }
+.widget-silo  { font-size: 12px; color: #334155; }
+.widget-chart-note { font-size: 9px; color: #94a3b8; font-style: italic; padding: 2px 0; }
+
+/* ── Dashboard grid table ── */
+table.grid-row { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 2px; }
+table.grid-row td { vertical-align: top; padding: 0 2px; overflow: hidden; }
 
 /* ── Generated footer ── */
 .gen-footer {
@@ -1417,9 +1423,8 @@ def _render_single_widget_html(widget, tag_data, ts_by_tag=None, from_dt=None, t
         if img_uri:
             return (
                 f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-                f'<div style="text-align:center;margin-top:4px">'
-                f'<img src="{img_uri}" alt="" style="max-width:100%;width:100%;height:auto" />'
-                f'</div></div>\n'
+                f'<img src="{img_uri}" alt="" />'
+                f'</div>\n'
             )
         # Fallback: render series as bar chart or value table
         series_data = []
@@ -1434,9 +1439,9 @@ def _render_single_widget_html(widget, tag_data, ts_by_tag=None, from_dt=None, t
                 s_val = 0
             series_data.append((s_label, s_val))
         w_grid = widget.get('w', 6)
-        chart_uri = _render_chart_image_base64(w_type, series_data, label, width_px=w_grid * 45, height_px=180)
+        chart_uri = _render_chart_image_base64(w_type, series_data, label, width_px=w_grid * 45, height_px=160)
         if chart_uri:
-            return f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><img src="{chart_uri}" style="width:100%;height:auto" /></div>\n'
+            return f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><img src="{chart_uri}" alt="" /></div>\n'
         # Last resort: text table
         parts = []
         for sl, sv in series_data:
@@ -1614,26 +1619,26 @@ def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_d
                 # Full-width: render directly
                 cards_html += _render_single_widget_html(row_widgets[0], tag_data, ts_by_tag, from_dt, to_dt)
             else:
-                # Multi-column row: use table for side-by-side layout
+                # Multi-column row: use fixed-layout table for side-by-side
                 col_pct = 100.0 / GRID_COLS
-                cards_html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:2px"><tr>\n'
+                cards_html += '<table class="grid-row"><tr>\n'
                 for widget in row_widgets:
                     w_span = widget.get('w', 3)
                     width = f'{w_span * col_pct:.1f}%'
                     cell_html = _render_single_widget_html(widget, tag_data, ts_by_tag, from_dt, to_dt)
-                    cards_html += f'<td style="width:{width};vertical-align:top;padding:0 2px">{cell_html}</td>\n'
+                    cards_html += f'<td style="width:{width}">{cell_html}</td>\n'
                 cards_html += '</tr></table>\n'
 
     logo_html = _build_logo_header_html(hercules_uri, asm_uri, client_logo_uri)
 
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>{_SHARED_CSS}</style></head>
-<body style="padding: 3mm 10mm 5mm 10mm; width: 190mm;">
+<body style="padding: 3mm 8mm 5mm 8mm; width: 194mm; overflow: hidden;">
 {logo_html}
 <h1 class="report-title" style="text-align:center">{_esc(report_name)}</h1>
 <p class="period" style="text-align:center"><strong>From:</strong> {_esc(period_start)} &nbsp;&mdash;&nbsp; <strong>To:</strong> {_esc(period_end)}</p>
 <div class="header-rule"></div>
-<div class="dashboard-section" style="margin-top:12px">
+<div class="dashboard-section" style="margin-top:8px">
 {cards_html}
 </div>
 <div class="gen-footer">
