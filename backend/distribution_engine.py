@@ -1324,8 +1324,8 @@ table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11p
 .widget-chart-note { font-size: 9px; color: #94a3b8; font-style: italic; padding: 2px 0; }
 
 /* ── Dashboard grid table ── */
-table.grid-row { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 2px; }
-table.grid-row td { vertical-align: top; padding: 0 2px; }
+table.grid-row { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+table.grid-row td { vertical-align: top; padding: 0 1px; }
 
 /* ── Generated footer ── */
 .gen-footer {
@@ -1616,12 +1616,12 @@ def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_d
                 # Full-width: render directly
                 cards_html += _render_single_widget_html(row_widgets[0], tag_data, ts_by_tag, from_dt, to_dt)
             else:
-                # Multi-column row: use fixed-layout table for side-by-side
-                col_pct = 100.0 / GRID_COLS
+                # Multi-column row: normalize widths to 100% of the row
+                row_total_w = sum(w.get('w', 3) for w in row_widgets) or 1
                 cards_html += '<table class="grid-row"><tr>\n'
                 for widget in row_widgets:
                     w_span = widget.get('w', 3)
-                    width = f'{w_span * col_pct:.1f}%'
+                    width = f'{(w_span / row_total_w) * 100:.1f}%'
                     cell_html = _render_single_widget_html(widget, tag_data, ts_by_tag, from_dt, to_dt)
                     cards_html += f'<td style="width:{width}">{cell_html}</td>\n'
                 cards_html += '</tr></table>\n'

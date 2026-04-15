@@ -480,6 +480,7 @@ export default function TabContainerWidget({ config, tagValues, isPreview, isSel
             onDragStop={handleSubInteractionEnd}
             onResizeStop={handleSubInteractionEnd}
             draggableCancel=".no-drag"
+            useCSSTransforms={subGridInteractive}
           >
             {activeWidgets.map(sw => {
               const isSubSel = selectedSubWidgetId === sw.id;
