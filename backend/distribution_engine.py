@@ -407,6 +407,74 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
                 if name:
                     result[name] = row['agg_value']
 
+        # ── Fallback to tag_history_archive for tags missing from result ──
+        missing_ids = [tid for tid, nm in id_to_name.items() if nm not in result]
+        if missing_ids:
+            if aggregation == 'last':
+                cur.execute("""
+                    SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                    FROM tag_history_archive a
+                    WHERE a.tag_id = ANY(%s)
+                      AND a.archive_hour >= %s::timestamp
+                      AND a.archive_hour <= %s::timestamp
+                    ORDER BY a.tag_id, a.archive_hour DESC
+                """, (missing_ids, from_dt, to_dt))
+                for row in cur.fetchall():
+                    name = id_to_name.get(row['tag_id'])
+                    if name and row['value'] is not None:
+                        result[name] = row['value']
+            elif aggregation == 'first':
+                cur.execute("""
+                    SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                    FROM tag_history_archive a
+                    WHERE a.tag_id = ANY(%s)
+                      AND a.archive_hour >= %s::timestamp
+                      AND a.archive_hour <= %s::timestamp
+                    ORDER BY a.tag_id, a.archive_hour ASC
+                """, (missing_ids, from_dt, to_dt))
+                for row in cur.fetchall():
+                    name = id_to_name.get(row['tag_id'])
+                    if name and row['value'] is not None:
+                        result[name] = row['value']
+            elif aggregation == 'delta':
+                cur.execute("""
+                    SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                    FROM tag_history_archive a
+                    WHERE a.tag_id = ANY(%s)
+                      AND a.archive_hour >= %s::timestamp
+                      AND a.archive_hour <= %s::timestamp
+                    ORDER BY a.tag_id, a.archive_hour ASC
+                """, (missing_ids, from_dt, to_dt))
+                arch_first = {row['tag_id']: row['value'] for row in cur.fetchall()}
+                cur.execute("""
+                    SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                    FROM tag_history_archive a
+                    WHERE a.tag_id = ANY(%s)
+                      AND a.archive_hour >= %s::timestamp
+                      AND a.archive_hour <= %s::timestamp
+                    ORDER BY a.tag_id, a.archive_hour DESC
+                """, (missing_ids, from_dt, to_dt))
+                for row in cur.fetchall():
+                    name = id_to_name.get(row['tag_id'])
+                    first = arch_first.get(row['tag_id'])
+                    if name and first is not None and row['value'] is not None:
+                        result[name] = float(row['value']) - float(first)
+            else:
+                agg_fn_map = {'avg': 'AVG', 'min': 'MIN', 'max': 'MAX', 'sum': 'SUM', 'count': 'COUNT'}
+                fn = agg_fn_map.get(aggregation, 'AVG')
+                cur.execute(f"""
+                    SELECT a.tag_id, {fn}(a.value) AS agg_value
+                    FROM tag_history_archive a
+                    WHERE a.tag_id = ANY(%s)
+                      AND a.archive_hour >= %s::timestamp
+                      AND a.archive_hour <= %s::timestamp
+                    GROUP BY a.tag_id
+                """, (missing_ids, from_dt, to_dt))
+                for row in cur.fetchall():
+                    name = id_to_name.get(row['tag_id'])
+                    if name and row['agg_value'] is not None:
+                        result[name] = row['agg_value']
+
     return result
 
 
