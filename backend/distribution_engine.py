@@ -1231,7 +1231,9 @@ p.period   { font-size: 12px; color: #64748b; font-weight: 500; margin: 0 0 2px 
 .kpi-label { font-size: 10px; font-weight: 500; color: #64748b; }
 .kpi-value { font-size: 12px; font-weight: 700; color: #0f172a; }
 
-/* ── Data tables ── */
+/* ── Data tables (paginated PDF) ──
+   xhtml2pdf aligns thead/tbody poorly if only <th> has widths; use <colgroup>
+   plus matching width on <td>. Avoid flex in table rows. */
 table.data-table {
   width: 100%;
   border-collapse: collapse;
@@ -1317,6 +1319,18 @@ table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11p
   color: #94a3b8;
   border-top: 1px solid #e5e7eb;
   padding-top: 4px;
+}
+table.gen-footer-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 9px;
+  color: #94a3b8;
+  border-top: 1px solid #e5e7eb;
+}
+table.gen-footer-table td {
+  padding-top: 4px;
+  vertical-align: top;
 }
 """
 
@@ -1701,19 +1715,29 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
             if label:
                 body_parts.append(f'<div class="section-label">{_esc(label)}</div>')
 
-            # Compute column widths: use explicit widths or distribute evenly
+            if not columns:
+                continue
+
+            # Column widths: <colgroup> + same width on each <td> (xhtml2pdf aligns thead/tbody reliably)
             num_cols = len(columns)
-            default_w = f'{100.0 / num_cols:.1f}%' if num_cols else 'auto'
+            default_w = f'{100.0 / num_cols:.1f}%' if num_cols else '100%'
+            col_widths = []
+            colgroup_parts = []
             header_cells = ''
             for c in columns:
-                align = _esc(c.get('align', 'left'))
                 cw = c.get('width', '')
-                if cw and cw != 'auto':
-                    width = _esc(cw)
+                if cw and str(cw).strip().lower() != 'auto':
+                    w_attr = _esc(str(cw).strip())
                 else:
-                    width = default_w
-                header_cells += f'<th style="text-align:{align};width:{width}">{_esc(c.get("header", ""))}</th>'
-            body_parts.append(f'<table class="data-table"><thead><tr>{header_cells}</tr></thead><tbody>')
+                    w_attr = default_w
+                col_widths.append(w_attr)
+                colgroup_parts.append(f'<col width="{w_attr}" />')
+                align = _esc(c.get('align', 'left'))
+                header_cells += f'<th style="text-align:{align}">{_esc(c.get("header", ""))}</th>'
+            cg = f'<colgroup>{"".join(colgroup_parts)}</colgroup>' if colgroup_parts else ''
+            body_parts.append(
+                f'<table class="data-table" width="100%">{cg}<thead><tr>{header_cells}</tr></thead><tbody>'
+            )
 
             visible_row_idx = 0
             for row in rows:
@@ -1722,10 +1746,16 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                 cells = row.get('cells', [])
                 stripe = ' class="alt-row"' if visible_row_idx % 2 == 1 else ''
                 td_parts = []
-                for i, cell in enumerate(cells):
+                for i in range(num_cols):
                     align = columns[i].get('align', 'left') if i < len(columns) else 'left'
-                    val = _resolve_cell(cell, tag_data)
-                    td_parts.append(f'<td style="text-align:{_esc(align)}">{_esc(val)}</td>')
+                    w_style = col_widths[i] if i < len(col_widths) else default_w
+                    if i < len(cells):
+                        val = _resolve_cell(cells[i], tag_data)
+                    else:
+                        val = ''
+                    td_parts.append(
+                        f'<td style="text-align:{_esc(align)};width:{w_style}">{_esc(val)}</td>'
+                    )
                 body_parts.append(f'<tr{stripe}>{"".join(td_parts)}</tr>')
                 visible_row_idx += 1
 
@@ -1743,10 +1773,11 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                 for ci, col in enumerate(columns):
                     sm = col.get('summary', {})
                     sm_type = sm.get('type', 'none')
+                    w_ci = col_widths[ci] if ci < len(col_widths) else default_w
 
                     if sm_type == 'label':
                         summary_cells.append(
-                            f'<td class="summary-row" style="text-align:{_esc(col.get("align", "left"))}">'
+                            f'<td class="summary-row" style="text-align:{_esc(col.get("align", "left"))};width:{w_ci}">'
                             f'{_esc(sm.get("label", s.get("summaryLabel", "Total")))}</td>'
                         )
                     elif sm_type == 'formula':
@@ -1764,7 +1795,8 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                         if sm_unit and val_str != '—':
                             val_str = f"{val_str} {sm_unit}"
                         summary_cells.append(
-                            f'<td class="summary-row" style="text-align:{_esc(col.get("align", "right"))}">{_esc(val_str)}</td>'
+                            f'<td class="summary-row" style="text-align:{_esc(col.get("align", "right"))};width:{w_ci}">'
+                            f'{_esc(val_str)}</td>'
                         )
                     elif sm_type in ('sum', 'avg', 'min', 'max', 'count'):
                         # Aggregate from visible row values in this column
@@ -1805,45 +1837,58 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                                 val_str = f"{val_str} {sm_unit}"
                             agg_label = f"{sm.get('label', '')}: " if sm.get('label') else ''
                             summary_cells.append(
-                                f'<td class="summary-row" style="text-align:{_esc(col.get("align", "right"))}">{_esc(agg_label)}{_esc(val_str)}</td>'
+                                f'<td class="summary-row" style="text-align:{_esc(col.get("align", "right"))};width:{w_ci}">'
+                                f'{_esc(agg_label)}{_esc(val_str)}</td>'
                             )
                         else:
-                            summary_cells.append(f'<td class="summary-row">—</td>')
+                            summary_cells.append(
+                                f'<td class="summary-row" style="text-align:{_esc(col.get("align", "right"))};width:{w_ci}">—</td>'
+                            )
                     elif not has_per_col:
                         # Legacy mode
                         if ci == 0:
                             colspan = max(1, len(columns) - 1)
+                            w_span = w_ci if colspan <= 1 else ''
+                            style = f'text-align:right;width:{w_span}' if w_span else 'text-align:right'
                             summary_cells.append(
-                                f'<td class="summary-row" style="text-align:right" colspan="{colspan}">'
+                                f'<td class="summary-row" style="{style}" colspan="{colspan}">'
                                 f'{_esc(s.get("summaryLabel", "Total"))}</td>'
                             )
-                        elif ci == len(columns) - 1 and s.get('summaryFormula'):
-                            result = _evaluate_formula(s['summaryFormula'], tag_data)
-                            su = s.get('summaryUnit', '')
-                            # Derive decimals from first data cell in last column
-                            col_dec = 0
-                            for row in rows:
-                                c0 = row.get('cells', [])[-1] if row.get('cells') else None
-                                if c0:
-                                    rd = c0.get('decimals')
-                                    col_dec = int(rd) if rd is not None and rd != '' else 0
-                                    break
-                            val_str = f"{result:,.{col_dec}f}" if isinstance(result, (int, float)) and result is not None else '—'
-                            if su and val_str != '—':
-                                val_str = f"{val_str} {su}"
-                            summary_cells.append(
-                                f'<td class="summary-row" style="text-align:right">{_esc(val_str)}</td>'
-                            )
+                        elif ci == len(columns) - 1:
+                            w_last = col_widths[-1] if col_widths else default_w
+                            if s.get('summaryFormula'):
+                                result = _evaluate_formula(s['summaryFormula'], tag_data)
+                                su = s.get('summaryUnit', '')
+                                # Derive decimals from first data cell in last column
+                                col_dec = 0
+                                for row in rows:
+                                    c0 = row.get('cells', [])[-1] if row.get('cells') else None
+                                    if c0:
+                                        rd = c0.get('decimals')
+                                        col_dec = int(rd) if rd is not None and rd != '' else 0
+                                        break
+                                val_str = f"{result:,.{col_dec}f}" if isinstance(result, (int, float)) and result is not None else '—'
+                                if su and val_str != '—':
+                                    val_str = f"{val_str} {su}"
+                                summary_cells.append(
+                                    f'<td class="summary-row" style="text-align:right;width:{w_last}">{_esc(val_str)}</td>'
+                                )
+                            else:
+                                summary_cells.append(
+                                    f'<td class="summary-row" style="text-align:right;width:{w_last}">—</td>'
+                                )
                         # else: skip (covered by colspan)
                     else:
                         # Per-column mode but this column has no summary
                         if ci == 0:
                             summary_cells.append(
-                                f'<td class="summary-row" style="text-align:left">'
+                                f'<td class="summary-row" style="text-align:left;width:{w_ci}">'
                                 f'{_esc(s.get("summaryLabel", "Total"))}</td>'
                             )
                         else:
-                            summary_cells.append(f'<td class="summary-row"></td>')
+                            summary_cells.append(
+                                f'<td class="summary-row" style="width:{w_ci}"></td>'
+                            )
 
                 body_parts.append(f'<tr class="summary-row">{"".join(summary_cells)}</tr>')
 
@@ -1879,14 +1924,18 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
     content_html = '\n'.join(body_parts)
 
     footer_records = f'Records: {total_rows}' if total_rows > 0 else ''
+    gen_ts = datetime.now().strftime('%d/%m/%Y, %H:%M:%S')
+    footer_tbl = (
+        f'<table class="gen-footer-table" width="100%" cellpadding="0" cellspacing="0"><tr>'
+        f'<td style="text-align:left;width:35%">{_esc(footer_records)}</td>'
+        f'<td style="text-align:right;width:65%">Generated by Hercules Reporting Module on {_esc(gen_ts)}</td>'
+        f'</tr></table>'
+    )
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>{_SHARED_CSS}</style></head>
 <body style="padding: 3mm 10mm 5mm 10mm; width: 190mm;">
 {content_html}
-<div class="gen-footer" style="display:flex;justify-content:space-between">
-<span>{_esc(footer_records)}</span>
-<span>Generated by Hercules Reporting Module on {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}</span>
-</div>
+{footer_tbl}
 </body></html>"""
 
 
