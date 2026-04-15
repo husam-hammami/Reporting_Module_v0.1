@@ -21,12 +21,12 @@ Summary of updates affecting **Job Logs**, **orders API JSON**, **historian wind
 
 ---
 
-## 3. Historian query window — hour overlap for archive (`Frontend/src/Pages/JobLogs/JobLogsPage.jsx`)
+## 3. Historian query window — archive end bucket (`Frontend/src/Pages/JobLogs/JobLogsPage.jsx`)
 
-- **`historianOrderWallParams`**: Expands Job Logs **`from` / `to`** sent to **`/api/historian/by-tags`** to:
-  - **`from`** = **local start-of-hour** containing order `start_time`
-  - **`to`** = **start of the hour after** the hour containing `end_time` (so `archive_hour <= to` includes the end-hour bucket, e.g. **21:00** for an order ending **20:54**)
-- **Why**: `tag_history_archive` stores **`archive_hour`** on the hour. Strict order times skipped **18:00** and **21:00** buckets and made **first/last** deltas (~24k) smaller than totals that include those buckets (~44k).
+- **`historianOrderWallParams`** for **`/api/historian/by-tags`**:
+  - **`from`** = **exact order `start_time`** (`toHistorianWallTimeParam`) — **not** floored to the hour, so `first` does not use an archive row for time **before** the order (flooring `from` had inflated deltas, e.g. ~64k vs ~44k).
+  - **`to`** = **start of the local hour after** `end_time` (so `archive_hour <= to` includes the bucket that contains the order end, e.g. **21:00** for **20:54**).
+- **Why**: `tag_history_archive` is hourly; a strict `to` at **20:54** dropped the **21:00** row and shrank totals (~24k); expanding **only `to`** fixes that without pulling in pre-start production.
 
 ---
 

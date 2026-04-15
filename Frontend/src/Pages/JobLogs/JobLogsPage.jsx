@@ -100,13 +100,9 @@ function toHistorianToParam(endTime) {
   return new Date().toISOString();
 }
 
-function localHourFloor(d) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), 0, 0, 0);
-}
-
 /** Start of the hour after d's local hour — `archive_hour <= to` then includes the end-hour bucket (e.g. 21:00 for 20:54). */
 function localHourStartAfter(d) {
-  const t = localHourFloor(d);
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), 0, 0, 0);
   const x = new Date(t);
   x.setHours(x.getHours() + 1);
   return x;
@@ -119,18 +115,13 @@ function formatLocalNaiveWallISO(d) {
 }
 
 /**
- * Expand order wall times to overlapping clock hours so historian first/last aligns with
- * tag_history_archive buckets (strict order times can skip 18:00 / 21:00 rows).
+ * Historian window for Job Logs: keep **from** at exact order start (so `first` does not pick an
+ * `tag_history_archive` row for the hour before the run — that inflated totals e.g. ~64k vs ~44k).
+ * Expand **to** to the start of the hour after `end_time` so `archive_hour <= to` includes the
+ * bucket that contains the order end (e.g. 21:00 for 20:54).
  */
 function historianOrderWallParams(start_time, end_time) {
-  const start = parseOrderWallTime(start_time);
-  if (!start) {
-    return {
-      fromParam: toHistorianWallTimeParam(start_time),
-      toParam: toHistorianToParam(end_time),
-    };
-  }
-  const fromParam = formatLocalNaiveWallISO(localHourFloor(start));
+  const fromParam = toHistorianWallTimeParam(start_time);
   if (end_time != null && end_time !== '') {
     const end = parseOrderWallTime(end_time);
     if (!end || Number.isNaN(end.getTime())) {
