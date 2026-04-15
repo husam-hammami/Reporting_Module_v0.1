@@ -972,7 +972,7 @@ def _resolve_cell(cell, tag_data):
         try:
             n = float(val)
             formatted = f"{n:,.{decimals}f}"
-            return f"{formatted} {unit}".strip() if unit else formatted
+            return f"{formatted}\u00a0{unit}" if unit else formatted
         except (TypeError, ValueError):
             return str(val)
 
@@ -1235,6 +1235,7 @@ p.period   { font-size: 12px; color: #64748b; font-weight: 500; margin: 0 0 2px 
 table.data-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   margin: 2px 0 6px 0;
   font-size: 11px;
 }
@@ -1247,12 +1248,16 @@ table.data-table th {
   color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  overflow: hidden;
+  word-wrap: break-word;
 }
 table.data-table td {
   padding: 4px 8px;
   font-size: 11px;
   border: 1px solid #d1d5db;
   color: #1e293b;
+  overflow: hidden;
+  word-wrap: break-word;
 }
 table.data-table .alt-row { background-color: #f1f5f9; }
 table.data-table .summary-row { font-weight: 700; background-color: #e0f2fe; }
@@ -1696,12 +1701,18 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
             if label:
                 body_parts.append(f'<div class="section-label">{_esc(label)}</div>')
 
-            header_cells = ''.join(
-                f'<th style="text-align:{_esc(c.get("align", "left"))}'
-                f'{";width:" + _esc(c["width"]) if c.get("width") and c["width"] != "auto" else ""}">'
-                f'{_esc(c.get("header", ""))}</th>'
-                for c in columns
-            )
+            # Compute column widths: use explicit widths or distribute evenly
+            num_cols = len(columns)
+            default_w = f'{100.0 / num_cols:.1f}%' if num_cols else 'auto'
+            header_cells = ''
+            for c in columns:
+                align = _esc(c.get('align', 'left'))
+                cw = c.get('width', '')
+                if cw and cw != 'auto':
+                    width = _esc(cw)
+                else:
+                    width = default_w
+                header_cells += f'<th style="text-align:{align};width:{width}">{_esc(c.get("header", ""))}</th>'
             body_parts.append(f'<table class="data-table"><thead><tr>{header_cells}</tr></thead><tbody>')
 
             visible_row_idx = 0
