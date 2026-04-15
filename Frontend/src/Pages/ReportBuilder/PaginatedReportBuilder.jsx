@@ -380,13 +380,23 @@ function resolveCellValue(cell, tagValues, rowContext = null, tagDecimalByName =
   if (cell.sourceType === 'static') return cell.value ?? '';
   if (cell.sourceType === 'tag') {
     const key = resolveTagKey(cell.tagName, cell.aggregation);
-    // Only fall back to plain tagName for 'last' (default) aggregation.
-    // For delta/first/sum/etc, the namespaced key must exist — falling back
-    // to the raw value would show the live value instead of the aggregation.
     const agg = cell.aggregation || 'last';
-    const raw = agg === 'last'
-      ? (tagValues?.[key] ?? tagValues?.[cell.tagName])
-      : tagValues?.[key];
+    let raw = tagValues?.[key];
+    // When namespaced key is missing (live mode), handle per aggregation:
+    // - delta → 0 (no time range = no change)
+    // - first/avg/min/max/sum → fall back to raw value (single-point = itself)
+    // - count → 1
+    // - last → fall back to raw value (default)
+    if (raw == null && cell.tagName) {
+      if (agg === 'delta') {
+        raw = 0;
+      } else if (agg === 'count') {
+        const base = tagValues?.[cell.tagName];
+        raw = base != null ? 1 : null;
+      } else {
+        raw = tagValues?.[cell.tagName] ?? null;
+      }
+    }
     if (raw == null) return '—';
     const n = Number(raw);
     if (isNaN(n)) return raw;
