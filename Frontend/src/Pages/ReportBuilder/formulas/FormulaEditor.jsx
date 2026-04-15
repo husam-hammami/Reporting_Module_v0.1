@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertCircle, CheckCircle2, X, Plus, Zap,
@@ -102,6 +102,8 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
   const [showNumberInput, setShowNumberInput] = useState(false);
   const [tagSearch, setTagSearch] = useState('');
   const [numberInput, setNumberInput] = useState('');
+  const [cursorIndex, setCursorIndex] = useState(Infinity);
+  const blockAreaRef = useRef(null);
   const tagTriggerRef = useRef(null);
 
   const portalThemeClass = useMemo(() => {
@@ -161,6 +163,7 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
   const validation = useMemo(() => validateFormula(value, tagNames), [value, tagNames]);
   const previewValue = useMemo(() => evaluateFormula(value, tagValues || {}), [value, tagValues]);
   const blocks = useMemo(() => parseToBlocks(value || ''), [value]);
+  const effectiveCursor = Math.min(Math.max(0, cursorIndex), blocks.length);
 
   const filteredTags = useMemo(() => {
     if (!tagSearch.trim()) return safeTags;
@@ -172,40 +175,77 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
     );
   }, [safeTags, tagSearch]);
 
-  const appendToFormula = useCallback((text) => {
-    const current = (value || '').trim();
-    const sep = current && !current.endsWith('(') && text !== ')' ? ' ' : '';
-    onChange(current + sep + text);
-  }, [value, onChange]);
+  const insertAtCursor = useCallback((text) => {
+    const newTokens = parseToBlocks(text);
+    if (!newTokens.length) return;
+    const pos = effectiveCursor;
+    const newBlocks = [...blocks];
+    newBlocks.splice(pos, 0, ...newTokens);
+    onChange(blocksToFormula(newBlocks));
+    setCursorIndex(pos + newTokens.length);
+  }, [blocks, effectiveCursor, onChange]);
 
   const addTag = useCallback((tagName) => {
-    appendToFormula(`{${tagName}}`);
+    insertAtCursor(`{${tagName}}`);
     setShowTagPicker(false);
     setTagSearch('');
-  }, [appendToFormula]);
+    setTimeout(() => blockAreaRef.current?.focus(), 0);
+  }, [insertAtCursor]);
 
   const addFunction = useCallback((fn) => {
-    appendToFormula(`${fn.name}(`);
+    insertAtCursor(`${fn.name}(`);
     setShowFuncPicker(false);
-  }, [appendToFormula]);
+    setTimeout(() => blockAreaRef.current?.focus(), 0);
+  }, [insertAtCursor]);
 
   const addOperator = useCallback((op) => {
-    appendToFormula(op);
-  }, [appendToFormula]);
+    insertAtCursor(op);
+    setTimeout(() => blockAreaRef.current?.focus(), 0);
+  }, [insertAtCursor]);
 
   const addNumber = useCallback(() => {
     if (!numberInput.trim()) return;
-    appendToFormula(numberInput.trim());
+    insertAtCursor(numberInput.trim());
     setNumberInput('');
     setShowNumberInput(false);
-  }, [numberInput, appendToFormula]);
+    setTimeout(() => blockAreaRef.current?.focus(), 0);
+  }, [numberInput, insertAtCursor]);
 
   const removeBlock = useCallback((index) => {
     const newBlocks = blocks.filter((_, i) => i !== index);
     onChange(blocksToFormula(newBlocks));
+    setCursorIndex((prev) => {
+      const clamped = Math.min(prev, blocks.length);
+      return clamped > index ? clamped - 1 : clamped;
+    });
   }, [blocks, onChange]);
 
-  const clearAll = useCallback(() => onChange(''), [onChange]);
+  const clearAll = useCallback(() => { onChange(''); setCursorIndex(0); }, [onChange]);
+
+  const handleBlockAreaKeyDown = useCallback((e) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setCursorIndex((prev) => Math.max(0, Math.min(prev, blocks.length) - 1));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setCursorIndex((prev) => Math.min(blocks.length, Math.min(prev, blocks.length) + 1));
+    } else if (e.key === 'Backspace') {
+      e.preventDefault();
+      const pos = effectiveCursor;
+      if (pos > 0) {
+        const newBlocks = blocks.filter((_, i) => i !== pos - 1);
+        onChange(blocksToFormula(newBlocks));
+        setCursorIndex(pos - 1);
+      }
+    } else if (e.key === 'Delete') {
+      e.preventDefault();
+      const pos = effectiveCursor;
+      if (pos < blocks.length) {
+        const newBlocks = blocks.filter((_, i) => i !== pos);
+        onChange(blocksToFormula(newBlocks));
+      }
+    }
+  }, [blocks, effectiveCursor, onChange]);
 
   return (
     <div ref={editorRef} className="space-y-3">
@@ -245,23 +285,42 @@ export default function FormulaEditor({ value, onChange, tags, tagValues, onSave
 
       {mode === 'visual' ? (
         <>
-          <div className="min-h-[72px] px-3.5 py-3 rounded-lg border border-[var(--rb-border)] bg-[var(--rb-input)] flex flex-wrap items-center gap-2 content-start transition-colors duration-150 focus-within:border-[var(--rb-accent)] focus-within:shadow-[0_0_0_3px_var(--rb-accent-subtle)]">
+          <div
+            ref={blockAreaRef}
+            tabIndex={0}
+            onKeyDown={handleBlockAreaKeyDown}
+            onClick={() => { setCursorIndex(blocks.length); blockAreaRef.current?.focus(); }}
+            className="min-h-[72px] px-3.5 py-3 rounded-lg border border-[var(--rb-border)] bg-[var(--rb-input)] flex flex-wrap items-center gap-2 content-start transition-colors duration-150 focus-within:border-[var(--rb-accent)] focus-within:shadow-[0_0_0_3px_var(--rb-accent-subtle)] cursor-text outline-none"
+          >
             {blocks.length === 0 ? (
-              <span className="text-[12px] italic text-[var(--rb-text-muted)] select-none">
-                e.g. {'{Pressure_1}'} + {'{Flow_Rate_1}'} / 2 — use buttons below
+              <span className="text-[12px] italic text-[var(--rb-text-muted)] select-none pointer-events-none">
+                Click here, then use buttons below to build formula
               </span>
             ) : (
               <>
                 {blocks.map((block, i) => (
-                  <BlockChip
-                    key={`${i}-${block.value}`}
-                    block={block}
-                    onRemove={() => removeBlock(i)}
-                    tagMeta={tagMeta}
-                  />
+                  <Fragment key={`${i}-${block.value}`}>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); setCursorIndex(i); blockAreaRef.current?.focus(); }}
+                      className="inline-flex items-center self-stretch cursor-text py-1"
+                      style={{ width: effectiveCursor === i ? 4 : 2, flexShrink: 0 }}
+                    >
+                      {effectiveCursor === i && <span className="w-[2px] h-5 rounded-full bg-[var(--rb-accent)] animate-pulse" />}
+                    </span>
+                    <span onClick={(e) => { e.stopPropagation(); setCursorIndex(i + 1); blockAreaRef.current?.focus(); }}>
+                      <BlockChip block={block} onRemove={() => removeBlock(i)} tagMeta={tagMeta} />
+                    </span>
+                  </Fragment>
                 ))}
+                {/* Cursor zone after last block + trailing click area */}
+                <span
+                  onClick={(e) => { e.stopPropagation(); setCursorIndex(blocks.length); blockAreaRef.current?.focus(); }}
+                  className="inline-flex items-center flex-1 self-stretch cursor-text min-w-[20px] min-h-[28px] py-1"
+                >
+                  {effectiveCursor === blocks.length && <span className="w-[2px] h-5 rounded-full bg-[var(--rb-accent)] animate-pulse" />}
+                </span>
                 <button
-                  onClick={clearAll}
+                  onClick={(e) => { e.stopPropagation(); clearAll(); }}
                   className="ml-1 p-1.5 rounded-full text-[var(--rb-text-muted)] hover:text-[var(--rb-danger)] hover:bg-[var(--rb-danger-subtle)] transition-all duration-150"
                   title="Clear all"
                 >
