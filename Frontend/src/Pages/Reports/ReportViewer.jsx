@@ -436,28 +436,32 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
       const prevScrollHeight = scrollContainer?.style.height;
       const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
       const prevScrollFlex = scrollContainer?.style.flex;
+      const prevScrollOpacity = scrollContainer?.style.opacity;
       if (scrollContainer) {
         scrollContainer.style.overflow = 'visible';
         scrollContainer.style.height = 'auto';
         scrollContainer.style.maxHeight = 'none';
         scrollContainer.style.flex = 'none';
+        if (historicalLoading) scrollContainer.style.opacity = '1';
       }
 
       // Wait a frame for styles to apply
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-      await exportAsPDF(el, template?.name || 'report', {
-        pageMode,
-        orientation: viewMode === 'tabular' ? 'landscape' : 'auto',
-      });
-
-      // Restore original styles
-      el.classList.remove('rb-pdf-export');
-      if (scrollContainer) {
-        scrollContainer.style.overflow = prevScrollOverflow || '';
-        scrollContainer.style.height = prevScrollHeight || '';
-        scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
-        scrollContainer.style.flex = prevScrollFlex || '';
+      try {
+        await exportAsPDF(el, template?.name || 'report', {
+          pageMode,
+          orientation: viewMode === 'tabular' ? 'landscape' : 'auto',
+        });
+      } finally {
+        el.classList.remove('rb-pdf-export');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+          scrollContainer.style.opacity = prevScrollOpacity || '';
+        }
       }
     } finally { setExporting(false); }
   };
@@ -465,7 +469,33 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     setExporting(true);
     try {
       const el = document.getElementById('report-print-section');
-      await exportAsPNG(el, template?.name || 'report');
+      el.classList.add('rb-pdf-export');
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      const prevScrollOpacity = scrollContainer?.style.opacity;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+        if (historicalLoading) scrollContainer.style.opacity = '1';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      try {
+        await exportAsPNG(el, template?.name || 'report');
+      } finally {
+        el.classList.remove('rb-pdf-export');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+          scrollContainer.style.opacity = prevScrollOpacity || '';
+        }
+      }
     } finally { setExporting(false); }
   };
 
@@ -785,7 +815,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                 isDraggable={false}
                 isResizable={false}
                 static
-                useCSSTransforms={true}
+                useCSSTransforms={false}
               >
                 {layout.map((item) => {
                   const widget = widgetMap.get(item.i);

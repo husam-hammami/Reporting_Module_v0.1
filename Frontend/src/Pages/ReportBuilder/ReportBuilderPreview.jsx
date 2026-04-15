@@ -153,14 +153,61 @@ export default function ReportBuilderPreview() {
     setExporting(true);
     try {
       const el = document.getElementById('report-print-section');
-      await exportAsPDF(el, template?.name || 'report');
+      el.classList.add('rb-pdf-export');
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const previewPageMode = template?.layout_config?.grid?.pageMode || 'a4';
+      try {
+        await exportAsPDF(el, template?.name || 'report', { pageMode: previewPageMode, orientation: 'auto' });
+      } finally {
+        el.classList.remove('rb-pdf-export');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+        }
+      }
     } finally { setExporting(false); }
   };
   const handleExportPNG = async () => {
     setExporting(true);
     try {
       const el = document.getElementById('report-print-section');
-      await exportAsPNG(el, template?.name || 'report');
+      el.classList.add('rb-pdf-export');
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      try {
+        await exportAsPNG(el, template?.name || 'report');
+      } finally {
+        el.classList.remove('rb-pdf-export');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+        }
+      }
     } finally { setExporting(false); }
   };
 
@@ -410,7 +457,7 @@ export default function ReportBuilderPreview() {
                 isDraggable={false}
                 isResizable={false}
                 static
-                useCSSTransforms={true}
+                useCSSTransforms={false}
               >
                 {layout.map((item) => {
                   const widget = widgetMap.get(item.i);

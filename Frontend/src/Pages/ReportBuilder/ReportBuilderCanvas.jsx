@@ -888,6 +888,7 @@ export default function ReportBuilderCanvas() {
                     onResizeStart={handleResizeStart}
                     draggableCancel=".no-drag"
                     draggableHandle=".widget-drag-handle"
+                    useCSSTransforms={!dashboardLocked}
                   >
                     {widgets.map((widget) => {
                       /* text = invisible wrapper (no border, no bg, no card — ever) */

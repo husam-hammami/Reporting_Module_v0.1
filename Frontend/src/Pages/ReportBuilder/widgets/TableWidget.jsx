@@ -1231,6 +1231,7 @@ export default function TableWidget({ config, tagValues, isPreview, isSelected, 
                 onDragStop={handleDrillLayoutEnd}
                 onResizeStop={handleDrillLayoutEnd}
                 draggableCancel="button,a,input,textarea,select,.no-drag"
+                useCSSTransforms={Boolean(canEdit && drillDownEnabled)}
               >
                 {drillDownWidgets.map((dw) => {
                   const rewrittenConfig = rewriteTagsForRow(dw.config, effectiveRowKey, drillDownSep);

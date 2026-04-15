@@ -1,6 +1,19 @@
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
+/** Let layout + fonts + canvas charts settle before html2canvas (RGL/transform timing). */
+async function waitForCapturePaint() {
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  if (typeof document !== 'undefined' && document.fonts?.ready) {
+    try {
+      await document.fonts.ready;
+    } catch {
+      /* ignore */
+    }
+  }
+  await new Promise((r) => setTimeout(r, 120));
+}
+
 /**
  * Reset any CSS transform on the element before capture, then restore.
  * This ensures html2canvas captures at true 1:1 scale regardless of zoom.
@@ -25,12 +38,16 @@ export async function exportAsPNG(element, filename = 'report') {
   const originalBg = element.style.backgroundColor;
   element.style.backgroundColor = '#ffffff';
 
+  await waitForCapturePaint();
+
   const canvas = await withResetTransform(element, () =>
     html2canvas(element, {
       scale: 3,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
+      windowWidth: Math.max(element.scrollWidth, element.offsetWidth),
+      width: Math.max(element.scrollWidth, element.offsetWidth),
     })
   );
 
@@ -55,6 +72,8 @@ export async function exportAsPNG(element, filename = 'report') {
 export async function exportAsPDF(element, filename = 'report', options = {}) {
   const originalBg = element.style.backgroundColor;
   element.style.backgroundColor = '#ffffff';
+
+  await waitForCapturePaint();
 
   const canvas = await withResetTransform(element, () =>
     html2canvas(element, {
