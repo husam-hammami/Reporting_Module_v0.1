@@ -100,6 +100,48 @@ function toHistorianToParam(endTime) {
   return new Date().toISOString();
 }
 
+function localHourFloor(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), 0, 0, 0);
+}
+
+/** Start of the hour after d's local hour — `archive_hour <= to` then includes the end-hour bucket (e.g. 21:00 for 20:54). */
+function localHourStartAfter(d) {
+  const t = localHourFloor(d);
+  const x = new Date(t);
+  x.setHours(x.getHours() + 1);
+  return x;
+}
+
+function formatLocalNaiveWallISO(d) {
+  if (!d || Number.isNaN(d.getTime())) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/**
+ * Expand order wall times to overlapping clock hours so historian first/last aligns with
+ * tag_history_archive buckets (strict order times can skip 18:00 / 21:00 rows).
+ */
+function historianOrderWallParams(start_time, end_time) {
+  const start = parseOrderWallTime(start_time);
+  if (!start) {
+    return {
+      fromParam: toHistorianWallTimeParam(start_time),
+      toParam: toHistorianToParam(end_time),
+    };
+  }
+  const fromParam = formatLocalNaiveWallISO(localHourFloor(start));
+  if (end_time != null && end_time !== '') {
+    const end = parseOrderWallTime(end_time);
+    if (!end || Number.isNaN(end.getTime())) {
+      return { fromParam, toParam: toHistorianWallTimeParam(end_time) };
+    }
+    const toParam = formatLocalNaiveWallISO(localHourStartAfter(end));
+    return { fromParam, toParam };
+  }
+  return { fromParam, toParam: new Date().toISOString() };
+}
+
 /** Merge historian `first` + `last` maps into per-tag { start, end, total }. Total = end − start when both numeric. */
 function mergeTagStartEnd(firstMap, lastMap) {
   const a = firstMap && typeof firstMap === 'object' ? firstMap : {};
@@ -191,8 +233,9 @@ export default function JobLogsPage() {
       .then(tagNames => {
         if (!Array.isArray(tagNames) || tagNames.length === 0) return;
 
-        let fromParam = toHistorianWallTimeParam(start_time);
-        let toParam = toHistorianToParam(end_time);
+        const wall = historianOrderWallParams(start_time, end_time);
+        let fromParam = wall.fromParam;
+        let toParam = wall.toParam;
 
         const fromMs = parseOrderWallTime(start_time)?.getTime() ?? NaN;
         const toMs =
