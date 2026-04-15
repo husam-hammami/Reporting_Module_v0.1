@@ -11,9 +11,10 @@ from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 block_cipher = None
 
-# Collect reportlab and xhtml2pdf fully (data files + submodules)
+# Collect reportlab, xhtml2pdf, matplotlib fully (data files + submodules)
 reportlab_datas, reportlab_binaries, reportlab_hiddenimports = collect_all('reportlab')
 xhtml2pdf_datas, xhtml2pdf_binaries, xhtml2pdf_hiddenimports = collect_all('xhtml2pdf')
+matplotlib_datas, matplotlib_binaries, matplotlib_hiddenimports = collect_all('matplotlib')
 
 # Locate snap7.dll in the python-snap7 package
 snap7_dll = []
@@ -39,7 +40,7 @@ a = Analysis(
         ('migrations', 'migrations'),
         ('version.txt', '.'),
         ('release_branch.txt', '.'),
-    ] + reportlab_datas + xhtml2pdf_datas,
+    ] + reportlab_datas + xhtml2pdf_datas + matplotlib_datas,
     hiddenimports=[
         # eventlet (all hubs must be importable — eventlet probes them at init)
         'eventlet.hubs.selects',
@@ -127,7 +128,7 @@ a = Analysis(
         'werkzeug.security',
         'dns',
         'dns.resolver',
-    ] + reportlab_hiddenimports + xhtml2pdf_hiddenimports,
+    ] + reportlab_hiddenimports + xhtml2pdf_hiddenimports + matplotlib_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=['pyinstaller_runtime_hook.py'],

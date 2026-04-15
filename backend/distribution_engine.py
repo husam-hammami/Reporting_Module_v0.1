@@ -17,8 +17,59 @@ from html import escape as html_escape
 from contextlib import closing
 
 from psycopg2.extras import RealDictCursor
+from io import BytesIO
 
 logger = logging.getLogger(__name__)
+
+
+# ── Chart image generation (matplotlib) ──────────────────────────────────────
+
+def _render_chart_image_base64(chart_type, series_data, label='', width_px=500, height_px=200):
+    """Render a chart as a base64 PNG data URI using matplotlib.
+    series_data: list of (label, value) tuples.
+    Returns data:image/png;base64,... string, or None on failure.
+    """
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+
+        fig_w = max(3, width_px / 100)
+        fig_h = max(1.5, height_px / 100)
+        fig, ax = plt.subplots(figsize=(fig_w, fig_h), dpi=100)
+
+        labels = [s[0] for s in series_data]
+        values = [s[1] for s in series_data]
+        colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#6366f1']
+
+        if chart_type == 'piechart' and any(v > 0 for v in values):
+            safe_vals = [max(v, 0) for v in values]
+            ax.pie(safe_vals, labels=labels, autopct='%1.0f%%', startangle=90,
+                   colors=colors[:len(values)], textprops={'fontsize': 8})
+        else:
+            bars = ax.bar(labels, values, color=colors[:len(values)], width=0.6)
+            ax.set_ylabel('')
+            ax.tick_params(axis='x', labelsize=7, rotation=30)
+            ax.tick_params(axis='y', labelsize=7)
+            for bar, val in zip(bars, values):
+                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+                        f'{val:,.1f}', ha='center', va='bottom', fontsize=7)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+
+        if label and chart_type != 'piechart':
+            ax.set_title(label, fontsize=9, fontweight='bold', pad=6)
+
+        plt.tight_layout(pad=0.5)
+        buf = BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight', dpi=100)
+        plt.close(fig)
+        buf.seek(0)
+        b64 = base64.b64encode(buf.read()).decode('ascii')
+        return f'data:image/png;base64,{b64}'
+    except Exception as e:
+        logger.debug("Chart rendering failed: %s", e)
+        return None
 
 # Default save directory (used when no path is provided)
 DEFAULT_SAVE_DIR = os.getenv(
@@ -1287,8 +1338,216 @@ def _build_logo_header_html(hercules_uri, asm_uri, client_logo_uri):
 
 # ── HTML report generation ───────────────────────────────────────────────────
 
+GRID_COLS = 12  # react-grid-layout uses 12 columns
+
+
+def _render_single_widget_html(widget, tag_data, ts_by_tag=None, from_dt=None, to_dt=None):
+    """Render one dashboard widget to an HTML string."""
+    w_type = widget.get('type', '')
+    config = widget.get('config', {}) or {}
+    label = config.get('label') or config.get('title') or widget.get('i', w_type)
+
+    if w_type in ('kpi', 'gauge', 'stat', 'progress', 'sparkline'):
+        ds = config.get('dataSource', {}) or {}
+        raw = _resolve_widget_datasource_value(ds, tag_data)
+        if raw is None:
+            val = '—'
+        elif isinstance(raw, float):
+            val = f"{raw:,.2f}"
+        else:
+            val = str(raw)
+        unit = config.get('unit', '')
+        unit_html = f'<span class="widget-unit">{_esc(unit)}</span>' if unit else ''
+        return f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div class="widget-value">{_esc(val)}{unit_html}</div></div>\n'
+
+    if w_type == 'silo':
+        ds = config.get('dataSource', {}) or {}
+        tag = ds.get('tagName', '')
+        s_val = tag_data.get(tag, '—')
+        if isinstance(s_val, float):
+            s_val = f"{s_val:.1f}"
+        cap_tag = config.get('capacityTag', '')
+        cap_val = tag_data.get(cap_tag, '—')
+        tons_tag = config.get('tonsTag', '')
+        tons_val = tag_data.get(tons_tag, '—')
+        if isinstance(cap_val, float):
+            cap_val = f"{cap_val:,.0f}"
+        if isinstance(tons_val, float):
+            tons_val = f"{tons_val:,.1f}"
+        return (
+            f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+            f'<div class="widget-silo">Level: <strong>{_esc(s_val)}%</strong> &nbsp;|&nbsp; '
+            f'Capacity: <strong>{_esc(cap_val)}</strong> &nbsp;|&nbsp; Tons: <strong>{_esc(tons_val)}</strong></div></div>\n'
+        )
+
+    if w_type in ('chart', 'barchart', 'piechart'):
+        # Try time-series chart image via the dedicated renderer
+        img_uri = _dashboard_chart_png_data_uri(w_type, config, label, ts_by_tag or {}, tag_data, from_dt, to_dt) if from_dt else None
+        if img_uri:
+            return (
+                f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+                f'<div style="text-align:center;margin-top:4px">'
+                f'<img src="{img_uri}" alt="" style="max-width:100%;width:100%;height:auto" />'
+                f'</div></div>\n'
+            )
+        # Fallback: render series as bar chart or value table
+        series_data = []
+        for s in _chart_series_list_for_export(config):
+            s_ds = s.get('dataSource', {}) or {}
+            s_tag = s_ds.get('tagName', '') or s.get('tagName', '')
+            s_raw = tag_data.get(s_tag) if s_tag else None
+            s_label = s.get('label', s_tag or 'Series')
+            try:
+                s_val = float(s_raw) if s_raw is not None else 0
+            except (TypeError, ValueError):
+                s_val = 0
+            series_data.append((s_label, s_val))
+        w_grid = widget.get('w', 6)
+        chart_uri = _render_chart_image_base64(w_type, series_data, label, width_px=w_grid * 45, height_px=180)
+        if chart_uri:
+            return f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><img src="{chart_uri}" style="width:100%;height:auto" /></div>\n'
+        # Last resort: text table
+        parts = []
+        for sl, sv in series_data:
+            parts.append(f'<tr><td style="padding:2px 8px;font-size:11px">{_esc(sl)}</td><td style="padding:2px 8px;font-weight:700;text-align:right;font-size:11px">{sv:,.2f}</td></tr>')
+        return (
+            f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+            f'<table style="width:100%;border-collapse:collapse">{"".join(parts)}</table></div>\n'
+        )
+
+    if w_type == 'table':
+        cols = config.get('tableColumns') or config.get('columns') or []
+        header_cells = ''.join(f'<th>{_esc(c.get("label", ""))}</th>' for c in cols)
+        data_cells = ''
+        for col in cols:
+            col_type = col.get('sourceType', 'tag')
+            col_agg = col.get('aggregation', 'last')
+            if col_type == 'tag':
+                tag_key = f'{col_agg}::{col.get("tagName", "")}' if col_agg and col_agg != 'last' else col.get('tagName', '')
+                c_val = tag_data.get(tag_key, tag_data.get(col.get('tagName', ''), '—'))
+                if isinstance(c_val, float):
+                    c_val = f"{c_val:,.2f}"
+                data_cells += f'<td>{_esc(c_val)}</td>'
+            elif col_type == 'group':
+                vals = [str(tag_data.get(t, '—')) for t in col.get('groupTags', [])]
+                data_cells += f'<td>{_esc(", ".join(vals))}</td>'
+            elif col_type == 'formula':
+                result = _evaluate_formula(col.get('formula', ''), tag_data, aggregation=col_agg)
+                data_cells += f'<td>{_esc(f"{result:,.2f}" if isinstance(result, float) else (result or "—"))}</td>'
+            else:
+                data_cells += '<td>—</td>'
+        return (
+            f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+            f'<table class="data-table"><thead><tr>{header_cells}</tr></thead><tbody><tr>{data_cells}</tr></tbody></table></div>\n'
+        )
+
+    if w_type == 'datapanel':
+        fields = config.get('fields', [])
+        field_parts = []
+        for f in fields:
+            f_label = f.get('label', '')
+            src = f.get('sourceType', 'static')
+            if src == 'static':
+                f_val = f.get('value', '')
+            elif src == 'tag' and f.get('tagName'):
+                f_val = tag_data.get(f['tagName'], '—')
+                if isinstance(f_val, float):
+                    dec = f.get('decimals', 2)
+                    f_val = f"{f_val:,.{dec}f}"
+                f_unit = f.get('unit', '')
+                if f_unit:
+                    f_val = f"{f_val} {f_unit}"
+            elif src == 'formula' and f.get('formula'):
+                f_val = _evaluate_formula(f['formula'], tag_data)
+                if isinstance(f_val, (int, float)):
+                    f_val = f"{f_val:,.2f}"
+                elif f_val is None:
+                    f_val = '—'
+            else:
+                f_val = '—'
+            if f_label or f_val:
+                field_parts.append(
+                    f'<tr><td style="padding:2px 8px;color:#64748b;font-size:10px">{_esc(f_label)}</td>'
+                    f'<td style="padding:2px 8px;font-weight:600;text-align:right">{_esc(f_val)}</td></tr>'
+                )
+        if field_parts:
+            return (
+                f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+                f'<table style="width:100%;font-size:11px;border-collapse:collapse">{"".join(field_parts)}</table></div>\n'
+            )
+        return ''
+
+    if w_type == 'statusbar':
+        status_parts = []
+        for st in config.get('tags', []):
+            if not isinstance(st, dict):
+                continue
+            st_tag = st.get('tagName', '')
+            raw = tag_data.get(st_tag)
+            num = float(raw) if raw is not None else None
+            is_on = num == 1 if num is not None else False
+            status_text = st.get('onLabel', 'ON') if is_on else st.get('offLabel', 'OFF')
+            dot = '●' if is_on else '○'
+            st_label = st.get('label', st_tag)
+            status_parts.append(f'{_esc(st_label)}: {dot} {_esc(status_text)}')
+        if status_parts:
+            return f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div style="font-size:11px">{" &nbsp;|&nbsp; ".join(status_parts)}</div></div>\n'
+        return ''
+
+    if w_type == 'status':
+        ds = config.get('dataSource', {}) or {}
+        tag = ds.get('tagName', '')
+        raw = tag_data.get(tag)
+        num = float(raw) if raw is not None else None
+        status_text = '—'
+        for zone in config.get('zones', []):
+            if num is not None and zone.get('from', 0) <= num <= zone.get('to', 0):
+                status_text = zone.get('status', str(num))
+                break
+        return f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div class="widget-value" style="font-size:16px">{_esc(status_text)}</div></div>\n'
+
+    if w_type == 'hopper':
+        ds = config.get('dataSource', {}) or {}
+        tag = ds.get('tagName', '')
+        val = tag_data.get(tag, '—')
+        if isinstance(val, float):
+            val = f"{val:.1f}"
+        cap_tag = config.get('capacityTag', '')
+        cap_val = tag_data.get(cap_tag, '—') if cap_tag else '—'
+        if isinstance(cap_val, float):
+            cap_val = f"{cap_val:,.0f}"
+        unit = config.get('unit', '%')
+        html = f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+        html += f'<div class="widget-silo">Level: <strong>{_esc(val)} {_esc(unit)}</strong>'
+        if cap_tag:
+            html += f' &nbsp;|&nbsp; Capacity: <strong>{_esc(cap_val)}</strong>'
+        html += '</div></div>\n'
+        return html
+
+    if w_type in ('text', 'header', 'image', 'spacer', 'divider', 'logo'):
+        if w_type == 'text':
+            text = config.get('text', config.get('content', ''))
+            if text:
+                return f'<div class="text-block" style="font-size:13px;color:#334155">{_esc(text)}</div>\n'
+        elif w_type == 'header':
+            text = config.get('text', config.get('title', ''))
+            if text:
+                return f'<div class="text-block" style="font-size:16px;font-weight:700;color:#0f172a">{_esc(text)}</div>\n'
+        return ''
+
+    # Generic fallback
+    ds = config.get('dataSource', {}) or {}
+    raw = _resolve_widget_datasource_value(ds, tag_data)
+    if raw is not None:
+        val = f"{raw:,.2f}" if isinstance(raw, float) else str(raw)
+        unit = config.get('unit', '')
+        unit_html = f'<span class="widget-unit">{_esc(unit)}</span>' if unit else ''
+        return f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div class="widget-value">{_esc(val)}{unit_html}</div></div>\n'
+    return ''
+
+
 def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_dt):
-    """Generate HTML report from dashboard widgets, styled to match frontend viewer."""
+    """Generate HTML report from dashboard widgets with grid layout."""
     period_start = from_dt.strftime('%d/%m/%Y, %H:%M')
     period_end = to_dt.strftime('%d/%m/%Y, %H:%M')
     hercules_uri, asm_uri, client_logo_uri = _get_logo_data_uris()
@@ -1305,200 +1564,34 @@ def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_d
         if section_heading:
             cards_html += f'<h2 class="report-section-title">{_esc(section_heading)}</h2>\n'
 
-        for widget in sorted(flat_widgets, key=lambda w: (w.get('y', 0), w.get('x', 0))):
-            w_type = widget.get('type', '')
-            config = widget.get('config', {}) or {}
-            label = config.get('label') or config.get('title') or widget.get('i', w_type)
+        sorted_widgets = sorted(flat_widgets, key=lambda w: (w.get('y', 0), w.get('x', 0)))
 
-            if w_type in ('kpi', 'gauge', 'stat', 'progress', 'sparkline'):
-                ds = config.get('dataSource', {}) or {}
-                raw = _resolve_widget_datasource_value(ds, tag_data)
-                if raw is None:
-                    val = '—'
-                elif isinstance(raw, float):
-                    val = f"{raw:,.2f}"
-                else:
-                    val = str(raw)
-                unit = config.get('unit', '')
-                unit_html = f'<span class="widget-unit">{_esc(unit)}</span>' if unit else ''
-                cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div class="widget-value">{_esc(val)}{unit_html}</div></div>\n'
+        # Group widgets into rows by y-coordinate
+        rows = {}
+        for widget in sorted_widgets:
+            y = widget.get('y', 0)
+            rows.setdefault(y, []).append(widget)
 
-            elif w_type == 'silo':
-                ds = config.get('dataSource', {}) or {}
-                tag = ds.get('tagName', '')
-                s_val = tag_data.get(tag, '—')
-                if isinstance(s_val, float):
-                    s_val = f"{s_val:.1f}"
-                cap_tag = config.get('capacityTag', '')
-                cap_val = tag_data.get(cap_tag, '—')
-                tons_tag = config.get('tonsTag', '')
-                tons_val = tag_data.get(tons_tag, '—')
-                if isinstance(cap_val, float):
-                    cap_val = f"{cap_val:,.0f}"
-                if isinstance(tons_val, float):
-                    tons_val = f"{tons_val:,.1f}"
-                cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-                cards_html += f'<div class="widget-silo">Level: <strong>{_esc(s_val)}%</strong> &nbsp;|&nbsp; Capacity: <strong>{_esc(cap_val)}</strong> &nbsp;|&nbsp; Tons: <strong>{_esc(tons_val)}</strong></div></div>\n'
+        for y_key in sorted(rows.keys()):
+            row_widgets = sorted(rows[y_key], key=lambda w: w.get('x', 0))
 
-            elif w_type in ('chart', 'barchart', 'piechart'):
-                img_uri = _dashboard_chart_png_data_uri(
-                    w_type, config, label, ts_by_tag, tag_data, from_dt, to_dt
-                )
-                if img_uri:
-                    cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-                    cards_html += (
-                        f'<div style="text-align:center;margin-top:4px">'
-                        f'<img src="{img_uri}" alt="" style="max-width:100%;width:100%;height:auto" />'
-                        f'</div></div>\n'
-                    )
-                else:
-                    series_parts = []
-                    for s in _chart_series_list_for_export(config):
-                        s_ds = s.get('dataSource', {}) or {}
-                        s_tag = s_ds.get('tagName', '') or s.get('tagName', '')
-                        s_raw = tag_data.get(s_tag, '—') if s_tag else '—'
-                        if isinstance(s_raw, float):
-                            s_raw = f"{s_raw:,.2f}"
-                        s_label = s.get('label', s_tag or 'Series')
-                        series_parts.append(
-                            f'<span class="kpi-item"><span class="kpi-label">{_esc(s_label)}: </span>'
-                            f'<span class="kpi-value">{_esc(s_raw)}</span></span>'
-                        )
-                    cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-                    cards_html += f'<div class="widget-chart-note">Chart — latest data point values:</div>'
-                    cards_html += (
-                        f'<div class="kpi-row" style="justify-content:flex-start">'
-                        f'{"  ".join(series_parts)}</div></div>\n'
-                    )
+            # Check if all widgets span the full width (full-width row)
+            total_w = sum(w.get('w', GRID_COLS) for w in row_widgets)
+            single_full = len(row_widgets) == 1 and row_widgets[0].get('w', GRID_COLS) >= GRID_COLS
 
-            elif w_type == 'table':
-                cols = config.get('tableColumns') or config.get('columns') or []
-                header_cells = ''.join(f'<th>{_esc(c.get("label", ""))}</th>' for c in cols)
-                data_cells = ''
-                for col in cols:
-                    col_type = col.get('sourceType', 'tag')
-                    col_agg = col.get('aggregation', 'last')
-                    if col_type == 'tag':
-                        tag_key = f'{col_agg}::{col.get("tagName", "")}' if col_agg and col_agg != 'last' else col.get('tagName', '')
-                        c_val = tag_data.get(tag_key, tag_data.get(col.get('tagName', ''), '—'))
-                        if isinstance(c_val, float):
-                            c_val = f"{c_val:,.2f}"
-                        data_cells += f'<td>{_esc(c_val)}</td>'
-                    elif col_type == 'group':
-                        vals = [str(tag_data.get(t, '—')) for t in col.get('groupTags', [])]
-                        data_cells += f'<td>{_esc(", ".join(vals))}</td>'
-                    elif col_type == 'formula':
-                        result = _evaluate_formula(col.get('formula', ''), tag_data, aggregation=col_agg)
-                        data_cells += f'<td>{_esc(f"{result:,.2f}" if isinstance(result, float) else (result or "—"))}</td>'
-                    else:
-                        data_cells += '<td>—</td>'
-                cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-                cards_html += f'<table class="data-table"><thead><tr>{header_cells}</tr></thead><tbody><tr>{data_cells}</tr></tbody></table></div>\n'
-
-            elif w_type == 'datapanel':
-                fields = config.get('fields', [])
-                field_parts = []
-                for f in fields:
-                    f_label = f.get('label', '')
-                    src = f.get('sourceType', 'static')
-                    if src == 'static':
-                        f_val = f.get('value', '')
-                    elif src == 'tag' and f.get('tagName'):
-                        f_val = tag_data.get(f['tagName'], '—')
-                        if isinstance(f_val, float):
-                            dec = f.get('decimals', 2)
-                            f_val = f"{f_val:,.{dec}f}"
-                        f_unit = f.get('unit', '')
-                        if f_unit:
-                            f_val = f"{f_val} {f_unit}"
-                    elif src == 'formula' and f.get('formula'):
-                        f_val = _evaluate_formula(f['formula'], tag_data)
-                        if isinstance(f_val, (int, float)):
-                            f_val = f"{f_val:,.2f}"
-                        elif f_val is None:
-                            f_val = '—'
-                    else:
-                        f_val = '—'
-                    if f_label or f_val:
-                        field_parts.append(
-                            f'<tr><td style="padding:2px 8px;color:#64748b;font-size:10px">{_esc(f_label)}</td>'
-                            f'<td style="padding:2px 8px;font-weight:600;text-align:right">{_esc(f_val)}</td></tr>'
-                        )
-                if field_parts:
-                    cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-                    cards_html += f'<table style="width:100%;font-size:11px;border-collapse:collapse">{"".join(field_parts)}</table></div>\n'
-
-            elif w_type == 'statusbar':
-                status_parts = []
-                for st in config.get('tags', []):
-                    if not isinstance(st, dict):
-                        continue
-                    st_tag = st.get('tagName', '')
-                    raw = tag_data.get(st_tag)
-                    num = float(raw) if raw is not None else None
-                    is_on = num == 1 if num is not None else False
-                    status_text = st.get('onLabel', 'ON') if is_on else st.get('offLabel', 'OFF')
-                    dot_color = st.get('onColor', '#10b981') if is_on else st.get('offColor', '#6b7280')
-                    st_label = st.get('label', st_tag)
-                    status_parts.append(
-                        f'<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;margin:2px;'
-                        f'border:1px solid {_esc(dot_color)}40;border-radius:4px;font-size:10px">'
-                        f'<span style="width:8px;height:8px;border-radius:50%;background:{_esc(dot_color)};display:inline-block"></span>'
-                        f'{_esc(st_label)}: <strong>{_esc(status_text)}</strong></span>'
-                    )
-                if status_parts:
-                    cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div>{"".join(status_parts)}</div></div>\n'
-
-            elif w_type == 'status':
-                ds = config.get('dataSource', {}) or {}
-                tag = ds.get('tagName', '')
-                raw = tag_data.get(tag)
-                num = float(raw) if raw is not None else None
-                status_text = '—'
-                for zone in config.get('zones', []):
-                    if num is not None and zone.get('from', 0) <= num <= zone.get('to', 0):
-                        status_text = zone.get('status', str(num))
-                        break
-                cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div class="widget-value" style="font-size:16px">{_esc(status_text)}</div></div>\n'
-
-            elif w_type == 'hopper':
-                ds = config.get('dataSource', {}) or {}
-                tag = ds.get('tagName', '')
-                val = tag_data.get(tag, '—')
-                if isinstance(val, float):
-                    val = f"{val:.1f}"
-                cap_tag = config.get('capacityTag', '')
-                cap_val = tag_data.get(cap_tag, '—') if cap_tag else '—'
-                if isinstance(cap_val, float):
-                    cap_val = f"{cap_val:,.0f}"
-                unit = config.get('unit', '%')
-                cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-                cards_html += f'<div class="widget-silo">Level: <strong>{_esc(val)} {_esc(unit)}</strong>'
-                if cap_tag:
-                    cards_html += f' &nbsp;|&nbsp; Capacity: <strong>{_esc(cap_val)}</strong>'
-                cards_html += '</div></div>\n'
-
-            elif w_type in ('text', 'header', 'image', 'spacer', 'divider', 'logo'):
-                if w_type == 'text':
-                    text = config.get('text', config.get('content', ''))
-                    if text:
-                        cards_html += f'<div class="text-block" style="font-size:13px;color:#334155">{_esc(text)}</div>\n'
-                elif w_type == 'header':
-                    text = config.get('text', config.get('title', ''))
-                    if text:
-                        cards_html += f'<div class="text-block" style="font-size:16px;font-weight:700;color:#0f172a">{_esc(text)}</div>\n'
-
+            if single_full or len(row_widgets) == 1:
+                # Full-width: render directly
+                cards_html += _render_single_widget_html(row_widgets[0], tag_data, ts_by_tag, from_dt, to_dt)
             else:
-                ds = config.get('dataSource', {}) or {}
-                raw = _resolve_widget_datasource_value(ds, tag_data)
-                if raw is not None:
-                    val = f"{raw:,.2f}" if isinstance(raw, float) else str(raw)
-                    unit = config.get('unit', '')
-                    unit_html = f'<span class="widget-unit">{_esc(unit)}</span>' if unit else ''
-                    cards_html += (
-                        f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-                        f'<div class="widget-value">{_esc(val)}{unit_html}</div></div>\n'
-                    )
+                # Multi-column row: use table for side-by-side layout
+                col_pct = 100.0 / GRID_COLS
+                cards_html += '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:2px"><tr>\n'
+                for widget in row_widgets:
+                    w_span = widget.get('w', 3)
+                    width = f'{w_span * col_pct:.1f}%'
+                    cell_html = _render_single_widget_html(widget, tag_data, ts_by_tag, from_dt, to_dt)
+                    cards_html += f'<td style="width:{width};vertical-align:top;padding:0 2px">{cell_html}</td>\n'
+                cards_html += '</tr></table>\n'
 
     logo_html = _build_logo_header_html(hercules_uri, asm_uri, client_logo_uri)
 
