@@ -39,11 +39,28 @@ def _get_db_connection():
 
 # ── Tag extraction from layout_config ────────────────────────────────────────
 
+_FORMULA_AGG_PREFIX_RE = re.compile(r'^(first|last|delta|avg|min|max|sum|count)::(.+)$', re.I)
+
+
+def _parse_formula_tag_tokens(formula):
+    """Yield (base_tag_name, explicit_agg_or_None) for each {…} token, excluding {col:…}."""
+    for m in re.finditer(r'\{([^}]+)\}', formula or ''):
+        inner = m.group(1)
+        if inner.startswith('col:'):
+            continue
+        mm = _FORMULA_AGG_PREFIX_RE.match(inner)
+        if mm:
+            yield mm.group(2), mm.group(1).lower()
+        else:
+            yield inner, None
+
+
 def _parse_formula_tags(formula):
-    """Extract {tagName} references from formula strings (paginated uses {Tag})."""
+    """Extract base tag names from formula strings (paginated uses {Tag} or {first::Tag})."""
     tags = set()
     tags.update(re.findall(r'\[([^\]]+)\]', formula or ''))
-    tags.update(t for t in re.findall(r'\{([^}]+)\}', formula or '') if not t.startswith('col:'))
+    for base, _explicit in _parse_formula_tag_tokens(formula):
+        tags.add(base)
     return tags
 
 
@@ -165,8 +182,8 @@ def _collect_aggregation_groups(layout_config):
                 if k.get('tagName'):
                     add_tag(k['tagName'], k.get('aggregation'))
                 if k.get('formula'):
-                    for t in _parse_formula_tags(k['formula']):
-                        add_tag(t, k.get('aggregation'))
+                    for base, explicit in _parse_formula_tag_tokens(k['formula']):
+                        add_tag(base, explicit or k.get('aggregation'))
 
         elif s_type == 'table':
             for row in (s.get('rows') or []):
@@ -175,8 +192,8 @@ def _collect_aggregation_groups(layout_config):
                     if src == 'tag' and cell.get('tagName'):
                         add_tag(cell['tagName'], cell.get('aggregation'))
                     elif src == 'formula' and cell.get('formula'):
-                        for t in _parse_formula_tags(cell['formula']):
-                            add_tag(t, cell.get('aggregation'))
+                        for base, explicit in _parse_formula_tag_tokens(cell['formula']):
+                            add_tag(base, explicit or cell.get('aggregation'))
 
     return agg_groups
 
@@ -342,20 +359,62 @@ def _get_formula_interp():
     return Interpreter()
 
 
+def _count_bare_formula_tag_occurrences(formula):
+    """Count bare {Tag} refs (no agg:: prefix) per base name — used for {T}-{T} totalizer delta."""
+    counts = {}
+    for base, explicit in _parse_formula_tag_tokens(formula):
+        if explicit:
+            continue
+        counts[base] = counts.get(base, 0) + 1
+    return counts
+
+
 def _evaluate_formula(formula, tag_data, aggregation=None):
     """Evaluate a formula string like '{Tag1} + {Tag2} * 100'. Returns float or None.
-    If aggregation is set (e.g. 'first', 'delta'), resolves {Tag} to namespaced keys first.
+
+    Mirrors frontend formulaEngine.js: supports {agg::Tag}; when the same bare {Tag}
+    appears exactly twice, first occurrence is last-in-range and the second is first
+    (so '{T}-{T}' equals delta for paginated historian merges).
     """
     if not formula or not formula.strip():
         return None
     try:
+        bare_dup = _count_bare_formula_tag_occurrences(formula)
+        bare_occ = {k: 0 for k in bare_dup}
+
         def _resolve_tag(m):
-            tag_name = m.group(1)
+            inner = m.group(1)
+            if inner.startswith('col:'):
+                return '0'
+            mm = _FORMULA_AGG_PREFIX_RE.match(inner)
+            if mm:
+                agg, base = mm.group(1).lower(), mm.group(2)
+                key = base if agg == 'last' else f'{agg}::{base}'
+                val = tag_data.get(key)
+                if val is None and agg == 'last':
+                    val = tag_data.get(base)
+                return str(float(val)) if val is not None else '0'
+            name = inner
+            use_dup = bare_dup.get(name) == 2
+            if use_dup:
+                k = bare_occ[name]
+                bare_occ[name] = k + 1
+                if k == 0:
+                    val = tag_data.get(name)
+                    if val is None:
+                        val = tag_data.get(f'last::{name}')
+                else:
+                    val = tag_data.get(f'first::{name}')
+                    if val is None:
+                        val = tag_data.get(name)
+                return str(float(val)) if val is not None else '0'
             if aggregation and aggregation != 'last':
-                key = f'{aggregation}::{tag_name}'
+                key = f'{aggregation}::{name}'
                 if key in tag_data:
                     return str(float(tag_data[key]))
-            return str(float(tag_data.get(tag_name, 0)))
+            val = tag_data.get(name)
+            return str(float(val)) if val is not None else '0'
+
         expr = re.sub(r'\{([^}]+)\}', _resolve_tag, formula)
 
         for fn_pattern, fn_safe in [('SUM', 'sum'), ('AVG', 'avg'), ('MIN', 'min'), ('MAX', 'max')]:
