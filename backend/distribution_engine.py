@@ -2639,7 +2639,8 @@ def execute_distribution_rule(rule_id):
             if rule.get('include_ai_summary'):
                 try:
                     all_tag_data = {}
-                    for rid in report_ids:
+                    all_layout_configs = {}
+                    for idx, rid in enumerate(report_ids):
                         with closing(get_conn()) as conn2:
                             actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
                             cur2 = actual2.cursor(cursor_factory=RealDictCursor)
@@ -2652,12 +2653,15 @@ def execute_distribution_rule(rule_id):
                                 tags = extract_all_tags(lc)
                                 td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
                                 all_tag_data.update(td)
+                                rname = report_names[idx] if idx < len(report_names) else f'Report {rid}'
+                                all_layout_configs[rname] = lc
 
                     summary = _generate_ai_summary(
                         report_names=report_names,
                         tag_data=all_tag_data,
                         from_dt=from_dt,
-                        to_dt=to_dt
+                        to_dt=to_dt,
+                        layout_configs=all_layout_configs,
                     )
                     if summary:
                         email_html = _prepend_summary_to_email(summary, email_html)
@@ -2749,13 +2753,114 @@ _ai_call_date = None
 _AI_DAILY_CAP = 200
 
 
-def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
+def _extract_report_context(layout_configs):
+    """Build a human-readable description of report structures for the AI prompt.
+    layout_configs: dict {report_name: layout_config_dict}
+    """
+    parts = []
+    for name, lc in (layout_configs or {}).items():
+        if not isinstance(lc, dict):
+            continue
+        report_type = lc.get('reportType', 'dashboard')
+
+        # Paginated (table) reports
+        paginated = lc.get('paginatedSections', [])
+        if report_type == 'paginated' and paginated:
+            lines = [f'Report "{name}" (Table Report):']
+            for s in paginated:
+                stype = s.get('type', '')
+                if stype == 'table':
+                    cols = s.get('columns', [])
+                    col_headers = [c.get('header', '?') for c in cols]
+                    label = s.get('label', 'Table')
+                    lines.append(f'  Table "{label}": columns {col_headers}')
+                    # Describe aggregation context per column from first row
+                    rows = s.get('rows', [])
+                    if rows:
+                        for ci, cell in enumerate((rows[0].get('cells') or [])):
+                            agg = cell.get('aggregation', '')
+                            src = cell.get('sourceType', '')
+                            unit_val = cell.get('unit', '')
+                            is_cb = unit_val == '__checkbox__'
+                            if ci < len(col_headers):
+                                col_name = col_headers[ci]
+                            else:
+                                col_name = f'Col {ci}'
+                            if src == 'static':
+                                lines.append(f'    - "{col_name}": static label (row identifier)')
+                            elif agg == 'delta':
+                                lines.append(f'    - "{col_name}": delta aggregation (= amount produced/consumed in the period)')
+                            elif agg == 'first':
+                                lines.append(f'    - "{col_name}": first aggregation (= reading at start of period)')
+                            elif agg in ('avg', 'sum', 'min', 'max', 'count'):
+                                lines.append(f'    - "{col_name}": {agg} aggregation')
+                            elif is_cb:
+                                lines.append(f'    - "{col_name}": boolean status (on/off)')
+                            elif agg == '' or agg == 'last':
+                                lines.append(f'    - "{col_name}": last value (current/end reading)')
+                        lines.append(f'    {len(rows)} data rows')
+                    # Summary row info
+                    has_summary = any(c.get('summary', {}).get('type', 'none') != 'none' for c in cols)
+                    if has_summary:
+                        sm_parts = []
+                        for c in cols:
+                            st = c.get('summary', {}).get('type', 'none')
+                            if st != 'none':
+                                sm_parts.append(f'{c.get("header","?")}={st}')
+                        lines.append(f'    Summary row: {", ".join(sm_parts)}')
+                elif stype == 'kpi-row':
+                    kpis = s.get('kpis', [])
+                    kpi_labels = [k.get('label', '?') for k in kpis]
+                    lines.append(f'  KPI Row: {kpi_labels}')
+            parts.append('\n'.join(lines))
+            continue
+
+        # Dashboard reports
+        dt = lc.get('dashboardTabs', {})
+        tabs = dt.get('tabs', []) if isinstance(dt.get('tabs'), list) else []
+        if dt.get('enabled') and tabs:
+            lines = [f'Report "{name}" (Dashboard):']
+            for tab in tabs:
+                tab_label = tab.get('label', '?')
+                widgets = tab.get('widgets', [])
+                widget_types = {}
+                for w in widgets:
+                    wt = w.get('type', '?')
+                    cfg = w.get('config', {}) or {}
+                    title = cfg.get('title') or cfg.get('label') or cfg.get('content', '')
+                    if wt in ('kpi', 'gauge', 'stat', 'progress', 'sparkline'):
+                        widget_types.setdefault('KPIs', []).append(title)
+                    elif wt in ('chart', 'barchart', 'piechart'):
+                        widget_types.setdefault('Charts', []).append(title)
+                    elif wt == 'table':
+                        col_labels = [c.get('label', '') for c in (cfg.get('tableColumns') or [])]
+                        widget_types.setdefault('Tables', []).append(f'{title} [{", ".join(col_labels)}]')
+                    elif wt == 'statusbar':
+                        tag_labels = [t.get('label', '') for t in (cfg.get('tags') or []) if isinstance(t, dict)]
+                        widget_types.setdefault('Status', []).append(f'{", ".join(tag_labels)}')
+                    elif wt == 'text':
+                        if title:
+                            widget_types.setdefault('Headings', []).append(title[:60])
+                lines.append(f'  Tab "{tab_label}":')
+                for cat, items in widget_types.items():
+                    lines.append(f'    {cat}: {", ".join(items[:8])}')
+            parts.append('\n'.join(lines))
+        elif lc.get('widgets'):
+            widgets = lc['widgets']
+            lines = [f'Report "{name}" (Dashboard): {len(widgets)} widgets']
+            parts.append('\n'.join(lines))
+
+    return '\n\n'.join(parts) if parts else ''
+
+
+def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=None):
     """
     Generate AI summary for distribution email.
     Args:
         report_names: list of report name strings
         tag_data: dict {tag_name_or_namespaced: value} — combined from all reports
         from_dt, to_dt: datetime range
+        layout_configs: dict {report_name: layout_config} for report structure context
     Returns: summary text string or None
     """
     global _ai_call_count, _ai_call_date
@@ -2816,7 +2921,12 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
     # Tag significance filter (max 30 tags to LLM)
     data_rows = []
     for key, value in tag_data.items():
-        tag_name = key.split('::', 1)[1] if '::' in key else key
+        agg_prefix = ''
+        if '::' in key:
+            agg_prefix, tag_name = key.split('::', 1)
+        else:
+            tag_name = key
+            agg_prefix = 'last'
         prof = profile_map.get(tag_name, {})
         if not prof:
             continue
@@ -2824,6 +2934,7 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
             'label': prof.get('label') or tag_name,
             'tag_type': prof.get('tag_type', 'unknown'),
             'value': value,
+            'aggregation': agg_prefix,
             'line': prof.get('line_name', ''),
             'tag_name': tag_name,
         })
@@ -2849,39 +2960,57 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt):
 
         data_rows = (counters + rates + booleans_zero + rest)[:30]
 
-    # Build structured table
-    lines = []
+    # Build structured table with aggregation context
+    data_lines = []
     for r in data_rows:
-        lines.append(f"{r['label']} | {r['tag_type']} | {r['value']} | {r['line']}")
-    structured_data = '\n'.join(lines)
+        data_lines.append(f"{r['label']} | {r['tag_type']} | {r['value']} | {r['aggregation']} | {r['line']}")
+    structured_data = '\n'.join(data_lines)
 
     names_str = ', '.join(report_names) if isinstance(report_names, list) else str(report_names)
     time_from = from_dt.strftime('%Y-%m-%d %H:%M')
     time_to = to_dt.strftime('%Y-%m-%d %H:%M')
 
-    prompt = f"""You summarize industrial production data for mill/plant managers. Be direct and useful.
+    # Build report structure context from layout_configs
+    report_context = _extract_report_context(layout_configs) if layout_configs else ''
 
-Report: {names_str}
-Period: {time_from} to {time_to}
+    prompt = f"""You analyze industrial production and energy data for mill/plant managers. Be direct, specific, and useful.
 
-Tag Data (Label | Type | Value | Production Line):
+REPORTS: {names_str}
+PERIOD: {time_from} to {time_to}
+"""
+    if report_context:
+        prompt += f"""
+REPORT STRUCTURE (what the report sections and columns mean):
+{report_context}
+"""
+
+    prompt += f"""
+TAG DATA (Label | Type | Value | Aggregation | Production Line):
 {structured_data}
 
-Write a brief summary using EXACTLY this format:
+AGGREGATION KEY:
+- delta = amount produced/consumed during the period (this IS the production figure)
+- first = meter reading at start of period
+- last = meter reading at end of period (or current value)
+- avg/sum/min/max = statistical aggregation over the period
+
+Write a smart summary using this format:
 
 **{names_str}** — {{one-line verdict: running normally / reduced output / line stopped / no data}}
 
-• **Production**: {{totalizer values with units, format large numbers with commas e.g. 420,436 kg}}
-• **Flow rates**: {{current rates if available, skip if none}}
+• **Production**: {{cite delta values as production amounts with units — e.g. "Wheat Scale produced 125,294 kg"}}
+• **Energy**: {{power consumption, energy totals, power factor — skip if no energy data}}
 • **Status**: {{equipment on/off, only if notable — skip if all normal}}
-• **Alerts**: {{zero counters, zero flow rates, unusual values — or "None"}}
+• **Alerts**: {{zero production, zero flow rates, abnormal values — or "None"}}
 
 Rules:
+- Delta values ARE the production amounts — present them as "X produced Y kg" not as raw meter readings.
+- First/last values are meter start/end readings — do NOT cite these as production amounts.
 - Use the Label column (not raw tag names) when referring to tags.
-- Maximum 4 bullet points. Each bullet under 20 words.
+- Maximum 4 bullet points. Each bullet under 25 words.
 - Format numbers with thousand separators (e.g. 1,234,567 kg not 1234567.0 kg).
-- Round decimals: 0 decimals for totalizers, 1 decimal for rates and percentages.
-- Only cite numbers from the data. Never calculate ratios or differences.
+- Round decimals: 0 for totalizers/energy, 1 for rates/percentages.
+- Only cite numbers from the data. Never invent or estimate.
 - N/A or missing values = "no data" — do not guess why.
 - Skip any bullet with nothing to report.
 - No paragraphs. No filler. No recommendations. No greetings."""
