@@ -826,24 +826,22 @@ def preview_summary():
 
         actual.commit()
 
-    # Build structured data table
+    # Build structured data table with aggregation context
     data_rows = []
-    for tag_name in sorted(chosen_tags):
+    for key, value in tag_data.items():
+        if '::' in key:
+            agg_prefix, tag_name = key.split('::', 1)
+        else:
+            tag_name = key
+            agg_prefix = 'last'
         prof = profile_map.get(tag_name, {})
-        # Check plain and namespaced keys
-        value = tag_data.get(tag_name)
-        if value is None:
-            for k, v in tag_data.items():
-                if k.endswith('::' + tag_name):
-                    value = v
-                    break
-        if value is None:
-            value = 'N/A'
-
+        if not prof:
+            continue
         data_rows.append(
             f"{prof.get('label', tag_name) or tag_name} | "
             f"{prof.get('tag_type', 'unknown')} | "
             f"{value} | "
+            f"{agg_prefix} | "
             f"{prof.get('line_name', '')}"
         )
 
@@ -854,26 +852,46 @@ def preview_summary():
     time_from = from_dt.strftime('%Y-%m-%d %H:%M')
     time_to = to_dt.strftime('%Y-%m-%d %H:%M')
 
-    prompt = f"""You summarize production data for plant managers. Be extremely concise.
+    # Extract report structure context
+    from distribution_engine import _extract_report_context
+    report_context = _extract_report_context({chosen_template['name']: lc})
 
-Report: {chosen_template['name']}
-Period: {time_from} to {time_to}
+    prompt = f"""You analyze industrial production and energy data for mill/plant managers. Be direct, specific, and useful.
 
-Data (Label | Type | Value | Line):
+REPORT: {chosen_template['name']}
+PERIOD: {time_from} to {time_to}
+"""
+    if report_context:
+        prompt += f"""
+REPORT STRUCTURE:
+{report_context}
+"""
+    prompt += f"""
+TAG DATA (Label | Type | Value | Aggregation | Production Line):
 {structured_data}
 
-Output format — use EXACTLY this structure:
-**{chosen_template['name']}** — {{one-line verdict: running normally / reduced output / line down / no data}}
+AGGREGATION KEY:
+- delta = amount produced/consumed during the period (this IS the production figure)
+- first = meter reading at start of period
+- last = meter reading at end of period (or current value)
+- avg/sum/min/max = statistical aggregation over the period
 
-• **Production**: {{key totals with values, or "No data recorded"}}
-• **Status**: {{equipment on/off states, only if notable}}
-• **Alerts**: {{zero counters, unusual values — or "None"}}
+Write a smart summary using EXACTLY this format:
+
+**{chosen_template['name']}** — {{one-line verdict: running normally / reduced output / line stopped / no data}}
+
+• **Production**: {{cite delta values as production amounts with units — e.g. "Wheat Scale produced 125,294 kg"}}
+• **Energy**: {{power consumption, energy totals, power factor — skip if no energy data}}
+• **Status**: {{equipment on/off, only if notable — skip if all normal}}
+• **Alerts**: {{zero production, zero flow rates, abnormal values — or "None"}}
 
 Rules:
-- Maximum 4 bullet points. No bullet longer than 15 words.
-- Only cite numbers from the data above. Never calculate or infer.
-- N/A values mean no data was recorded — say "no data", don't speculate why.
-- Skip any bullet that has nothing useful to report.
+- Delta values ARE production amounts — present as "X produced Y kg".
+- First/last are meter readings — do NOT cite as production.
+- Use the Label column when referring to tags.
+- Maximum 4 bullets. Each under 25 words.
+- Format numbers with thousand separators.
+- Skip bullets with nothing to report.
 - No paragraphs. No filler. No recommendations."""
 
     try:

@@ -2640,11 +2640,11 @@ def execute_distribution_rule(rule_id):
                 try:
                     all_tag_data = {}
                     all_layout_configs = {}
-                    for idx, rid in enumerate(report_ids):
+                    for rid in report_ids:
                         with closing(get_conn()) as conn2:
                             actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
                             cur2 = actual2.cursor(cursor_factory=RealDictCursor)
-                            cur2.execute("SELECT layout_config FROM report_builder_templates WHERE id = %s", (rid,))
+                            cur2.execute("SELECT name, layout_config FROM report_builder_templates WHERE id = %s", (rid,))
                             tpl = cur2.fetchone()
                             if tpl:
                                 lc = tpl['layout_config']
@@ -2653,8 +2653,7 @@ def execute_distribution_rule(rule_id):
                                 tags = extract_all_tags(lc)
                                 td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
                                 all_tag_data.update(td)
-                                rname = report_names[idx] if idx < len(report_names) else f'Report {rid}'
-                                all_layout_configs[rname] = lc
+                                all_layout_configs[tpl['name'] or f'Report {rid}'] = lc
 
                     summary = _generate_ai_summary(
                         report_names=report_names,
