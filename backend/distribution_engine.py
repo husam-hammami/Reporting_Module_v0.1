@@ -77,6 +77,112 @@ def _extract_datasource_tags(ds):
     return tags
 
 
+def _chart_series_list_for_export(config):
+    """Series list for chart/barchart/piechart — matches ChartWidget (series or legacy tags[])."""
+    if not isinstance(config, dict):
+        return []
+    raw = config.get('series')
+    if isinstance(raw, list) and len(raw) > 0:
+        return raw
+    built = []
+    for t in config.get('tags') or []:
+        if isinstance(t, dict):
+            tn = t.get('tagName', '')
+            if tn:
+                built.append({
+                    'label': t.get('displayName') or t.get('label') or tn,
+                    'dataSource': {'type': 'tag', 'tagName': tn},
+                })
+        elif isinstance(t, str) and t.strip():
+            built.append({'label': t, 'dataSource': {'type': 'tag', 'tagName': t.strip()}})
+    return built
+
+
+def _flatten_tabcontainer_widgets(tc_widget):
+    """Ordered list of inner widgets from all tabs of a tabcontainer, expanding nested tabcontainers."""
+    out = []
+    cfg = (tc_widget or {}).get('config') or {}
+    for tab in cfg.get('tabs') or []:
+        for w in tab.get('widgets') or []:
+            if not w:
+                continue
+            if w.get('type') == 'tabcontainer':
+                out.extend(_flatten_tabcontainer_widgets(w))
+            else:
+                out.append(w)
+    return out
+
+
+def _flatten_dashboard_widget_list(widgets):
+    """Top-level dashboard widgets with tabcontainer nodes expanded."""
+    out = []
+    for w in widgets or []:
+        if not w:
+            continue
+        if w.get('type') == 'tabcontainer':
+            out.extend(_flatten_tabcontainer_widgets(w))
+        else:
+            out.append(w)
+    return out
+
+
+def _dashboard_sections_for_distribution(layout_config):
+    """Sections of (optional heading, widgets) for PDF/XLSX/email.
+
+    When dashboard multi-tabs are enabled (Report Builder), widgets are stored per tab
+    under layout_config.dashboardTabs and the root ``widgets`` array is empty — the
+    distribution engine must read each tab's widget list.
+
+    Returns:
+        list[tuple[str | None, list]] — non-empty widget lists only (except fallback).
+    """
+    lc = layout_config if isinstance(layout_config, dict) else {}
+    dt = lc.get('dashboardTabs') or {}
+    tabs = dt.get('tabs') if isinstance(dt.get('tabs'), list) else []
+    if dt.get('enabled') and tabs:
+        sections = []
+        for tab in tabs:
+            label = tab.get('label')
+            if label is not None:
+                label = str(label).strip() or None
+            flat = _flatten_dashboard_widget_list(tab.get('widgets') or [])
+            if flat:
+                sections.append((label, flat))
+        if sections:
+            return sections
+    root = lc.get('widgets') or []
+    return [(None, _flatten_dashboard_widget_list(root))]
+
+
+def _update_tags_from_dashboard_widget(widget, tags):
+    """Merge tag names referenced by one dashboard widget into ``tags``."""
+    config = widget.get('config', {}) or {}
+    widget_type = widget.get('type', '')
+
+    ds = config.get('dataSource', {}) or {}
+    tags.update(_extract_datasource_tags(ds))
+
+    if widget_type == 'silo':
+        for key in ('capacityTag', 'tonsTag'):
+            if config.get(key):
+                tags.add(config[key])
+
+    for series in _chart_series_list_for_export(config):
+        s_ds = series.get('dataSource', {}) or {}
+        tags.update(_extract_datasource_tags(s_ds))
+        if series.get('tagName'):
+            tags.add(series['tagName'])
+
+    for col in (config.get('tableColumns') or config.get('columns') or []):
+        col_type = col.get('sourceType', 'tag')
+        if col_type == 'tag' and col.get('tagName'):
+            tags.add(col['tagName'])
+        elif col_type == 'group' and col.get('groupTags'):
+            tags.update(col['groupTags'])
+        elif col_type == 'formula' and col.get('formula'):
+            tags.update(_parse_formula_tags(col['formula']))
+
+
 def _extract_paginated_tags(sections):
     """Extract tag names from paginatedSections (Table Report format)."""
     tags = set()
@@ -129,31 +235,10 @@ def extract_all_tags(layout_config):
     """Extract every tag name referenced in a report layout_config."""
     tags = set()
 
-    # Dashboard widgets
-    for widget in layout_config.get('widgets', []):
-        config = widget.get('config', {})
-        widget_type = widget.get('type', '')
-
-        ds = config.get('dataSource', {})
-        tags.update(_extract_datasource_tags(ds))
-
-        if widget_type == 'silo':
-            for key in ('capacityTag', 'tonsTag'):
-                if config.get(key):
-                    tags.add(config[key])
-
-        for series in config.get('series', []):
-            s_ds = series.get('dataSource', {})
-            tags.update(_extract_datasource_tags(s_ds))
-
-        for col in config.get('tableColumns', []):
-            col_type = col.get('sourceType', 'tag')
-            if col_type == 'tag' and col.get('tagName'):
-                tags.add(col['tagName'])
-            elif col_type == 'group' and col.get('groupTags'):
-                tags.update(col['groupTags'])
-            elif col_type == 'formula' and col.get('formula'):
-                tags.update(_parse_formula_tags(col['formula']))
+    # Dashboard widgets (root grid, dashboardTabs.*.widgets, nested tabcontainers)
+    for _heading, widget_list in _dashboard_sections_for_distribution(layout_config):
+        for widget in widget_list:
+            _update_tags_from_dashboard_widget(widget, tags)
 
     # Paginated (Table Report) sections
     tags.update(_extract_paginated_tags(layout_config.get('paginatedSections', [])))
@@ -438,6 +523,40 @@ def _evaluate_formula(formula, tag_data, aggregation=None):
         return float(result) if isinstance(result, (int, float)) and not (isinstance(result, float) and (result != result)) else None
     except Exception:
         return None
+
+
+def _resolve_widget_datasource_value(ds, tag_data):
+    """Scalar from a widget dataSource (tag / formula / group) for static export."""
+    if not ds:
+        return None
+    ds_type = ds.get('type', 'tag') or 'tag'
+    if ds_type == 'formula' and ds.get('formula'):
+        return _evaluate_formula(ds['formula'], tag_data)
+    if ds_type == 'group' and ds.get('groupTags'):
+        vals = []
+        for t in ds['groupTags']:
+            v = tag_data.get(t)
+            if v is not None:
+                try:
+                    vals.append(float(v))
+                except (TypeError, ValueError):
+                    pass
+        if not vals:
+            return None
+        agg = ds.get('aggregation', 'avg')
+        if agg == 'sum':
+            return sum(vals)
+        if agg == 'min':
+            return min(vals)
+        if agg == 'max':
+            return max(vals)
+        if agg == 'count':
+            return len(vals)
+        return sum(vals) / len(vals)
+    tn = ds.get('tagName', '')
+    if tn:
+        return tag_data.get(tn)
+    return None
 
 
 # ── Resolve a paginated cell value ───────────────────────────────────────────
@@ -786,6 +905,14 @@ table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11p
 
 /* ── Dashboard grid ── */
 .dashboard-section { margin-bottom: 8px; }
+.report-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 14px 0 8px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e2e8f0;
+}
 .dashboard-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -832,104 +959,114 @@ def _build_logo_header_html(hercules_uri, asm_uri, client_logo_uri):
 
 # ── HTML report generation ───────────────────────────────────────────────────
 
-def _generate_dashboard_html(report_name, widgets, tag_data, from_dt, to_dt):
+def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_dt):
     """Generate HTML report from dashboard widgets, styled to match frontend viewer."""
     period_start = from_dt.strftime('%d/%m/%Y, %H:%M')
     period_end = to_dt.strftime('%d/%m/%Y, %H:%M')
     hercules_uri, asm_uri, client_logo_uri = _get_logo_data_uris()
 
     cards_html = ""
-    for widget in sorted(widgets, key=lambda w: (w.get('y', 0), w.get('x', 0))):
-        w_type = widget.get('type', '')
-        config = widget.get('config', {})
-        label = config.get('label') or config.get('title') or widget.get('i', w_type)
+    for section_heading, flat_widgets in _dashboard_sections_for_distribution(layout_config):
+        if section_heading:
+            cards_html += f'<h2 class="report-section-title">{_esc(section_heading)}</h2>\n'
 
-        if w_type in ('kpi', 'gauge', 'stat'):
-            ds = config.get('dataSource', {})
-            tag = ds.get('tagName', '')
-            val = tag_data.get(tag, '—')
-            if isinstance(val, float):
-                val = f"{val:,.2f}"
-            unit = config.get('unit', '')
-            unit_html = f'<span class="widget-unit">{_esc(unit)}</span>' if unit else ''
-            cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div class="widget-value">{_esc(val)}{unit_html}</div></div>\n'
+        for widget in sorted(flat_widgets, key=lambda w: (w.get('y', 0), w.get('x', 0))):
+            w_type = widget.get('type', '')
+            config = widget.get('config', {}) or {}
+            label = config.get('label') or config.get('title') or widget.get('i', w_type)
 
-        elif w_type == 'silo':
-            ds = config.get('dataSource', {})
-            tag = ds.get('tagName', '')
-            val = tag_data.get(tag, '—')
-            if isinstance(val, float):
-                val = f"{val:.1f}"
-            cap_tag = config.get('capacityTag', '')
-            cap_val = tag_data.get(cap_tag, '—')
-            tons_tag = config.get('tonsTag', '')
-            tons_val = tag_data.get(tons_tag, '—')
-            if isinstance(cap_val, float):
-                cap_val = f"{cap_val:,.0f}"
-            if isinstance(tons_val, float):
-                tons_val = f"{tons_val:,.1f}"
-            cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-            cards_html += f'<div class="widget-silo">Level: <strong>{_esc(val)}%</strong> &nbsp;|&nbsp; Capacity: <strong>{_esc(cap_val)}</strong> &nbsp;|&nbsp; Tons: <strong>{_esc(tons_val)}</strong></div></div>\n'
-
-        elif w_type in ('chart', 'barchart'):
-            series_parts = []
-            for s in config.get('series', []):
-                s_ds = s.get('dataSource', {})
-                s_tag = s_ds.get('tagName', '')
-                s_val = tag_data.get(s_tag, '—')
-                if isinstance(s_val, float):
-                    s_val = f"{s_val:,.2f}"
-                s_label = s.get('label', s_tag)
-                series_parts.append(f'<span class="kpi-item"><span class="kpi-label">{_esc(s_label)}: </span><span class="kpi-value">{_esc(s_val)}</span></span>')
-            cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-            cards_html += f'<div class="widget-chart-note">Chart — latest data point values:</div>'
-            cards_html += f'<div class="kpi-row" style="justify-content:flex-start">{"  ".join(series_parts)}</div></div>\n'
-
-        elif w_type == 'table':
-            cols = config.get('tableColumns', [])
-            header_cells = ''.join(f'<th>{_esc(c.get("label", ""))}</th>' for c in cols)
-            # Single row of latest values
-            data_cells = ''
-            for col in cols:
-                col_type = col.get('sourceType', 'tag')
-                col_agg = col.get('aggregation', 'last')
-                if col_type == 'tag':
-                    tag_key = f'{col_agg}::{col.get("tagName", "")}' if col_agg and col_agg != 'last' else col.get('tagName', '')
-                    c_val = tag_data.get(tag_key, tag_data.get(col.get('tagName', ''), '—'))
-                    if isinstance(c_val, float):
-                        c_val = f"{c_val:,.2f}"
-                    data_cells += f'<td>{_esc(c_val)}</td>'
-                elif col_type == 'group':
-                    vals = [str(tag_data.get(t, '—')) for t in col.get('groupTags', [])]
-                    data_cells += f'<td>{_esc(", ".join(vals))}</td>'
-                elif col_type == 'formula':
-                    result = _evaluate_formula(col.get('formula', ''), tag_data, aggregation=col_agg)
-                    data_cells += f'<td>{_esc(f"{result:,.2f}" if isinstance(result, float) else (result or "—"))}</td>'
+            if w_type in ('kpi', 'gauge', 'stat', 'progress', 'sparkline'):
+                ds = config.get('dataSource', {}) or {}
+                raw = _resolve_widget_datasource_value(ds, tag_data)
+                if raw is None:
+                    val = '—'
+                elif isinstance(raw, float):
+                    val = f"{raw:,.2f}"
                 else:
-                    data_cells += '<td>—</td>'
-            cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-            cards_html += f'<table class="data-table"><thead><tr>{header_cells}</tr></thead><tbody><tr>{data_cells}</tr></tbody></table></div>\n'
-
-        elif w_type in ('text', 'header', 'image', 'spacer', 'divider'):
-            if w_type == 'text':
-                text = config.get('text', config.get('content', ''))
-                if text:
-                    cards_html += f'<div class="text-block" style="font-size:13px;color:#334155">{_esc(text)}</div>\n'
-            elif w_type == 'header':
-                text = config.get('text', config.get('title', ''))
-                if text:
-                    cards_html += f'<div class="text-block" style="font-size:16px;font-weight:700;color:#0f172a">{_esc(text)}</div>\n'
-
-        else:
-            ds = config.get('dataSource', {})
-            tag = ds.get('tagName', '')
-            if tag:
-                val = tag_data.get(tag, '—')
-                if isinstance(val, float):
-                    val = f"{val:,.2f}"
+                    val = str(raw)
                 unit = config.get('unit', '')
                 unit_html = f'<span class="widget-unit">{_esc(unit)}</span>' if unit else ''
                 cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div><div class="widget-value">{_esc(val)}{unit_html}</div></div>\n'
+
+            elif w_type == 'silo':
+                ds = config.get('dataSource', {}) or {}
+                tag = ds.get('tagName', '')
+                s_val = tag_data.get(tag, '—')
+                if isinstance(s_val, float):
+                    s_val = f"{s_val:.1f}"
+                cap_tag = config.get('capacityTag', '')
+                cap_val = tag_data.get(cap_tag, '—')
+                tons_tag = config.get('tonsTag', '')
+                tons_val = tag_data.get(tons_tag, '—')
+                if isinstance(cap_val, float):
+                    cap_val = f"{cap_val:,.0f}"
+                if isinstance(tons_val, float):
+                    tons_val = f"{tons_val:,.1f}"
+                cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+                cards_html += f'<div class="widget-silo">Level: <strong>{_esc(s_val)}%</strong> &nbsp;|&nbsp; Capacity: <strong>{_esc(cap_val)}</strong> &nbsp;|&nbsp; Tons: <strong>{_esc(tons_val)}</strong></div></div>\n'
+
+            elif w_type in ('chart', 'barchart', 'piechart'):
+                series_parts = []
+                for s in _chart_series_list_for_export(config):
+                    s_ds = s.get('dataSource', {}) or {}
+                    s_tag = s_ds.get('tagName', '') or s.get('tagName', '')
+                    s_raw = tag_data.get(s_tag, '—') if s_tag else '—'
+                    if isinstance(s_raw, float):
+                        s_raw = f"{s_raw:,.2f}"
+                    s_label = s.get('label', s_tag or 'Series')
+                    series_parts.append(
+                        f'<span class="kpi-item"><span class="kpi-label">{_esc(s_label)}: </span>'
+                        f'<span class="kpi-value">{_esc(s_raw)}</span></span>'
+                    )
+                cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+                cards_html += f'<div class="widget-chart-note">Chart — latest data point values:</div>'
+                cards_html += f'<div class="kpi-row" style="justify-content:flex-start">{"  ".join(series_parts)}</div></div>\n'
+
+            elif w_type == 'table':
+                cols = config.get('tableColumns') or config.get('columns') or []
+                header_cells = ''.join(f'<th>{_esc(c.get("label", ""))}</th>' for c in cols)
+                data_cells = ''
+                for col in cols:
+                    col_type = col.get('sourceType', 'tag')
+                    col_agg = col.get('aggregation', 'last')
+                    if col_type == 'tag':
+                        tag_key = f'{col_agg}::{col.get("tagName", "")}' if col_agg and col_agg != 'last' else col.get('tagName', '')
+                        c_val = tag_data.get(tag_key, tag_data.get(col.get('tagName', ''), '—'))
+                        if isinstance(c_val, float):
+                            c_val = f"{c_val:,.2f}"
+                        data_cells += f'<td>{_esc(c_val)}</td>'
+                    elif col_type == 'group':
+                        vals = [str(tag_data.get(t, '—')) for t in col.get('groupTags', [])]
+                        data_cells += f'<td>{_esc(", ".join(vals))}</td>'
+                    elif col_type == 'formula':
+                        result = _evaluate_formula(col.get('formula', ''), tag_data, aggregation=col_agg)
+                        data_cells += f'<td>{_esc(f"{result:,.2f}" if isinstance(result, float) else (result or "—"))}</td>'
+                    else:
+                        data_cells += '<td>—</td>'
+                cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+                cards_html += f'<table class="data-table"><thead><tr>{header_cells}</tr></thead><tbody><tr>{data_cells}</tr></tbody></table></div>\n'
+
+            elif w_type in ('text', 'header', 'image', 'spacer', 'divider'):
+                if w_type == 'text':
+                    text = config.get('text', config.get('content', ''))
+                    if text:
+                        cards_html += f'<div class="text-block" style="font-size:13px;color:#334155">{_esc(text)}</div>\n'
+                elif w_type == 'header':
+                    text = config.get('text', config.get('title', ''))
+                    if text:
+                        cards_html += f'<div class="text-block" style="font-size:16px;font-weight:700;color:#0f172a">{_esc(text)}</div>\n'
+
+            else:
+                ds = config.get('dataSource', {}) or {}
+                raw = _resolve_widget_datasource_value(ds, tag_data)
+                if raw is not None:
+                    val = f"{raw:,.2f}" if isinstance(raw, float) else str(raw)
+                    unit = config.get('unit', '')
+                    unit_html = f'<span class="widget-unit">{_esc(unit)}</span>' if unit else ''
+                    cards_html += (
+                        f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+                        f'<div class="widget-value">{_esc(val)}{unit_html}</div></div>\n'
+                    )
 
     logo_html = _build_logo_header_html(hercules_uri, asm_uri, client_logo_uri)
 
@@ -1225,8 +1362,7 @@ def _generate_report_html(report_name, layout_config, tag_data, from_dt, to_dt):
     if report_type == 'paginated' and paginated_sections:
         return _generate_paginated_html(report_name, paginated_sections, tag_data, from_dt, to_dt)
     else:
-        widgets = layout_config.get('widgets', [])
-        return _generate_dashboard_html(report_name, widgets, tag_data, from_dt, to_dt)
+        return _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_dt)
 
 
 # ── PDF conversion ───────────────────────────────────────────────────────────
@@ -1499,6 +1635,8 @@ def _xlsx_dashboard(wb, layout_config, tag_data, from_dt, to_dt, report_name,
                     header_font, header_fill, alt_fill, title_font, subtitle_font,
                     kpi_label_font, kpi_value_font, thin_border, num_align, text_align):
     """Render dashboard report widgets to an Excel sheet."""
+    from openpyxl.styles import Font
+
     ws = wb.active
     ws.title = "Dashboard Summary"
     row_idx = 1
@@ -1515,93 +1653,116 @@ def _xlsx_dashboard(wb, layout_config, tag_data, from_dt, to_dt, report_name,
         row_idx = 3
     row_idx += 1  # Blank row
 
-    widgets = layout_config.get('widgets', [])
+    section_title_font = Font(name='Calibri', bold=True, size=11)
+    widget_group_font = Font(name='Calibri', bold=True, size=10)
 
-    for widget in widgets:
-        wtype = widget.get('type', '')
-        config = widget.get('config', {})
-        label = config.get('title', '') or config.get('label', '') or widget.get('name', '')
+    for section_label, flat_widgets in _dashboard_sections_for_distribution(layout_config):
+        if section_label:
+            ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
+            ws.cell(row=row_idx, column=1, value=section_label).font = section_title_font
+            row_idx += 2
 
-        if wtype in ('kpi', 'gauge', 'stat'):
-            tag_name = (config.get('dataSource') or {}).get('tagName', '')
-            raw = tag_data.get(tag_name)
-            ws.cell(row=row_idx, column=1, value=label).font = kpi_label_font
-            c = ws.cell(row=row_idx, column=2)
-            try:
-                c.value = float(raw) if raw is not None else None
-                c.number_format = '#,##0.00'
-                c.alignment = num_align
-            except (TypeError, ValueError):
-                c.value = str(raw) if raw else '—'
-            c.font = kpi_value_font
-            unit = config.get('unit', '')
-            if unit:
-                ws.cell(row=row_idx, column=3, value=unit).font = kpi_label_font
-            row_idx += 1
+        for widget in flat_widgets:
+            wtype = widget.get('type', '')
+            config = widget.get('config', {}) or {}
+            label = config.get('title', '') or config.get('label', '') or widget.get('name', '')
 
-        elif wtype == 'silo':
-            ws.cell(row=row_idx, column=1, value=label).font = Font(name='Calibri', bold=True, size=10)
-            row_idx += 1
-            for sub_label, sub_key in [('Level', 'tagName'), ('Capacity', 'capacityTag'), ('Tons', 'tonsTag')]:
-                tag_name = (config.get('dataSource') or {}).get(sub_key, '') if sub_key == 'tagName' else config.get(sub_key, '')
-                raw = tag_data.get(tag_name)
-                ws.cell(row=row_idx, column=1, value=f'  {sub_label}').font = kpi_label_font
-                c = ws.cell(row=row_idx, column=2)
-                try:
-                    c.value = float(raw) if raw is not None else None
-                    c.number_format = '#,##0.0'
-                    c.alignment = num_align
-                except (TypeError, ValueError):
-                    c.value = str(raw) if raw else '—'
-                row_idx += 1
-            row_idx += 1
-
-        elif wtype in ('chart', 'barchart'):
-            ws.cell(row=row_idx, column=1, value=label).font = Font(name='Calibri', bold=True, size=10)
-            row_idx += 1
-            for series in config.get('series', []):
-                s_label = series.get('label', '')
-                tag_name = (series.get('dataSource') or {}).get('tagName', '')
-                raw = tag_data.get(tag_name)
-                ws.cell(row=row_idx, column=1, value=f'  {s_label}').font = kpi_label_font
+            if wtype in ('kpi', 'gauge', 'stat', 'progress', 'sparkline'):
+                ds = config.get('dataSource') or {}
+                raw = _resolve_widget_datasource_value(ds, tag_data)
+                ws.cell(row=row_idx, column=1, value=label).font = kpi_label_font
                 c = ws.cell(row=row_idx, column=2)
                 try:
                     c.value = float(raw) if raw is not None else None
                     c.number_format = '#,##0.00'
                     c.alignment = num_align
                 except (TypeError, ValueError):
-                    c.value = str(raw) if raw else '—'
+                    c.value = str(raw) if raw is not None and raw != '' else '—'
+                c.font = kpi_value_font
+                unit = config.get('unit', '')
+                if unit:
+                    ws.cell(row=row_idx, column=3, value=unit).font = kpi_label_font
                 row_idx += 1
-            row_idx += 1
 
-        elif wtype == 'table':
-            ws.cell(row=row_idx, column=1, value=label).font = Font(name='Calibri', bold=True, size=10)
-            row_idx += 1
-            table_cols = config.get('columns', [])
-            # Headers
-            for ci, col in enumerate(table_cols):
-                c = ws.cell(row=row_idx, column=ci + 1, value=col.get('label', ''))
-                c.font = header_font
-                c.fill = header_fill
-                c.border = thin_border
-            row_idx += 1
-            # Single row of values
-            for ci, col in enumerate(table_cols):
-                src = col.get('sourceType', 'tag')
-                cell_def = {'sourceType': src, 'tagName': col.get('tagName', ''),
-                            'formula': col.get('formula', ''), 'groupTags': col.get('groupTags', []),
-                            'aggregation': col.get('aggregation', 'avg'), 'decimals': 2, 'unit': ''}
-                val, unit, dec = _resolve_cell_raw(cell_def, tag_data)
-                c = ws.cell(row=row_idx, column=ci + 1, value=val)
-                if isinstance(val, (int, float)):
-                    c.number_format = f'#,##0.{"0" * dec}'
+            elif wtype == 'silo':
+                ws.cell(row=row_idx, column=1, value=label).font = widget_group_font
+                row_idx += 1
+                for sub_label, sub_key in [('Level', 'tagName'), ('Capacity', 'capacityTag'), ('Tons', 'tonsTag')]:
+                    tag_name = (config.get('dataSource') or {}).get(sub_key, '') if sub_key == 'tagName' else config.get(sub_key, '')
+                    raw = tag_data.get(tag_name)
+                    ws.cell(row=row_idx, column=1, value=f'  {sub_label}').font = kpi_label_font
+                    c = ws.cell(row=row_idx, column=2)
+                    try:
+                        c.value = float(raw) if raw is not None else None
+                        c.number_format = '#,##0.0'
+                        c.alignment = num_align
+                    except (TypeError, ValueError):
+                        c.value = str(raw) if raw else '—'
+                    row_idx += 1
+                row_idx += 1
+
+            elif wtype in ('chart', 'barchart', 'piechart'):
+                ws.cell(row=row_idx, column=1, value=label).font = widget_group_font
+                row_idx += 1
+                for series in _chart_series_list_for_export(config):
+                    s_label = series.get('label', '')
+                    tag_name = (series.get('dataSource') or {}).get('tagName', '') or series.get('tagName', '')
+                    raw = tag_data.get(tag_name) if tag_name else None
+                    ws.cell(row=row_idx, column=1, value=f'  {s_label}').font = kpi_label_font
+                    c = ws.cell(row=row_idx, column=2)
+                    try:
+                        c.value = float(raw) if raw is not None else None
+                        c.number_format = '#,##0.00'
+                        c.alignment = num_align
+                    except (TypeError, ValueError):
+                        c.value = str(raw) if raw else '—'
+                    row_idx += 1
+                row_idx += 1
+
+            elif wtype == 'table':
+                ws.cell(row=row_idx, column=1, value=label).font = widget_group_font
+                row_idx += 1
+                table_cols = config.get('tableColumns') or config.get('columns') or []
+                for ci, col in enumerate(table_cols):
+                    c = ws.cell(row=row_idx, column=ci + 1, value=col.get('label', ''))
+                    c.font = header_font
+                    c.fill = header_fill
+                    c.border = thin_border
+                row_idx += 1
+                for ci, col in enumerate(table_cols):
+                    src = col.get('sourceType', 'tag')
+                    cell_def = {'sourceType': src, 'tagName': col.get('tagName', ''),
+                                'formula': col.get('formula', ''), 'groupTags': col.get('groupTags', []),
+                                'aggregation': col.get('aggregation', 'avg'), 'decimals': 2, 'unit': ''}
+                    val, unit, dec = _resolve_cell_raw(cell_def, tag_data)
+                    c = ws.cell(row=row_idx, column=ci + 1, value=val)
+                    if isinstance(val, (int, float)):
+                        c.number_format = f'#,##0.{"0" * dec}'
+                        c.alignment = num_align
+                    c.border = thin_border
+                row_idx += 2
+
+            elif wtype in ('text', 'header', 'image', 'spacer', 'divider'):
+                continue
+
+            else:
+                ds = config.get('dataSource') or {}
+                raw = _resolve_widget_datasource_value(ds, tag_data)
+                if raw is None:
+                    continue
+                ws.cell(row=row_idx, column=1, value=label).font = kpi_label_font
+                c = ws.cell(row=row_idx, column=2)
+                try:
+                    c.value = float(raw) if raw is not None else None
+                    c.number_format = '#,##0.00'
                     c.alignment = num_align
-                c.border = thin_border
-            row_idx += 2
-
-        # Skip text, header, image, spacer, divider widgets
-        elif wtype in ('text', 'header', 'image', 'spacer', 'divider'):
-            continue
+                except (TypeError, ValueError):
+                    c.value = str(raw)
+                c.font = kpi_value_font
+                unit = config.get('unit', '')
+                if unit:
+                    ws.cell(row=row_idx, column=3, value=unit).font = kpi_label_font
+                row_idx += 1
 
 
 # ── Email delivery ───────────────────────────────────────────────────────────
