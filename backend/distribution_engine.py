@@ -956,13 +956,19 @@ def _resolve_cell(cell, tag_data):
         unit = cell.get('customUnit', '')
 
     def _fmt_check(val):
-        """Format a value as checkbox: ✓ for truthy, empty for falsy."""
+        """Format checkbox cells — same wording as paginated Report Builder (Yes / No)."""
         if val is None:
-            return ''
+            return '—'
         try:
-            return '✓' if float(val) == 1 else ''
+            n = float(val)
+            return 'Yes' if n == 1 else 'No'
         except (TypeError, ValueError):
-            return '✓' if str(val).strip().lower() in ('1', 'true', 'yes') else ''
+            s = str(val).strip().lower()
+            if s in ('1', 'true', 'yes', 'y', 'on'):
+                return 'Yes'
+            if s in ('0', 'false', 'no', 'n', 'off'):
+                return 'No'
+            return 'Yes' if s else 'No'
 
     def _fmt(val):
         if val is None:
@@ -1014,7 +1020,7 @@ def _resolve_cell_raw(cell, tag_data):
     """Resolve a single cell to a raw (value, unit, decimals) tuple for Excel output.
     Returns: (value: float|str|None, unit: str, decimals: int)
     - value is a raw float for numeric cells (no formatting), str for static, None for missing
-    - Checkbox cells return '✓' or '' as string values
+    - Checkbox cells return 'Yes' or 'No' (or '—' if unset)
     """
     if not cell:
         return (None, '', 0)
@@ -1030,13 +1036,19 @@ def _resolve_cell_raw(cell, tag_data):
         unit = cell.get('customUnit', '')
 
     def _to_check(val):
-        """Convert value to checkbox string for Excel."""
+        """Convert value to Yes/No for checkbox columns (Excel export)."""
         if val is None:
-            return ''
+            return '—'
         try:
-            return '✓' if float(val) == 1 else ''
+            n = float(val)
+            return 'Yes' if n == 1 else 'No'
         except (TypeError, ValueError):
-            return '✓' if str(val).strip().lower() in ('1', 'true', 'yes') else ''
+            s = str(val).strip().lower()
+            if s in ('1', 'true', 'yes', 'y', 'on'):
+                return 'Yes'
+            if s in ('0', 'false', 'no', 'n', 'off'):
+                return 'No'
+            return 'Yes' if s else 'No'
 
     def _to_num(val):
         if val is None:
