@@ -360,8 +360,14 @@ def get_by_tags():
                     if name:
                         result[name] = row["agg_value"]
 
-            # Fallback to tag_history_archive for non-auto modes
-            if not result and aggregation != "auto":
+            # Fallback to tag_history_archive for tags MISSING from result.
+            # Previous logic used `if not result` which skipped archive when
+            # even one tag had data — leaving other tags silently empty.
+            found_names = set(result.keys())
+            all_names = set(id_to_name.values())
+            missing_names = all_names - found_names
+            if missing_names and aggregation != "auto":
+                missing_ids = [tid for tid, nm in id_to_name.items() if nm in missing_names]
                 if aggregation == "last":
                     cur.execute("""
                         SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
@@ -370,7 +376,7 @@ def get_by_tags():
                           AND a.archive_hour >= %s::timestamp
                           AND a.archive_hour <= %s::timestamp
                         ORDER BY a.tag_id, a.archive_hour DESC
-                    """, (tag_ids, from_ts, to_ts))
+                    """, (missing_ids, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
                         if name and row["value"] is not None:
@@ -383,14 +389,12 @@ def get_by_tags():
                           AND a.archive_hour >= %s::timestamp
                           AND a.archive_hour <= %s::timestamp
                         ORDER BY a.tag_id, a.archive_hour ASC
-                    """, (tag_ids, from_ts, to_ts))
+                    """, (missing_ids, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
                         if name and row["value"] is not None:
                             result[name] = row["value"]
                 elif aggregation == "delta":
-                    # Use last − first of archive value column (same logic as raw tag_history).
-                    # SUM(value_delta) is unreliable when the column is NULL after archiving.
                     cur.execute("""
                         SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
                         FROM tag_history_archive a
@@ -398,7 +402,7 @@ def get_by_tags():
                           AND a.archive_hour >= %s::timestamp
                           AND a.archive_hour <= %s::timestamp
                         ORDER BY a.tag_id, a.archive_hour ASC
-                    """, (tag_ids, from_ts, to_ts))
+                    """, (missing_ids, from_ts, to_ts))
                     arch_first = {row["tag_id"]: row["value"] for row in cur.fetchall()}
                     cur.execute("""
                         SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
@@ -407,7 +411,7 @@ def get_by_tags():
                           AND a.archive_hour >= %s::timestamp
                           AND a.archive_hour <= %s::timestamp
                         ORDER BY a.tag_id, a.archive_hour DESC
-                    """, (tag_ids, from_ts, to_ts))
+                    """, (missing_ids, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
                         first = arch_first.get(row["tag_id"])
@@ -422,7 +426,7 @@ def get_by_tags():
                           AND a.archive_hour >= %s::timestamp
                           AND a.archive_hour <= %s::timestamp
                         GROUP BY a.tag_id
-                    """, (tag_ids, from_ts, to_ts))
+                    """, (missing_ids, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
                         if name and row["agg_value"] is not None:
