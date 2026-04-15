@@ -1314,12 +1314,9 @@ table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11p
 .dashboard-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
   padding: 6px 10px;
   margin-bottom: 4px;
-  overflow: hidden;
 }
-.dashboard-card img { max-width: 100%; height: auto; display: block; }
 .widget-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
 .widget-value { font-size: 16px; font-weight: 700; color: #0f172a; }
 .widget-unit  { font-size: 10px; font-weight: 500; color: #94a3b8; margin-left: 3px; }
@@ -1328,7 +1325,7 @@ table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11p
 
 /* ── Dashboard grid table ── */
 table.grid-row { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 2px; }
-table.grid-row td { vertical-align: top; padding: 0 2px; overflow: hidden; }
+table.grid-row td { vertical-align: top; padding: 0 2px; }
 
 /* ── Generated footer ── */
 .gen-footer {
@@ -1633,7 +1630,7 @@ def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_d
 
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>{_SHARED_CSS}</style></head>
-<body style="padding: 3mm 8mm 5mm 8mm; width: 194mm; overflow: hidden;">
+<body style="padding: 3mm 8mm 5mm 8mm; width: 194mm;">
 {logo_html}
 <h1 class="report-title" style="text-align:center">{_esc(report_name)}</h1>
 <p class="period" style="text-align:center"><strong>From:</strong> {_esc(period_start)} &nbsp;&mdash;&nbsp; <strong>To:</strong> {_esc(period_end)}</p>
