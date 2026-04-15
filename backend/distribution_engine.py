@@ -478,6 +478,254 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
     return result
 
 
+def _fetch_time_series_for_distribution(tag_names, from_dt, to_dt, max_points=500):
+    """Load per-tag time arrays for dashboard chart images (mirrors historian /time-series).
+
+    Returns:
+        dict[str, list[dict]] — ``{ tagName: [{"t": epoch_ms, "v": float}, ...], ... }``
+    """
+    if not tag_names:
+        return {}
+    max_points = max(10, min(int(max_points or 500), 5000))
+
+    get_conn = _get_db_connection()
+    with closing(get_conn()) as conn:
+        actual_conn = conn._conn if hasattr(conn, '_conn') else conn
+        cur = actual_conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute(
+            "SELECT id, tag_name FROM tags WHERE tag_name = ANY(%s) AND is_active = true",
+            (list(tag_names),),
+        )
+        tag_map = {row['tag_name']: row['id'] for row in cur.fetchall()}
+        if not tag_map:
+            return {}
+
+        tag_ids = list(tag_map.values())
+        id_to_name = {v: k for k, v in tag_map.items()}
+        result = {}
+
+        cur.execute(
+            """
+            SELECT COUNT(*) AS cnt
+            FROM tag_history h
+            WHERE h.tag_id = ANY(%s)
+              AND h."timestamp" >= %s::timestamp
+              AND h."timestamp" <= %s::timestamp
+            """,
+            (tag_ids, from_dt, to_dt),
+        )
+        total_count = cur.fetchone()['cnt']
+
+        if total_count > 0:
+            if total_count <= max_points * len(tag_ids):
+                cur.execute(
+                    """
+                    SELECT h.tag_id, h.value,
+                           EXTRACT(EPOCH FROM h."timestamp") * 1000 AS t_ms
+                    FROM tag_history h
+                    WHERE h.tag_id = ANY(%s)
+                      AND h."timestamp" >= %s::timestamp
+                      AND h."timestamp" <= %s::timestamp
+                    ORDER BY h."timestamp"
+                    """,
+                    (tag_ids, from_dt, to_dt),
+                )
+            else:
+                cur.execute(
+                    """
+                    WITH bounds AS (
+                        SELECT EXTRACT(EPOCH FROM (%s::timestamp - %s::timestamp)) AS range_secs
+                    )
+                    SELECT h.tag_id,
+                           AVG(h.value) AS value,
+                           AVG(EXTRACT(EPOCH FROM h."timestamp")) * 1000 AS t_ms
+                    FROM tag_history h, bounds
+                    WHERE h.tag_id = ANY(%s)
+                      AND h."timestamp" >= %s::timestamp
+                      AND h."timestamp" <= %s::timestamp
+                    GROUP BY h.tag_id,
+                             FLOOR(EXTRACT(EPOCH FROM h."timestamp") / GREATEST(1, bounds.range_secs / %s))
+                    ORDER BY t_ms
+                    """,
+                    (to_dt, from_dt, tag_ids, from_dt, to_dt, max_points),
+                )
+
+            for row in cur.fetchall():
+                name = id_to_name.get(row['tag_id'])
+                if name and row['value'] is not None and row['t_ms'] is not None:
+                    result.setdefault(name, []).append({'t': round(row['t_ms']), 'v': float(row['value'])})
+
+        if not result:
+            cur.execute(
+                """
+                SELECT a.tag_id, a.value,
+                       EXTRACT(EPOCH FROM a.archive_hour) * 1000 AS t_ms
+                FROM tag_history_archive a
+                WHERE a.tag_id = ANY(%s)
+                  AND a.archive_hour >= %s::timestamp
+                  AND a.archive_hour <= %s::timestamp
+                ORDER BY a.archive_hour
+                """,
+                (tag_ids, from_dt, to_dt),
+            )
+            for row in cur.fetchall():
+                name = id_to_name.get(row['tag_id'])
+                if name and row['value'] is not None and row['t_ms'] is not None:
+                    result.setdefault(name, []).append({'t': round(row['t_ms']), 'v': float(row['value'])})
+
+    return result
+
+
+_CHART_COLOR_DEFAULTS = ['#2563eb', '#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#ec4899', '#8b5cf6']
+
+
+def _collect_dashboard_chart_tag_names(layout_config):
+    """Tag names referenced by chart / barchart / piechart series (for time-series fetch)."""
+    names = set()
+    for _heading, flat_widgets in _dashboard_sections_for_distribution(layout_config):
+        for w in flat_widgets:
+            wt = w.get('type', '')
+            if wt not in ('chart', 'barchart', 'piechart'):
+                continue
+            cfg = w.get('config') or {}
+            for s in _chart_series_list_for_export(cfg):
+                s_ds = s.get('dataSource', {}) or {}
+                tn = s_ds.get('tagName', '') or s.get('tagName', '')
+                if tn:
+                    names.add(tn)
+    return names
+
+
+def _dashboard_chart_png_data_uri(w_type, config, label, ts_by_tag, tag_data, from_dt, to_dt):
+    """Render chart as PNG data URI for embedding in PDF HTML. Returns None to use text fallback."""
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        import matplotlib.dates as mdates
+    except ImportError:
+        logger.warning('matplotlib not installed; dashboard charts fall back to text in PDF')
+        return None
+
+    series_list = _chart_series_list_for_export(config or {})
+    if not series_list:
+        return None
+
+    cfg_colors = (config or {}).get('colors') or []
+    title = label or (config or {}).get('title') or 'Chart'
+
+    try:
+        from io import BytesIO
+
+        fig, ax = plt.subplots(figsize=(6.8, 2.9), dpi=110)
+        fig.patch.set_facecolor('#ffffff')
+        ax.set_facecolor('#fafafa')
+
+        if w_type == 'piechart':
+            sizes = []
+            labels = []
+            for i, s in enumerate(series_list):
+                s_ds = s.get('dataSource', {}) or {}
+                tag = s_ds.get('tagName', '') or s.get('tagName', '')
+                if not tag:
+                    continue
+                raw = tag_data.get(tag)
+                if raw is None:
+                    continue
+                try:
+                    v = abs(float(raw))
+                except (TypeError, ValueError):
+                    continue
+                if v <= 0:
+                    continue
+                sizes.append(v)
+                labels.append(s.get('label', tag) or tag)
+            if not sizes:
+                plt.close(fig)
+                return None
+            col_cycle = [cfg_colors[i % len(cfg_colors)] if cfg_colors else _CHART_COLOR_DEFAULTS[i % len(_CHART_COLOR_DEFAULTS)]
+                           for i in range(len(sizes))]
+            ax.pie(sizes, labels=labels, colors=col_cycle, autopct='%1.1f%%', startangle=90,
+                   textprops={'fontsize': 8})
+            ax.set_title(title, fontsize=10, fontweight='bold', color='#0f172a')
+        elif w_type == 'barchart' or (w_type == 'chart' and (config or {}).get('chartType') == 'bar'):
+            xs = []
+            heights = []
+            for i, s in enumerate(series_list):
+                s_ds = s.get('dataSource', {}) or {}
+                tag = s_ds.get('tagName', '') or s.get('tagName', '')
+                if not tag:
+                    continue
+                raw = tag_data.get(tag)
+                if raw is None:
+                    continue
+                try:
+                    heights.append(float(raw))
+                except (TypeError, ValueError):
+                    continue
+                xs.append(s.get('label', tag) or tag)
+            if not xs:
+                plt.close(fig)
+                return None
+            colors = [cfg_colors[i % len(cfg_colors)] if cfg_colors else _CHART_COLOR_DEFAULTS[i % len(_CHART_COLOR_DEFAULTS)]
+                      for i in range(len(xs))]
+            ax.bar(range(len(xs)), heights, color=colors, edgecolor='#e2e8f0', linewidth=0.5)
+            ax.set_xticks(range(len(xs)))
+            ax.set_xticklabels(xs, rotation=25, ha='right', fontsize=8)
+            ax.set_ylabel('Value', fontsize=8, color='#64748b')
+            ax.grid(True, axis='y', linestyle='--', alpha=0.35)
+            ax.set_title(title, fontsize=10, fontweight='bold', color='#0f172a')
+        else:
+            # Line chart (default)
+            plotted = False
+            for i, s in enumerate(series_list):
+                s_ds = s.get('dataSource', {}) or {}
+                tag = s_ds.get('tagName', '') or s.get('tagName', '')
+                if not tag:
+                    continue
+                pts = ts_by_tag.get(tag) or []
+                if not pts:
+                    continue
+                if len(pts) == 1:
+                    p0 = pts[0]
+                    pts = [
+                        p0,
+                        {'t': int(p0['t']) + 3600000, 'v': float(p0['v'])},
+                    ]
+                xdt = [mdates.date2num(datetime.fromtimestamp(float(p['t']) / 1000.0)) for p in pts]
+                vs = [float(p['v']) for p in pts]
+                color = (s.get('color') or (cfg_colors[i % len(cfg_colors)] if cfg_colors
+                        else _CHART_COLOR_DEFAULTS[i % len(_CHART_COLOR_DEFAULTS)]))
+                ax.plot(xdt, vs, linewidth=1.6, label=s.get('label', tag) or tag, color=color)
+                plotted = True
+            if not plotted:
+                plt.close(fig)
+                return None
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m %H:%M'))
+            ax.tick_params(axis='x', labelsize=7, rotation=18)
+            ax.tick_params(axis='y', labelsize=8)
+            ax.grid(True, linestyle='--', alpha=0.35)
+            ax.set_title(title, fontsize=10, fontweight='bold', color='#0f172a')
+            if len(series_list) > 1:
+                ax.legend(loc='upper right', fontsize=7, framealpha=0.92)
+
+        fig.tight_layout()
+        buf = BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight', facecolor=fig.get_facecolor())
+        plt.close(fig)
+        buf.seek(0)
+        b64 = base64.standard_b64encode(buf.read()).decode('ascii')
+        return f'data:image/png;base64,{b64}'
+    except Exception as e:
+        logger.warning('Dashboard chart render failed (%s): %s', title, e)
+        try:
+            plt.close('all')
+        except Exception:
+            pass
+        return None
+
+
 # ── Safe string helper ───────────────────────────────────────────────────────
 
 def _esc(val):
@@ -1033,6 +1281,13 @@ def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_d
     period_end = to_dt.strftime('%d/%m/%Y, %H:%M')
     hercules_uri, asm_uri, client_logo_uri = _get_logo_data_uris()
 
+    chart_tag_names = _collect_dashboard_chart_tag_names(layout_config)
+    ts_by_tag = (
+        _fetch_time_series_for_distribution(chart_tag_names, from_dt, to_dt)
+        if chart_tag_names
+        else {}
+    )
+
     cards_html = ""
     for section_heading, flat_widgets in _dashboard_sections_for_distribution(layout_config):
         if section_heading:
@@ -1074,21 +1329,35 @@ def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_d
                 cards_html += f'<div class="widget-silo">Level: <strong>{_esc(s_val)}%</strong> &nbsp;|&nbsp; Capacity: <strong>{_esc(cap_val)}</strong> &nbsp;|&nbsp; Tons: <strong>{_esc(tons_val)}</strong></div></div>\n'
 
             elif w_type in ('chart', 'barchart', 'piechart'):
-                series_parts = []
-                for s in _chart_series_list_for_export(config):
-                    s_ds = s.get('dataSource', {}) or {}
-                    s_tag = s_ds.get('tagName', '') or s.get('tagName', '')
-                    s_raw = tag_data.get(s_tag, '—') if s_tag else '—'
-                    if isinstance(s_raw, float):
-                        s_raw = f"{s_raw:,.2f}"
-                    s_label = s.get('label', s_tag or 'Series')
-                    series_parts.append(
-                        f'<span class="kpi-item"><span class="kpi-label">{_esc(s_label)}: </span>'
-                        f'<span class="kpi-value">{_esc(s_raw)}</span></span>'
+                img_uri = _dashboard_chart_png_data_uri(
+                    w_type, config, label, ts_by_tag, tag_data, from_dt, to_dt
+                )
+                if img_uri:
+                    cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+                    cards_html += (
+                        f'<div style="text-align:center;margin-top:4px">'
+                        f'<img src="{img_uri}" alt="" style="max-width:100%;width:100%;height:auto" />'
+                        f'</div></div>\n'
                     )
-                cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
-                cards_html += f'<div class="widget-chart-note">Chart — latest data point values:</div>'
-                cards_html += f'<div class="kpi-row" style="justify-content:flex-start">{"  ".join(series_parts)}</div></div>\n'
+                else:
+                    series_parts = []
+                    for s in _chart_series_list_for_export(config):
+                        s_ds = s.get('dataSource', {}) or {}
+                        s_tag = s_ds.get('tagName', '') or s.get('tagName', '')
+                        s_raw = tag_data.get(s_tag, '—') if s_tag else '—'
+                        if isinstance(s_raw, float):
+                            s_raw = f"{s_raw:,.2f}"
+                        s_label = s.get('label', s_tag or 'Series')
+                        series_parts.append(
+                            f'<span class="kpi-item"><span class="kpi-label">{_esc(s_label)}: </span>'
+                            f'<span class="kpi-value">{_esc(s_raw)}</span></span>'
+                        )
+                    cards_html += f'<div class="dashboard-card"><div class="widget-label">{_esc(label)}</div>'
+                    cards_html += f'<div class="widget-chart-note">Chart — latest data point values:</div>'
+                    cards_html += (
+                        f'<div class="kpi-row" style="justify-content:flex-start">'
+                        f'{"  ".join(series_parts)}</div></div>\n'
+                    )
 
             elif w_type == 'table':
                 cols = config.get('tableColumns') or config.get('columns') or []
