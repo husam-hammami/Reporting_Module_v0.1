@@ -3042,45 +3042,129 @@ def _is_zero(val):
 
 
 def _format_summary_html(summary):
-    """Convert AI summary markdown (bold + bullets) to email-safe HTML."""
+    """Convert AI summary markdown into a visually rich email-safe HTML card.
+
+    Parses the structured AI output:
+      Line 1: **Report** — verdict
+      Bullets: • **Label**: content
+    """
     import re
-    # Bold
-    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_escape(summary))
-    # Bullet lines
-    lines = text.split('\n')
-    out = []
+    escaped = html_escape(summary)
+    lines = [l.strip() for l in escaped.split('\n') if l.strip()]
+    if not lines:
+        return ''
+
+    # ── Parse verdict line (first line: **Name** — verdict) ──
+    verdict_html = ''
+    first = lines[0]
+    vm = re.match(r'\*\*(.+?)\*\*\s*[—–-]\s*(.+)', first)
+    if vm:
+        report_name = vm.group(1)
+        verdict_text = vm.group(2).strip()
+        # Determine status color from verdict keywords
+        vl = verdict_text.lower()
+        if any(w in vl for w in ('stopped', 'no data', 'offline', 'down')):
+            dot_color, dot_bg = '#dc2626', '#fef2f2'
+        elif any(w in vl for w in ('reduced', 'low', 'partial', 'warning')):
+            dot_color, dot_bg = '#d97706', '#fffbeb'
+        else:
+            dot_color, dot_bg = '#059669', '#ecfdf5'
+        verdict_html = (
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px"><tr>'
+            f'<td style="vertical-align:middle;width:10px;padding-right:10px">'
+            f'<div style="width:10px;height:10px;border-radius:50%;background:{dot_color}"></div></td>'
+            f'<td style="vertical-align:middle">'
+            f'<span style="font-size:15px;font-weight:700;color:#0f172a">{report_name}</span>'
+            f'<span style="font-size:13px;color:#64748b;margin-left:8px">— {verdict_text}</span>'
+            f'</td></tr></table>'
+        )
+        lines = lines[1:]
+
+    # ── Parse bullet lines ──
+    bullet_rows = []
+    # Map bullet labels to icons/colors
+    BULLET_STYLE = {
+        'production': {'icon': '📦', 'accent': '#0369a1', 'bg': '#f0f9ff'},
+        'energy':     {'icon': '⚡', 'accent': '#7c3aed', 'bg': '#f5f3ff'},
+        'status':     {'icon': '⚙', 'accent': '#0d9488', 'bg': '#f0fdfa'},
+        'alerts':     {'icon': '⚠', 'accent': '#dc2626', 'bg': '#fef2f2'},
+        'flow':       {'icon': '💧', 'accent': '#0284c7', 'bg': '#f0f9ff'},
+    }
+
     for line in lines:
-        line = line.strip()
-        if line.startswith('• ') or line.startswith('&bull; '):
-            content = line.lstrip('• ').lstrip('&bull; ')
-            out.append(f'<div style="padding-left:12px;margin:2px 0;">• {content}</div>')
+        # Match: • **Label**: content  OR  • **Label** content
+        bm = re.match(r'[•\-]\s*\*\*(.+?)\*\*:?\s*(.*)', line)
+        if bm:
+            label = bm.group(1).strip()
+            content = bm.group(2).strip()
+            # Bold any remaining **text** in content
+            content = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', content)
+
+            # Pick style by label
+            label_key = label.lower().split()[0] if label else ''
+            style = BULLET_STYLE.get(label_key, {'icon': '•', 'accent': '#475569', 'bg': '#f8fafc'})
+
+            # Handle "None" alerts specially
+            if label_key == 'alerts' and content.lower().strip() in ('none', 'none.', '—'):
+                style = {**style, 'accent': '#059669', 'bg': '#ecfdf5', 'icon': '✓'}
+                content = '<span style="color:#059669;font-weight:600">None</span>'
+
+            bullet_rows.append(
+                f'<tr><td style="padding:8px 12px;background:{style["bg"]};border-radius:6px;margin-bottom:4px">'
+                f'<table cellpadding="0" cellspacing="0" width="100%"><tr>'
+                f'<td style="vertical-align:top;width:24px;font-size:14px;padding-top:1px">{style["icon"]}</td>'
+                f'<td style="vertical-align:top">'
+                f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:{style["accent"]};margin-bottom:2px">{label}</div>'
+                f'<div style="font-size:13px;color:#1e293b;line-height:1.5">{content}</div>'
+                f'</td></tr></table>'
+                f'</td></tr>'
+                f'<tr><td style="height:4px"></td></tr>'
+            )
         elif line:
-            out.append(f'<div style="margin:2px 0;">{line}</div>')
-    return ''.join(out)
+            # Non-bullet line (rare) — render as plain text
+            rendered = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', line)
+            bullet_rows.append(f'<tr><td style="padding:4px 0;font-size:13px;color:#1e293b">{rendered}</td></tr>')
+
+    bullets_html = f'<table width="100%" cellpadding="0" cellspacing="0">{"".join(bullet_rows)}</table>' if bullet_rows else ''
+
+    return verdict_html + bullets_html
 
 
 def _prepend_summary_to_email(summary, email_html):
-    """Insert AI summary block into the email HTML, after the message paragraph."""
+    """Insert styled AI summary card into the email HTML."""
     formatted = _format_summary_html(summary)
+    if not formatted:
+        return email_html
+
     summary_row = (
         '<tr><td style="padding:0 32px 24px 32px">'
-        '<div style="background:#f0f9ff;border-left:4px solid #0284c7;'
-        'padding:16px 20px;border-radius:6px;">'
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;'
-        'letter-spacing:0.06em;color:#0369a1;margin-bottom:8px;">AI Summary</div>'
-        f'<div style="font-size:13px;color:#1e293b;line-height:1.6;">{formatted}</div>'
-        '</div></td></tr>'
+        # Outer card
+        '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;'
+        'padding:20px 24px;box-shadow:0 1px 3px rgba(0,0,0,0.06)">'
+        # Header bar
+        '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;'
+        'border-bottom:1px solid #e2e8f0;padding-bottom:10px"><tr>'
+        '<td style="vertical-align:middle">'
+        '<span style="font-size:12px;font-weight:800;text-transform:uppercase;'
+        'letter-spacing:0.08em;color:#0369a1">✦ AI Insights</span></td>'
+        '<td style="text-align:right;vertical-align:middle">'
+        '<span style="font-size:10px;font-weight:600;color:#94a3b8;'
+        'background:#f8fafc;padding:3px 10px;border-radius:99px">Hercules AI</span></td>'
+        '</tr></table>'
+        # Content
+        f'{formatted}'
+        '</div>'
+        '</td></tr>'
     )
+
     # Insert before the <!-- Footer --> comment or the footer <tr>
     marker = '<!-- Footer -->'
     idx = email_html.find(marker)
     if idx >= 0:
         return email_html[:idx] + summary_row + '\n\n  ' + email_html[idx:]
-    # Fallback: insert before closing </table></td></tr></table>
     idx = email_html.lower().find('</table>\n</td></tr>')
     if idx >= 0:
         return email_html[:idx] + summary_row + '\n' + email_html[idx:]
-    # Last resort: append before </body>
     idx = email_html.lower().find('</body>')
     if idx >= 0:
         return email_html[:idx] + summary_row + email_html[idx:]
