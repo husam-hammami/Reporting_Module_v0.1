@@ -8,6 +8,10 @@ Also aggregates universal historian rows (layout_id IS NULL) into tag_history_ar
 Uses an advisory lock for the universal historian block so only one process archives
 per hour, and INSERT ... ON CONFLICT DO NOTHING to avoid duplicate rows if the
 worker runs twice.
+
+Universal raw rows (layout_id IS NULL) in tag_history are pruned only after
+TAG_HISTORY_RAW_RETENTION_DAYS (default 365 = 1 year), not after each hour.
+Set TAG_HISTORY_RAW_RETENTION_DAYS=0 to disable pruning (disk will grow).
 """
 
 import logging
@@ -96,16 +100,27 @@ def dynamic_archive_worker():
                                     cursor.execute(insert_sql, (None, tag_id, last_value, None, agg_delta, is_counter, 'GOOD', archive_hour, None))
                                 conn.commit()
                                 logger.info(f"[Historian] Archived {len(agg_rows)} rows → tag_history_archive | {archive_hour}")
-
-                                cursor.execute("""
-                                    DELETE FROM tag_history
-                                    WHERE layout_id IS NULL AND "timestamp" < %s
-                                """, (archive_hour,))
-                                deleted = cursor.rowcount
-                                conn.commit()
-                                logger.info(f"[Historian] Cleaned {deleted} raw rows from tag_history (keep last hour)")
                             else:
                                 conn.rollback()
+
+                            raw_retention_days = int(os.getenv('TAG_HISTORY_RAW_RETENTION_DAYS', '365'))
+                            if raw_retention_days > 0:
+                                cursor.execute(
+                                    """
+                                    DELETE FROM tag_history
+                                    WHERE layout_id IS NULL
+                                      AND "timestamp" < (CURRENT_TIMESTAMP - (%s * INTERVAL '1 day'))
+                                    """,
+                                    (raw_retention_days,),
+                                )
+                                pruned = cursor.rowcount
+                                conn.commit()
+                                if pruned:
+                                    logger.info(
+                                        "[Historian] Pruned %s universal tag_history rows older than %s days",
+                                        pruned,
+                                        raw_retention_days,
+                                    )
                         else:
                             conn.rollback()
                 except Exception as hist_err:

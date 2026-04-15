@@ -17,7 +17,7 @@ import {
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useReportCanvas, useAvailableTags, useAvailableFormulas } from '../../Hooks/useReportBuilder';
-import { evaluateFormula, extractTagRefs } from './formulas/formulaEngine';
+import { evaluateFormula, extractTagRefs, parseFormulaTagReferences } from './formulas/formulaEngine';
 import { getCachedMappings, refreshMappingsCache } from '../../utils/mappingsCache';
 import { useBranding } from '../../Context/BrandingContext';
 import HerculesLogoPng from '../../Assets/Hercules_New.png';
@@ -610,7 +610,9 @@ export function collectPaginatedTagAggregations(sections) {
               addTag(cell.tagName, cell.aggregation);
             }
             if (cell.sourceType === 'formula' && cell.formula) {
-              extractTagRefs(cell.formula).forEach((t) => addTag(t, cell.aggregation));
+              parseFormulaTagReferences(cell.formula).forEach(({ base, explicitAgg }) => {
+                if (base) addTag(base, explicitAgg || cell.aggregation);
+              });
             }
           });
         }
