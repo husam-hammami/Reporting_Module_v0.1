@@ -380,7 +380,13 @@ function resolveCellValue(cell, tagValues, rowContext = null, tagDecimalByName =
   if (cell.sourceType === 'static') return cell.value ?? '';
   if (cell.sourceType === 'tag') {
     const key = resolveTagKey(cell.tagName, cell.aggregation);
-    const raw = tagValues?.[key] ?? tagValues?.[cell.tagName];
+    // Only fall back to plain tagName for 'last' (default) aggregation.
+    // For delta/first/sum/etc, the namespaced key must exist — falling back
+    // to the raw value would show the live value instead of the aggregation.
+    const agg = cell.aggregation || 'last';
+    const raw = agg === 'last'
+      ? (tagValues?.[key] ?? tagValues?.[cell.tagName])
+      : tagValues?.[key];
     if (raw == null) return '—';
     const n = Number(raw);
     if (isNaN(n)) return raw;
