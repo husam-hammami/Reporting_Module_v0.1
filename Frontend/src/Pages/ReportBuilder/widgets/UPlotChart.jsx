@@ -15,6 +15,7 @@
 import { useRef, useEffect, useMemo, useState } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
+import { useThumbnailCapture } from '../ThumbnailCaptureContext';
 
 const DEFAULT_COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#ec4899', '#8b5cf6', '#06b6d4', '#10b981'];
 
@@ -252,6 +253,7 @@ export default function UPlotChart({ series: seriesDefs, tagHistory, tagValues, 
   const seriesKeyRef = useRef('');
   const spanKeyRef = useRef('');
   const [ready, setReady] = useState(false);
+  const isCapturing = useThumbnailCapture();
 
   // Normalize series definitions
   const normalizedSeries = useMemo(
@@ -343,6 +345,19 @@ export default function UPlotChart({ series: seriesDefs, tagHistory, tagValues, 
       });
     }
   }, [tagValues, normalizedSeries]);
+
+  /* html2canvas: after PDF export toggles layout/capture mode, force one paint so the canvas bitmap is current */
+  useEffect(() => {
+    if (!isCapturing || !chartRef.current) return;
+    const id = requestAnimationFrame(() => {
+      try {
+        chartRef.current?.redraw?.();
+      } catch {
+        /* ignore */
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isCapturing]);
 
   // Handle container resize via ResizeObserver
   useEffect(() => {

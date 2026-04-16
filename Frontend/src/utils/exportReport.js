@@ -11,7 +11,8 @@ async function waitForCapturePaint() {
       /* ignore */
     }
   }
-  await new Promise((r) => setTimeout(r, 120));
+  /* Extra headroom after capture-mode disables Chart.js / gauge animations and uPlot resizes */
+  await new Promise((r) => setTimeout(r, 220));
 }
 
 /**
