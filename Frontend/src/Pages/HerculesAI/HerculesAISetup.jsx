@@ -508,7 +508,7 @@ export default function HerculesAISetup() {
                         labels: charts.production.labels,
                         datasets: [
                           { label: 'Current', data: charts.production.current, backgroundColor: '#0369a1', borderRadius: 4 },
-                          ...(charts.production.previous.some(v => v > 0)
+                          ...(charts.production.previous?.some(v => v > 0)
                             ? [{ label: 'Previous', data: charts.production.previous, backgroundColor: '#94a3b8', borderRadius: 4 }]
                             : []),
                         ],
@@ -552,7 +552,7 @@ export default function HerculesAISetup() {
                         labels: charts.rates.labels,
                         datasets: [
                           { label: 'Current', data: charts.rates.current, backgroundColor: '#0891b2', borderRadius: 4 },
-                          ...(charts.rates.previous.some(v => v > 0)
+                          ...(charts.rates.previous?.some(v => v > 0)
                             ? [{ label: 'Previous', data: charts.rates.previous, backgroundColor: '#94a3b8', borderRadius: 4 }]
                             : []),
                         ],
