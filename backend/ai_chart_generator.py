@@ -66,7 +66,7 @@ def generate_charts(tag_data, prev_tag_data, profiles, report_names,
         agg = key.split('::')[0] if '::' in key else 'last'
         profile = profiles.get(tag_name, {})
         tag_type = profile.get('tag_type', 'unknown')
-        label = profile.get('label') or tag_name
+        label = profile.get('label') or _humanize_tag_name(tag_name)
         line = profile.get('line_name', '')
 
         prev_val = prev_tag_data.get(key, None)
@@ -172,6 +172,8 @@ def _production_bar_chart(counters, from_dt, to_dt):
         ax.set_xticks(list(x))
         ax.set_xticklabels(labels, fontsize=7, rotation=30, ha='right')
         ax.tick_params(axis='y', labelsize=7)
+        from matplotlib.ticker import FuncFormatter
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: _fmt_number(x)))
         ax.set_title('Production Output', fontsize=10, fontweight='bold',
                      color=COLORS['text'], pad=10)
         ax.grid(axis='y', alpha=0.3, zorder=0)
@@ -291,6 +293,8 @@ def _rate_comparison_chart(rates, from_dt, to_dt):
         ax.set_xticks(list(x))
         ax.set_xticklabels(labels, fontsize=7, rotation=30, ha='right')
         ax.tick_params(axis='y', labelsize=7)
+        from matplotlib.ticker import FuncFormatter
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: _fmt_number(x)))
         ax.set_title('Rate Comparison', fontsize=10, fontweight='bold',
                      color=COLORS['text'], pad=10)
         ax.grid(axis='y', alpha=0.3, zorder=0)
@@ -337,3 +341,26 @@ def _fmt_number(n):
         return f'{n:,.0f}'
     else:
         return f'{n:,.1f}'
+
+
+def _humanize_tag_name(tag_name):
+    """Convert raw PLC tag name to readable label.
+
+    MilB_C32_Total_Kwh → C32 Total Kwh
+    B1_Deopt_Emptying → B1 Deopt Emptying
+    """
+    import re
+    # Strip common prefixes (MilB_, Mil_B_, Mill_B_, etc.)
+    name = re.sub(r'^(?:Mil(?:l)?[_ ]?[A-Z]?[_ ]?)', '', tag_name)
+    # Replace underscores with spaces
+    name = name.replace('_', ' ').strip()
+    # Title case, but keep uppercase abbreviations (C32, B1, PF, etc.)
+    parts = name.split()
+    result = []
+    for p in parts:
+        if p.isupper() or re.match(r'^[A-Z]\d', p):
+            result.append(p)  # keep as-is: C32, PF, KVA
+        else:
+            result.append(p.capitalize())
+
+    return ' '.join(result) or tag_name
