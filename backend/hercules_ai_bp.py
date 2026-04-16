@@ -979,8 +979,12 @@ def generate_insights():
         report_map = []
         for tpl in templates:
             lc = tpl['layout_config']
+            if not lc:
+                continue  # skip templates with no layout
             if isinstance(lc, str):
                 lc = json.loads(lc)
+            if not isinstance(lc, dict):
+                continue
             tags = extract_all_tags(lc)
             td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
             all_tag_data.update(td)
