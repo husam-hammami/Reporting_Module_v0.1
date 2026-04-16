@@ -1012,7 +1012,7 @@ def generate_insights():
                 report_names.append(tpl_name)
                 report_map.append({'id': tpl['id'], 'name': tpl_name})
             except Exception as tpl_err:
-                logger.warning("Insights: error processing template '%s': %s", tpl_name, tpl_err)
+                logger.warning("Insights: error processing template '%s': %s", tpl_name, tpl_err, exc_info=True)
                 continue
 
         if not report_names:
