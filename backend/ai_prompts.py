@@ -26,7 +26,7 @@ def resolve_comparison_label(period_duration):
 
 def build_insights_prompt(report_names, time_from, time_to, cmp_label,
                           prev_from_str, prev_to_str, structured_data,
-                          report_context=''):
+                          report_context='', trend_summary=''):
     """Build the multi-report insights prompt WITH comparison period.
 
     This is the CANONICAL prompt used by the insights hub AND distribution engine.
@@ -41,6 +41,7 @@ def build_insights_prompt(report_names, time_from, time_to, cmp_label,
         structured_data: newline-joined tag data rows
             (Label | Type | Now | Previous | Aggregation | Line)
         report_context: optional report structure context string
+        trend_summary: optional multi-period trend lines for counter tags
     """
     names_str = ', '.join(report_names) if isinstance(report_names, list) else str(report_names)
 
@@ -68,7 +69,15 @@ INDUSTRIAL CONTEXT (use these thresholds for analysis):
 - Production counter delta = 0 means zero output for entire period
 - Temperature/pressure spikes beyond +20% of previous = investigate immediately
 - Equipment ON but zero production = mechanical fault or upstream blockage
+"""
+    if trend_summary:
+        prompt += f"""
+PRODUCTION TRENDS (oldest -> newest, {cmp_label} periods):
+{trend_summary}
 
+If 3+ periods show consistent decline, mention in the Plant Status verdict or Alerts.
+"""
+    prompt += f"""
 OUTPUT FORMAT — two sections, be EXTREMELY concise:
 
 SECTION 1 — OVERVIEW:

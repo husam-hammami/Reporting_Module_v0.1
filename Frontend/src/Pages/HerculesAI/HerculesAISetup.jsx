@@ -8,6 +8,10 @@ import { useLanguage } from '../../Hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import TimePeriodTabs from '../Reports/TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 /* ── Theme ────────────────────────────────────────────────────────────────── */
 function useTheme() {
@@ -289,12 +293,12 @@ export default function HerculesAISetup() {
     setLoadingCharts(true);
     setChartError(null);
     try {
-      const res = await herculesAIApi.previewCharts({
+      const res = await herculesAIApi.chartData({
         report_ids: selectedReportIds,
         from: dateRange.from.toISOString(),
         to: dateRange.to.toISOString(),
       });
-      setCharts(res.data?.charts || []);
+      setCharts(res.data || {});
     } catch (err) {
       setChartError(err.response?.data?.error || 'Chart generation failed');
     } finally {
@@ -423,6 +427,32 @@ export default function HerculesAISetup() {
         {/* Results */}
         {insightsResult && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            {/* KPI Score */}
+            {insightsResult?.kpi && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, padding: '16px 20px', background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12 }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 24, fontWeight: 800, color: '#fff',
+                  background: insightsResult.kpi.score >= 75 ? '#059669' : insightsResult.kpi.score >= 50 ? '#d97706' : '#dc2626',
+                }}>
+                  {insightsResult.kpi.score}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: th.text, marginBottom: 6 }}>Plant Health Score</div>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    {Object.values(insightsResult.kpi.breakdown).map((b, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 40, height: 6, borderRadius: 3, background: th.border, overflow: 'hidden' }}>
+                          <div style={{ width: `${b.score}%`, height: '100%', borderRadius: 3, background: b.score >= 75 ? '#059669' : b.score >= 50 ? '#d97706' : '#dc2626' }} />
+                        </div>
+                        <span style={{ fontSize: 10, color: th.textMuted }}>{b.label} {b.score}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Period header */}
             {insightsResult.period && (
               <p style={{ fontSize: 11, color: th.textMuted, marginBottom: 8 }}>
@@ -468,22 +498,78 @@ export default function HerculesAISetup() {
                 </div>
               )}
 
-              {charts && charts.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 12 }}>
-                  {charts.map((chart, i) => (
-                    <div key={i} style={{ background: th.surfaceAlt, border: `1px solid ${th.border}`, borderRadius: 12, padding: 12 }}>
-                      <p style={{ fontSize: 12, fontWeight: 600, color: th.textSecondary, marginBottom: 8, marginTop: 0 }}>{chart.title}</p>
-                      <img
-                        src={`data:image/png;base64,${chart.image_base64}`}
-                        alt={chart.title}
-                        style={{ width: '100%', borderRadius: 8, border: `1px solid ${th.border}` }}
-                      />
+              {charts && (charts.production || charts.equipment || charts.rates) && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
+
+                  {charts.production && (
+                    <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: 16 }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: th.text, marginBottom: 12, marginTop: 0 }}>Production Output</p>
+                      <Bar data={{
+                        labels: charts.production.labels,
+                        datasets: [
+                          { label: 'Current', data: charts.production.current, backgroundColor: '#0369a1', borderRadius: 4 },
+                          ...(charts.production.previous?.some(v => v > 0)
+                            ? [{ label: 'Previous', data: charts.production.previous, backgroundColor: '#94a3b8', borderRadius: 4 }]
+                            : []),
+                        ],
+                      }} options={{
+                        responsive: true,
+                        plugins: { legend: { labels: { color: th.textSecondary, font: { size: 11 } } } },
+                        scales: {
+                          x: { ticks: { color: th.textMuted, font: { size: 10 }, maxRotation: 45 }, grid: { display: false } },
+                          y: { ticks: { color: th.textMuted, font: { size: 10 }, callback: (v) => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v }, grid: { color: th.border + '40' } },
+                        },
+                      }} />
                     </div>
-                  ))}
+                  )}
+
+                  {charts.equipment && (
+                    <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: 16 }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: th.text, marginBottom: 12, marginTop: 0 }}>Equipment Status</p>
+                      <Bar data={{
+                        labels: charts.equipment.labels,
+                        datasets: [{
+                          data: charts.equipment.states.map(() => 1),
+                          backgroundColor: charts.equipment.states.map(s => s ? '#059669' : '#dc2626'),
+                          borderRadius: 4,
+                        }],
+                      }} options={{
+                        indexAxis: 'y',
+                        responsive: true,
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => charts.equipment.states[ctx.dataIndex] ? 'ON' : 'OFF' } } },
+                        scales: {
+                          x: { display: false, max: 1 },
+                          y: { ticks: { color: th.textSecondary, font: { size: 10 } }, grid: { display: false } },
+                        },
+                      }} />
+                    </div>
+                  )}
+
+                  {charts.rates && (
+                    <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: 16 }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: th.text, marginBottom: 12, marginTop: 0 }}>Rate Comparison</p>
+                      <Bar data={{
+                        labels: charts.rates.labels,
+                        datasets: [
+                          { label: 'Current', data: charts.rates.current, backgroundColor: '#0891b2', borderRadius: 4 },
+                          ...(charts.rates.previous?.some(v => v > 0)
+                            ? [{ label: 'Previous', data: charts.rates.previous, backgroundColor: '#94a3b8', borderRadius: 4 }]
+                            : []),
+                        ],
+                      }} options={{
+                        responsive: true,
+                        plugins: { legend: { labels: { color: th.textSecondary, font: { size: 11 } } } },
+                        scales: {
+                          x: { ticks: { color: th.textMuted, font: { size: 10 }, maxRotation: 45 }, grid: { display: false } },
+                          y: { ticks: { color: th.textMuted, font: { size: 10 } }, grid: { color: th.border + '40' } },
+                        },
+                      }} />
+                    </div>
+                  )}
                 </div>
               )}
 
-              {charts && charts.length === 0 && (
+              {charts && !charts.production && !charts.equipment && !charts.rates && (
                 <p style={{ fontSize: 12, color: th.textMuted }}>No charts to generate — need counter, boolean, or rate tags.</p>
               )}
             </div>

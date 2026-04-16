@@ -69,6 +69,7 @@ a = Analysis(
         'ai_provider',
         'ai_prompts',
         'ai_chart_generator',
+        'ai_kpi_scorer',
         'matplotlib',
         'matplotlib.backends.backend_agg',
         'anthropic',
