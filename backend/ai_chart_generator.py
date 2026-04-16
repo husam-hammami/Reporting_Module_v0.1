@@ -104,6 +104,7 @@ def generate_charts(tag_data, prev_tag_data, profiles, report_names,
 
     # Assign CID identifiers
     for i, chart in enumerate(charts):
+        # cid reserved for future CID-based email embedding
         chart['cid'] = f'chart_{i}'
 
     return charts

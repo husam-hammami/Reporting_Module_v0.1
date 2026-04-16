@@ -2916,10 +2916,16 @@ def execute_distribution_rule(rule_id):
                 # AI-only email: no attachments, clean AI insights email
                 if ai_summary_text:
                     formatted_summary = _format_summary_html(ai_summary_text)
-                    chart_html = _build_chart_html(ai_charts)
                     email_html = _build_ai_only_email_html(
-                        report_names, from_dt, to_dt, formatted_summary + chart_html
+                        report_names, from_dt, to_dt, formatted_summary
                     )
+                    chart_html = _build_chart_html(ai_charts)
+                    if chart_html:
+                        # Insert charts as a separate section outside the summary card
+                        if '<!-- Footer -->' in email_html:
+                            email_html = email_html.replace('<!-- Footer -->', chart_html + '\n  <!-- Footer -->')
+                        else:
+                            email_html = email_html.replace('</body>', chart_html + '\n</body>')
                     subject = f"Hercules AI Insights: {names_str} — {datetime.now().strftime('%Y-%m-%d')}"
                     email_result = _send_email(recipients, subject, email_html)
                     if not email_result['success']:
@@ -3565,7 +3571,6 @@ def _load_tag_profiles(tag_data):
                 WHERE tag_name = ANY(%s) AND is_tracked = true
             """, (list(raw_tags),))
             profile_map = {r['tag_name']: dict(r) for r in cur.fetchall()}
-            actual.commit()
             return profile_map
     except Exception as e:
         logger.warning("Failed to load tag profiles for charts: %s", e)
