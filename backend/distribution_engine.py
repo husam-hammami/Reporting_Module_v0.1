@@ -2791,6 +2791,8 @@ def execute_distribution_rule(rule_id):
 
         # ── AI Summary generation (runs once, injected into all outputs) ──
         ai_summary_text = None
+        all_tag_data = {}
+        all_layout_configs = {}
         if need_ai:
             try:
                 all_tag_data = {}
