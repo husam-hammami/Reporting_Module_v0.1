@@ -289,7 +289,7 @@ export default function HerculesAISetup() {
     setChartError(null);
     try {
       const res = await herculesAIApi.previewCharts({
-        report_ids: activeIds,
+        report_ids: selectedReportIds,
         from: dateRange.from.toISOString(),
         to: dateRange.to.toISOString(),
       });
@@ -299,7 +299,7 @@ export default function HerculesAISetup() {
     } finally {
       setLoadingCharts(false);
     }
-  }, [activeIds, dateRange]);
+  }, [selectedReportIds, dateRange]);
 
   const animatedCount = useCountUp(status?.total || 0);
   const lineCount = status?.lines?.length || 0;
