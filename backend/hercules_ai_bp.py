@@ -988,12 +988,16 @@ def generate_insights():
             try:
                 lc = tpl.get('layout_config')
                 if not lc:
-                    logger.debug("Insights: skipping template '%s' — no layout_config", tpl_name)
+                    logger.debug("Insights: skipping '%s' — no layout_config", tpl_name)
                     continue
                 if isinstance(lc, str):
-                    lc = json.loads(lc)
-                if not isinstance(lc, dict):
-                    logger.debug("Insights: skipping template '%s' — layout_config is %s", tpl_name, type(lc))
+                    try:
+                        lc = json.loads(lc)
+                    except (json.JSONDecodeError, TypeError):
+                        logger.debug("Insights: skipping '%s' — invalid JSON", tpl_name)
+                        continue
+                if not isinstance(lc, dict) or not lc:
+                    logger.debug("Insights: skipping '%s' — layout_config is %s", tpl_name, type(lc))
                     continue
                 tags = extract_all_tags(lc)
                 if not tags:
@@ -1010,6 +1014,9 @@ def generate_insights():
             except Exception as tpl_err:
                 logger.warning("Insights: error processing template '%s': %s", tpl_name, tpl_err)
                 continue
+
+        if not report_names:
+            return jsonify({'error': 'Selected reports have no data or configuration. Try different reports.'}), 400
 
         report_context = _extract_report_context(all_layout_configs)
 
