@@ -1340,6 +1340,100 @@ def preview_charts():
         return jsonify({'error': f'Chart generation failed: {e}'}), 500
 
 
+@hercules_ai_bp.route('/hercules-ai/chart-data', methods=['POST'])
+@login_required
+def chart_data():
+    """Return raw chart data for frontend Chart.js rendering.
+
+    Body: { report_ids?: int[], from: ISO8601, to: ISO8601 }
+    Returns: { production: {...}, equipment: {...}, rates: {...} }
+    """
+    data = request.get_json() or {}
+    from_str = data.get('from')
+    to_str = data.get('to')
+    if not from_str or not to_str:
+        return jsonify({'error': 'from and to are required'}), 400
+
+    try:
+        from_dt = datetime.fromisoformat(from_str.replace('Z', '+00:00')).replace(tzinfo=None)
+        to_dt = datetime.fromisoformat(to_str.replace('Z', '+00:00')).replace(tzinfo=None)
+    except (ValueError, TypeError) as e:
+        return jsonify({'error': f'Invalid date format: {e}'}), 400
+
+    collected = _collect_tag_data_for_period(data.get('report_ids'), from_dt, to_dt)
+    if isinstance(collected, tuple):
+        return jsonify({'error': collected[0]}), collected[1]
+
+    all_tag_data = collected['all_tag_data']
+    prev_tag_data = collected['prev_tag_data']
+    profiles = collected['profile_map']
+
+    production = {'labels': [], 'current': [], 'previous': [], 'units': []}
+    equipment = {'labels': [], 'states': []}
+    rates = {'labels': [], 'current': [], 'previous': [], 'units': []}
+
+    for key, val in all_tag_data.items():
+        tag_name = key.split('::')[-1] if '::' in key else key
+        agg = key.split('::')[0] if '::' in key else 'last'
+        profile = profiles.get(tag_name, {})
+        tag_type = profile.get('tag_type', 'unknown')
+        label = profile.get('label') or tag_name
+        unit = profile.get('unit', '')
+        prev_val = prev_tag_data.get(key)
+
+        if tag_type == 'counter' and agg == 'delta':
+            production['labels'].append(label)
+            production['current'].append(_safe_float(val))
+            production['previous'].append(_safe_float(prev_val))
+            production['units'].append(unit)
+        elif tag_type == 'boolean':
+            equipment['labels'].append(label)
+            v = val
+            if isinstance(v, bool):
+                equipment['states'].append(v)
+            elif isinstance(v, (int, float)):
+                equipment['states'].append(v > 0)
+            else:
+                equipment['states'].append(str(v).lower() in ('true', '1', 'on'))
+        elif tag_type == 'rate':
+            rates['labels'].append(label)
+            rates['current'].append(_safe_float(val))
+            rates['previous'].append(_safe_float(prev_val))
+            rates['units'].append(unit)
+
+    # Sort production by current value descending, top 8
+    if production['labels']:
+        combined = sorted(
+            zip(production['labels'], production['current'],
+                production['previous'], production['units']),
+            key=lambda x: abs(x[1] or 0), reverse=True)[:8]
+        production = {
+            'labels': [c[0] for c in combined],
+            'current': [c[1] or 0 for c in combined],
+            'previous': [c[2] or 0 for c in combined],
+            'units': [c[3] for c in combined],
+        }
+
+    # Same for rates
+    if rates['labels']:
+        combined = sorted(
+            zip(rates['labels'], rates['current'],
+                rates['previous'], rates['units']),
+            key=lambda x: abs(x[1] or 0), reverse=True)[:8]
+        rates = {
+            'labels': [c[0] for c in combined],
+            'current': [c[1] or 0 for c in combined],
+            'previous': [c[2] or 0 for c in combined],
+            'units': [c[3] for c in combined],
+        }
+
+    return jsonify({
+        'production': production if production['labels'] else None,
+        'equipment': equipment if equipment['labels'] else None,
+        'rates': rates if rates['labels'] else None,
+    })
+
+
 @hercules_ai_bp.route('/hercules-ai/test-connection', methods=['POST'])
 @login_required
 def test_ai_connection():
