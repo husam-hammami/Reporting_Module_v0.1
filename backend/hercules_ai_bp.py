@@ -1079,54 +1079,48 @@ def generate_insights():
     else:
         cmp_label = 'previous period'
 
-    prompt = f"""You analyze industrial production and energy data for mill/plant managers. Be direct, specific, and insightful.
+    prompt = f"""You write concise plant insights for mill managers. Numbers only — no filler.
 
 REPORTS: {names_str}
-CURRENT PERIOD: {time_from} to {time_to}
-COMPARISON PERIOD ({cmp_label}): {prev_from_str} to {prev_to_str}
+PERIOD: {time_from} to {time_to}
+COMPARISON: vs {cmp_label} ({prev_from_str} to {prev_to_str})
 """
     if report_context:
         prompt += f"""
-REPORT STRUCTURE:
+STRUCTURE:
 {report_context}
 """
     prompt += f"""
-TAG DATA (Label | Type | Current Value | {cmp_label.title()} Value | Aggregation | Line):
+DATA (Label | Type | Now | {cmp_label.title()} | Aggregation | Line):
 {structured_data}
 
-AGGREGATION KEY:
-- delta = amount produced/consumed during the period (this IS the production figure)
-- first = meter reading at start of period
-- last = meter reading at end of period (or current value)
+KEYS: delta=produced amount, first=start reading, last=end/current reading.
 
-IMPORTANT: Compare current values against {cmp_label} values and highlight changes.
+OUTPUT FORMAT — two sections, be EXTREMELY concise:
 
-Provide analysis in TWO sections:
+SECTION 1 — OVERVIEW:
+**Plant Overview** — {{8 words max: e.g. "Production down 41%, Mill B stopped"}}
 
-SECTION 1 — PLANT OVERVIEW (combined across all reports):
-**Plant Overview** — {{overall verdict including comparison: up/down/stable vs {cmp_label}}}
+• **Production**: {{delta values only, with ↑↓→ change — e.g. "B1: 113,926 kg (↓43%), Flour: 85,629 kg (↓42%)"}}
+• **Status**: {{equipment on/off changes — e.g. "Mill B stopped, Pasta running" — SKIP if unchanged}}
+• **Energy**: {{power/energy with change — e.g. "C32: 184 kVA, PF 0.14 (was 0.74)" — SKIP if no energy tags}}
+• **Alerts**: {{critical issues: drops >30%, zero output, bad power factor — or "None"}}
 
-• **Production**: {{totals with comparison — e.g. "Total 317,384 kg (↑12% vs {cmp_label})"}}
-• **Trend**: {{what changed significantly vs {cmp_label} — higher/lower output, new lines active/stopped}}
-• **Energy**: {{energy summary with comparison if available, skip if none}}
-• **Alerts**: {{zero production, drops >20%, unusual values — or "None"}}
+SECTION 2 — PER REPORT (one per report):
+---REPORT: ExactReportName---
+**ExactReportName** — {{5 words max verdict}}
+• {{key metric with change, 15 words max}}
+• {{second finding if notable, 15 words max}}
 
-SECTION 2 — PER-REPORT DETAILS:
-For each report, write on a NEW line starting with ---REPORT: ReportName---
-Then the summary:
-**ReportName** — {{verdict with comparison}}
-• production figures with change vs {cmp_label} (e.g. "↑15%" or "↓8%" or "→ stable")
-• notable changes only (2-3 bullets max)
-
-Rules:
-- Delta values ARE production amounts — compare current delta vs previous delta.
-- Calculate percentage change: (current - previous) / previous × 100. Use ↑ for increase, ↓ for decrease, → for <2% change.
-- If previous value is N/A or 0, say "no comparison available" — don't divide by zero.
-- First/last are meter readings — do NOT cite as production.
-- Use tag labels, not raw names.
-- Maximum 4 bullets for overview, 3 per report.
-- Format numbers with thousand separators.
-- Skip empty bullets. No filler. No recommendations. No greetings."""
+STRICT RULES:
+1. NEVER cite meter readings (first/last values). Only cite delta values as production.
+2. Each bullet MAX 20 words. Verdict MAX 8 words.
+3. SKIP any bullet that has nothing useful. Do NOT write "No energy data available."
+4. Use ↑↓→ arrows with percentages for changes.
+5. Format: 1,234,567 kg (not 1234567.0).
+6. Use tag labels, never raw tag_names.
+7. Overview max 4 bullets. Per-report max 2 bullets.
+8. No paragraphs, no explanations, no recommendations, no greetings."""
 
     try:
         import ai_provider
