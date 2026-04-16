@@ -2826,6 +2826,40 @@ def execute_distribution_rule(rule_id):
             except Exception as e:
                 logger.warning("AI summary generation failed: %s", e, exc_info=True)
 
+        # ── AI Chart generation (runs after summary, never blocks email) ──
+        ai_charts = []
+        if need_ai and ai_summary_text and all_tag_data:
+            try:
+                import ai_chart_generator
+
+                # Compute previous-period data for chart comparisons
+                period_duration = to_dt - from_dt
+                prev_to = from_dt
+                prev_from = prev_to - period_duration
+                prev_tag_data = {}
+                if all_layout_configs:
+                    for _rn, _lc in all_layout_configs.items():
+                        _tgs = extract_all_tags(_lc)
+                        if _tgs:
+                            _ptd = _fetch_tag_data_multi_agg(_lc, _tgs, prev_from, prev_to)
+                            prev_tag_data.update(_ptd)
+
+                # Load tag profiles for chart labeling/classification
+                profile_map = _load_tag_profiles(all_tag_data)
+
+                ai_charts = ai_chart_generator.generate_charts_safe(
+                    tag_data=all_tag_data,
+                    prev_tag_data=prev_tag_data,
+                    profiles=profile_map,
+                    report_names=report_names,
+                    from_dt=from_dt,
+                    to_dt=to_dt,
+                )
+                if ai_charts:
+                    logger.info("AI charts generated: %d chart(s)", len(ai_charts))
+            except Exception as e:
+                logger.warning("Chart generation skipped: %s", e)
+
         # Inject AI summary into report attachments (PDF, HTML, XLSX)
         if ai_summary_text and need_reports and attachments:
             updated = []
@@ -2882,8 +2916,9 @@ def execute_distribution_rule(rule_id):
                 # AI-only email: no attachments, clean AI insights email
                 if ai_summary_text:
                     formatted_summary = _format_summary_html(ai_summary_text)
+                    chart_html = _build_chart_html(ai_charts)
                     email_html = _build_ai_only_email_html(
-                        report_names, from_dt, to_dt, formatted_summary
+                        report_names, from_dt, to_dt, formatted_summary + chart_html
                     )
                     subject = f"Hercules AI Insights: {names_str} — {datetime.now().strftime('%Y-%m-%d')}"
                     email_result = _send_email(recipients, subject, email_html)
@@ -2899,6 +2934,23 @@ def execute_distribution_rule(rule_id):
 
                 if ai_summary_text:
                     email_html = _prepend_summary_to_email(ai_summary_text, email_html)
+
+                # Insert AI charts after AI summary (before footer)
+                if ai_charts:
+                    chart_block = (
+                        '<tr><td style="padding:0 32px 24px 32px">'
+                        + _build_chart_html(ai_charts)
+                        + '</td></tr>'
+                    )
+                    marker = '<!-- Footer -->'
+                    idx = email_html.find(marker)
+                    if idx >= 0:
+                        email_html = email_html[:idx] + chart_block + '\n\n  ' + email_html[idx:]
+                    else:
+                        # Fallback: insert before </body>
+                        idx = email_html.lower().find('</body>')
+                        if idx >= 0:
+                            email_html = email_html[:idx] + chart_block + email_html[idx:]
 
                 email_result = _send_email(recipients, subject, email_html, attachments=attachments)
                 if not email_result['success']:
@@ -3466,6 +3518,58 @@ def _format_summary_html(summary):
     bullets_html = f'<table width="100%" cellpadding="0" cellspacing="0">{"".join(bullet_rows)}</table>' if bullet_rows else ''
 
     return verdict_html + bullets_html
+
+
+def _build_chart_html(charts):
+    """Build email-safe HTML for chart images using base64 data URIs.
+
+    Resend API doesn't support CID inline images, so charts are embedded
+    as data:image/png;base64,... directly in the <img src> attribute.
+    """
+    if not charts:
+        return ''
+    parts = ['<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">']
+    for chart in charts:
+        b64 = base64.b64encode(chart['image_bytes']).decode('ascii')
+        data_uri = f'data:image/png;base64,{b64}'
+        parts.append(
+            f'<tr><td style="padding:8px 0;text-align:center;">'
+            f'<p style="margin:0 0 4px;font-size:11px;font-weight:bold;color:#0f172a;">'
+            f'{_esc(chart["title"])}</p>'
+            f'<img src="{data_uri}" alt="{_esc(chart["title"])}"'
+            f' style="max-width:100%;height:auto;border:1px solid #e2e8f0;border-radius:6px;" />'
+            f'</td></tr>'
+        )
+    parts.append('</table>')
+    return '\n'.join(parts)
+
+
+def _load_tag_profiles(tag_data):
+    """Load tag profiles from hercules_ai_tag_profiles for the given tag_data keys.
+
+    Returns: dict {tag_name: {tag_name, label, tag_type, line_name}}
+    """
+    raw_tags = set()
+    for k in tag_data:
+        raw_tags.add(k.split('::', 1)[1] if '::' in k else k)
+    if not raw_tags:
+        return {}
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                SELECT tag_name, label, tag_type, line_name
+                FROM hercules_ai_tag_profiles
+                WHERE tag_name = ANY(%s) AND is_tracked = true
+            """, (list(raw_tags),))
+            profile_map = {r['tag_name']: dict(r) for r in cur.fetchall()}
+            actual.commit()
+            return profile_map
+    except Exception as e:
+        logger.warning("Failed to load tag profiles for charts: %s", e)
+        return {}
 
 
 def _prepend_summary_to_email(summary, email_html):
