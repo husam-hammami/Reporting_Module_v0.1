@@ -267,9 +267,10 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
         recipients: rule.recipients || [],
       });
     } else {
-      setForm({ ...EMPTY_RULE });
+      // New rule: default AI summary ON when setup is complete
+      setForm(f => ({ ...EMPTY_RULE, include_ai_summary: aiSetupComplete }));
     }
-  }, [rule]);
+  }, [rule, aiSetupComplete]);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
