@@ -423,6 +423,15 @@ export default function HerculesAISetup() {
         {/* Results */}
         {insightsResult && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            {/* Period header */}
+            {insightsResult.period && (
+              <p style={{ fontSize: 11, color: th.textMuted, marginBottom: 8 }}>
+                {new Date(insightsResult.period.from).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {' — '}
+                {new Date(insightsResult.period.to).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {insightsResult.tags_analyzed ? ` • ${insightsResult.tags_analyzed} tags analyzed` : ''}
+              </p>
+            )}
             {/* Overview card */}
             {insightsResult.overview && <InsightCard text={insightsResult.overview} th={th} defaultExpanded />}
 
