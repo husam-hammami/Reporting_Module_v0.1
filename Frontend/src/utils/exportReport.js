@@ -1,5 +1,6 @@
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { Chart } from 'chart.js';
 
 /** Let layout + fonts + canvas charts settle before html2canvas (RGL/transform timing). */
 async function waitForCapturePaint() {
@@ -13,6 +14,50 @@ async function waitForCapturePaint() {
   }
   /* Extra headroom after capture-mode disables Chart.js / gauge animations and uPlot resizes */
   await new Promise((r) => setTimeout(r, 220));
+}
+
+/**
+ * Force every Chart.js instance under `root` to finish one paint pass.
+ * react-chartjs-2 may not repaint the canvas in the same frame as `animation: false`;
+ * html2canvas clones bitmap via getImageData — stale/empty bitmaps export as white.
+ */
+export function syncChartJsCanvasesBeforeSnapshot(root) {
+  if (!root?.querySelectorAll || typeof Chart?.getChart !== 'function') return;
+  for (const canvas of root.querySelectorAll('canvas')) {
+    try {
+      const chart = Chart.getChart(canvas);
+      if (chart) {
+        chart.stop?.();
+        chart.resize?.();
+        chart.update('none');
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/** html2canvas options shared by dashboard PDF/PNG and paginated PDF. */
+export function buildHtml2CanvasCaptureOptions(element, scale = 3) {
+  const w = Math.max(element.scrollWidth, element.offsetWidth, 1);
+  const h = Math.max(element.scrollHeight, element.offsetHeight, 1);
+  return {
+    scale,
+    useCORS: true,
+    /* Prefer drawImage clone path; avoids empty clones when getImageData throws on edge cases */
+    allowTaint: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+    windowWidth: w,
+    windowHeight: h,
+    width: w,
+    height: h,
+  };
+}
+
+/** One paint frame after Chart.js sync (call after `syncChartJsCanvasesBeforeSnapshot`). */
+export async function flushFrameAfterChartSync() {
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 }
 
 /**
@@ -40,16 +85,11 @@ export async function exportAsPNG(element, filename = 'report') {
   element.style.backgroundColor = '#ffffff';
 
   await waitForCapturePaint();
+  syncChartJsCanvasesBeforeSnapshot(element);
+  await flushFrameAfterChartSync();
 
   const canvas = await withResetTransform(element, () =>
-    html2canvas(element, {
-      scale: 3,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      windowWidth: Math.max(element.scrollWidth, element.offsetWidth),
-      width: Math.max(element.scrollWidth, element.offsetWidth),
-    })
+    html2canvas(element, buildHtml2CanvasCaptureOptions(element))
   );
 
   element.style.backgroundColor = originalBg;
@@ -75,17 +115,11 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
   element.style.backgroundColor = '#ffffff';
 
   await waitForCapturePaint();
+  syncChartJsCanvasesBeforeSnapshot(element);
+  await flushFrameAfterChartSync();
 
   const canvas = await withResetTransform(element, () =>
-    html2canvas(element, {
-      scale: 3,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      // Ensure full scroll width is captured (prevents wide table clipping)
-      windowWidth: Math.max(element.scrollWidth, element.offsetWidth),
-      width: Math.max(element.scrollWidth, element.offsetWidth),
-    })
+    html2canvas(element, buildHtml2CanvasCaptureOptions(element))
   );
 
   element.style.backgroundColor = originalBg;

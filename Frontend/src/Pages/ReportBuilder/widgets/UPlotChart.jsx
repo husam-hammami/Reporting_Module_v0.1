@@ -346,18 +346,33 @@ export default function UPlotChart({ series: seriesDefs, tagHistory, tagValues, 
     }
   }, [tagValues, normalizedSeries]);
 
-  /* html2canvas: after PDF export toggles layout/capture mode, force one paint so the canvas bitmap is current */
+  /* html2canvas: layout/overflow changes during export — resize + redraw after two frames so bitmap is current */
   useEffect(() => {
-    if (!isCapturing || !chartRef.current) return;
-    const id = requestAnimationFrame(() => {
-      try {
-        chartRef.current?.redraw?.();
-      } catch {
-        /* ignore */
-      }
+    if (!isCapturing || !chartRef.current || !containerRef.current) return;
+    let raf1;
+    let raf2;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        try {
+          const el = containerRef.current;
+          if (el && chartRef.current) {
+            const rect = el.getBoundingClientRect();
+            const ww = Math.floor(rect.width) || 400;
+            const legendReserve = config.showLegend !== false ? 30 : 0;
+            const hh = Math.max(60, Math.floor(rect.height || 200) - legendReserve);
+            chartRef.current.setSize({ width: ww, height: hh });
+            chartRef.current.redraw(true);
+          }
+        } catch {
+          /* ignore */
+        }
+      });
     });
-    return () => cancelAnimationFrame(id);
-  }, [isCapturing]);
+    return () => {
+      if (raf1 != null) cancelAnimationFrame(raf1);
+      if (raf2 != null) cancelAnimationFrame(raf2);
+    };
+  }, [isCapturing, config.showLegend]);
 
   // Handle container resize via ResizeObserver
   useEffect(() => {

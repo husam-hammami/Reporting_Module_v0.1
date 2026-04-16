@@ -19,6 +19,11 @@ import useTimePeriod from '../../Hooks/useTimePeriod';
 import axios from '../../API/axios';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import {
+  buildHtml2CanvasCaptureOptions,
+  flushFrameAfterChartSync,
+  syncChartJsCanvasesBeforeSnapshot,
+} from '../../utils/exportReport';
 
 /* ══════════════════════════════════════════════════════════════════
    MAIN COMPONENT
@@ -216,15 +221,10 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
       // Wait a frame for styles to apply
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-      const canvas = await html2canvas(el, {
-        scale: 3,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        // Ensure html2canvas treats the element's full scroll width as the viewport
-        windowWidth: Math.max(el.scrollWidth, el.offsetWidth),
-        width: Math.max(el.scrollWidth, el.offsetWidth),
-      });
+      syncChartJsCanvasesBeforeSnapshot(el);
+      await flushFrameAfterChartSync();
+
+      const canvas = await html2canvas(el, buildHtml2CanvasCaptureOptions(el));
 
       el.style.overflow = prevOverflow;
       el.classList.remove('rb-pdf-export');
