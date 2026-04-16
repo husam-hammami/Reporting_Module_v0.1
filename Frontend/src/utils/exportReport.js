@@ -1,163 +1,84 @@
-import html2canvas from 'html2canvas';
+import { toCanvas } from 'html-to-image';
 import jsPDF from 'jspdf';
-import { Chart } from 'chart.js';
 
-/** Let layout + fonts + canvas charts settle before html2canvas (RGL/transform timing). */
-async function waitForCapturePaint() {
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
-    try {
-      await document.fonts.ready;
-    } catch {
-      /* ignore */
-    }
-  }
-  await new Promise((r) => setTimeout(r, 300));
+/**
+ * Temporarily switch the page to light mode so CSS variables resolve to dark-on-white
+ * values. Returns a cleanup function that restores the original mode.
+ */
+function forceLightMode() {
+  const html = document.documentElement;
+  const wasDark = html.classList.contains('dark');
+  if (wasDark) html.classList.remove('dark');
+  return () => { if (wasDark) html.classList.add('dark'); };
 }
 
 /**
- * Force every Chart.js instance under `root` to stop animation and paint once.
+ * Force every Chart.js instance inside `root` to paint synchronously.
  */
 function syncChartJsCanvases(root) {
-  if (!root?.querySelectorAll || typeof Chart?.getChart !== 'function') return;
-  for (const canvas of root.querySelectorAll('canvas')) {
+  if (!root?.querySelectorAll) return;
+  const ChartCtor = window.Chart;
+  const getChart = ChartCtor?.getChart;
+  if (typeof getChart !== 'function') return;
+
+  for (const cvs of root.querySelectorAll('canvas')) {
     try {
-      const chart = Chart.getChart(canvas);
+      const chart = getChart(cvs);
       if (chart) {
         chart.stop?.();
         chart.resize?.();
         chart.update('none');
       }
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }
 }
 
 /**
- * Convert every <canvas> under `root` to a sibling <img> and hide the canvas.
- * html2canvas has persistent issues cloning canvas bitmaps (tainted, stale, WebGL
- * preserveDrawingBuffer=false). Static <img> elements are handled reliably.
- * Returns a cleanup function that restores the original canvases.
+ * Wait for layout, fonts, and chart paints to settle.
  */
-function snapshotCanvasesToImages(root) {
-  if (!root?.querySelectorAll) return () => {};
-  const swaps = [];
+async function settle(element) {
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-  for (const canvas of [...root.querySelectorAll('canvas')]) {
-    try {
-      const dataUrl = canvas.toDataURL('image/png');
-      const img = document.createElement('img');
-      img.src = dataUrl;
-      img.width = canvas.width;
-      img.height = canvas.height;
-      img.style.width = canvas.offsetWidth + 'px';
-      img.style.height = canvas.offsetHeight + 'px';
-      img.style.display = canvas.style.display || 'block';
-      img.style.position = canvas.style.position || '';
-      img.style.inset = canvas.style.inset || '';
+  syncChartJsCanvases(element);
 
-      const origDisplay = canvas.style.display;
-      canvas.style.display = 'none';
-      canvas.parentNode.insertBefore(img, canvas);
-      swaps.push({ canvas, img, origDisplay });
-    } catch {
-      /* tainted or empty — leave original */
-    }
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  if (document.fonts?.ready) {
+    try { await document.fonts.ready; } catch { /* ignore */ }
   }
 
-  return () => {
-    for (const { canvas, img, origDisplay } of swaps) {
-      canvas.style.display = origDisplay;
-      img.remove();
-    }
-  };
+  await new Promise((r) => setTimeout(r, 500));
 }
 
 /**
- * Force the page into light mode for the duration of capture.
- * Dark mode uses light text colors (CSS variables) which become invisible
- * on the white PDF background. Returns a cleanup function.
- */
-function forceLightMode() {
-  const html = document.documentElement;
-  const wasDark = html.classList.contains('dark');
-  if (wasDark) {
-    html.classList.remove('dark');
-  }
-  return () => {
-    if (wasDark) {
-      html.classList.add('dark');
-    }
-  };
-}
-
-/** Reset any CSS transform on the element before capture, then restore. */
-function withResetTransform(element, fn) {
-  const scaledEl = element.closest('[style*="transform"]') || element.parentElement;
-  const origTransform = scaledEl?.style?.transform || '';
-  if (scaledEl && origTransform) {
-    scaledEl.style.transform = 'none';
-  }
-  try {
-    return fn();
-  } finally {
-    if (scaledEl && origTransform) {
-      scaledEl.style.transform = origTransform;
-    }
-  }
-}
-
-/** Build html2canvas options. */
-function captureOptions(element) {
-  const w = Math.max(element.scrollWidth, element.offsetWidth, 1);
-  const h = Math.max(element.scrollHeight, element.offsetHeight, 1);
-  return {
-    scale: 3,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: '#ffffff',
-    logging: false,
-    windowWidth: w,
-    windowHeight: h,
-    width: w,
-    height: h,
-  };
-}
-
-/**
- * Core capture pipeline shared by PDF and PNG export:
- * 1. Wait for layout/fonts to settle
- * 2. Force Chart.js to finish painting
- * 3. Switch page to light mode (dark text on white background)
- * 4. Replace <canvas> with static <img> snapshots
- * 5. Capture with html2canvas
- * 6. Restore everything
+ * Core capture: switch to light mode, wait, snapshot via html-to-image, restore.
+ * html-to-image uses SVG foreignObject — the browser's own rendering engine paints
+ * the DOM, so CSS variables, flexbox, SVG, and canvas elements all render correctly.
  */
 async function captureElement(element) {
   const originalBg = element.style.backgroundColor;
   element.style.backgroundColor = '#ffffff';
 
-  await waitForCapturePaint();
-
-  syncChartJsCanvases(element);
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-  const restoreCanvases = snapshotCanvasesToImages(element);
   const restoreDarkMode = forceLightMode();
 
-  /* Let the browser repaint with light-mode CSS variables and static images */
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  await new Promise((r) => setTimeout(r, 80));
+  await settle(element);
 
   let canvas;
   try {
-    canvas = await withResetTransform(element, () =>
-      html2canvas(element, captureOptions(element))
-    );
+    canvas = await toCanvas(element, {
+      backgroundColor: '#ffffff',
+      pixelRatio: 2,
+      skipAutoScale: true,
+      includeQueryParams: true,
+      cacheBust: true,
+      filter: (node) => {
+        if (node.classList?.contains?.('print:hidden')) return false;
+        if (node.tagName === 'NOSCRIPT') return false;
+        return true;
+      },
+    });
   } finally {
     restoreDarkMode();
-    restoreCanvases();
     element.style.backgroundColor = originalBg;
   }
 
@@ -168,6 +89,7 @@ export async function exportAsPNG(element, filename = 'report') {
   const canvas = await captureElement(element);
 
   canvas.toBlob((blob) => {
+    if (!blob) return;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

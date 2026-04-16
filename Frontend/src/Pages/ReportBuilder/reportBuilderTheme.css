@@ -1410,9 +1410,10 @@
   fill: #374151 !important;
 }
 
-/* Remove overflow clipping so wide tables are fully captured */
+/* Remove overflow clipping so widget content is fully captured */
 .rb-pdf-export .overflow-x-auto,
-.rb-pdf-export .overflow-auto {
+.rb-pdf-export .overflow-auto,
+.rb-pdf-export .overflow-hidden {
   overflow: visible !important;
 }
 
