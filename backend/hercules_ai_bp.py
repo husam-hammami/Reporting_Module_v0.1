@@ -970,24 +970,34 @@ def generate_insights():
         logger.exception("Insights: failed to load config/templates: %s", e)
         return jsonify({'error': f'Failed to load data: {e}'}), 500
 
-    # Collect tag data and build prompt data
+    # Calculate previous period for comparison (same duration shifted back)
+    period_duration = to_dt - from_dt
+    prev_to = from_dt
+    prev_from = prev_to - period_duration
+
+    # Collect tag data for BOTH periods
     from distribution_engine import extract_all_tags, _fetch_tag_data_multi_agg, _extract_report_context
     try:
         all_tag_data = {}
+        prev_tag_data = {}
         all_layout_configs = {}
         report_names = []
         report_map = []
         for tpl in templates:
             lc = tpl['layout_config']
             if not lc:
-                continue  # skip templates with no layout
+                continue
             if isinstance(lc, str):
                 lc = json.loads(lc)
             if not isinstance(lc, dict):
                 continue
             tags = extract_all_tags(lc)
+            # Current period
             td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
             all_tag_data.update(td)
+            # Previous period (for comparison)
+            ptd = _fetch_tag_data_multi_agg(lc, tags, prev_from, prev_to)
+            prev_tag_data.update(ptd)
             all_layout_configs[tpl['name']] = lc
             report_names.append(tpl['name'])
             report_map.append({'id': tpl['id'], 'name': tpl['name']})
@@ -1020,10 +1030,11 @@ def generate_insights():
                 tag_name = key
                 agg_prefix = 'last'
             prof = profile_map.get(tag_name)
+            prev_val = prev_tag_data.get(key, 'N/A')
             data_rows.append(
                 f"{(prof.get('label') or tag_name) if prof else tag_name} | "
                 f"{prof.get('tag_type', 'unknown') if prof else 'unknown'} | "
-                f"{value} | {agg_prefix} | "
+                f"{value} | {prev_val} | {agg_prefix} | "
                 f"{prof.get('line_name', '') if prof else ''}"
             )
 
@@ -1033,16 +1044,30 @@ def generate_insights():
         logger.exception("Insights: failed to collect tag data: %s", e)
         return jsonify({'error': f'Failed to collect data: {e}'}), 500
 
-    # Limit to 40 rows for insights (more than email's 30)
+    # Limit to 40 rows for insights
     structured_data = '\n'.join(data_rows[:40])
     names_str = ', '.join(report_names)
     time_from = from_dt.strftime('%Y-%m-%d %H:%M')
     time_to = to_dt.strftime('%Y-%m-%d %H:%M')
+    prev_from_str = prev_from.strftime('%Y-%m-%d %H:%M')
+    prev_to_str = prev_to.strftime('%Y-%m-%d %H:%M')
 
-    prompt = f"""You analyze industrial production and energy data for mill/plant managers. Be direct, specific, and useful.
+    # Determine comparison label based on period duration
+    hours = period_duration.total_seconds() / 3600
+    if hours <= 25:
+        cmp_label = 'previous day'
+    elif hours <= 170:
+        cmp_label = 'previous week'
+    elif hours <= 745:
+        cmp_label = 'previous month'
+    else:
+        cmp_label = 'previous period'
+
+    prompt = f"""You analyze industrial production and energy data for mill/plant managers. Be direct, specific, and insightful.
 
 REPORTS: {names_str}
-PERIOD: {time_from} to {time_to}
+CURRENT PERIOD: {time_from} to {time_to}
+COMPARISON PERIOD ({cmp_label}): {prev_from_str} to {prev_to_str}
 """
     if report_context:
         prompt += f"""
@@ -1050,37 +1075,42 @@ REPORT STRUCTURE:
 {report_context}
 """
     prompt += f"""
-TAG DATA (Label | Type | Value | Aggregation | Production Line):
+TAG DATA (Label | Type | Current Value | {cmp_label.title()} Value | Aggregation | Line):
 {structured_data}
 
 AGGREGATION KEY:
 - delta = amount produced/consumed during the period (this IS the production figure)
 - first = meter reading at start of period
 - last = meter reading at end of period (or current value)
-- avg/sum/min/max = statistical aggregation over the period
+
+IMPORTANT: Compare current values against {cmp_label} values and highlight changes.
 
 Provide analysis in TWO sections:
 
 SECTION 1 — PLANT OVERVIEW (combined across all reports):
-**Plant Overview** — {{overall verdict}}
-• **Production**: {{total production across all lines}}
-• **Energy**: {{energy summary if available, skip if none}}
-• **Status**: {{notable equipment states, skip if all normal}}
-• **Alerts**: {{anomalies or "None"}}
+**Plant Overview** — {{overall verdict including comparison: up/down/stable vs {cmp_label}}}
+
+• **Production**: {{totals with comparison — e.g. "Total 317,384 kg (↑12% vs {cmp_label})"}}
+• **Trend**: {{what changed significantly vs {cmp_label} — higher/lower output, new lines active/stopped}}
+• **Energy**: {{energy summary with comparison if available, skip if none}}
+• **Alerts**: {{zero production, drops >20%, unusual values — or "None"}}
 
 SECTION 2 — PER-REPORT DETAILS:
 For each report, write on a NEW line starting with ---REPORT: ReportName---
 Then the summary:
-**ReportName** — {{verdict}}
-• key findings (2-3 bullets max per report)
+**ReportName** — {{verdict with comparison}}
+• production figures with change vs {cmp_label} (e.g. "↑15%" or "↓8%" or "→ stable")
+• notable changes only (2-3 bullets max)
 
 Rules:
-- Delta values ARE production amounts — present as "X produced Y kg".
+- Delta values ARE production amounts — compare current delta vs previous delta.
+- Calculate percentage change: (current - previous) / previous × 100. Use ↑ for increase, ↓ for decrease, → for <2% change.
+- If previous value is N/A or 0, say "no comparison available" — don't divide by zero.
 - First/last are meter readings — do NOT cite as production.
 - Use tag labels, not raw names.
 - Maximum 4 bullets for overview, 3 per report.
 - Format numbers with thousand separators.
-- Skip empty bullets. No filler. No recommendations."""
+- Skip empty bullets. No filler. No recommendations. No greetings."""
 
     try:
         import ai_provider
