@@ -1301,8 +1301,35 @@ table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11p
   color: #94a3b8;
 }
 
-/* ── Dashboard grid ── */
+/* ── Dashboard grid (align with Report Viewer / PDF export look) ── */
 .dashboard-section { margin-bottom: 8px; }
+.dashboard-tab-block {
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+.dashboard-tab-block.tab-after-first {
+  page-break-before: always;
+}
+/* Tab title bar — table layout for xhtml2pdf (avoids flex issues) */
+table.report-tab-banner {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0 0 0;
+}
+table.report-tab-banner td {
+  background-color: #1a3a5c;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 8px 14px;
+  vertical-align: middle;
+}
+.report-tab-accent {
+  height: 3px;
+  background-color: #0f3460;
+  margin: 0 0 10px 0;
+}
 .report-section-title {
   font-size: 14px;
   font-weight: 700;
@@ -1313,15 +1340,22 @@ table.data-table .summary-row td { border-top: 2px solid #94a3b8; font-size: 11p
 }
 .dashboard-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  padding: 6px 10px;
-  margin-bottom: 4px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
 }
 .widget-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
 .widget-value { font-size: 16px; font-weight: 700; color: #0f172a; }
 .widget-unit  { font-size: 10px; font-weight: 500; color: #94a3b8; margin-left: 3px; }
 .widget-silo  { font-size: 12px; color: #334155; }
 .widget-chart-note { font-size: 9px; color: #94a3b8; font-style: italic; padding: 2px 0; }
+.dashboard-card img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 4px;
+}
 
 /* ── Dashboard grid table ── */
 table.grid-row { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
@@ -1593,9 +1627,18 @@ def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_d
     )
 
     cards_html = ""
-    for section_heading, flat_widgets in _dashboard_sections_for_distribution(layout_config):
+    for tab_index, (section_heading, flat_widgets) in enumerate(_dashboard_sections_for_distribution(layout_config)):
+        tab_cls = "dashboard-tab-block"
+        if tab_index > 0:
+            tab_cls += " tab-after-first"
+        cards_html += f'<div class="{tab_cls}">\n'
         if section_heading:
-            cards_html += f'<h2 class="report-section-title">{_esc(section_heading)}</h2>\n'
+            cards_html += (
+                '<table class="report-tab-banner" width="100%" cellpadding="0" cellspacing="0"><tr>'
+                f'<td>{_esc(section_heading)}</td>'
+                '</tr></table>\n'
+                '<div class="report-tab-accent"></div>\n'
+            )
 
         sorted_widgets = sorted(flat_widgets, key=lambda w: (w.get('y', 0), w.get('x', 0)))
 
@@ -1625,6 +1668,8 @@ def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_d
                     cell_html = _render_single_widget_html(widget, tag_data, ts_by_tag, from_dt, to_dt)
                     cards_html += f'<td style="width:{width}">{cell_html}</td>\n'
                 cards_html += '</tr></table>\n'
+
+        cards_html += '</div>\n'
 
     logo_html = _build_logo_header_html(hercules_uri, asm_uri, client_logo_uri)
 
@@ -2441,6 +2486,7 @@ def _build_email_html(report_name, from_dt, to_dt, filename):
     <td style="padding:0 32px 28px 32px">
       <p style="font-size:13px;color:#475569;line-height:1.6;margin:0">
         Please find the scheduled report <strong>{_esc(report_name)}</strong> attached to this email.
+        The attachment uses the same layout as the dashboard viewer (including every tab when the report has multiple dashboard tabs).
         The report covers the period shown above. If you have questions about this report, please
         contact your system administrator.
       </p>
