@@ -67,6 +67,10 @@ a = Analysis(
         'updates_bp',
         'hercules_ai_bp',
         'ai_provider',
+        'ai_prompts',
+        'ai_chart_generator',
+        'matplotlib',
+        'matplotlib.backends.backend_agg',
         'anthropic',
         'openai',
 

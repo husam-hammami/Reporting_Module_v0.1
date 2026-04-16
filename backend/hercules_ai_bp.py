@@ -4,6 +4,7 @@ Hercules AI Blueprint — Phase 1
 Tag profiling, classification, config management, and preview summary.
 """
 
+import base64
 import json
 import logging
 import re
@@ -14,6 +15,8 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from psycopg2.extras import RealDictCursor
+
+import ai_prompts
 
 logger = logging.getLogger(__name__)
 
@@ -856,43 +859,13 @@ def preview_summary():
     from distribution_engine import _extract_report_context
     report_context = _extract_report_context({chosen_template['name']: lc})
 
-    prompt = f"""You analyze industrial production and energy data for mill/plant managers. Be direct, specific, and useful.
-
-REPORT: {chosen_template['name']}
-PERIOD: {time_from} to {time_to}
-"""
-    if report_context:
-        prompt += f"""
-REPORT STRUCTURE:
-{report_context}
-"""
-    prompt += f"""
-TAG DATA (Label | Type | Value | Aggregation | Production Line):
-{structured_data}
-
-AGGREGATION KEY:
-- delta = amount produced/consumed during the period (this IS the production figure)
-- first = meter reading at start of period
-- last = meter reading at end of period (or current value)
-- avg/sum/min/max = statistical aggregation over the period
-
-Write a smart summary using EXACTLY this format:
-
-**{chosen_template['name']}** — {{one-line verdict: running normally / reduced output / line stopped / no data}}
-
-• **Production**: {{cite delta values as production amounts with units — e.g. "Wheat Scale produced 125,294 kg"}}
-• **Energy**: {{power consumption, energy totals, power factor — skip if no energy data}}
-• **Status**: {{equipment on/off, only if notable — skip if all normal}}
-• **Alerts**: {{zero production, zero flow rates, abnormal values — or "None"}}
-
-Rules:
-- Delta values ARE production amounts — present as "X produced Y kg".
-- First/last are meter readings — do NOT cite as production.
-- Use the Label column when referring to tags.
-- Maximum 4 bullets. Each under 25 words.
-- Format numbers with thousand separators.
-- Skip bullets with nothing to report.
-- No paragraphs. No filler. No recommendations."""
+    prompt = ai_prompts.build_single_report_prompt(
+        report_name=chosen_template['name'],
+        time_from=time_from,
+        time_to=time_to,
+        structured_data=structured_data,
+        report_context=report_context,
+    )
 
     try:
         import ai_provider
@@ -918,6 +891,134 @@ Rules:
         return jsonify({'error': f'Could not generate summary: {err_msg}'}), 500
 
 
+def _collect_tag_data_for_period(report_ids, from_dt, to_dt):
+    """Shared helper: load templates, fetch current + previous period tag data.
+
+    Returns a dict on success:
+        {
+            'templates': list of template rows,
+            'all_tag_data': dict of {tag_key: value} for current period,
+            'prev_tag_data': dict of {tag_key: value} for previous period,
+            'report_names': list of report name strings,
+            'report_map': list of {id, name},
+            'all_layout_configs': dict of {name: layout_config},
+            'profile_map': dict of {tag_name: profile_row},
+            'ai_config': dict from hercules_ai_config,
+            'prev_from': datetime, 'prev_to': datetime,
+        }
+    On error returns a tuple (error_message, http_status_code).
+    """
+    from distribution_engine import extract_all_tags, _fetch_tag_data_multi_agg
+
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor(cursor_factory=RealDictCursor)
+
+            config = _get_config(cur)
+            if not config.get('setup_completed'):
+                return ('Complete AI setup first', 400)
+
+            ai_config = _get_raw_config(cur)
+
+            # Load templates
+            if report_ids and isinstance(report_ids, list) and len(report_ids) > 0:
+                cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE id = ANY(%s) AND is_active = true",
+                            (report_ids,))
+            else:
+                cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE is_active = true ORDER BY name")
+            templates = cur.fetchall()
+
+            if not templates:
+                return ('No active report templates found', 400)
+
+            actual.commit()
+    except Exception as e:
+        logger.exception("_collect_tag_data: failed to load config/templates: %s", e)
+        return (f'Failed to load data: {e}', 500)
+
+    # Previous period (same duration shifted back)
+    period_duration = to_dt - from_dt
+    prev_to = from_dt
+    prev_from = prev_to - period_duration
+
+    try:
+        all_tag_data = {}
+        prev_tag_data = {}
+        all_layout_configs = {}
+        report_names = []
+        report_map = []
+        for tpl in templates:
+            tpl_name = tpl.get('name') or f"Report_{tpl.get('id', '?')}"
+            try:
+                lc = tpl.get('layout_config')
+                if not lc:
+                    logger.debug("_collect_tag_data: skipping '%s' — no layout_config", tpl_name)
+                    continue
+                if isinstance(lc, str):
+                    try:
+                        lc = json.loads(lc)
+                    except (json.JSONDecodeError, TypeError):
+                        logger.debug("_collect_tag_data: skipping '%s' — invalid JSON", tpl_name)
+                        continue
+                if not isinstance(lc, dict) or not lc:
+                    logger.debug("_collect_tag_data: skipping '%s' — layout_config is %s", tpl_name, type(lc))
+                    continue
+                tags = extract_all_tags(lc)
+                if not tags:
+                    continue
+                # Current period
+                td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
+                all_tag_data.update(td)
+                # Previous period
+                ptd = _fetch_tag_data_multi_agg(lc, tags, prev_from, prev_to)
+                prev_tag_data.update(ptd)
+                all_layout_configs[tpl_name] = lc
+                report_names.append(tpl_name)
+                report_map.append({'id': tpl['id'], 'name': tpl_name})
+            except Exception as tpl_err:
+                logger.warning("_collect_tag_data: error processing template '%s': %s", tpl_name, tpl_err, exc_info=True)
+                continue
+
+        if not report_names:
+            return ('Selected reports have no data or configuration. Try different reports.', 400)
+
+        # Load profiles
+        raw_tags = set()
+        for k in all_tag_data:
+            raw_tags.add(k.split('::', 1)[1] if '::' in k else k)
+
+        profile_map = {}
+        if raw_tags:
+            get_conn2 = _get_db_connection()
+            with closing(get_conn2()) as conn2:
+                actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
+                cur2 = actual2.cursor(cursor_factory=RealDictCursor)
+                cur2.execute("""SELECT tag_name, label, tag_type, line_name
+                               FROM hercules_ai_tag_profiles
+                               WHERE tag_name = ANY(%s) AND is_tracked = true""",
+                             (list(raw_tags),))
+                profile_map = {r['tag_name']: r for r in cur2.fetchall()}
+                actual2.commit()
+
+        return {
+            'templates': templates,
+            'all_tag_data': all_tag_data,
+            'prev_tag_data': prev_tag_data,
+            'report_names': report_names,
+            'report_map': report_map,
+            'all_layout_configs': all_layout_configs,
+            'profile_map': profile_map,
+            'ai_config': ai_config,
+            'prev_from': prev_from,
+            'prev_to': prev_to,
+        }
+    except Exception as e:
+        logger.exception("_collect_tag_data: failed to collect tag data: %s", e)
+        return (f'Failed to collect data: {e}', 500)
+
+
 @hercules_ai_bp.route('/hercules-ai/insights', methods=['POST'])
 @login_required
 def generate_insights():
@@ -938,189 +1039,65 @@ def generate_insights():
     except (ValueError, TypeError) as e:
         return jsonify({'error': f'Invalid date format: {e}'}), 400
 
-    try:
-        get_conn = _get_db_connection()
-        with closing(get_conn()) as conn:
-            actual = conn._conn if hasattr(conn, '_conn') else conn
-            cur = actual.cursor(cursor_factory=RealDictCursor)
+    collected = _collect_tag_data_for_period(data.get('report_ids'), from_dt, to_dt)
+    if isinstance(collected, tuple):
+        return jsonify({'error': collected[0]}), collected[1]
 
-            config = _get_config(cur)
-            if not config.get('setup_completed'):
-                return jsonify({'error': 'Complete AI setup first'}), 400
+    templates = collected['templates']
+    all_tag_data = collected['all_tag_data']
+    prev_tag_data = collected['prev_tag_data']
+    report_names = collected['report_names']
+    report_map = collected['report_map']
+    all_layout_configs = collected['all_layout_configs']
+    profile_map = collected['profile_map']
+    ai_config = collected['ai_config']
+    prev_from = collected['prev_from']
+    prev_to = collected['prev_to']
 
-            ai_config = _get_raw_config(cur)
-            provider = ai_config.get('ai_provider', 'cloud')
-            if provider == 'cloud' and not ai_config.get('llm_api_key'):
-                return jsonify({'error': 'API key required'}), 400
+    # Build text rows for the LLM prompt
+    data_rows = []
+    for key, value in all_tag_data.items():
+        if '::' in key:
+            agg_prefix, tag_name = key.split('::', 1)
+        else:
+            tag_name = key
+            agg_prefix = 'last'
+        prof = profile_map.get(tag_name)
+        prev_val = prev_tag_data.get(key, 'N/A')
+        data_rows.append(
+            f"{(prof.get('label') or tag_name) if prof else tag_name} | "
+            f"{prof.get('tag_type', 'unknown') if prof else 'unknown'} | "
+            f"{value} | {prev_val} | {agg_prefix} | "
+            f"{prof.get('line_name', '') if prof else ''}"
+        )
 
-            # Load templates
-            report_ids = data.get('report_ids')
-            if report_ids and isinstance(report_ids, list) and len(report_ids) > 0:
-                cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE id = ANY(%s) AND is_active = true",
-                            (report_ids,))
-            else:
-                cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE is_active = true ORDER BY name")
-            templates = cur.fetchall()
+    if not data_rows:
+        return jsonify({'error': 'No tag data available for the selected period'}), 400
 
-            if not templates:
-                return jsonify({'error': 'No active report templates found'}), 400
-
-            actual.commit()
-    except Exception as e:
-        logger.exception("Insights: failed to load config/templates: %s", e)
-        return jsonify({'error': f'Failed to load data: {e}'}), 500
-
-    # Calculate previous period for comparison (same duration shifted back)
-    period_duration = to_dt - from_dt
-    prev_to = from_dt
-    prev_from = prev_to - period_duration
-
-    # Collect tag data for BOTH periods
-    from distribution_engine import extract_all_tags, _fetch_tag_data_multi_agg, _extract_report_context
-    try:
-        all_tag_data = {}
-        prev_tag_data = {}
-        all_layout_configs = {}
-        report_names = []
-        report_map = []
-        for tpl in templates:
-            tpl_name = tpl.get('name') or f"Report_{tpl.get('id', '?')}"
-            try:
-                lc = tpl.get('layout_config')
-                if not lc:
-                    logger.debug("Insights: skipping '%s' — no layout_config", tpl_name)
-                    continue
-                if isinstance(lc, str):
-                    try:
-                        lc = json.loads(lc)
-                    except (json.JSONDecodeError, TypeError):
-                        logger.debug("Insights: skipping '%s' — invalid JSON", tpl_name)
-                        continue
-                if not isinstance(lc, dict) or not lc:
-                    logger.debug("Insights: skipping '%s' — layout_config is %s", tpl_name, type(lc))
-                    continue
-                tags = extract_all_tags(lc)
-                if not tags:
-                    continue
-                # Current period
-                td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
-                all_tag_data.update(td)
-                # Previous period (for comparison)
-                ptd = _fetch_tag_data_multi_agg(lc, tags, prev_from, prev_to)
-                prev_tag_data.update(ptd)
-                all_layout_configs[tpl_name] = lc
-                report_names.append(tpl_name)
-                report_map.append({'id': tpl['id'], 'name': tpl_name})
-            except Exception as tpl_err:
-                logger.warning("Insights: error processing template '%s': %s", tpl_name, tpl_err, exc_info=True)
-                continue
-
-        if not report_names:
-            return jsonify({'error': 'Selected reports have no data or configuration. Try different reports.'}), 400
-
-        report_context = _extract_report_context(all_layout_configs)
-
-        # Load profiles for richer labels
-        raw_tags = set()
-        for k in all_tag_data:
-            raw_tags.add(k.split('::', 1)[1] if '::' in k else k)
-
-        profile_map = {}
-        if raw_tags:
-            with closing(get_conn()) as conn2:
-                actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
-                cur2 = actual2.cursor(cursor_factory=RealDictCursor)
-                cur2.execute("""SELECT tag_name, label, tag_type, line_name
-                               FROM hercules_ai_tag_profiles
-                               WHERE tag_name = ANY(%s) AND is_tracked = true""",
-                             (list(raw_tags),))
-                profile_map = {r['tag_name']: r for r in cur2.fetchall()}
-                actual2.commit()
-
-        data_rows = []
-        for key, value in all_tag_data.items():
-            agg_prefix = ''
-            if '::' in key:
-                agg_prefix, tag_name = key.split('::', 1)
-            else:
-                tag_name = key
-                agg_prefix = 'last'
-            prof = profile_map.get(tag_name)
-            prev_val = prev_tag_data.get(key, 'N/A')
-            data_rows.append(
-                f"{(prof.get('label') or tag_name) if prof else tag_name} | "
-                f"{prof.get('tag_type', 'unknown') if prof else 'unknown'} | "
-                f"{value} | {prev_val} | {agg_prefix} | "
-                f"{prof.get('line_name', '') if prof else ''}"
-            )
-
-        if not data_rows:
-            return jsonify({'error': 'No tag data available for the selected period'}), 400
-    except Exception as e:
-        logger.exception("Insights: failed to collect tag data: %s", e)
-        return jsonify({'error': f'Failed to collect data: {e}'}), 500
+    from distribution_engine import _extract_report_context
+    report_context = _extract_report_context(all_layout_configs)
 
     # Limit to 40 rows for insights
     structured_data = '\n'.join(data_rows[:40])
-    names_str = ', '.join(report_names)
     time_from = from_dt.strftime('%Y-%m-%d %H:%M')
     time_to = to_dt.strftime('%Y-%m-%d %H:%M')
     prev_from_str = prev_from.strftime('%Y-%m-%d %H:%M')
     prev_to_str = prev_to.strftime('%Y-%m-%d %H:%M')
 
     # Determine comparison label based on period duration
-    hours = period_duration.total_seconds() / 3600
-    if hours <= 25:
-        cmp_label = 'previous day'
-    elif hours <= 170:
-        cmp_label = 'previous week'
-    elif hours <= 745:
-        cmp_label = 'previous month'
-    else:
-        cmp_label = 'previous period'
+    period_duration = to_dt - from_dt
+    cmp_label = ai_prompts.resolve_comparison_label(period_duration)
 
-    prompt = f"""You write concise plant insights for mill managers. Numbers only — no filler.
-
-REPORTS: {names_str}
-PERIOD: {time_from} to {time_to}
-COMPARED AGAINST: {cmp_label} ({prev_from_str} to {prev_to_str})
-"""
-    if report_context:
-        prompt += f"""
-STRUCTURE:
-{report_context}
-"""
-    prompt += f"""
-DATA (Label | Type | Now | {cmp_label.title()} | Aggregation | Line):
-{structured_data}
-
-KEYS: delta=produced amount, first=start reading, last=end/current reading.
-
-OUTPUT FORMAT — two sections, be EXTREMELY concise:
-
-SECTION 1 — OVERVIEW:
-**Plant Overview** — {{8 words max verdict, e.g. "Mill B stopped, production down 41% vs {cmp_label}"}}
-
-• **Production**: {{delta values with explicit comparison — e.g. "B1: 113,926 kg (↓43% vs {cmp_label})"}}
-• **Status**: {{equipment changes — e.g. "Mill B stopped since {cmp_label}" — SKIP if unchanged}}
-• **Energy**: {{power with comparison — e.g. "C32: 184 kVA, PF dropped 0.74→0.14 vs {cmp_label}" — SKIP if no energy tags}}
-• **Alerts**: {{critical issues only — or "None"}}
-
-SECTION 2 — PER REPORT (one per report):
----REPORT: ExactReportName---
-**ExactReportName** — {{5 words max verdict}}
-• {{key metric with "vs {cmp_label}" comparison, 20 words max}}
-• {{second finding if notable, 20 words max}}
-
-STRICT RULES:
-1. EVERY percentage change MUST say "vs {cmp_label}" — never write bare "↓43%", always "↓43% vs {cmp_label}".
-2. NEVER cite meter readings (first/last values). Only cite delta values as production.
-3. Each bullet MAX 20 words. Verdict MAX 8 words.
-4. SKIP any bullet with nothing useful. Do NOT write "No data available."
-5. Format: 1,234,567 kg (not 1234567.0). Use ↑↓→ arrows.
-6. Use tag labels, never raw tag_names.
-7. Overview max 4 bullets. Per-report max 2 bullets.
-8. No paragraphs, no explanations, no recommendations, no greetings."""
+    prompt = ai_prompts.build_insights_prompt(
+        report_names=[t['name'] for t in templates],
+        time_from=time_from,
+        time_to=time_to,
+        cmp_label=cmp_label,
+        prev_from_str=prev_from_str,
+        prev_to_str=prev_to_str,
+        structured_data=structured_data,
+        report_context=report_context,
+    )
 
     try:
         import ai_provider
@@ -1161,6 +1138,61 @@ STRICT RULES:
         if 'timeout' in err_msg.lower():
             return jsonify({'error': 'Analysis timed out. Try a shorter time range or fewer reports.'}), 504
         return jsonify({'error': f'Insights failed: {err_msg}'}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/preview-charts', methods=['POST'])
+@login_required
+def preview_charts():
+    """Generate chart previews for selected reports and time range.
+
+    Body: { report_ids?: int[], from: ISO8601, to: ISO8601 }
+    Returns: { charts: [{ title: str, image_base64: str }] }
+    """
+    data = request.get_json() or {}
+    from_str = data.get('from')
+    to_str = data.get('to')
+    if not from_str or not to_str:
+        return jsonify({'error': 'from and to are required'}), 400
+
+    try:
+        from_dt = datetime.fromisoformat(from_str.replace('Z', '+00:00')).replace(tzinfo=None)
+        to_dt = datetime.fromisoformat(to_str.replace('Z', '+00:00')).replace(tzinfo=None)
+    except (ValueError, TypeError) as e:
+        return jsonify({'error': f'Invalid date format: {e}'}), 400
+
+    collected = _collect_tag_data_for_period(data.get('report_ids'), from_dt, to_dt)
+    if isinstance(collected, tuple):
+        return jsonify({'error': collected[0]}), collected[1]
+
+    try:
+        import ai_chart_generator
+    except ImportError:
+        return jsonify({'error': 'Chart generation not available (matplotlib not installed)'}), 500
+
+    try:
+        charts = ai_chart_generator.generate_charts_safe(
+            collected['all_tag_data'],
+            collected['prev_tag_data'],
+            collected['profile_map'],
+            collected['report_names'],
+            from_dt, to_dt,
+        )
+
+        result = []
+        for chart in charts:
+            img_bytes = chart.get('image_bytes')
+            if not img_bytes:
+                continue
+            result.append({
+                'title': chart.get('title', ''),
+                'image_base64': base64.b64encode(img_bytes).decode('ascii'),
+            })
+
+        return jsonify({'charts': result})
+
+    except Exception as e:
+        logger.exception("Chart preview failed: %s", e)
+        return jsonify({'error': f'Chart generation failed: {e}'}), 500
 
 
 @hercules_ai_bp.route('/hercules-ai/test-connection', methods=['POST'])

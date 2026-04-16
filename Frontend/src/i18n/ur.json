@@ -784,5 +784,10 @@
   "herculesAI.provider.testConnection": "کنکشن ٹیسٹ",
 
   "distribution.includeAISummary": "AI خلاصہ",
-  "distribution.aiSummaryDisabledHint": "پہلے ہرکیولیز AI سیٹ اپ مکمل کریں"
+  "distribution.aiSummaryDisabledHint": "پہلے ہرکیولیز AI سیٹ اپ مکمل کریں",
+  "distribution.contentMode": "ای میل مواد",
+  "distribution.reportOnly": "صرف رپورٹس",
+  "distribution.reportWithAi": "رپورٹس + AI خلاصہ",
+  "distribution.aiOnly": "صرف AI تجزیہ",
+  "distribution.aiOnlyHint": "ای میل میں صرف AI تجزیہ ہوگا، کوئی رپورٹ اٹیچمنٹ نہیں"
 }

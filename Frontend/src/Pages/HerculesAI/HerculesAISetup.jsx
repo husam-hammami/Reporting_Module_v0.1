@@ -196,6 +196,9 @@ export default function HerculesAISetup() {
   const [analyzing, setAnalyzing] = useState(false);
   const [insightsResult, setInsightsResult] = useState(null);
   const [insightsError, setInsightsError] = useState('');
+  const [charts, setCharts] = useState(null);
+  const [loadingCharts, setLoadingCharts] = useState(false);
+  const [chartError, setChartError] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -266,7 +269,7 @@ export default function HerculesAISetup() {
 
   const runInsights = useCallback(async () => {
     if (!dateRange) { toast.error('Select a time range first'); return; }
-    setAnalyzing(true); setInsightsResult(null); setInsightsError('');
+    setAnalyzing(true); setInsightsResult(null); setInsightsError(''); setCharts(null); setChartError(null);
     try {
       const res = await herculesAIApi.insights({
         report_ids: selectedReportIds,
@@ -280,6 +283,23 @@ export default function HerculesAISetup() {
       setInsightsError(e.response?.data?.error || e.response?.data?.message || e.message || 'Analysis failed');
     } finally { setAnalyzing(false); }
   }, [dateRange, selectedReportIds]);
+
+  const loadCharts = useCallback(async () => {
+    setLoadingCharts(true);
+    setChartError(null);
+    try {
+      const res = await herculesAIApi.previewCharts({
+        report_ids: activeIds,
+        from: dateRange.from.toISOString(),
+        to: dateRange.to.toISOString(),
+      });
+      setCharts(res.data?.charts || []);
+    } catch (err) {
+      setChartError(err.response?.data?.error || 'Chart generation failed');
+    } finally {
+      setLoadingCharts(false);
+    }
+  }, [activeIds, dateRange]);
 
   const animatedCount = useCountUp(status?.total || 0);
   const lineCount = status?.lines?.length || 0;
@@ -418,6 +438,44 @@ export default function HerculesAISetup() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, fontSize: 11, color: th.textMuted }}>
               <span>{insightsResult.tags_analyzed} tags analyzed</span>
               <span>Generated just now</span>
+            </div>
+
+            {/* ── Chart Preview ── */}
+            <div style={{ marginTop: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: th.text, display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                  <span style={{ color: th.accent }}>Chart Preview</span>
+                </h3>
+                <button onClick={loadCharts} disabled={loadingCharts}
+                  style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, border: `1px solid ${th.border}`, background: th.surfaceAlt, color: th.textSecondary, fontWeight: 600, cursor: 'pointer', opacity: loadingCharts ? 0.5 : 1 }}>
+                  {loadingCharts ? 'Generating...' : 'Generate Charts'}
+                </button>
+              </div>
+
+              {chartError && (
+                <div style={{ padding: '8px 14px', borderRadius: 8, background: th.dangerBg, color: th.danger, fontSize: 12, fontWeight: 600, marginBottom: 12 }}>
+                  {chartError}
+                </div>
+              )}
+
+              {charts && charts.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 12 }}>
+                  {charts.map((chart, i) => (
+                    <div key={i} style={{ background: th.surfaceAlt, border: `1px solid ${th.border}`, borderRadius: 12, padding: 12 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: th.textSecondary, marginBottom: 8, marginTop: 0 }}>{chart.title}</p>
+                      <img
+                        src={`data:image/png;base64,${chart.image_base64}`}
+                        alt={chart.title}
+                        style={{ width: '100%', borderRadius: 8, border: `1px solid ${th.border}` }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {charts && charts.length === 0 && (
+                <p style={{ fontSize: 12, color: th.textMuted }}>No charts to generate — need counter, boolean, or rate tags.</p>
+              )}
             </div>
           </motion.div>
         )}

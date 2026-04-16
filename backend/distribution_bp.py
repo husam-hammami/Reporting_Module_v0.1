@@ -185,7 +185,21 @@ def _validate_rule(data):
         'schedule_day_of_month': dom,
         'enabled': bool(data.get('enabled', True)),
         'include_ai_summary': bool(data.get('include_ai_summary', False)),
+        'content_mode': data.get('content_mode', 'report_only'),
     }
+
+    # Validate content_mode
+    valid_modes = ('report_only', 'report_with_ai', 'ai_only')
+    if cleaned['content_mode'] not in valid_modes:
+        return None, f"content_mode must be one of: {', '.join(valid_modes)}"
+
+    # Derive include_ai_summary from content_mode for backward compatibility
+    cleaned['include_ai_summary'] = cleaned['content_mode'] in ('report_with_ai', 'ai_only')
+
+    # ai_only mode is email-only — disk doesn't make sense
+    if cleaned['content_mode'] == 'ai_only' and cleaned['delivery_method'] == 'disk':
+        return None, "AI Insights Only mode requires email delivery"
+
     return cleaned, None
 
 
@@ -281,8 +295,8 @@ def create_rule():
                 INSERT INTO distribution_rules
                     (name, report_id, report_ids, delivery_method, recipients, save_path,
                      format, schedule_type, schedule_time, schedule_day_of_week,
-                     schedule_day_of_month, enabled, include_ai_summary)
-                VALUES (%s, %s, %s::jsonb, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s, %s)
+                     schedule_day_of_month, enabled, include_ai_summary, content_mode)
+                VALUES (%s, %s, %s::jsonb, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
             """, (
                 cleaned['name'], cleaned['report_id'],
@@ -292,6 +306,7 @@ def create_rule():
                 cleaned['format'], cleaned['schedule_type'], cleaned['schedule_time'],
                 cleaned['schedule_day_of_week'], cleaned['schedule_day_of_month'],
                 cleaned['enabled'], cleaned['include_ai_summary'],
+                cleaned['content_mode'],
             ))
             row = cursor.fetchone()
             actual_conn.commit()
@@ -327,7 +342,7 @@ def update_rule(rule_id):
                     recipients = %s::jsonb, save_path = %s, format = %s,
                     schedule_type = %s, schedule_time = %s,
                     schedule_day_of_week = %s, schedule_day_of_month = %s,
-                    enabled = %s, include_ai_summary = %s, updated_at = NOW()
+                    enabled = %s, include_ai_summary = %s, content_mode = %s, updated_at = NOW()
                 WHERE id = %s
                 RETURNING *
             """, (
@@ -337,7 +352,8 @@ def update_rule(rule_id):
                 json.dumps(cleaned['recipients']), cleaned['save_path'],
                 cleaned['format'], cleaned['schedule_type'], cleaned['schedule_time'],
                 cleaned['schedule_day_of_week'], cleaned['schedule_day_of_month'],
-                cleaned['enabled'], cleaned['include_ai_summary'], rule_id,
+                cleaned['enabled'], cleaned['include_ai_summary'],
+                cleaned['content_mode'], rule_id,
             ))
             row = cursor.fetchone()
             if not row:

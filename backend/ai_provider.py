@@ -60,7 +60,7 @@ def _generate_cloud(prompt, config, timeout):
     try:
         client = anthropic.Anthropic(api_key=api_key, timeout=timeout)
         response = client.messages.create(
-            model=model, max_tokens=500,
+            model=model, max_tokens=700,
             messages=[{"role": "user", "content": prompt}]
         )
         return response.content[0].text
@@ -82,7 +82,7 @@ def _generate_local(prompt, config, timeout):
             response = client.chat.completions.create(
                 model=model or "local-model",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=500
+                max_tokens=700
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -96,7 +96,7 @@ def _generate_local(prompt, config, timeout):
             json={
                 "model": model or "local-model",
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 500,
+                "max_tokens": 700,
             },
             timeout=timeout
         )

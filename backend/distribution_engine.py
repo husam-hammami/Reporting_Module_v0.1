@@ -19,6 +19,8 @@ from contextlib import closing
 from psycopg2.extras import RealDictCursor
 from io import BytesIO
 
+import ai_prompts
+
 logger = logging.getLogger(__name__)
 
 
@@ -2520,6 +2522,100 @@ def _build_email_html(report_name, from_dt, to_dt, filename):
 </body></html>"""
 
 
+def _build_ai_only_email_html(report_names, from_dt, to_dt, ai_summary_html):
+    """Build email HTML for AI-only distribution (no report attachments)."""
+    hercules_uri, asm_uri, client_logo_uri = _get_logo_data_uris()
+    period_from = from_dt.strftime('%d/%m/%Y, %H:%M')
+    period_to = to_dt.strftime('%d/%m/%Y, %H:%M')
+    generated = datetime.now().strftime('%d/%m/%Y, %H:%M')
+
+    # Logo images (same as _build_email_html)
+    hercules_img = f'<img src="{hercules_uri}" alt="Hercules" width="auto" height="36" style="height:36px;width:auto;display:block" />' if hercules_uri else ''
+    asm_img = f'<img src="{asm_uri}" alt="ASM" width="auto" height="32" style="height:32px;width:auto;display:inline-block;vertical-align:middle" />' if asm_uri else ''
+    client_img = f'<img src="{client_logo_uri}" alt="" width="auto" height="32" style="height:32px;width:auto;max-width:100px;display:inline-block;vertical-align:middle" />' if client_logo_uri else ''
+    right_logos = ''
+    if client_img or asm_img:
+        spacer = '&nbsp;&nbsp;' if client_img and asm_img else ''
+        right_logos = f'{client_img}{spacer}{asm_img}'
+
+    names_str = _esc(', '.join(report_names) if isinstance(report_names, list) else str(report_names))
+
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,system-ui,-apple-system,sans-serif;color:#1a1a2e">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08)">
+
+  <!-- Logo header bar -->
+  <tr>
+    <td style="background:linear-gradient(135deg,#0f1b2d 0%,#1a3a5c 100%);padding:16px 24px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="text-align:left">{hercules_img}</td>
+          <td style="text-align:right">{right_logos}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Title & period -->
+  <tr>
+    <td style="padding:28px 32px 0 32px;text-align:center">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;margin-bottom:6px">AI Insights</div>
+      <div style="font-size:22px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;margin-bottom:4px">{names_str}</div>
+      <div style="height:2px;width:60px;background:linear-gradient(90deg,#0f3460,#1a5276);margin:8px auto 12px auto;border-radius:1px"></div>
+    </td>
+  </tr>
+
+  <!-- Period card -->
+  <tr>
+    <td style="padding:0 32px 24px 32px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px">
+        <tr>
+          <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin-bottom:2px">Report Period</div>
+            <div style="font-size:14px;font-weight:600;color:#334155"><strong>From:</strong> {_esc(period_from)} &nbsp;&mdash;&nbsp; <strong>To:</strong> {_esc(period_to)}</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin-bottom:2px">Generated</div>
+            <div style="font-size:14px;font-weight:600;color:#334155">{_esc(generated)}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- AI Summary content -->
+  <tr>
+    <td style="padding:0 32px 24px 32px">
+      <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:20px 24px;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;border-bottom:1px solid #e2e8f0;padding-bottom:10px"><tr>
+          <td style="vertical-align:middle"><span style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#0369a1">✦ AI Insights</span></td>
+          <td style="text-align:right;vertical-align:middle"><span style="font-size:10px;font-weight:600;color:#94a3b8;background:#f8fafc;padding:3px 10px;border-radius:99px">Hercules AI</span></td>
+        </tr></table>
+        {ai_summary_html}
+      </div>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 32px;text-align:center">
+      <div style="font-size:11px;color:#94a3b8;line-height:1.5">
+        Generated by <strong style="color:#64748b">Hercules AI</strong> — Automated insights from your plant data.
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
 def _send_email(recipients, subject, body_html, attachments=None):
     """Send HTML email with optional attachments using configured method (Resend or SMTP).
 
@@ -2634,7 +2730,16 @@ def execute_distribution_rule(rule_id):
         ext = {'pdf': 'pdf', 'html': 'html', 'xlsx': 'xlsx'}.get(fmt, 'pdf')
         timestamp_str = datetime.now().strftime('%Y%m%d_%H%M')
 
-        # 3. Generate each report
+        # ── content_mode logic ──
+        content_mode = rule.get('content_mode', 'report_only')
+        # Backward compat: old rules without content_mode but with include_ai_summary
+        if content_mode == 'report_only' and rule.get('include_ai_summary'):
+            content_mode = 'report_with_ai'
+
+        need_ai = content_mode in ('report_with_ai', 'ai_only')
+        need_reports = content_mode in ('report_only', 'report_with_ai')
+
+        # 3. Generate each report (skip when ai_only)
         attachments = []  # list of (filename, content_bytes)
         report_names = []
         skipped = []
@@ -2657,31 +2762,36 @@ def execute_distribution_rule(rule_id):
             template = dict(template)
             report_name = template['name']
             report_names.append(report_name)
-            layout_config = template['layout_config']
-            if isinstance(layout_config, str):
-                layout_config = json.loads(layout_config)
 
-            tag_names = extract_all_tags(layout_config)
-            tag_data = _fetch_tag_data_multi_agg(layout_config, tag_names, from_dt, to_dt)
-            if fmt == 'xlsx':
-                content_bytes = _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt)
-            else:
-                html_content = _generate_report_html(report_name, layout_config, tag_data, from_dt, to_dt)
-                if fmt == 'pdf':
-                    content_bytes = _html_to_pdf(html_content)
+            if need_reports:
+                layout_config = template['layout_config']
+                if isinstance(layout_config, str):
+                    layout_config = json.loads(layout_config)
+
+                tag_names = extract_all_tags(layout_config)
+                tag_data = _fetch_tag_data_multi_agg(layout_config, tag_names, from_dt, to_dt)
+                if fmt == 'xlsx':
+                    content_bytes = _generate_xlsx(report_name, layout_config, tag_data, from_dt, to_dt)
                 else:
-                    content_bytes = html_content.encode('utf-8')
+                    html_content = _generate_report_html(report_name, layout_config, tag_data, from_dt, to_dt)
+                    if fmt == 'pdf':
+                        content_bytes = _html_to_pdf(html_content)
+                    else:
+                        content_bytes = html_content.encode('utf-8')
 
-            safe_name = re.sub(r'[^\w\-]', '_', report_name)
-            filename = f"{safe_name}_{timestamp_str}.{ext}"
-            attachments.append((filename, content_bytes))
+                safe_name = re.sub(r'[^\w\-]', '_', report_name)
+                filename = f"{safe_name}_{timestamp_str}.{ext}"
+                attachments.append((filename, content_bytes))
 
-        if not attachments:
+        if need_reports and not attachments:
+            raise ValueError(f"All reports missing: {'; '.join(skipped)}")
+
+        if not report_names:
             raise ValueError(f"All reports missing: {'; '.join(skipped)}")
 
         # ── AI Summary generation (runs once, injected into all outputs) ──
         ai_summary_text = None
-        if rule.get('include_ai_summary'):
+        if need_ai:
             try:
                 all_tag_data = {}
                 all_layout_configs = {}
@@ -2716,8 +2826,42 @@ def execute_distribution_rule(rule_id):
             except Exception as e:
                 logger.warning("AI summary generation failed: %s", e, exc_info=True)
 
+        # ── AI Chart generation (runs after summary, never blocks email) ──
+        ai_charts = []
+        if need_ai and ai_summary_text and all_tag_data:
+            try:
+                import ai_chart_generator
+
+                # Compute previous-period data for chart comparisons
+                period_duration = to_dt - from_dt
+                prev_to = from_dt
+                prev_from = prev_to - period_duration
+                prev_tag_data = {}
+                if all_layout_configs:
+                    for _rn, _lc in all_layout_configs.items():
+                        _tgs = extract_all_tags(_lc)
+                        if _tgs:
+                            _ptd = _fetch_tag_data_multi_agg(_lc, _tgs, prev_from, prev_to)
+                            prev_tag_data.update(_ptd)
+
+                # Load tag profiles for chart labeling/classification
+                profile_map = _load_tag_profiles(all_tag_data)
+
+                ai_charts = ai_chart_generator.generate_charts_safe(
+                    tag_data=all_tag_data,
+                    prev_tag_data=prev_tag_data,
+                    profiles=profile_map,
+                    report_names=report_names,
+                    from_dt=from_dt,
+                    to_dt=to_dt,
+                )
+                if ai_charts:
+                    logger.info("AI charts generated: %d chart(s)", len(ai_charts))
+            except Exception as e:
+                logger.warning("Chart generation skipped: %s", e)
+
         # Inject AI summary into report attachments (PDF, HTML, XLSX)
-        if ai_summary_text:
+        if ai_summary_text and need_reports and attachments:
             updated = []
             for filename, content_bytes in attachments:
                 try:
@@ -2767,24 +2911,68 @@ def execute_distribution_rule(rule_id):
 
         if delivery in ('email', 'both') and recipients:
             names_str = ', '.join(report_names)
-            subject = f"Hercules Report: {names_str} — {datetime.now().strftime('%Y-%m-%d')}"
-            email_html = _build_email_html(names_str, from_dt, to_dt,
-                                           ', '.join(fn for fn, _ in attachments))
 
-            if ai_summary_text:
-                email_html = _prepend_summary_to_email(ai_summary_text, email_html)
+            if content_mode == 'ai_only':
+                # AI-only email: no attachments, clean AI insights email
+                if ai_summary_text:
+                    formatted_summary = _format_summary_html(ai_summary_text)
+                    email_html = _build_ai_only_email_html(
+                        report_names, from_dt, to_dt, formatted_summary
+                    )
+                    chart_html = _build_chart_html(ai_charts)
+                    if chart_html:
+                        # Insert charts as a separate section outside the summary card
+                        if '<!-- Footer -->' in email_html:
+                            email_html = email_html.replace('<!-- Footer -->', chart_html + '\n  <!-- Footer -->')
+                        else:
+                            email_html = email_html.replace('</body>', chart_html + '\n</body>')
+                    subject = f"Hercules AI Insights: {names_str} — {datetime.now().strftime('%Y-%m-%d')}"
+                    email_result = _send_email(recipients, subject, email_html)
+                    if not email_result['success']:
+                        errors.append(f"Email: {email_result['error']}")
+                else:
+                    errors.append("AI summary generation failed — no email sent")
+            else:
+                # report_only or report_with_ai: existing behavior
+                subject = f"Hercules Report: {names_str} — {datetime.now().strftime('%Y-%m-%d')}"
+                email_html = _build_email_html(names_str, from_dt, to_dt,
+                                               ', '.join(fn for fn, _ in attachments))
 
-            email_result = _send_email(recipients, subject, email_html, attachments=attachments)
-            if not email_result['success']:
-                errors.append(f"Email: {email_result['error']}")
+                if ai_summary_text:
+                    email_html = _prepend_summary_to_email(ai_summary_text, email_html)
+
+                # Insert AI charts after AI summary (before footer)
+                if ai_charts:
+                    chart_block = (
+                        '<tr><td style="padding:0 32px 24px 32px">'
+                        + _build_chart_html(ai_charts)
+                        + '</td></tr>'
+                    )
+                    marker = '<!-- Footer -->'
+                    idx = email_html.find(marker)
+                    if idx >= 0:
+                        email_html = email_html[:idx] + chart_block + '\n\n  ' + email_html[idx:]
+                    else:
+                        # Fallback: insert before </body>
+                        idx = email_html.lower().find('</body>')
+                        if idx >= 0:
+                            email_html = email_html[:idx] + chart_block + email_html[idx:]
+
+                email_result = _send_email(recipients, subject, email_html, attachments=attachments)
+                if not email_result['success']:
+                    errors.append(f"Email: {email_result['error']}")
 
         if delivery in ('disk', 'both') and rule.get('save_path'):
-            for filename, content_bytes in attachments:
-                try:
-                    saved_path = _save_to_disk(rule['save_path'], filename, content_bytes)
-                    logger.info(f"Report saved to {saved_path}")
-                except Exception as e:
-                    errors.append(f"Disk ({filename}): {str(e)}")
+            if content_mode == 'ai_only':
+                # Defense in depth: ai_only with disk delivery — skip silently
+                logger.info("AI-only mode: skipping disk delivery for rule %s", rule_id)
+            else:
+                for filename, content_bytes in attachments:
+                    try:
+                        saved_path = _save_to_disk(rule['save_path'], filename, content_bytes)
+                        logger.info(f"Report saved to {saved_path}")
+                    except Exception as e:
+                        errors.append(f"Disk ({filename}): {str(e)}")
 
         # 5. Update run status
         real_errors = [e for e in errors if not e.startswith('Report ') or 'not found' not in e]
@@ -2820,6 +3008,8 @@ def execute_distribution_rule(rule_id):
             actual_conn.commit()
 
         if success:
+            if content_mode == 'ai_only':
+                return {'success': True, 'message': f'AI insights delivered via {delivery}'}
             return {'success': True, 'message': f'{len(attachments)} report(s) delivered via {delivery}'}
         else:
             return {'success': False, 'error': '; '.join(errors)}
@@ -2917,9 +3107,52 @@ def _inject_ai_summary_xlsx(xlsx_bytes, summary_text):
 
 
 # Daily rate limit for AI calls
-_ai_call_count = 0
-_ai_call_date = None
 _AI_DAILY_CAP = 200
+
+
+def _get_ai_call_count(conn):
+    """Get today's AI call count from the database. Returns (count, date_str)."""
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT value FROM hercules_ai_config WHERE key = 'daily_call_count'"
+            )
+            row = cur.fetchone()
+            if row:
+                data = row[0] if isinstance(row[0], dict) else {}
+                if data.get('date') == today:
+                    return data.get('count', 0), today
+            return 0, today
+    except Exception:
+        return 0, today
+
+
+def _increment_ai_call_count(conn):
+    """Atomically increment today's AI call count in the database."""
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO hercules_ai_config (key, value)
+                VALUES ('daily_call_count', %s::jsonb)
+                ON CONFLICT (key) DO UPDATE
+                SET value = CASE
+                    WHEN (hercules_ai_config.value->>'date') = %s
+                    THEN jsonb_build_object('date', %s, 'count',
+                         (COALESCE((hercules_ai_config.value->>'count')::int, 0) + 1))
+                    ELSE jsonb_build_object('date', %s, 'count', 1)
+                END,
+                updated_at = NOW()
+            """, [
+                json.dumps({'date': today, 'count': 1}),
+                today, today, today
+            ])
+            conn.commit()
+    except Exception as e:
+        logger.warning("Failed to increment AI call count: %s", e)
 
 
 def _extract_report_context(layout_configs):
@@ -3032,17 +3265,6 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
         layout_configs: dict {report_name: layout_config} for report structure context
     Returns: summary text string or None
     """
-    global _ai_call_count, _ai_call_date
-
-    # Rate limit check
-    today = datetime.now().date()
-    if _ai_call_date != today:
-        _ai_call_count = 0
-        _ai_call_date = today
-    if _ai_call_count >= _AI_DAILY_CAP:
-        logger.warning("AI daily rate limit reached (%d calls)", _AI_DAILY_CAP)
-        return None
-
     # Load all config from DB
     get_conn = _get_db_connection()
     ai_config = {}
@@ -3050,6 +3272,13 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
     try:
         with closing(get_conn()) as conn:
             actual = conn._conn if hasattr(conn, '_conn') else conn
+
+            # Rate limit check (DB-backed, UTC date)
+            count, _ = _get_ai_call_count(actual)
+            if count >= _AI_DAILY_CAP:
+                logger.warning("AI daily rate limit reached (%d calls)", _AI_DAILY_CAP)
+                return None
+
             cur = actual.cursor(cursor_factory=RealDictCursor)
 
             cur.execute("SELECT key, value FROM hercules_ai_config")
@@ -3105,6 +3334,7 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
             'aggregation': agg_prefix,
             'line': prof.get('line_name', '') if prof else '',
             'tag_name': tag_name,
+            'key': key,
         })
 
     if not data_rows:
@@ -3129,66 +3359,63 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
 
         data_rows = (counters + rates + booleans_zero + rest)[:30]
 
-    # Build structured table with aggregation context
+    # ── Fetch previous-period data for comparison ──
+    period_duration = to_dt - from_dt
+    prev_to = from_dt
+    prev_from = prev_to - period_duration
+
+    prev_tag_data = {}
+    if layout_configs:
+        try:
+            for _rname, lc in layout_configs.items():
+                tags = extract_all_tags(lc)
+                if tags:
+                    ptd = _fetch_tag_data_multi_agg(lc, tags, prev_from, prev_to)
+                    prev_tag_data.update(ptd)
+        except Exception as prev_err:
+            logger.warning("AI summary: failed to fetch previous period data: %s", prev_err)
+
+    # Determine comparison label based on period duration
+    cmp_label = ai_prompts.resolve_comparison_label(period_duration)
+
+    # Build structured table with current AND previous values
     data_lines = []
     for r in data_rows:
-        data_lines.append(f"{r['label']} | {r['tag_type']} | {r['value']} | {r['aggregation']} | {r['line']}")
+        prev_val = prev_tag_data.get(r['key'], 'N/A')
+        data_lines.append(
+            f"{r['label']} | {r['tag_type']} | {r['value']} | {prev_val} | {r['aggregation']} | {r['line']}"
+        )
     structured_data = '\n'.join(data_lines)
 
-    names_str = ', '.join(report_names) if isinstance(report_names, list) else str(report_names)
     time_from = from_dt.strftime('%Y-%m-%d %H:%M')
     time_to = to_dt.strftime('%Y-%m-%d %H:%M')
+    prev_from_str = prev_from.strftime('%Y-%m-%d %H:%M')
+    prev_to_str = prev_to.strftime('%Y-%m-%d %H:%M')
 
     # Build report structure context from layout_configs
     report_context = _extract_report_context(layout_configs) if layout_configs else ''
 
-    prompt = f"""You analyze industrial production and energy data for mill/plant managers. Be direct, specific, and useful.
-
-REPORTS: {names_str}
-PERIOD: {time_from} to {time_to}
-"""
-    if report_context:
-        prompt += f"""
-REPORT STRUCTURE (what the report sections and columns mean):
-{report_context}
-"""
-
-    prompt += f"""
-TAG DATA (Label | Type | Value | Aggregation | Production Line):
-{structured_data}
-
-AGGREGATION KEY:
-- delta = amount produced/consumed during the period (this IS the production figure)
-- first = meter reading at start of period
-- last = meter reading at end of period (or current value)
-- avg/sum/min/max = statistical aggregation over the period
-
-Write a smart summary using this format:
-
-**{names_str}** — {{one-line verdict: running normally / reduced output / line stopped / no data}}
-
-• **Production**: {{cite delta values as production amounts with units — e.g. "Wheat Scale produced 125,294 kg"}}
-• **Energy**: {{power consumption, energy totals, power factor — skip if no energy data}}
-• **Status**: {{equipment on/off, only if notable — skip if all normal}}
-• **Alerts**: {{zero production, zero flow rates, abnormal values — or "None"}}
-
-Rules:
-- Delta values ARE the production amounts — present them as "X produced Y kg" not as raw meter readings.
-- First/last values are meter start/end readings — do NOT cite these as production amounts.
-- Use the Label column (not raw tag names) when referring to tags.
-- Maximum 4 bullet points. Each bullet under 25 words.
-- Format numbers with thousand separators (e.g. 1,234,567 kg not 1234567.0 kg).
-- Round decimals: 0 for totalizers/energy, 1 for rates/percentages.
-- Only cite numbers from the data. Never invent or estimate.
-- N/A or missing values = "no data" — do not guess why.
-- Skip any bullet with nothing to report.
-- No paragraphs. No filler. No recommendations. No greetings."""
+    prompt = ai_prompts.build_insights_prompt(
+        report_names=report_names,
+        time_from=time_from,
+        time_to=time_to,
+        cmp_label=cmp_label,
+        prev_from_str=prev_from_str,
+        prev_to_str=prev_to_str,
+        structured_data=structured_data,
+        report_context=report_context,
+    )
 
     try:
         import ai_provider
         result = ai_provider.generate(prompt, ai_config)
         if result:
-            _ai_call_count += 1
+            try:
+                with closing(get_conn()) as inc_conn:
+                    inc_actual = inc_conn._conn if hasattr(inc_conn, '_conn') else inc_conn
+                    _increment_ai_call_count(inc_actual)
+            except Exception as inc_err:
+                logger.warning("Failed to record AI call count: %s", inc_err)
         return result
     except Exception as e:
         logger.warning("AI summary API call failed: %s", e)
@@ -3297,6 +3524,57 @@ def _format_summary_html(summary):
     bullets_html = f'<table width="100%" cellpadding="0" cellspacing="0">{"".join(bullet_rows)}</table>' if bullet_rows else ''
 
     return verdict_html + bullets_html
+
+
+def _build_chart_html(charts):
+    """Build email-safe HTML for chart images using base64 data URIs.
+
+    Resend API doesn't support CID inline images, so charts are embedded
+    as data:image/png;base64,... directly in the <img src> attribute.
+    """
+    if not charts:
+        return ''
+    parts = ['<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">']
+    for chart in charts:
+        b64 = base64.b64encode(chart['image_bytes']).decode('ascii')
+        data_uri = f'data:image/png;base64,{b64}'
+        parts.append(
+            f'<tr><td style="padding:8px 0;text-align:center;">'
+            f'<p style="margin:0 0 4px;font-size:11px;font-weight:bold;color:#0f172a;">'
+            f'{_esc(chart["title"])}</p>'
+            f'<img src="{data_uri}" alt="{_esc(chart["title"])}"'
+            f' style="max-width:100%;height:auto;border:1px solid #e2e8f0;border-radius:6px;" />'
+            f'</td></tr>'
+        )
+    parts.append('</table>')
+    return '\n'.join(parts)
+
+
+def _load_tag_profiles(tag_data):
+    """Load tag profiles from hercules_ai_tag_profiles for the given tag_data keys.
+
+    Returns: dict {tag_name: {tag_name, label, tag_type, line_name}}
+    """
+    raw_tags = set()
+    for k in tag_data:
+        raw_tags.add(k.split('::', 1)[1] if '::' in k else k)
+    if not raw_tags:
+        return {}
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                SELECT tag_name, label, tag_type, line_name
+                FROM hercules_ai_tag_profiles
+                WHERE tag_name = ANY(%s) AND is_tracked = true
+            """, (list(raw_tags),))
+            profile_map = {r['tag_name']: dict(r) for r in cur.fetchall()}
+            return profile_map
+    except Exception as e:
+        logger.warning("Failed to load tag profiles for charts: %s", e)
+        return {}
 
 
 def _prepend_summary_to_email(summary, email_html):

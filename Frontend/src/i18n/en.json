@@ -784,5 +784,10 @@
   "herculesAI.provider.testConnection": "Test Connection",
 
   "distribution.includeAISummary": "AI Summary",
-  "distribution.aiSummaryDisabledHint": "Complete Hercules AI setup first"
+  "distribution.aiSummaryDisabledHint": "Complete Hercules AI setup first",
+  "distribution.contentMode": "Email Content",
+  "distribution.reportOnly": "Reports Only",
+  "distribution.reportWithAi": "Reports + AI Summary",
+  "distribution.aiOnly": "AI Insights Only",
+  "distribution.aiOnlyHint": "Email will contain AI analysis only, no report attachments"
 }
