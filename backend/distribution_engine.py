@@ -2919,9 +2919,52 @@ def _inject_ai_summary_xlsx(xlsx_bytes, summary_text):
 
 
 # Daily rate limit for AI calls
-_ai_call_count = 0
-_ai_call_date = None
 _AI_DAILY_CAP = 200
+
+
+def _get_ai_call_count(conn):
+    """Get today's AI call count from the database. Returns (count, date_str)."""
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT value FROM hercules_ai_config WHERE key = 'daily_call_count'"
+            )
+            row = cur.fetchone()
+            if row:
+                data = row[0] if isinstance(row[0], dict) else {}
+                if data.get('date') == today:
+                    return data.get('count', 0), today
+            return 0, today
+    except Exception:
+        return 0, today
+
+
+def _increment_ai_call_count(conn):
+    """Atomically increment today's AI call count in the database."""
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO hercules_ai_config (key, value)
+                VALUES ('daily_call_count', %s::jsonb)
+                ON CONFLICT (key) DO UPDATE
+                SET value = CASE
+                    WHEN (hercules_ai_config.value->>'date') = %s
+                    THEN jsonb_build_object('date', %s, 'count',
+                         (COALESCE((hercules_ai_config.value->>'count')::int, 0) + 1))
+                    ELSE jsonb_build_object('date', %s, 'count', 1)
+                END,
+                updated_at = NOW()
+            """, [
+                json.dumps({'date': today, 'count': 1}),
+                today, today, today
+            ])
+            conn.commit()
+    except Exception as e:
+        logger.warning("Failed to increment AI call count: %s", e)
 
 
 def _extract_report_context(layout_configs):
@@ -3034,17 +3077,6 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
         layout_configs: dict {report_name: layout_config} for report structure context
     Returns: summary text string or None
     """
-    global _ai_call_count, _ai_call_date
-
-    # Rate limit check
-    today = datetime.now().date()
-    if _ai_call_date != today:
-        _ai_call_count = 0
-        _ai_call_date = today
-    if _ai_call_count >= _AI_DAILY_CAP:
-        logger.warning("AI daily rate limit reached (%d calls)", _AI_DAILY_CAP)
-        return None
-
     # Load all config from DB
     get_conn = _get_db_connection()
     ai_config = {}
@@ -3052,6 +3084,13 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
     try:
         with closing(get_conn()) as conn:
             actual = conn._conn if hasattr(conn, '_conn') else conn
+
+            # Rate limit check (DB-backed, UTC date)
+            count, _ = _get_ai_call_count(actual)
+            if count >= _AI_DAILY_CAP:
+                logger.warning("AI daily rate limit reached (%d calls)", _AI_DAILY_CAP)
+                return None
+
             cur = actual.cursor(cursor_factory=RealDictCursor)
 
             cur.execute("SELECT key, value FROM hercules_ai_config")
@@ -3183,7 +3222,12 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
         import ai_provider
         result = ai_provider.generate(prompt, ai_config)
         if result:
-            _ai_call_count += 1
+            try:
+                with closing(get_conn()) as inc_conn:
+                    inc_actual = inc_conn._conn if hasattr(inc_conn, '_conn') else inc_conn
+                    _increment_ai_call_count(inc_actual)
+            except Exception as inc_err:
+                logger.warning("Failed to record AI call count: %s", inc_err)
         return result
     except Exception as e:
         logger.warning("AI summary API call failed: %s", e)
