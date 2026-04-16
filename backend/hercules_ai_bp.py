@@ -821,11 +821,17 @@ def preview_summary():
 
         # Build context from profiles
         cur.execute("""
-            SELECT tag_name, label, tag_type, line_name
+            SELECT tag_name, label, tag_type, line_name, evidence
             FROM hercules_ai_tag_profiles
             WHERE tag_name = ANY(%s) AND is_tracked = true
         """, (list(chosen_tags),))
-        profile_map = {r['tag_name']: r for r in cur.fetchall()}
+        profile_map = {}
+        for r in cur.fetchall():
+            evidence = r.get('evidence') or {}
+            if isinstance(evidence, str):
+                evidence = json.loads(evidence)
+            r['unit'] = evidence.get('unit', '')
+            profile_map[r['tag_name']] = r
 
         actual.commit()
 
@@ -840,9 +846,11 @@ def preview_summary():
         prof = profile_map.get(tag_name, {})
         if not prof:
             continue
+        unit = prof.get('unit', '')
         data_rows.append(
             f"{prof.get('label', tag_name) or tag_name} | "
             f"{prof.get('tag_type', 'unknown')} | "
+            f"{unit} | "
             f"{value} | "
             f"{agg_prefix} | "
             f"{prof.get('line_name', '')}"
@@ -995,11 +1003,16 @@ def _collect_tag_data_for_period(report_ids, from_dt, to_dt):
             with closing(get_conn2()) as conn2:
                 actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
                 cur2 = actual2.cursor(cursor_factory=RealDictCursor)
-                cur2.execute("""SELECT tag_name, label, tag_type, line_name
+                cur2.execute("""SELECT tag_name, label, tag_type, line_name, evidence
                                FROM hercules_ai_tag_profiles
                                WHERE tag_name = ANY(%s) AND is_tracked = true""",
                              (list(raw_tags),))
-                profile_map = {r['tag_name']: r for r in cur2.fetchall()}
+                for r in cur2.fetchall():
+                    evidence = r.get('evidence') or {}
+                    if isinstance(evidence, str):
+                        evidence = json.loads(evidence)
+                    r['unit'] = evidence.get('unit', '')
+                    profile_map[r['tag_name']] = r
                 actual2.commit()
 
         return {
@@ -1064,11 +1077,24 @@ def generate_insights():
             agg_prefix = 'last'
         prof = profile_map.get(tag_name)
         prev_val = prev_tag_data.get(key, 'N/A')
+        unit = prof.get('unit', '') if prof else ''
+        # Compute change percentage server-side
+        change_pct = 'N/A'
+        if prev_val not in ('N/A', None, ''):
+            try:
+                now_f = float(value)
+                prev_f = float(prev_val)
+                if prev_f != 0:
+                    change_pct = f"{((now_f - prev_f) / prev_f * 100):+.1f}%"
+                elif now_f != 0:
+                    change_pct = '+inf'
+            except (ValueError, TypeError):
+                pass
+        label = (prof.get('label') or tag_name) if prof else tag_name
+        ttype = prof.get('tag_type', 'unknown') if prof else 'unknown'
+        line = prof.get('line_name', '') if prof else ''
         data_rows.append(
-            f"{(prof.get('label') or tag_name) if prof else tag_name} | "
-            f"{prof.get('tag_type', 'unknown') if prof else 'unknown'} | "
-            f"{value} | {prev_val} | {agg_prefix} | "
-            f"{prof.get('line_name', '') if prof else ''}"
+            f"{label} | {ttype} | {unit} | {value} | {prev_val} | {change_pct} | {agg_prefix} | {line}"
         )
 
     if not data_rows:

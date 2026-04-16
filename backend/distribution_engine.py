@@ -3307,11 +3307,17 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
                 return None
 
             cur.execute("""
-                SELECT tag_name, label, tag_type, line_name
+                SELECT tag_name, label, tag_type, line_name, evidence
                 FROM hercules_ai_tag_profiles
                 WHERE tag_name = ANY(%s) AND is_tracked = true
             """, (tag_list,))
-            profile_map = {r['tag_name']: r for r in cur.fetchall()}
+            profile_map = {}
+            for r in cur.fetchall():
+                evidence = r.get('evidence') or {}
+                if isinstance(evidence, str):
+                    evidence = json.loads(evidence)
+                r['unit'] = evidence.get('unit', '')
+                profile_map[r['tag_name']] = r
             actual.commit()
 
     except Exception as e:
@@ -3332,6 +3338,7 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
         data_rows.append({
             'label': (prof.get('label') or tag_name) if prof else tag_name,
             'tag_type': prof.get('tag_type', 'unknown') if prof else 'unknown',
+            'unit': prof.get('unit', '') if prof else '',
             'value': value,
             'aggregation': agg_prefix,
             'line': prof.get('line_name', '') if prof else '',
@@ -3384,8 +3391,21 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
     data_lines = []
     for r in data_rows:
         prev_val = prev_tag_data.get(r['key'], 'N/A')
+        unit = r.get('unit', '')
+        # Compute change percentage server-side
+        change_pct = 'N/A'
+        if prev_val not in ('N/A', None, ''):
+            try:
+                now_f = float(r['value'])
+                prev_f = float(prev_val)
+                if prev_f != 0:
+                    change_pct = f"{((now_f - prev_f) / prev_f * 100):+.1f}%"
+                elif now_f != 0:
+                    change_pct = '+inf'
+            except (ValueError, TypeError):
+                pass
         data_lines.append(
-            f"{r['label']} | {r['tag_type']} | {r['value']} | {prev_val} | {r['aggregation']} | {r['line']}"
+            f"{r['label']} | {r['tag_type']} | {unit} | {r['value']} | {prev_val} | {change_pct} | {r['aggregation']} | {r['line']}"
         )
     structured_data = '\n'.join(data_lines)
 
@@ -3568,11 +3588,19 @@ def _load_tag_profiles(tag_data):
             actual = conn._conn if hasattr(conn, '_conn') else conn
             cur = actual.cursor(cursor_factory=RealDictCursor)
             cur.execute("""
-                SELECT tag_name, label, tag_type, line_name
+                SELECT tag_name, label, tag_type, line_name, evidence
                 FROM hercules_ai_tag_profiles
                 WHERE tag_name = ANY(%s) AND is_tracked = true
             """, (list(raw_tags),))
-            profile_map = {r['tag_name']: dict(r) for r in cur.fetchall()}
+            profile_map = {}
+            for r in cur.fetchall():
+                d = dict(r)
+                evidence = d.get('evidence') or {}
+                if isinstance(evidence, str):
+                    import json as _json
+                    evidence = _json.loads(evidence)
+                d['unit'] = evidence.get('unit', '')
+                profile_map[d['tag_name']] = d
             return profile_map
     except Exception as e:
         logger.warning("Failed to load tag profiles for charts: %s", e)

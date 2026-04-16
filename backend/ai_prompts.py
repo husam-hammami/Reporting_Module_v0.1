@@ -56,10 +56,11 @@ STRUCTURE:
 {report_context}
 """
     prompt += f"""
-DATA (Label | Type | Now | {cmp_label.title()} | Aggregation | Line):
+DATA (Label | Type | Unit | Now | {cmp_label.title()} | Change% | Aggregation | Line):
 {structured_data}
 
 KEYS: delta=produced amount, first=start reading, last=end/current reading.
+Change% = pre-computed percentage change (use directly, do NOT calculate yourself).
 
 OUTPUT FORMAT — two sections, be EXTREMELY concise:
 
@@ -85,7 +86,10 @@ STRICT RULES:
 5. Format: 1,234,567 kg (not 1234567.0). Use ↑↓→ arrows.
 6. Use tag labels, never raw tag_names.
 7. Overview max 4 bullets. Per-report max 2 bullets.
-8. No paragraphs, no explanations, no recommendations, no greetings."""
+8. No paragraphs, no explanations, no recommendations, no greetings.
+9. NEVER use internal terms "delta", "first", "last", "aggregation" in output. Say "produced 113,926 kg" not "delta: 113926".
+10. ALWAYS include units. Say "113,926 kg" not "113,926".
+11. Use the Change% column directly — do not calculate percentages yourself."""
 
     return prompt
 
@@ -113,7 +117,7 @@ REPORT STRUCTURE:
 {report_context}
 """
     prompt += f"""
-TAG DATA (Label | Type | Value | Aggregation | Production Line):
+TAG DATA (Label | Type | Unit | Value | Aggregation | Production Line):
 {structured_data}
 
 AGGREGATION KEY:
