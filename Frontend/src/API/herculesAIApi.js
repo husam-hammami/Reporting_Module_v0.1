@@ -14,4 +14,5 @@ export const herculesAIApi = {
   previewSummary:  ()          => axios.post(`${BASE}/preview-summary`),
   testConnection:  ()          => axios.post(`${BASE}/test-connection`),
   insights:        (data)      => axios.post(`${BASE}/insights`, data),
+  previewCharts:   (data)      => axios.post(`${BASE}/preview-charts`, data),
 };
