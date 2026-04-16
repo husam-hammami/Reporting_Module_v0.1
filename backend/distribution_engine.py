@@ -3417,6 +3417,93 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
     # Build report structure context from layout_configs
     report_context = _extract_report_context(layout_configs) if layout_configs else ''
 
+    # Build production trend context for counter tags (wrapped — must not delay email)
+    trend_summary = ''
+    try:
+        counter_tags = [
+            r['tag_name'] for r in data_rows if r['tag_type'] == 'counter'
+        ]
+        if counter_tags and layout_configs:
+            trend_data = {}  # {tag_name: {period_idx: value}}
+            for i in range(2, 5):  # periods 2, 3, 4
+                p_to = from_dt - period_duration * (i - 1)
+                p_from = p_to - period_duration
+                for _rname, lc in layout_configs.items():
+                    tags = extract_all_tags(lc)
+                    relevant = [t for t in tags if t in counter_tags]
+                    if relevant:
+                        vals = _fetch_tag_data_multi_agg(lc, relevant, p_from, p_to)
+                        for key, val in (vals or {}).items():
+                            tn = key.split('::')[-1] if '::' in key else key
+                            agg = key.split('::')[0] if '::' in key else 'last'
+                            if agg == 'delta' and tn in counter_tags:
+                                if tn not in trend_data:
+                                    trend_data[tn] = {}
+                                trend_data[tn][i] = val
+
+            # Build trend lines
+            trend_lines = []
+            for tn in counter_tags:
+                if tn not in trend_data or len(trend_data[tn]) < 2:
+                    continue
+                prof = profile_map.get(tn, {})
+                lbl = prof.get('label') or tn
+                u = prof.get('unit', '')
+
+                def _fmt(v, unit=''):
+                    if v is None or v == 'N/A':
+                        return 'N/A'
+                    try:
+                        fv = float(v)
+                        if fv >= 1_000_000:
+                            s = f'{fv/1_000_000:,.1f}M'
+                        elif fv >= 1_000:
+                            s = f'{fv/1_000:,.1f}K'
+                        else:
+                            s = f'{fv:,.0f}'
+                        return f'{s} {unit}'.strip() if unit else s
+                    except (ValueError, TypeError):
+                        return str(v)
+
+                def _sf(v):
+                    if v is None or v == 'N/A':
+                        return None
+                    try:
+                        return float(v)
+                    except (ValueError, TypeError):
+                        return None
+
+                vlist = []
+                for pidx in [4, 3, 2]:
+                    vlist.append(_fmt(trend_data[tn].get(pidx), u))
+                prev_key = f'delta::{tn}'
+                prev_v = prev_tag_data.get(prev_key, prev_tag_data.get(tn))
+                vlist.append(_fmt(prev_v, u))
+                curr_key = f'delta::{tn}'
+                curr_v = tag_data.get(curr_key, tag_data.get(tn))
+                vlist.append(_fmt(curr_v, u))
+
+                numeric_vals = [_sf(v) for v in [
+                    trend_data[tn].get(4), trend_data[tn].get(3),
+                    trend_data[tn].get(2), prev_v, curr_v
+                ] if _sf(v) is not None]
+
+                direction = ''
+                if len(numeric_vals) >= 3:
+                    if all(numeric_vals[j] >= numeric_vals[j + 1] for j in range(len(numeric_vals) - 1)):
+                        direction = '[declining]'
+                    elif all(numeric_vals[j] <= numeric_vals[j + 1] for j in range(len(numeric_vals) - 1)):
+                        direction = '[rising]'
+                    else:
+                        direction = '[fluctuating]'
+
+                trend_lines.append(f"{lbl}: {' -> '.join(vlist)} {direction}")
+
+            if trend_lines:
+                trend_summary = '\n'.join(trend_lines)
+    except Exception as trend_err:
+        logger.warning("AI summary: trend fetch failed (non-blocking): %s", trend_err)
+
     prompt = ai_prompts.build_insights_prompt(
         report_names=report_names,
         time_from=time_from,
@@ -3426,6 +3513,7 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
         prev_to_str=prev_to_str,
         structured_data=structured_data,
         report_context=report_context,
+        trend_summary=trend_summary,
     )
 
     try:

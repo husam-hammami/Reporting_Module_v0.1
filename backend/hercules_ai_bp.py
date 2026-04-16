@@ -899,6 +899,33 @@ def preview_summary():
         return jsonify({'error': f'Could not generate summary: {err_msg}'}), 500
 
 
+def _fmt_trend_val(val, unit=''):
+    """Format a numeric value for trend display (e.g. 1234567 -> '1,234.6K')."""
+    if val is None or val == 'N/A':
+        return 'N/A'
+    try:
+        v = float(val)
+        if v >= 1_000_000:
+            s = f'{v/1_000_000:,.1f}M'
+        elif v >= 1_000:
+            s = f'{v/1_000:,.1f}K'
+        else:
+            s = f'{v:,.0f}'
+        return f'{s} {unit}'.strip() if unit else s
+    except (ValueError, TypeError):
+        return str(val)
+
+
+def _safe_float(val):
+    """Safely convert a value to float, returning None on failure."""
+    if val is None or val == 'N/A':
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
 def _collect_tag_data_for_period(report_ids, from_dt, to_dt):
     """Shared helper: load templates, fetch current + previous period tag data.
 
@@ -1015,6 +1042,38 @@ def _collect_tag_data_for_period(report_ids, from_dt, to_dt):
                     profile_map[r['tag_name']] = r
                 actual2.commit()
 
+        # Fetch 4-period trend for counter tags (production metrics)
+        trend_data = {}  # {tag_name: {period_idx: value}}
+        counter_tags = [
+            tn for tn, p in profile_map.items()
+            if p.get('tag_type') == 'counter'
+        ]
+
+        if counter_tags:
+            for i in range(2, 5):  # periods 2, 3, 4 (period 1 = prev_tag_data)
+                p_to = from_dt - period_duration * (i - 1)
+                p_from = p_to - period_duration
+                try:
+                    for tpl in templates:
+                        lc = tpl.get('layout_config') or tpl.get('lc')
+                        if not lc:
+                            continue
+                        if isinstance(lc, str):
+                            lc = json.loads(lc)
+                        tags_in = extract_all_tags(lc)
+                        relevant = [t for t in tags_in if t in counter_tags]
+                        if relevant:
+                            vals = _fetch_tag_data_multi_agg(lc, relevant, p_from, p_to)
+                            for key, val in (vals or {}).items():
+                                tag_name = key.split('::')[-1] if '::' in key else key
+                                agg = key.split('::')[0] if '::' in key else 'last'
+                                if agg == 'delta' and tag_name in counter_tags:
+                                    if tag_name not in trend_data:
+                                        trend_data[tag_name] = {}
+                                    trend_data[tag_name][i] = val
+                except Exception as e:
+                    logger.warning("Trend fetch for period %d failed: %s", i, e)
+
         return {
             'templates': templates,
             'all_tag_data': all_tag_data,
@@ -1026,6 +1085,8 @@ def _collect_tag_data_for_period(report_ids, from_dt, to_dt):
             'ai_config': ai_config,
             'prev_from': prev_from,
             'prev_to': prev_to,
+            'trend_data': trend_data,
+            'counter_tags': counter_tags,
         }
     except Exception as e:
         logger.exception("_collect_tag_data: failed to collect tag data: %s", e)
@@ -1066,6 +1127,8 @@ def generate_insights():
     ai_config = collected['ai_config']
     prev_from = collected['prev_from']
     prev_to = collected['prev_to']
+    trend_data = collected.get('trend_data', {})
+    counter_tags = collected.get('counter_tags', [])
 
     # Compute KPI score (no LLM, fast)
     try:
@@ -1126,6 +1189,48 @@ def generate_insights():
     period_duration = to_dt - from_dt
     cmp_label = ai_prompts.resolve_comparison_label(period_duration)
 
+    # Build trend summary for counter tags (oldest -> newest over 5 periods)
+    trend_lines = []
+    for tag_name in counter_tags:
+        if tag_name not in trend_data or len(trend_data[tag_name]) < 2:
+            continue
+        profile = profile_map.get(tag_name, {})
+        label = profile.get('label') or tag_name
+        unit = profile.get('unit', '')
+
+        # Build period values: [oldest(4), 3, 2, prev(1), current]
+        vals = []
+        for period_idx in [4, 3, 2]:
+            v = trend_data[tag_name].get(period_idx)
+            vals.append(_fmt_trend_val(v, unit))
+
+        # Add previous period value (period 1)
+        prev_key = f'delta::{tag_name}'
+        prev_v = prev_tag_data.get(prev_key, prev_tag_data.get(tag_name))
+        vals.append(_fmt_trend_val(prev_v, unit))
+
+        # Add current period value
+        curr_key = f'delta::{tag_name}'
+        curr_v = all_tag_data.get(curr_key, all_tag_data.get(tag_name))
+        vals.append(_fmt_trend_val(curr_v, unit))
+
+        # Determine trend direction from numeric values
+        numeric_vals = [_safe_float(v) for v in [
+            trend_data[tag_name].get(4), trend_data[tag_name].get(3),
+            trend_data[tag_name].get(2), prev_v, curr_v
+        ] if _safe_float(v) is not None]
+
+        direction = ''
+        if len(numeric_vals) >= 3:
+            if all(numeric_vals[j] >= numeric_vals[j + 1] for j in range(len(numeric_vals) - 1)):
+                direction = '[declining]'
+            elif all(numeric_vals[j] <= numeric_vals[j + 1] for j in range(len(numeric_vals) - 1)):
+                direction = '[rising]'
+            else:
+                direction = '[fluctuating]'
+
+        trend_lines.append(f"{label}: {' -> '.join(vals)} {direction}")
+
     prompt = ai_prompts.build_insights_prompt(
         report_names=[t['name'] for t in templates],
         time_from=time_from,
@@ -1135,6 +1240,7 @@ def generate_insights():
         prev_to_str=prev_to_str,
         structured_data=structured_data,
         report_context=report_context,
+        trend_summary='\n'.join(trend_lines) if trend_lines else '',
     )
 
     try:
