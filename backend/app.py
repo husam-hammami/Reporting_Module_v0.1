@@ -794,6 +794,7 @@ def _run_startup_migrations():
         'create_hercules_ai_tables.sql',
         'add_ai_summary_to_distribution.sql',
         'add_order_tracking_to_report_templates.sql',
+        'add_distribution_content_mode.sql',
     ]
 
     try:
