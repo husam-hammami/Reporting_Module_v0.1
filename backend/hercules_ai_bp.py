@@ -984,23 +984,32 @@ def generate_insights():
         report_names = []
         report_map = []
         for tpl in templates:
-            lc = tpl['layout_config']
-            if not lc:
+            tpl_name = tpl.get('name') or f"Report_{tpl.get('id', '?')}"
+            try:
+                lc = tpl.get('layout_config')
+                if not lc:
+                    logger.debug("Insights: skipping template '%s' — no layout_config", tpl_name)
+                    continue
+                if isinstance(lc, str):
+                    lc = json.loads(lc)
+                if not isinstance(lc, dict):
+                    logger.debug("Insights: skipping template '%s' — layout_config is %s", tpl_name, type(lc))
+                    continue
+                tags = extract_all_tags(lc)
+                if not tags:
+                    continue
+                # Current period
+                td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
+                all_tag_data.update(td)
+                # Previous period (for comparison)
+                ptd = _fetch_tag_data_multi_agg(lc, tags, prev_from, prev_to)
+                prev_tag_data.update(ptd)
+                all_layout_configs[tpl_name] = lc
+                report_names.append(tpl_name)
+                report_map.append({'id': tpl['id'], 'name': tpl_name})
+            except Exception as tpl_err:
+                logger.warning("Insights: error processing template '%s': %s", tpl_name, tpl_err)
                 continue
-            if isinstance(lc, str):
-                lc = json.loads(lc)
-            if not isinstance(lc, dict):
-                continue
-            tags = extract_all_tags(lc)
-            # Current period
-            td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
-            all_tag_data.update(td)
-            # Previous period (for comparison)
-            ptd = _fetch_tag_data_multi_agg(lc, tags, prev_from, prev_to)
-            prev_tag_data.update(ptd)
-            all_layout_configs[tpl['name']] = lc
-            report_names.append(tpl['name'])
-            report_map.append({'id': tpl['id'], 'name': tpl['name']})
 
         report_context = _extract_report_context(all_layout_configs)
 
