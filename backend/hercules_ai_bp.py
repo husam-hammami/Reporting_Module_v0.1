@@ -896,9 +896,11 @@ Rules:
 
     try:
         import ai_provider
-        summary = ai_provider.generate(prompt, ai_config)
+        summary = ai_provider.generate(prompt, ai_config, timeout=30)
         if not summary:
-            return jsonify({'error': 'Could not generate summary. Check your provider settings.'}), 400
+            logger.warning("Preview summary returned empty — provider: %s, model: %s",
+                           ai_config.get('ai_provider'), ai_config.get('llm_model'))
+            return jsonify({'error': 'Could not generate summary. Check your provider settings and API key.'}), 400
         return jsonify({
             'summary': summary,
             'report_name': chosen_template['name'],
@@ -908,9 +910,11 @@ Rules:
         logger.warning("Preview summary failed: %s", e)
         err_msg = str(e)
         if 'authentication' in err_msg.lower() or 'api key' in err_msg.lower() or '401' in err_msg:
-            return jsonify({'error': 'Could not generate summary. Check your API key.'}), 400
+            return jsonify({'error': 'Invalid API key. Please re-enter your key and test the connection.'}), 400
         if 'timeout' in err_msg.lower() or 'timed out' in err_msg.lower():
-            return jsonify({'error': 'Summary generation timed out. Try again.'}), 504
+            return jsonify({'error': 'Summary generation timed out. Try again or use a faster model (Haiku).'}), 504
+        if 'not_found' in err_msg.lower() or 'model' in err_msg.lower():
+            return jsonify({'error': f'Model error: {err_msg}'}), 400
         return jsonify({'error': f'Could not generate summary: {err_msg}'}), 500
 
 
