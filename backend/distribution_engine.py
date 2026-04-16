@@ -2985,7 +2985,7 @@ def _extract_report_context(layout_configs):
             continue
 
         # Dashboard reports
-        dt = lc.get('dashboardTabs', {})
+        dt = lc.get('dashboardTabs') or {}
         tabs = dt.get('tabs', []) if isinstance(dt.get('tabs'), list) else []
         if dt.get('enabled') and tabs:
             lines = [f'Report "{name}" (Dashboard):']
