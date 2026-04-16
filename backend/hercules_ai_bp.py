@@ -918,6 +918,201 @@ Rules:
         return jsonify({'error': f'Could not generate summary: {err_msg}'}), 500
 
 
+@hercules_ai_bp.route('/hercules-ai/insights', methods=['POST'])
+@login_required
+def generate_insights():
+    """Generate AI insights for selected reports and time range.
+
+    Body: { report_ids?: int[], from: ISO8601, to: ISO8601 }
+    Returns: { overview, reports: [{id, name, summary}], period, tags_analyzed }
+    """
+    data = request.get_json() or {}
+    from_str = data.get('from')
+    to_str = data.get('to')
+    if not from_str or not to_str:
+        return jsonify({'error': 'from and to are required'}), 400
+
+    try:
+        from_dt = datetime.fromisoformat(from_str.replace('Z', '+00:00')).replace(tzinfo=None)
+        to_dt = datetime.fromisoformat(to_str.replace('Z', '+00:00')).replace(tzinfo=None)
+    except (ValueError, TypeError) as e:
+        return jsonify({'error': f'Invalid date format: {e}'}), 400
+
+    get_conn = _get_db_connection()
+    with closing(get_conn()) as conn:
+        actual = conn._conn if hasattr(conn, '_conn') else conn
+        cur = actual.cursor(cursor_factory=RealDictCursor)
+
+        config = _get_config(cur)
+        if not config.get('setup_completed'):
+            return jsonify({'error': 'Complete AI setup first'}), 400
+
+        ai_config = _get_raw_config(cur)
+        provider = ai_config.get('ai_provider', 'cloud')
+        if provider == 'cloud' and not ai_config.get('llm_api_key'):
+            return jsonify({'error': 'API key required'}), 400
+
+        # Load templates
+        report_ids = data.get('report_ids')
+        if report_ids and isinstance(report_ids, list) and len(report_ids) > 0:
+            cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE id = ANY(%s) AND is_active = true",
+                        (report_ids,))
+        else:
+            cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE is_active = true ORDER BY name")
+        templates = cur.fetchall()
+
+        if not templates:
+            return jsonify({'error': 'No active report templates found'}), 400
+
+        actual.commit()
+
+    # Collect tag data and layout configs
+    from distribution_engine import extract_all_tags, _fetch_tag_data_multi_agg, _extract_report_context
+
+    all_tag_data = {}
+    all_layout_configs = {}
+    report_names = []
+    report_map = []  # [{id, name}]
+    for tpl in templates:
+        lc = tpl['layout_config']
+        if isinstance(lc, str):
+            lc = json.loads(lc)
+        tags = extract_all_tags(lc)
+        td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
+        all_tag_data.update(td)
+        all_layout_configs[tpl['name']] = lc
+        report_names.append(tpl['name'])
+        report_map.append({'id': tpl['id'], 'name': tpl['name']})
+
+    report_context = _extract_report_context(all_layout_configs)
+
+    # Build tag data rows (same logic as distribution_engine._generate_ai_summary)
+    # Load profiles for richer labels
+    raw_tags = set()
+    for k in all_tag_data:
+        raw_tags.add(k.split('::', 1)[1] if '::' in k else k)
+
+    profile_map = {}
+    if raw_tags:
+        with closing(get_conn()) as conn2:
+            actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
+            cur2 = actual2.cursor(cursor_factory=RealDictCursor)
+            cur2.execute("""SELECT tag_name, label, tag_type, line_name
+                           FROM hercules_ai_tag_profiles
+                           WHERE tag_name = ANY(%s) AND is_tracked = true""",
+                         (list(raw_tags),))
+            profile_map = {r['tag_name']: r for r in cur2.fetchall()}
+            actual2.commit()
+
+    data_rows = []
+    for key, value in all_tag_data.items():
+        agg_prefix = ''
+        if '::' in key:
+            agg_prefix, tag_name = key.split('::', 1)
+        else:
+            tag_name = key
+            agg_prefix = 'last'
+        prof = profile_map.get(tag_name)
+        data_rows.append(
+            f"{(prof.get('label') or tag_name) if prof else tag_name} | "
+            f"{prof.get('tag_type', 'unknown') if prof else 'unknown'} | "
+            f"{value} | {agg_prefix} | "
+            f"{prof.get('line_name', '') if prof else ''}"
+        )
+
+    if not data_rows:
+        return jsonify({'error': 'No tag data available for the selected period'}), 400
+
+    # Limit to 40 rows for insights (more than email's 30)
+    structured_data = '\n'.join(data_rows[:40])
+    names_str = ', '.join(report_names)
+    time_from = from_dt.strftime('%Y-%m-%d %H:%M')
+    time_to = to_dt.strftime('%Y-%m-%d %H:%M')
+
+    prompt = f"""You analyze industrial production and energy data for mill/plant managers. Be direct, specific, and useful.
+
+REPORTS: {names_str}
+PERIOD: {time_from} to {time_to}
+"""
+    if report_context:
+        prompt += f"""
+REPORT STRUCTURE:
+{report_context}
+"""
+    prompt += f"""
+TAG DATA (Label | Type | Value | Aggregation | Production Line):
+{structured_data}
+
+AGGREGATION KEY:
+- delta = amount produced/consumed during the period (this IS the production figure)
+- first = meter reading at start of period
+- last = meter reading at end of period (or current value)
+- avg/sum/min/max = statistical aggregation over the period
+
+Provide analysis in TWO sections:
+
+SECTION 1 — PLANT OVERVIEW (combined across all reports):
+**Plant Overview** — {{overall verdict}}
+• **Production**: {{total production across all lines}}
+• **Energy**: {{energy summary if available, skip if none}}
+• **Status**: {{notable equipment states, skip if all normal}}
+• **Alerts**: {{anomalies or "None"}}
+
+SECTION 2 — PER-REPORT DETAILS:
+For each report, write on a NEW line starting with ---REPORT: ReportName---
+Then the summary:
+**ReportName** — {{verdict}}
+• key findings (2-3 bullets max per report)
+
+Rules:
+- Delta values ARE production amounts — present as "X produced Y kg".
+- First/last are meter readings — do NOT cite as production.
+- Use tag labels, not raw names.
+- Maximum 4 bullets for overview, 3 per report.
+- Format numbers with thousand separators.
+- Skip empty bullets. No filler. No recommendations."""
+
+    try:
+        import ai_provider
+        result = ai_provider.generate(prompt, ai_config, timeout=45)
+        if not result:
+            return jsonify({'error': 'Could not generate insights. Check your provider settings.'}), 400
+
+        # Parse response into overview + per-report sections
+        overview = ''
+        report_summaries = []
+        parts = result.split('---REPORT:')
+        overview = parts[0].strip()
+
+        for part in parts[1:]:
+            lines = part.strip().split('\n', 1)
+            rname = lines[0].replace('---', '').strip()
+            rsummary = lines[1].strip() if len(lines) > 1 else ''
+            # Match to template
+            matched = next((r for r in report_map if r['name'].lower() == rname.lower()), None)
+            report_summaries.append({
+                'id': matched['id'] if matched else None,
+                'name': rname,
+                'summary': rsummary,
+            })
+
+        return jsonify({
+            'overview': overview,
+            'reports': report_summaries,
+            'period': {'from': from_str, 'to': to_str},
+            'tags_analyzed': len(data_rows),
+        })
+
+    except Exception as e:
+        logger.warning("Insights generation failed: %s", e)
+        err_msg = str(e)
+        if 'authentication' in err_msg.lower() or '401' in err_msg:
+            return jsonify({'error': 'Invalid API key. Please check your provider settings.'}), 400
+        if 'timeout' in err_msg.lower():
+            return jsonify({'error': 'Analysis timed out. Try a shorter time range or fewer reports.'}), 504
+        return jsonify({'error': f'Insights failed: {err_msg}'}), 500
+
+
 @hercules_ai_bp.route('/hercules-ai/test-connection', methods=['POST'])
 @login_required
 def test_ai_connection():

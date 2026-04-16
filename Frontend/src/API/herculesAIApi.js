@@ -13,4 +13,5 @@ export const herculesAIApi = {
   getStatus:       ()          => axios.get(`${BASE}/status`),
   previewSummary:  ()          => axios.post(`${BASE}/preview-summary`),
   testConnection:  ()          => axios.post(`${BASE}/test-connection`),
+  insights:        (data)      => axios.post(`${BASE}/insights`, data),
 };
