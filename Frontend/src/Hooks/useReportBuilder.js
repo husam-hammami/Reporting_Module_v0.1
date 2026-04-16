@@ -1008,7 +1008,8 @@ export function useReportCanvas(templateId) {
     return newId;
   }, [widgets, activeTabId, pushToHistory]);
 
-  const switchDashboardTab = useCallback((newTabId) => {
+  const switchDashboardTab = useCallback((newTabId, opts = {}) => {
+    const skipDirty = opts.skipDirty === true;
     const dt = tabsRef.current;
     if (!dt?.enabled || newTabId === activeTabId) return;
     // Deep-copy current widgets into the active tab before switching
@@ -1029,7 +1030,7 @@ export function useReportCanvas(templateId) {
     pastRef.current = [];
     futureRef.current = [];
     setHistoryState({ pastCount: 0, futureCount: 0 });
-    setDirty(true);
+    if (!skipDirty) setDirty(true);
   }, [activeTabId, widgets]);
 
   // Collect all widgets across all tabs (for tag subscription)

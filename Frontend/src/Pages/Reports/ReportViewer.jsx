@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { flushSync } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaChevronLeft, FaPrint, FaExpand, FaCompress, FaClock, FaFilePdf, FaImage } from 'react-icons/fa';
-import { exportAsPNG, exportAsPDF } from '../../utils/exportReport';
+import { captureElement, exportAsPNG, exportAsPDFFromCanvases, printCanvases } from '../../utils/exportReport';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
 import {
   useReportCanvas,
@@ -425,14 +425,40 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     return liveTagHistory;
   }, [timePeriod.tab, liveTagHistory, historicalTagHistory]);
 
+  const captureDashboardCanvases = useCallback(async (el) => {
+    const multi = dashboardTabs?.enabled && Array.isArray(dashboardTabs.tabs) && dashboardTabs.tabs.length > 1;
+    if (!multi) {
+      return [await captureElement(el)];
+    }
+    const originalId = activeTabId;
+    const out = [];
+    try {
+      for (const tab of dashboardTabs.tabs) {
+        flushSync(() => {
+          switchDashboardTab(tab.id, { skipDirty: true });
+          setExporting(true);
+        });
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        out.push(await captureElement(el));
+      }
+    } finally {
+      if (originalId) {
+        flushSync(() => {
+          switchDashboardTab(originalId, { skipDirty: true });
+          setExporting(true);
+        });
+      }
+    }
+    return out;
+  }, [dashboardTabs, activeTabId, switchDashboardTab]);
+
   const handleExportPDF = async () => {
     flushSync(() => setExporting(true));
     try {
       const el = document.getElementById('report-print-section');
-      // Add PDF-export class for optimized styling during capture
+      if (!el) return;
       el.classList.add('rb-pdf-export');
 
-      // For tabular mode: temporarily remove max-width constraint and expand container
       const scrollContainer = scrollContainerRef.current;
       const prevScrollOverflow = scrollContainer?.style.overflow;
       const prevScrollHeight = scrollContainer?.style.height;
@@ -447,14 +473,50 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         if (historicalLoading) scrollContainer.style.opacity = '1';
       }
 
-      // Wait a frame for styles to apply
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
       try {
-        await exportAsPDF(el, template?.name || 'report', {
+        const canvases = await captureDashboardCanvases(el);
+        await exportAsPDFFromCanvases(canvases, template?.name || 'report', {
           pageMode,
           orientation: viewMode === 'tabular' ? 'landscape' : 'auto',
         });
+      } finally {
+        el.classList.remove('rb-pdf-export');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+          scrollContainer.style.opacity = prevScrollOpacity || '';
+        }
+      }
+    } finally { setExporting(false); }
+  };
+
+  const handlePrintReport = async () => {
+    flushSync(() => setExporting(true));
+    try {
+      const el = document.getElementById('report-print-section');
+      if (!el) return;
+      el.classList.add('rb-pdf-export');
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      const prevScrollOpacity = scrollContainer?.style.opacity;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+        if (historicalLoading) scrollContainer.style.opacity = '1';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      try {
+        const canvases = await captureDashboardCanvases(el);
+        printCanvases(canvases, template?.name || 'Report');
       } finally {
         el.classList.remove('rb-pdf-export');
         if (scrollContainer) {
@@ -644,7 +706,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
               <FaPrint size={12} /> {exporting ? 'Exporting...' : 'Export'}
             </button>
             <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              <button onClick={() => window.print()} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg flex items-center gap-2">
+              <button type="button" onClick={() => { void handlePrintReport(); }} disabled={exporting} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg flex items-center gap-2 disabled:opacity-50">
                 <FaPrint className="text-[10px]" /> Print
               </button>
               <button onClick={handleExportPDF} disabled={exporting} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50">
@@ -703,7 +765,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
               <AiInsightsPanel tagValues={tagValues} />
             </div>
             <div className="hidden xl:block" style={{ width: 200, position: 'fixed', right: 0, top: 0, bottom: 0, zIndex: 30, background: '#0f1b2d', borderLeft: '1px solid rgba(255,255,255,0.06)', overflow: 'auto', paddingTop: 48 }}>
-              <ActionsPanel reportId={reportId} onExportPDF={handleExportPDF} onExportPNG={handleExportPNG} onToggleFullscreen={toggleFullscreen} />
+              <ActionsPanel reportId={reportId} onExportPDF={handleExportPDF} onExportPNG={handleExportPNG} onPrint={handlePrintReport} onToggleFullscreen={toggleFullscreen} />
             </div>
           </>
         )}
