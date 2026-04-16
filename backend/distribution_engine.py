@@ -2688,6 +2688,8 @@ def execute_distribution_rule(rule_id):
                             all_tag_data.update(td)
                             all_layout_configs[tpl['name'] or f'Report {rid}'] = lc
 
+                logger.info("AI summary: collecting data for %d reports, %d tags found",
+                            len(all_layout_configs), len(all_tag_data))
                 ai_summary_text = _generate_ai_summary(
                     report_names=report_names,
                     tag_data=all_tag_data,
@@ -2695,8 +2697,12 @@ def execute_distribution_rule(rule_id):
                     to_dt=to_dt,
                     layout_configs=all_layout_configs,
                 )
+                if ai_summary_text:
+                    logger.info("AI summary generated successfully (%d chars)", len(ai_summary_text))
+                else:
+                    logger.warning("AI summary returned empty for reports: %s", report_names)
             except Exception as e:
-                logger.warning("AI summary generation failed: %s", e)
+                logger.warning("AI summary generation failed: %s", e, exc_info=True)
 
         # Inject AI summary into report attachments (PDF, HTML, XLSX)
         if ai_summary_text:
@@ -3078,19 +3084,19 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
         else:
             tag_name = key
             agg_prefix = 'last'
-        prof = profile_map.get(tag_name, {})
-        if not prof:
-            continue
+        prof = profile_map.get(tag_name)
+        # Use profile if tracked, otherwise fall back to raw tag name
         data_rows.append({
-            'label': prof.get('label') or tag_name,
-            'tag_type': prof.get('tag_type', 'unknown'),
+            'label': (prof.get('label') or tag_name) if prof else tag_name,
+            'tag_type': prof.get('tag_type', 'unknown') if prof else 'unknown',
             'value': value,
             'aggregation': agg_prefix,
-            'line': prof.get('line_name', ''),
+            'line': prof.get('line_name', '') if prof else '',
             'tag_name': tag_name,
         })
 
     if not data_rows:
+        logger.warning("AI summary: no tag data to analyze (tag_data had %d entries)", len(tag_data))
         return None
 
     if len(data_rows) > 30:
