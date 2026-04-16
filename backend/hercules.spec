@@ -67,6 +67,7 @@ a = Analysis(
         'updates_bp',
         'hercules_ai_bp',
         'ai_provider',
+        'ai_prompts',
         'anthropic',
         'openai',
 

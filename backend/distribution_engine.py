@@ -19,6 +19,8 @@ from contextlib import closing
 from psycopg2.extras import RealDictCursor
 from io import BytesIO
 
+import ai_prompts
+
 logger = logging.getLogger(__name__)
 
 
@@ -3105,6 +3107,7 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
             'aggregation': agg_prefix,
             'line': prof.get('line_name', '') if prof else '',
             'tag_name': tag_name,
+            'key': key,
         })
 
     if not data_rows:
@@ -3129,60 +3132,60 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
 
         data_rows = (counters + rates + booleans_zero + rest)[:30]
 
-    # Build structured table with aggregation context
+    # ── Fetch previous-period data for comparison ──
+    period_duration = to_dt - from_dt
+    prev_to = from_dt
+    prev_from = prev_to - period_duration
+
+    prev_tag_data = {}
+    if layout_configs:
+        try:
+            for _rname, lc in layout_configs.items():
+                tags = extract_all_tags(lc)
+                if tags:
+                    ptd = _fetch_tag_data_multi_agg(lc, tags, prev_from, prev_to)
+                    prev_tag_data.update(ptd)
+        except Exception as prev_err:
+            logger.warning("AI summary: failed to fetch previous period data: %s", prev_err)
+
+    # Determine comparison label based on period duration
+    hours = period_duration.total_seconds() / 3600
+    if hours <= 25:
+        cmp_label = 'previous day'
+    elif hours <= 170:
+        cmp_label = 'previous week'
+    elif hours <= 745:
+        cmp_label = 'previous month'
+    else:
+        cmp_label = 'previous period'
+
+    # Build structured table with current AND previous values
     data_lines = []
     for r in data_rows:
-        data_lines.append(f"{r['label']} | {r['tag_type']} | {r['value']} | {r['aggregation']} | {r['line']}")
+        prev_val = prev_tag_data.get(r['key'], 'N/A')
+        data_lines.append(
+            f"{r['label']} | {r['tag_type']} | {r['value']} | {prev_val} | {r['aggregation']} | {r['line']}"
+        )
     structured_data = '\n'.join(data_lines)
 
-    names_str = ', '.join(report_names) if isinstance(report_names, list) else str(report_names)
     time_from = from_dt.strftime('%Y-%m-%d %H:%M')
     time_to = to_dt.strftime('%Y-%m-%d %H:%M')
+    prev_from_str = prev_from.strftime('%Y-%m-%d %H:%M')
+    prev_to_str = prev_to.strftime('%Y-%m-%d %H:%M')
 
     # Build report structure context from layout_configs
     report_context = _extract_report_context(layout_configs) if layout_configs else ''
 
-    prompt = f"""You analyze industrial production and energy data for mill/plant managers. Be direct, specific, and useful.
-
-REPORTS: {names_str}
-PERIOD: {time_from} to {time_to}
-"""
-    if report_context:
-        prompt += f"""
-REPORT STRUCTURE (what the report sections and columns mean):
-{report_context}
-"""
-
-    prompt += f"""
-TAG DATA (Label | Type | Value | Aggregation | Production Line):
-{structured_data}
-
-AGGREGATION KEY:
-- delta = amount produced/consumed during the period (this IS the production figure)
-- first = meter reading at start of period
-- last = meter reading at end of period (or current value)
-- avg/sum/min/max = statistical aggregation over the period
-
-Write a smart summary using this format:
-
-**{names_str}** — {{one-line verdict: running normally / reduced output / line stopped / no data}}
-
-• **Production**: {{cite delta values as production amounts with units — e.g. "Wheat Scale produced 125,294 kg"}}
-• **Energy**: {{power consumption, energy totals, power factor — skip if no energy data}}
-• **Status**: {{equipment on/off, only if notable — skip if all normal}}
-• **Alerts**: {{zero production, zero flow rates, abnormal values — or "None"}}
-
-Rules:
-- Delta values ARE the production amounts — present them as "X produced Y kg" not as raw meter readings.
-- First/last values are meter start/end readings — do NOT cite these as production amounts.
-- Use the Label column (not raw tag names) when referring to tags.
-- Maximum 4 bullet points. Each bullet under 25 words.
-- Format numbers with thousand separators (e.g. 1,234,567 kg not 1234567.0 kg).
-- Round decimals: 0 for totalizers/energy, 1 for rates/percentages.
-- Only cite numbers from the data. Never invent or estimate.
-- N/A or missing values = "no data" — do not guess why.
-- Skip any bullet with nothing to report.
-- No paragraphs. No filler. No recommendations. No greetings."""
+    prompt = ai_prompts.build_insights_prompt(
+        report_names=report_names,
+        time_from=time_from,
+        time_to=time_to,
+        cmp_label=cmp_label,
+        prev_from_str=prev_from_str,
+        prev_to_str=prev_to_str,
+        structured_data=structured_data,
+        report_context=report_context,
+    )
 
     try:
         import ai_provider
