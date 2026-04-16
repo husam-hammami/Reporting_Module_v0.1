@@ -22,6 +22,7 @@ const EMPTY_RULE = {
   schedule_day_of_month: 1,
   enabled: true,
   include_ai_summary: false,
+  content_mode: 'report_only',
 };
 
 function schedulePreview(form, t) {
@@ -268,7 +269,11 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
       });
     } else {
       // New rule: default AI summary ON when setup is complete
-      setForm(f => ({ ...EMPTY_RULE, include_ai_summary: aiSetupComplete }));
+      setForm(f => ({
+        ...EMPTY_RULE,
+        include_ai_summary: aiSetupComplete,
+        content_mode: aiSetupComplete ? 'report_with_ai' : 'report_only',
+      }));
     }
   }, [rule, aiSetupComplete]);
 
@@ -369,7 +374,7 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
                 })}
               </div>
             </div>
-            <div className="w-40">
+            <div className="w-40" style={{ opacity: form.content_mode === 'ai_only' ? 0.4 : 1 }}>
               <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.format')}</div>
               <div className="flex rounded-lg overflow-hidden" style={{ border: `1.5px solid ${t.border}` }}>
                 {[
@@ -377,11 +382,14 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
                   { value: 'xlsx', label: tr('distribution.excel') },
                   { value: 'html', label: 'HTML' },
                 ].map(f => (
-                  <button key={f.value} onClick={() => set('format', f.value)}
+                  <button key={f.value}
+                    onClick={() => form.content_mode !== 'ai_only' && set('format', f.value)}
+                    disabled={form.content_mode === 'ai_only'}
                     className="flex-1 py-2 text-xs font-bold transition-all"
                     style={{
                       background: form.format === f.value ? t.accent : 'transparent',
                       color: form.format === f.value ? t.btnText : t.textSecondary,
+                      cursor: form.content_mode === 'ai_only' ? 'not-allowed' : 'pointer',
                     }}>
                     {f.label}
                   </button>
@@ -389,24 +397,33 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
               </div>
             </div>
 
-            {/* AI Summary toggle */}
-            <div className="w-48">
-              <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.includeAISummary')}</div>
-              <button
-                onClick={() => aiSetupComplete && set('include_ai_summary', !form.include_ai_summary)}
-                disabled={!aiSetupComplete}
-                className="flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all w-full"
-                style={{
-                  background: form.include_ai_summary ? t.accent : t.inputBg,
-                  color: form.include_ai_summary ? t.btnText : t.textSecondary,
-                  border: `1.5px solid ${form.include_ai_summary ? t.accent : t.border}`,
-                  opacity: aiSetupComplete ? 1 : 0.5,
-                  cursor: aiSetupComplete ? 'pointer' : 'not-allowed',
+            {/* Content Mode */}
+            <div className="flex-1 min-w-[160px]">
+              <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.contentMode', 'Email Content')}</div>
+              <select
+                className="w-full text-xs bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-white"
+                value={form.content_mode || 'report_only'}
+                onChange={e => {
+                  set('content_mode', e.target.value);
+                  // Derive include_ai_summary for backward compat
+                  set('include_ai_summary', e.target.value !== 'report_only');
+                  // ai_only forces email delivery
+                  if (e.target.value === 'ai_only' && form.delivery_method === 'disk') {
+                    set('delivery_method', 'email');
+                  }
                 }}
-                title={!aiSetupComplete ? tr('distribution.aiSummaryDisabledHint') : ''}
               >
-                {form.include_ai_summary ? 'On' : 'Off'}
-              </button>
+                <option value="report_only">{tr('distribution.reportOnly', 'Reports Only')}</option>
+                <option value="report_with_ai">{tr('distribution.reportWithAi', 'Reports + AI Summary')}</option>
+                <option value="ai_only" disabled={!aiSetupComplete}>
+                  {tr('distribution.aiOnly', 'AI Insights Only')}
+                </option>
+              </select>
+              {form.content_mode === 'ai_only' && (
+                <p className="text-[9px] text-cyan-400 mt-1">
+                  {tr('distribution.aiOnlyHint', 'Email will contain AI analysis only, no report attachments')}
+                </p>
+              )}
             </div>
           </div>
 

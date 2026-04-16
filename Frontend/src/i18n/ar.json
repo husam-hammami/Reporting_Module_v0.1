@@ -784,5 +784,10 @@
   "herculesAI.provider.testConnection": "اختبار الاتصال",
 
   "distribution.includeAISummary": "ملخص AI",
-  "distribution.aiSummaryDisabledHint": "أكمل إعداد هرقل AI أولاً"
+  "distribution.aiSummaryDisabledHint": "أكمل إعداد هرقل AI أولاً",
+  "distribution.contentMode": "محتوى البريد الإلكتروني",
+  "distribution.reportOnly": "التقارير فقط",
+  "distribution.reportWithAi": "التقارير + ملخص AI",
+  "distribution.aiOnly": "تحليل AI فقط",
+  "distribution.aiOnlyHint": "سيحتوي البريد على تحليل AI فقط، بدون مرفقات التقارير"
 }

@@ -784,5 +784,10 @@
   "herculesAI.provider.testConnection": "कनेक्शन टेस्ट",
 
   "distribution.includeAISummary": "AI सारांश",
-  "distribution.aiSummaryDisabledHint": "पहले हरक्यूलिस AI सेटअप पूरा करें"
+  "distribution.aiSummaryDisabledHint": "पहले हरक्यूलिस AI सेटअप पूरा करें",
+  "distribution.contentMode": "ईमेल सामग्री",
+  "distribution.reportOnly": "केवल रिपोर्ट",
+  "distribution.reportWithAi": "रिपोर्ट + AI सारांश",
+  "distribution.aiOnly": "केवल AI विश्लेषण",
+  "distribution.aiOnlyHint": "ईमेल में केवल AI विश्लेषण होगा, कोई रिपोर्ट अटैचमेंट नहीं"
 }
