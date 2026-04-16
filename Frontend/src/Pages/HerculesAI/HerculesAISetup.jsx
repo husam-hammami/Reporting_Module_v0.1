@@ -153,8 +153,6 @@ function InsightCard({ text, th, defaultExpanded = false, name = '' }) {
       {bullets.map((b, i) => <BulletRow key={i} label={b.label} content={b.content} th={th} />)}
     </div>
   );
-    </div>
-  );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
