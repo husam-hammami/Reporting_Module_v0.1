@@ -1339,11 +1339,74 @@
     height: auto !important;
     max-height: none !important;
     flex: none !important;
+    background: white !important;
   }
 
   /* Release the outer dashboard container's viewport height */
   .rb-report-viewer-outer {
     height: auto !important;
+    background: white !important;
+  }
+
+  /* ── Dashboard grid: scale to fit A4 page width ── */
+  #report-print-section {
+    zoom: 0.58;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    background: white !important;
+  }
+
+  /* Force light-mode CSS variables for print (mirrors rb-pdf-export) */
+  .report-builder {
+    --rb-text: #111827 !important;
+    --rb-text-secondary: #374151 !important;
+    --rb-text-muted: #6b7280 !important;
+    --rb-text-inverse: #ffffff !important;
+    --rb-surface: #f9fafb !important;
+    --rb-panel: #ffffff !important;
+    --rb-canvas: #f8fafc !important;
+    --rb-card-bg: #ffffff !important;
+    --rb-border: #e5e7eb !important;
+    --rb-border-subtle: #f3f4f6 !important;
+    --rb-card-border: #e5e7eb !important;
+    --rb-input: #ffffff !important;
+    --rb-silo-card-bg: #ffffff !important;
+    --rb-accent: #0f3460 !important;
+    color: #111827 !important;
+  }
+
+  /* Dark text and borders for widget cards */
+  .rb-widget-card {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+  }
+
+  .rb-value-primary {
+    color: #111827 !important;
+  }
+
+  .rb-value-secondary,
+  .rb-value-unit,
+  .rb-caption {
+    color: #374151 !important;
+  }
+
+  .rb-widget-title,
+  .rb-heading,
+  .rb-table-title {
+    color: #111827 !important;
+  }
+
+  /* SVG text — dark fills */
+  svg text {
+    fill: #111827 !important;
+  }
+
+  /* Remove overflow clipping so widget content is fully visible */
+  .overflow-hidden {
+    overflow: visible !important;
   }
 }
 
