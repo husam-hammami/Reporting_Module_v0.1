@@ -12,16 +12,13 @@ async function waitForCapturePaint() {
       /* ignore */
     }
   }
-  /* Extra headroom after capture-mode disables Chart.js / gauge animations and uPlot resizes */
-  await new Promise((r) => setTimeout(r, 220));
+  await new Promise((r) => setTimeout(r, 300));
 }
 
 /**
- * Force every Chart.js instance under `root` to finish one paint pass.
- * react-chartjs-2 may not repaint the canvas in the same frame as `animation: false`;
- * html2canvas clones bitmap via getImageData — stale/empty bitmaps export as white.
+ * Force every Chart.js instance under `root` to stop animation and paint once.
  */
-export function syncChartJsCanvasesBeforeSnapshot(root) {
+function syncChartJsCanvases(root) {
   if (!root?.querySelectorAll || typeof Chart?.getChart !== 'function') return;
   for (const canvas of root.querySelectorAll('canvas')) {
     try {
@@ -37,35 +34,66 @@ export function syncChartJsCanvasesBeforeSnapshot(root) {
   }
 }
 
-/** html2canvas options shared by dashboard PDF/PNG and paginated PDF. */
-export function buildHtml2CanvasCaptureOptions(element, scale = 3) {
-  const w = Math.max(element.scrollWidth, element.offsetWidth, 1);
-  const h = Math.max(element.scrollHeight, element.offsetHeight, 1);
-  return {
-    scale,
-    useCORS: true,
-    /* Prefer drawImage clone path; avoids empty clones when getImageData throws on edge cases */
-    allowTaint: true,
-    backgroundColor: '#ffffff',
-    logging: false,
-    windowWidth: w,
-    windowHeight: h,
-    width: w,
-    height: h,
+/**
+ * Convert every <canvas> under `root` to a sibling <img> and hide the canvas.
+ * html2canvas has persistent issues cloning canvas bitmaps (tainted, stale, WebGL
+ * preserveDrawingBuffer=false). Static <img> elements are handled reliably.
+ * Returns a cleanup function that restores the original canvases.
+ */
+function snapshotCanvasesToImages(root) {
+  if (!root?.querySelectorAll) return () => {};
+  const swaps = [];
+
+  for (const canvas of [...root.querySelectorAll('canvas')]) {
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.width = canvas.width;
+      img.height = canvas.height;
+      img.style.width = canvas.offsetWidth + 'px';
+      img.style.height = canvas.offsetHeight + 'px';
+      img.style.display = canvas.style.display || 'block';
+      img.style.position = canvas.style.position || '';
+      img.style.inset = canvas.style.inset || '';
+
+      const origDisplay = canvas.style.display;
+      canvas.style.display = 'none';
+      canvas.parentNode.insertBefore(img, canvas);
+      swaps.push({ canvas, img, origDisplay });
+    } catch {
+      /* tainted or empty — leave original */
+    }
+  }
+
+  return () => {
+    for (const { canvas, img, origDisplay } of swaps) {
+      canvas.style.display = origDisplay;
+      img.remove();
+    }
   };
 }
 
-/** One paint frame after Chart.js sync (call after `syncChartJsCanvasesBeforeSnapshot`). */
-export async function flushFrameAfterChartSync() {
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+/**
+ * Force the page into light mode for the duration of capture.
+ * Dark mode uses light text colors (CSS variables) which become invisible
+ * on the white PDF background. Returns a cleanup function.
+ */
+function forceLightMode() {
+  const html = document.documentElement;
+  const wasDark = html.classList.contains('dark');
+  if (wasDark) {
+    html.classList.remove('dark');
+  }
+  return () => {
+    if (wasDark) {
+      html.classList.add('dark');
+    }
+  };
 }
 
-/**
- * Reset any CSS transform on the element before capture, then restore.
- * This ensures html2canvas captures at true 1:1 scale regardless of zoom.
- */
+/** Reset any CSS transform on the element before capture, then restore. */
 function withResetTransform(element, fn) {
-  // Walk up and find any scaled container
   const scaledEl = element.closest('[style*="transform"]') || element.parentElement;
   const origTransform = scaledEl?.style?.transform || '';
   if (scaledEl && origTransform) {
@@ -80,19 +108,64 @@ function withResetTransform(element, fn) {
   }
 }
 
-export async function exportAsPNG(element, filename = 'report') {
+/** Build html2canvas options. */
+function captureOptions(element) {
+  const w = Math.max(element.scrollWidth, element.offsetWidth, 1);
+  const h = Math.max(element.scrollHeight, element.offsetHeight, 1);
+  return {
+    scale: 3,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+    windowWidth: w,
+    windowHeight: h,
+    width: w,
+    height: h,
+  };
+}
+
+/**
+ * Core capture pipeline shared by PDF and PNG export:
+ * 1. Wait for layout/fonts to settle
+ * 2. Force Chart.js to finish painting
+ * 3. Switch page to light mode (dark text on white background)
+ * 4. Replace <canvas> with static <img> snapshots
+ * 5. Capture with html2canvas
+ * 6. Restore everything
+ */
+async function captureElement(element) {
   const originalBg = element.style.backgroundColor;
   element.style.backgroundColor = '#ffffff';
 
   await waitForCapturePaint();
-  syncChartJsCanvasesBeforeSnapshot(element);
-  await flushFrameAfterChartSync();
 
-  const canvas = await withResetTransform(element, () =>
-    html2canvas(element, buildHtml2CanvasCaptureOptions(element))
-  );
+  syncChartJsCanvases(element);
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-  element.style.backgroundColor = originalBg;
+  const restoreCanvases = snapshotCanvasesToImages(element);
+  const restoreDarkMode = forceLightMode();
+
+  /* Let the browser repaint with light-mode CSS variables and static images */
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  await new Promise((r) => setTimeout(r, 80));
+
+  let canvas;
+  try {
+    canvas = await withResetTransform(element, () =>
+      html2canvas(element, captureOptions(element))
+    );
+  } finally {
+    restoreDarkMode();
+    restoreCanvases();
+    element.style.backgroundColor = originalBg;
+  }
+
+  return canvas;
+}
+
+export async function exportAsPNG(element, filename = 'report') {
+  const canvas = await captureElement(element);
 
   canvas.toBlob((blob) => {
     const url = URL.createObjectURL(blob);
@@ -106,25 +179,10 @@ export async function exportAsPNG(element, filename = 'report') {
 
 /**
  * Export as multi-page PDF with auto-detected orientation and page numbers.
- * @param {HTMLElement} element - The report container to capture
- * @param {string} filename - Base filename (without extension)
- * @param {object} options - { orientation: 'portrait'|'landscape'|'auto', pageMode: 'a4'|'full' }
  */
 export async function exportAsPDF(element, filename = 'report', options = {}) {
-  const originalBg = element.style.backgroundColor;
-  element.style.backgroundColor = '#ffffff';
+  const canvas = await captureElement(element);
 
-  await waitForCapturePaint();
-  syncChartJsCanvasesBeforeSnapshot(element);
-  await flushFrameAfterChartSync();
-
-  const canvas = await withResetTransform(element, () =>
-    html2canvas(element, buildHtml2CanvasCaptureOptions(element))
-  );
-
-  element.style.backgroundColor = originalBg;
-
-  // Auto-detect orientation: use portrait for A4/narrow content, landscape for wide dashboards
   let orientation = options.orientation || 'auto';
   if (orientation === 'auto') {
     const pageMode = options.pageMode || 'a4';
@@ -138,29 +196,21 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
 
-  // Use comfortable margins: 12mm sides, 10mm top, leave room for footer
   const marginX = 12;
   const marginTop = 10;
-  const footerHeight = 8; // mm reserved for page number footer
+  const footerHeight = 8;
 
-  // Scale image to fit page width within margins
   const scaledWidth = pdfWidth - 2 * marginX;
   const scaledHeight = (imgHeight / imgWidth) * scaledWidth;
-
-  // Content area height per page
   const contentHeight = pdfHeight - marginTop - footerHeight;
-
-  // Calculate total pages needed
   const totalPages = Math.ceil(scaledHeight / contentHeight);
 
   for (let page = 0; page < totalPages; page++) {
     if (page > 0) pdf.addPage();
 
-    // Calculate which portion of the image to show on this page
     const srcY = (page * contentHeight / scaledHeight) * imgHeight;
     const srcH = Math.min((contentHeight / scaledHeight) * imgHeight, imgHeight - srcY);
 
-    // Create a canvas slice for this page
     const pageCanvas = document.createElement('canvas');
     pageCanvas.width = imgWidth;
     pageCanvas.height = Math.ceil(srcH);
@@ -172,7 +222,6 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
 
     pdf.addImage(pageImgData, 'PNG', marginX, marginTop, scaledWidth, sliceScaledHeight);
 
-    // Page number footer
     pdf.setFontSize(8);
     pdf.setTextColor(150);
     pdf.text(
@@ -182,7 +231,6 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
       { align: 'center' }
     );
 
-    // Date stamp on first page
     if (page === 0) {
       pdf.text(
         new Date().toLocaleString(),
