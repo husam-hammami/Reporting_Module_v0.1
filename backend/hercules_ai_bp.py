@@ -938,90 +938,96 @@ def generate_insights():
     except (ValueError, TypeError) as e:
         return jsonify({'error': f'Invalid date format: {e}'}), 400
 
-    get_conn = _get_db_connection()
-    with closing(get_conn()) as conn:
-        actual = conn._conn if hasattr(conn, '_conn') else conn
-        cur = actual.cursor(cursor_factory=RealDictCursor)
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor(cursor_factory=RealDictCursor)
 
-        config = _get_config(cur)
-        if not config.get('setup_completed'):
-            return jsonify({'error': 'Complete AI setup first'}), 400
+            config = _get_config(cur)
+            if not config.get('setup_completed'):
+                return jsonify({'error': 'Complete AI setup first'}), 400
 
-        ai_config = _get_raw_config(cur)
-        provider = ai_config.get('ai_provider', 'cloud')
-        if provider == 'cloud' and not ai_config.get('llm_api_key'):
-            return jsonify({'error': 'API key required'}), 400
+            ai_config = _get_raw_config(cur)
+            provider = ai_config.get('ai_provider', 'cloud')
+            if provider == 'cloud' and not ai_config.get('llm_api_key'):
+                return jsonify({'error': 'API key required'}), 400
 
-        # Load templates
-        report_ids = data.get('report_ids')
-        if report_ids and isinstance(report_ids, list) and len(report_ids) > 0:
-            cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE id = ANY(%s) AND is_active = true",
-                        (report_ids,))
-        else:
-            cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE is_active = true ORDER BY name")
-        templates = cur.fetchall()
+            # Load templates
+            report_ids = data.get('report_ids')
+            if report_ids and isinstance(report_ids, list) and len(report_ids) > 0:
+                cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE id = ANY(%s) AND is_active = true",
+                            (report_ids,))
+            else:
+                cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE is_active = true ORDER BY name")
+            templates = cur.fetchall()
 
-        if not templates:
-            return jsonify({'error': 'No active report templates found'}), 400
+            if not templates:
+                return jsonify({'error': 'No active report templates found'}), 400
 
-        actual.commit()
+            actual.commit()
+    except Exception as e:
+        logger.exception("Insights: failed to load config/templates: %s", e)
+        return jsonify({'error': f'Failed to load data: {e}'}), 500
 
-    # Collect tag data and layout configs
+    # Collect tag data and build prompt data
     from distribution_engine import extract_all_tags, _fetch_tag_data_multi_agg, _extract_report_context
+    try:
+        all_tag_data = {}
+        all_layout_configs = {}
+        report_names = []
+        report_map = []
+        for tpl in templates:
+            lc = tpl['layout_config']
+            if isinstance(lc, str):
+                lc = json.loads(lc)
+            tags = extract_all_tags(lc)
+            td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
+            all_tag_data.update(td)
+            all_layout_configs[tpl['name']] = lc
+            report_names.append(tpl['name'])
+            report_map.append({'id': tpl['id'], 'name': tpl['name']})
 
-    all_tag_data = {}
-    all_layout_configs = {}
-    report_names = []
-    report_map = []  # [{id, name}]
-    for tpl in templates:
-        lc = tpl['layout_config']
-        if isinstance(lc, str):
-            lc = json.loads(lc)
-        tags = extract_all_tags(lc)
-        td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
-        all_tag_data.update(td)
-        all_layout_configs[tpl['name']] = lc
-        report_names.append(tpl['name'])
-        report_map.append({'id': tpl['id'], 'name': tpl['name']})
+        report_context = _extract_report_context(all_layout_configs)
 
-    report_context = _extract_report_context(all_layout_configs)
+        # Load profiles for richer labels
+        raw_tags = set()
+        for k in all_tag_data:
+            raw_tags.add(k.split('::', 1)[1] if '::' in k else k)
 
-    # Build tag data rows (same logic as distribution_engine._generate_ai_summary)
-    # Load profiles for richer labels
-    raw_tags = set()
-    for k in all_tag_data:
-        raw_tags.add(k.split('::', 1)[1] if '::' in k else k)
+        profile_map = {}
+        if raw_tags:
+            with closing(get_conn()) as conn2:
+                actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
+                cur2 = actual2.cursor(cursor_factory=RealDictCursor)
+                cur2.execute("""SELECT tag_name, label, tag_type, line_name
+                               FROM hercules_ai_tag_profiles
+                               WHERE tag_name = ANY(%s) AND is_tracked = true""",
+                             (list(raw_tags),))
+                profile_map = {r['tag_name']: r for r in cur2.fetchall()}
+                actual2.commit()
 
-    profile_map = {}
-    if raw_tags:
-        with closing(get_conn()) as conn2:
-            actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
-            cur2 = actual2.cursor(cursor_factory=RealDictCursor)
-            cur2.execute("""SELECT tag_name, label, tag_type, line_name
-                           FROM hercules_ai_tag_profiles
-                           WHERE tag_name = ANY(%s) AND is_tracked = true""",
-                         (list(raw_tags),))
-            profile_map = {r['tag_name']: r for r in cur2.fetchall()}
-            actual2.commit()
+        data_rows = []
+        for key, value in all_tag_data.items():
+            agg_prefix = ''
+            if '::' in key:
+                agg_prefix, tag_name = key.split('::', 1)
+            else:
+                tag_name = key
+                agg_prefix = 'last'
+            prof = profile_map.get(tag_name)
+            data_rows.append(
+                f"{(prof.get('label') or tag_name) if prof else tag_name} | "
+                f"{prof.get('tag_type', 'unknown') if prof else 'unknown'} | "
+                f"{value} | {agg_prefix} | "
+                f"{prof.get('line_name', '') if prof else ''}"
+            )
 
-    data_rows = []
-    for key, value in all_tag_data.items():
-        agg_prefix = ''
-        if '::' in key:
-            agg_prefix, tag_name = key.split('::', 1)
-        else:
-            tag_name = key
-            agg_prefix = 'last'
-        prof = profile_map.get(tag_name)
-        data_rows.append(
-            f"{(prof.get('label') or tag_name) if prof else tag_name} | "
-            f"{prof.get('tag_type', 'unknown') if prof else 'unknown'} | "
-            f"{value} | {agg_prefix} | "
-            f"{prof.get('line_name', '') if prof else ''}"
-        )
-
-    if not data_rows:
-        return jsonify({'error': 'No tag data available for the selected period'}), 400
+        if not data_rows:
+            return jsonify({'error': 'No tag data available for the selected period'}), 400
+    except Exception as e:
+        logger.exception("Insights: failed to collect tag data: %s", e)
+        return jsonify({'error': f'Failed to collect data: {e}'}), 500
 
     # Limit to 40 rows for insights (more than email's 30)
     structured_data = '\n'.join(data_rows[:40])
