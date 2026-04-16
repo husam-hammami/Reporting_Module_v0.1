@@ -1067,6 +1067,18 @@ def generate_insights():
     prev_from = collected['prev_from']
     prev_to = collected['prev_to']
 
+    # Compute KPI score (no LLM, fast)
+    try:
+        import ai_kpi_scorer
+        kpi = ai_kpi_scorer.compute_kpi_score(
+            tag_data=all_tag_data,
+            prev_tag_data=prev_tag_data,
+            profiles=profile_map,
+        )
+    except Exception as e:
+        logger.warning("KPI scoring failed: %s", e)
+        kpi = None
+
     # Build text rows for the LLM prompt
     data_rows = []
     for key, value in all_tag_data.items():
@@ -1154,6 +1166,7 @@ def generate_insights():
             'reports': report_summaries,
             'period': {'from': from_str, 'to': to_str},
             'tags_analyzed': len(data_rows),
+            'kpi': kpi,
         })
 
     except Exception as e:
