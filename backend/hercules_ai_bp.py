@@ -1083,7 +1083,7 @@ def generate_insights():
 
 REPORTS: {names_str}
 PERIOD: {time_from} to {time_to}
-COMPARISON: vs {cmp_label} ({prev_from_str} to {prev_to_str})
+COMPARED AGAINST: {cmp_label} ({prev_from_str} to {prev_to_str})
 """
     if report_context:
         prompt += f"""
@@ -1099,25 +1099,25 @@ KEYS: delta=produced amount, first=start reading, last=end/current reading.
 OUTPUT FORMAT — two sections, be EXTREMELY concise:
 
 SECTION 1 — OVERVIEW:
-**Plant Overview** — {{8 words max: e.g. "Production down 41%, Mill B stopped"}}
+**Plant Overview** — {{8 words max verdict, e.g. "Mill B stopped, production down 41% vs {cmp_label}"}}
 
-• **Production**: {{delta values only, with ↑↓→ change — e.g. "B1: 113,926 kg (↓43%), Flour: 85,629 kg (↓42%)"}}
-• **Status**: {{equipment on/off changes — e.g. "Mill B stopped, Pasta running" — SKIP if unchanged}}
-• **Energy**: {{power/energy with change — e.g. "C32: 184 kVA, PF 0.14 (was 0.74)" — SKIP if no energy tags}}
-• **Alerts**: {{critical issues: drops >30%, zero output, bad power factor — or "None"}}
+• **Production**: {{delta values with explicit comparison — e.g. "B1: 113,926 kg (↓43% vs {cmp_label})"}}
+• **Status**: {{equipment changes — e.g. "Mill B stopped since {cmp_label}" — SKIP if unchanged}}
+• **Energy**: {{power with comparison — e.g. "C32: 184 kVA, PF dropped 0.74→0.14 vs {cmp_label}" — SKIP if no energy tags}}
+• **Alerts**: {{critical issues only — or "None"}}
 
 SECTION 2 — PER REPORT (one per report):
 ---REPORT: ExactReportName---
 **ExactReportName** — {{5 words max verdict}}
-• {{key metric with change, 15 words max}}
-• {{second finding if notable, 15 words max}}
+• {{key metric with "vs {cmp_label}" comparison, 20 words max}}
+• {{second finding if notable, 20 words max}}
 
 STRICT RULES:
-1. NEVER cite meter readings (first/last values). Only cite delta values as production.
-2. Each bullet MAX 20 words. Verdict MAX 8 words.
-3. SKIP any bullet that has nothing useful. Do NOT write "No energy data available."
-4. Use ↑↓→ arrows with percentages for changes.
-5. Format: 1,234,567 kg (not 1234567.0).
+1. EVERY percentage change MUST say "vs {cmp_label}" — never write bare "↓43%", always "↓43% vs {cmp_label}".
+2. NEVER cite meter readings (first/last values). Only cite delta values as production.
+3. Each bullet MAX 20 words. Verdict MAX 8 words.
+4. SKIP any bullet with nothing useful. Do NOT write "No data available."
+5. Format: 1,234,567 kg (not 1234567.0). Use ↑↓→ arrows.
 6. Use tag labels, never raw tag_names.
 7. Overview max 4 bullets. Per-report max 2 bullets.
 8. No paragraphs, no explanations, no recommendations, no greetings."""
