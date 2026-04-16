@@ -240,6 +240,18 @@ def _update_tags_from_dashboard_widget(widget, tags):
         if field.get('formula'):
             tags.update(_parse_formula_tags(field['formula']))
 
+    # staticDataRows (table widget additional rows with tag cells)
+    for row in config.get('staticDataRows', []):
+        if not isinstance(row, list):
+            continue
+        for cell in row:
+            if not isinstance(cell, dict):
+                continue
+            if cell.get('sourceType') == 'tag' and cell.get('tagName'):
+                tags.add(cell['tagName'])
+            elif cell.get('sourceType') == 'formula' and cell.get('formula'):
+                tags.update(_parse_formula_tags(cell['formula']))
+
     # statusbar tags
     for st in config.get('tags', []):
         if isinstance(st, dict) and st.get('tagName'):
