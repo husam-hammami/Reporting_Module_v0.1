@@ -15,6 +15,7 @@
 import { useRef, useEffect, useMemo, useState } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
+import { useThumbnailCapture } from '../ThumbnailCaptureContext';
 
 const DEFAULT_COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#ec4899', '#8b5cf6', '#06b6d4', '#10b981'];
 
@@ -252,6 +253,7 @@ export default function UPlotChart({ series: seriesDefs, tagHistory, tagValues, 
   const seriesKeyRef = useRef('');
   const spanKeyRef = useRef('');
   const [ready, setReady] = useState(false);
+  const isCapturing = useThumbnailCapture();
 
   // Normalize series definitions
   const normalizedSeries = useMemo(
@@ -343,6 +345,34 @@ export default function UPlotChart({ series: seriesDefs, tagHistory, tagValues, 
       });
     }
   }, [tagValues, normalizedSeries]);
+
+  /* html2canvas: layout/overflow changes during export — resize + redraw after two frames so bitmap is current */
+  useEffect(() => {
+    if (!isCapturing || !chartRef.current || !containerRef.current) return;
+    let raf1;
+    let raf2;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        try {
+          const el = containerRef.current;
+          if (el && chartRef.current) {
+            const rect = el.getBoundingClientRect();
+            const ww = Math.floor(rect.width) || 400;
+            const legendReserve = config.showLegend !== false ? 30 : 0;
+            const hh = Math.max(60, Math.floor(rect.height || 200) - legendReserve);
+            chartRef.current.setSize({ width: ww, height: hh });
+            chartRef.current.redraw(true);
+          }
+        } catch {
+          /* ignore */
+        }
+      });
+    });
+    return () => {
+      if (raf1 != null) cancelAnimationFrame(raf1);
+      if (raf2 != null) cancelAnimationFrame(raf2);
+    };
+  }, [isCapturing, config.showLegend]);
 
   // Handle container resize via ResizeObserver
   useEffect(() => {

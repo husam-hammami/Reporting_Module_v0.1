@@ -17,8 +17,7 @@ import { PaginatedReportPreview, collectPaginatedTagNames, collectPaginatedTagAg
 import TimePeriodTabs, { PAGINATED_TABS } from './TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
 import axios from '../../API/axios';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { exportAsPDF as exportAsPDFUtil } from '../../utils/exportReport';
 
 /* ══════════════════════════════════════════════════════════════════
    MAIN COMPONENT
@@ -197,81 +196,20 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
-  // PDF export
+  // PDF export — delegates to the shared pipeline (light-mode switch + canvas→img swap)
   const handleExportPDF = async () => {
     if (!reportRef.current) return;
     setExporting(true);
     try {
-      // Capture the inner paginated-preview-root element (width: 210mm), not the
-      // outer wrapper div which inherits max-w-[1200px] and would include empty side margins.
       const el = reportRef.current.querySelector('.paginated-preview-root') || reportRef.current.firstElementChild || reportRef.current;
-
-      // Add PDF-export class for optimized styling during capture
       el.classList.add('rb-pdf-export');
-
-      // Temporarily force the element to render at its natural width (no clipping)
       const prevOverflow = el.style.overflow;
       el.style.overflow = 'visible';
 
-      // Wait a frame for styles to apply
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-      const canvas = await html2canvas(el, {
-        scale: 3,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        // Ensure html2canvas treats the element's full scroll width as the viewport
-        windowWidth: Math.max(el.scrollWidth, el.offsetWidth),
-        width: Math.max(el.scrollWidth, el.offsetWidth),
-      });
+      await exportAsPDFUtil(el, template?.name || 'report', { orientation: 'portrait', pageMode: 'a4' });
 
       el.style.overflow = prevOverflow;
       el.classList.remove('rb-pdf-export');
-
-      const imgWidth = 210; // A4 width mm
-      const pageHeight = 297; // A4 height mm
-      const marginX = 10;
-      const marginTop = 8;
-      const footerSpace = 6;
-      const usableWidth = imgWidth - 2 * marginX;
-      const usableHeight = pageHeight - marginTop - footerSpace;
-
-      const scaledImgHeight = (canvas.height * usableWidth) / canvas.width;
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-      let yOffset = 0;
-      let pageNum = 1;
-      const totalPages = Math.ceil(scaledImgHeight / usableHeight);
-
-      while (yOffset < scaledImgHeight) {
-        if (pageNum > 1) pdf.addPage();
-
-        const sourceY = (yOffset / scaledImgHeight) * canvas.height;
-        const sourceH = Math.min((usableHeight / scaledImgHeight) * canvas.height, canvas.height - sourceY);
-        const destH = (sourceH / canvas.height) * scaledImgHeight;
-
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sourceH;
-        const ctx = pageCanvas.getContext('2d');
-        ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceH, 0, 0, canvas.width, sourceH);
-
-        const imgData = pageCanvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', marginX, marginTop, usableWidth, destH);
-
-        // Footer
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text(`Page ${pageNum} of ${totalPages}`, imgWidth / 2, pageHeight - 2, { align: 'center' });
-        pdf.text(new Date().toLocaleDateString('en-GB'), imgWidth - marginX, pageHeight - 2, { align: 'right' });
-
-        yOffset += usableHeight;
-        pageNum++;
-      }
-
-      const name = template?.name || 'report';
-      pdf.save(`${name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
     }

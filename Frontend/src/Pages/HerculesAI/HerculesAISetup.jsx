@@ -102,7 +102,9 @@ export default function HerculesAISetup() {
   useEffect(() => {
     (async () => {
       try {
-        const [cfg, st] = await Promise.all([herculesAIApi.getConfig(), herculesAIApi.getStatus()]);
+        const [cfgRes, stRes] = await Promise.all([herculesAIApi.getConfig(), herculesAIApi.getStatus()]);
+        const cfg = cfgRes.data || cfgRes;
+        const st = stRes.data || stRes;
         setConfig(cfg);
         setStatus(st);
         setProvider(cfg.ai_provider || 'cloud');
@@ -132,11 +134,11 @@ export default function HerculesAISetup() {
       const payload = { ai_provider: provider, llm_model: model };
       if (provider === 'cloud' && apiKey) payload.llm_api_key = apiKey;
       if (provider === 'local') payload.local_server_url = localUrl;
-      const updated = await herculesAIApi.updateConfig(payload);
-      setConfig(updated);
+      const res = await herculesAIApi.updateConfig(payload);
+      setConfig(res.data || res);
       toast.success('Provider saved');
     } catch (e) {
-      toast.error('Failed to save: ' + (e.response?.data?.message || e.message));
+      toast.error('Failed to save: ' + (e.response?.data?.message || e.response?.data?.error || e.message));
     } finally {
       setSaving(false);
     }
@@ -148,9 +150,9 @@ export default function HerculesAISetup() {
     try {
       await saveProvider();
       const res = await herculesAIApi.testConnection();
-      setTestResult(res);
+      setTestResult(res.data || res);
     } catch (e) {
-      setTestResult({ ok: false, message: e.response?.data?.message || e.message });
+      setTestResult({ ok: false, message: e.response?.data?.message || e.response?.data?.error || e.message || 'Connection failed' });
     } finally {
       setTesting(false);
     }
@@ -161,11 +163,11 @@ export default function HerculesAISetup() {
     setScanResult(null);
     try {
       const res = await herculesAIApi.scan();
-      const st = await herculesAIApi.getStatus();
-      setStatus(st);
-      setScanResult(res);
+      const stRes = await herculesAIApi.getStatus();
+      setStatus(stRes.data || stRes);
+      setScanResult(res.data || res);
     } catch (e) {
-      toast.error('Scan failed: ' + (e.response?.data?.message || e.message));
+      toast.error('Scan failed: ' + (e.response?.data?.message || e.response?.data?.error || e.message));
     } finally {
       setScanning(false);
     }
@@ -174,8 +176,8 @@ export default function HerculesAISetup() {
   const completeSetup = useCallback(async () => {
     setCompleting(true);
     try {
-      const updated = await herculesAIApi.updateConfig({ setup_completed: true });
-      setConfig(updated);
+      const res = await herculesAIApi.updateConfig({ setup_completed: true });
+      setConfig(res.data || res);
       toast.success('Hercules AI is ready!');
       goTo(3);
     } catch (e) {
@@ -190,9 +192,10 @@ export default function HerculesAISetup() {
     setPreviewText('');
     try {
       const res = await herculesAIApi.previewSummary();
-      setPreviewText(res.summary || 'No summary generated.');
+      const data = res.data || res;
+      setPreviewText(data.summary || 'No summary generated.');
     } catch (e) {
-      setPreviewText('Preview failed: ' + (e.response?.data?.message || e.message));
+      setPreviewText('Preview failed: ' + (e.response?.data?.message || e.response?.data?.error || e.message));
     } finally {
       setPreviewLoading(false);
     }

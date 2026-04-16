@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPen, FaPrint, FaExpand, FaCompress, FaFilePdf, FaImage } from 'react-icons/fa';
 import { Tooltip } from '@mui/material';
@@ -16,7 +17,7 @@ import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '
 import axios from '../../API/axios';
 import { useSocket } from '../../Context/SocketContext';
 import { useEmulator } from '../../Context/EmulatorContext';
-import { useThumbnailCapture } from './ThumbnailCaptureContext';
+import { ThumbnailCaptureContext, useThumbnailCapture } from './ThumbnailCaptureContext';
 import LiveDataIndicator from '../../Components/Common/LiveDataIndicator';
 import { ReportTableTabLinkProvider } from './context/ReportTableTabLinkContext';
 
@@ -150,7 +151,7 @@ export default function ReportBuilderPreview() {
   const handlePrint = () => window.print();
 
   const handleExportPDF = async () => {
-    setExporting(true);
+    flushSync(() => setExporting(true));
     try {
       const el = document.getElementById('report-print-section');
       el.classList.add('rb-pdf-export');
@@ -181,7 +182,7 @@ export default function ReportBuilderPreview() {
     } finally { setExporting(false); }
   };
   const handleExportPNG = async () => {
-    setExporting(true);
+    flushSync(() => setExporting(true));
     try {
       const el = document.getElementById('report-print-section');
       el.classList.add('rb-pdf-export');
@@ -410,6 +411,7 @@ export default function ReportBuilderPreview() {
           style={pageMode === 'a4' ? { maxWidth: 1220 } : {}}
           {...pageEntrance}
         >
+          <ThumbnailCaptureContext.Provider value={exporting}>
           <ReportTableTabLinkProvider>
           {/* Unified dashboard header bar */}
           <div
@@ -505,6 +507,7 @@ export default function ReportBuilderPreview() {
             </div>
           )}
           </ReportTableTabLinkProvider>
+          </ThumbnailCaptureContext.Provider>
         </motion.div>
       </div>
     </div>

@@ -1,59 +1,95 @@
-import html2canvas from 'html2canvas';
+import { toCanvas } from 'html-to-image';
 import jsPDF from 'jspdf';
 
-/** Let layout + fonts + canvas charts settle before html2canvas (RGL/transform timing). */
-async function waitForCapturePaint() {
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
-    try {
-      await document.fonts.ready;
-    } catch {
-      /* ignore */
-    }
-  }
-  await new Promise((r) => setTimeout(r, 120));
+/**
+ * Temporarily switch the page to light mode so CSS variables resolve to dark-on-white
+ * values. Returns a cleanup function that restores the original mode.
+ */
+function forceLightMode() {
+  const html = document.documentElement;
+  const wasDark = html.classList.contains('dark');
+  if (wasDark) html.classList.remove('dark');
+  return () => { if (wasDark) html.classList.add('dark'); };
 }
 
 /**
- * Reset any CSS transform on the element before capture, then restore.
- * This ensures html2canvas captures at true 1:1 scale regardless of zoom.
+ * Force every Chart.js instance inside `root` to paint synchronously.
  */
-function withResetTransform(element, fn) {
-  // Walk up and find any scaled container
-  const scaledEl = element.closest('[style*="transform"]') || element.parentElement;
-  const origTransform = scaledEl?.style?.transform || '';
-  if (scaledEl && origTransform) {
-    scaledEl.style.transform = 'none';
-  }
-  try {
-    return fn();
-  } finally {
-    if (scaledEl && origTransform) {
-      scaledEl.style.transform = origTransform;
-    }
+function syncChartJsCanvases(root) {
+  if (!root?.querySelectorAll) return;
+  const ChartCtor = window.Chart;
+  const getChart = ChartCtor?.getChart;
+  if (typeof getChart !== 'function') return;
+
+  for (const cvs of root.querySelectorAll('canvas')) {
+    try {
+      const chart = getChart(cvs);
+      if (chart) {
+        chart.stop?.();
+        chart.resize?.();
+        chart.update('none');
+      }
+    } catch { /* ignore */ }
   }
 }
 
-export async function exportAsPNG(element, filename = 'report') {
+/**
+ * Wait for layout, fonts, and chart paints to settle.
+ */
+async function settle(element) {
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  syncChartJsCanvases(element);
+
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  if (document.fonts?.ready) {
+    try { await document.fonts.ready; } catch { /* ignore */ }
+  }
+
+  await new Promise((r) => setTimeout(r, 500));
+}
+
+/**
+ * Core capture: switch to light mode, wait, snapshot via html-to-image, restore.
+ * html-to-image uses SVG foreignObject — the browser's own rendering engine paints
+ * the DOM, so CSS variables, flexbox, SVG, and canvas elements all render correctly.
+ */
+async function captureElement(element) {
   const originalBg = element.style.backgroundColor;
   element.style.backgroundColor = '#ffffff';
 
-  await waitForCapturePaint();
+  const restoreDarkMode = forceLightMode();
 
-  const canvas = await withResetTransform(element, () =>
-    html2canvas(element, {
-      scale: 3,
-      useCORS: true,
+  await settle(element);
+
+  let canvas;
+  try {
+    canvas = await toCanvas(element, {
       backgroundColor: '#ffffff',
-      logging: false,
-      windowWidth: Math.max(element.scrollWidth, element.offsetWidth),
-      width: Math.max(element.scrollWidth, element.offsetWidth),
-    })
-  );
+      pixelRatio: 2,
+      skipAutoScale: true,
+      includeQueryParams: true,
+      cacheBust: true,
+      filter: (node) => {
+        if (node.classList?.contains?.('print:hidden')) return false;
+        if (node.tagName === 'NOSCRIPT') return false;
+        return true;
+      },
+    });
+  } finally {
+    restoreDarkMode();
+    element.style.backgroundColor = originalBg;
+  }
 
-  element.style.backgroundColor = originalBg;
+  return canvas;
+}
+
+export async function exportAsPNG(element, filename = 'report') {
+  const canvas = await captureElement(element);
 
   canvas.toBlob((blob) => {
+    if (!blob) return;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -65,31 +101,10 @@ export async function exportAsPNG(element, filename = 'report') {
 
 /**
  * Export as multi-page PDF with auto-detected orientation and page numbers.
- * @param {HTMLElement} element - The report container to capture
- * @param {string} filename - Base filename (without extension)
- * @param {object} options - { orientation: 'portrait'|'landscape'|'auto', pageMode: 'a4'|'full' }
  */
 export async function exportAsPDF(element, filename = 'report', options = {}) {
-  const originalBg = element.style.backgroundColor;
-  element.style.backgroundColor = '#ffffff';
+  const canvas = await captureElement(element);
 
-  await waitForCapturePaint();
-
-  const canvas = await withResetTransform(element, () =>
-    html2canvas(element, {
-      scale: 3,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      // Ensure full scroll width is captured (prevents wide table clipping)
-      windowWidth: Math.max(element.scrollWidth, element.offsetWidth),
-      width: Math.max(element.scrollWidth, element.offsetWidth),
-    })
-  );
-
-  element.style.backgroundColor = originalBg;
-
-  // Auto-detect orientation: use portrait for A4/narrow content, landscape for wide dashboards
   let orientation = options.orientation || 'auto';
   if (orientation === 'auto') {
     const pageMode = options.pageMode || 'a4';
@@ -103,29 +118,21 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
   const imgWidth = canvas.width;
   const imgHeight = canvas.height;
 
-  // Use comfortable margins: 12mm sides, 10mm top, leave room for footer
   const marginX = 12;
   const marginTop = 10;
-  const footerHeight = 8; // mm reserved for page number footer
+  const footerHeight = 8;
 
-  // Scale image to fit page width within margins
   const scaledWidth = pdfWidth - 2 * marginX;
   const scaledHeight = (imgHeight / imgWidth) * scaledWidth;
-
-  // Content area height per page
   const contentHeight = pdfHeight - marginTop - footerHeight;
-
-  // Calculate total pages needed
   const totalPages = Math.ceil(scaledHeight / contentHeight);
 
   for (let page = 0; page < totalPages; page++) {
     if (page > 0) pdf.addPage();
 
-    // Calculate which portion of the image to show on this page
     const srcY = (page * contentHeight / scaledHeight) * imgHeight;
     const srcH = Math.min((contentHeight / scaledHeight) * imgHeight, imgHeight - srcY);
 
-    // Create a canvas slice for this page
     const pageCanvas = document.createElement('canvas');
     pageCanvas.width = imgWidth;
     pageCanvas.height = Math.ceil(srcH);
@@ -137,7 +144,6 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
 
     pdf.addImage(pageImgData, 'PNG', marginX, marginTop, scaledWidth, sliceScaledHeight);
 
-    // Page number footer
     pdf.setFontSize(8);
     pdf.setTextColor(150);
     pdf.text(
@@ -147,7 +153,6 @@ export async function exportAsPDF(element, filename = 'report', options = {}) {
       { align: 'center' }
     );
 
-    // Date stamp on first page
     if (page === 0) {
       pdf.text(
         new Date().toLocaleString(),

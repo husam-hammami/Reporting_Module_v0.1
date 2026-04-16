@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaChevronLeft, FaPrint, FaExpand, FaCompress, FaClock, FaFilePdf, FaImage } from 'react-icons/fa';
 import { exportAsPNG, exportAsPDF } from '../../utils/exportReport';
@@ -22,6 +23,7 @@ import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '
 import TabSelector from '../../Components/ui/TabSelector';
 import ReportThumbnail from '../ReportBuilder/ReportThumbnail';
 import { ReportTableTabLinkProvider } from '../ReportBuilder/context/ReportTableTabLinkContext';
+import { ThumbnailCaptureContext } from '../ReportBuilder/ThumbnailCaptureContext';
 import ReportListingPage from '../../Components/Reports/ReportListingPage';
 import PaginatedReportView from './PaginatedReportViewer';
 import TimePeriodTabs, { VIEWER_TABS } from './TimePeriodTabs';
@@ -424,7 +426,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   }, [timePeriod.tab, liveTagHistory, historicalTagHistory]);
 
   const handleExportPDF = async () => {
-    setExporting(true);
+    flushSync(() => setExporting(true));
     try {
       const el = document.getElementById('report-print-section');
       // Add PDF-export class for optimized styling during capture
@@ -466,7 +468,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     } finally { setExporting(false); }
   };
   const handleExportPNG = async () => {
-    setExporting(true);
+    flushSync(() => setExporting(true));
     try {
       const el = document.getElementById('report-print-section');
       el.classList.add('rb-pdf-export');
@@ -706,6 +708,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
           </>
         )}
         <ReportTableTabLinkProvider>
+        <ThumbnailCaptureContext.Provider value={exporting}>
         <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'xl:pl-[200px] xl:pr-[200px]' : ''} max-w-full print:px-0 print:pl-0 print:pr-0`}>
           {/* Dashboard header bar is rendered in the unified chrome toolbar above */}
 
@@ -851,6 +854,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             </div>
           )}
         </div>
+        </ThumbnailCaptureContext.Provider>
         </ReportTableTabLinkProvider>
       </div>
     </div>

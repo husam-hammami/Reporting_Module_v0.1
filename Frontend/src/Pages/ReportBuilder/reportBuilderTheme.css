@@ -1357,10 +1357,41 @@
   display: none !important;
 }
 
-/* Force light background, remove decorative shadows/borders */
+/* Force light background, dark text, and override CSS variables for PDF capture.
+   In dark mode the CSS variables resolve to light colors — invisible on white. */
 .rb-pdf-export {
   background: #ffffff !important;
   color: #000000 !important;
+
+  --rb-text: #111827 !important;
+  --rb-text-secondary: #374151 !important;
+  --rb-text-muted: #6b7280 !important;
+  --rb-text-inverse: #ffffff !important;
+  --rb-surface: #f9fafb !important;
+  --rb-panel: #ffffff !important;
+  --rb-canvas: #f8fafc !important;
+  --rb-card-bg: #ffffff !important;
+  --rb-border: #e5e7eb !important;
+  --rb-border-subtle: #f3f4f6 !important;
+  --rb-card-border: #e5e7eb !important;
+  --rb-input: #ffffff !important;
+  --rb-silo-card-bg: #ffffff !important;
+  --rb-accent: #0f3460 !important;
+}
+
+/* All text under export root must be dark */
+.rb-pdf-export * {
+  color: inherit;
+}
+
+.rb-pdf-export .rb-value-primary {
+  color: #111827 !important;
+}
+
+.rb-pdf-export .rb-value-secondary,
+.rb-pdf-export .rb-value-unit,
+.rb-pdf-export .rb-caption {
+  color: #374151 !important;
 }
 
 .rb-pdf-export .rb-widget-card {
@@ -1370,9 +1401,19 @@
   background: #ffffff !important;
 }
 
-/* Remove overflow clipping so wide tables are fully captured */
+/* SVG elements using CSS variables — force dark fills/strokes */
+.rb-pdf-export svg text {
+  fill: #111827 !important;
+}
+
+.rb-pdf-export svg .rb-widget-title {
+  fill: #374151 !important;
+}
+
+/* Remove overflow clipping so widget content is fully captured */
 .rb-pdf-export .overflow-x-auto,
-.rb-pdf-export .overflow-auto {
+.rb-pdf-export .overflow-auto,
+.rb-pdf-export .overflow-hidden {
   overflow: visible !important;
 }
 
