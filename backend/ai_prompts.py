@@ -44,7 +44,7 @@ def build_insights_prompt(report_names, time_from, time_to, cmp_label,
     """
     names_str = ', '.join(report_names) if isinstance(report_names, list) else str(report_names)
 
-    prompt = f"""You write concise plant insights for mill managers. Numbers only — no filler.
+    prompt = f"""You are a senior plant engineer writing a shift handover briefing. Be direct, technical, action-oriented. Use industrial language: "line stopped", "tripped", "running light", "at capacity", "below nameplate". Never say "I", "we", "the data shows", or "it appears". State facts as facts.
 
 REPORTS: {names_str}
 PERIOD: {time_from} to {time_to}
@@ -62,10 +62,17 @@ DATA (Label | Type | Unit | Now | {cmp_label.title()} | Change% | Aggregation | 
 KEYS: delta=produced amount, first=start reading, last=end/current reading.
 Change% = pre-computed percentage change (use directly, do NOT calculate yourself).
 
+INDUSTRIAL CONTEXT (use these thresholds for analysis):
+- Power factor (PF/cos φ) below 0.85 = penalty risk; below 0.5 = capacitor bank failure likely
+- Flow rate = 0 when previous > 0 means line stopped or sensor fault
+- Production counter delta = 0 means zero output for entire period
+- Temperature/pressure spikes beyond +20% of previous = investigate immediately
+- Equipment ON but zero production = mechanical fault or upstream blockage
+
 OUTPUT FORMAT — two sections, be EXTREMELY concise:
 
 SECTION 1 — OVERVIEW:
-**Plant Overview** — {{8 words max verdict, e.g. "Mill B stopped, production down 41% vs {cmp_label}"}}
+**Plant Status** — {{8 words max verdict, e.g. "Mill B stopped, production down 41% vs {cmp_label}"}}
 
 • **Production**: {{delta values with explicit comparison — e.g. "B1: 113,926 kg (↓43% vs {cmp_label})"}}
 • **Status**: {{equipment changes — e.g. "Mill B stopped since {cmp_label}" — SKIP if unchanged}}
@@ -106,7 +113,7 @@ def build_single_report_prompt(report_name, time_from, time_to,
             (Label | Type | Value | Aggregation | Production Line)
         report_context: optional report structure context string
     """
-    prompt = f"""You analyze industrial production and energy data for mill/plant managers. Be direct, specific, and useful.
+    prompt = f"""You are a senior plant engineer writing a shift handover briefing. Be direct, technical, action-oriented. Use industrial language: "line stopped", "tripped", "running light", "at capacity", "below nameplate". Never say "I", "we", "the data shows", or "it appears". State facts as facts.
 
 REPORT: {report_name}
 PERIOD: {time_from} to {time_to}
@@ -125,6 +132,13 @@ AGGREGATION KEY:
 - first = meter reading at start of period
 - last = meter reading at end of period (or current value)
 - avg/sum/min/max = statistical aggregation over the period
+
+INDUSTRIAL CONTEXT (use these thresholds for analysis):
+- Power factor (PF/cos φ) below 0.85 = penalty risk; below 0.5 = capacitor bank failure likely
+- Flow rate = 0 when previous > 0 means line stopped or sensor fault
+- Production counter delta = 0 means zero output for entire period
+- Temperature/pressure spikes beyond +20% of previous = investigate immediately
+- Equipment ON but zero production = mechanical fault or upstream blockage
 
 Write a smart summary using EXACTLY this format:
 
