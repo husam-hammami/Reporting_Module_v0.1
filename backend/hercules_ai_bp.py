@@ -1127,7 +1127,7 @@ def generate_insights():
 
     try:
         import ai_provider
-        result = ai_provider.generate(prompt, ai_config, timeout=45)
+        result = ai_provider.generate(prompt, ai_config, timeout=45, max_tokens=min(700 + 150 * len(templates), 2000))
         if not result:
             return jsonify({'error': 'Could not generate insights. Check your provider settings.'}), 400
 
