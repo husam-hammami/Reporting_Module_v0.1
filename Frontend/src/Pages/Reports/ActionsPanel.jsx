@@ -28,7 +28,7 @@ function ActionButton({ icon: Icon, label, onClick, active }) {
   );
 }
 
-export default function ActionsPanel({ reportId, onExportPDF, onExportPNG, onToggleFullscreen, style, className = '' }) {
+export default function ActionsPanel({ reportId, onExportPDF, onExportPNG, onPrint, onToggleFullscreen, style, className = '' }) {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
 
@@ -65,7 +65,7 @@ export default function ActionsPanel({ reportId, onExportPDF, onExportPNG, onTog
       <ActionButton icon={FileDown} label="Download PDF" onClick={onExportPDF} />
       <ActionButton icon={Image} label="Download PNG" onClick={onExportPNG} />
       <ActionButton icon={FileSpreadsheet} label="Download Excel" onClick={handleExcel} />
-      <ActionButton icon={Printer} label="Print" onClick={() => window.print()} />
+      <ActionButton icon={Printer} label="Print" onClick={() => (onPrint ? onPrint() : window.print())} />
 
       <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '6px 10px' }} />
 

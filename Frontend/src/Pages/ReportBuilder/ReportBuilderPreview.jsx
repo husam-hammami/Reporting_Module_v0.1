@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPen, FaPrint, FaExpand, FaCompress, FaFilePdf, FaImage } from 'react-icons/fa';
 import { Tooltip } from '@mui/material';
 import { motion, useReducedMotion } from 'framer-motion';
-import { exportAsPNG, exportAsPDF } from '../../utils/exportReport';
+import { captureElement, exportAsPNG, exportAsPDFFromCanvases, printCanvases } from '../../utils/exportReport';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
 import { useReportCanvas, useAvailableTags, collectWidgetTagNames, collectDataPanelScopedHistorianRequests } from '../../Hooks/useReportBuilder';
 import {
@@ -148,12 +148,71 @@ export default function ReportBuilderPreview() {
 
   const tagHistory = useTagHistory(usedTagNames, tagValues);
 
-  const handlePrint = () => window.print();
+  const captureDashboardCanvases = useCallback(async (el) => {
+    const multi = dashboardTabs?.enabled && Array.isArray(dashboardTabs.tabs) && dashboardTabs.tabs.length > 1;
+    if (!multi) {
+      return [await captureElement(el)];
+    }
+    const originalId = activeTabId;
+    const out = [];
+    try {
+      for (const tab of dashboardTabs.tabs) {
+        flushSync(() => {
+          switchDashboardTab(tab.id, { skipDirty: true });
+          setExporting(true);
+        });
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        out.push(await captureElement(el));
+      }
+    } finally {
+      if (originalId) {
+        flushSync(() => {
+          switchDashboardTab(originalId, { skipDirty: true });
+          setExporting(true);
+        });
+      }
+    }
+    return out;
+  }, [dashboardTabs, activeTabId, switchDashboardTab]);
+
+  const handlePrintReport = async () => {
+    flushSync(() => setExporting(true));
+    try {
+      const el = document.getElementById('report-print-section');
+      if (!el) return;
+      el.classList.add('rb-pdf-export');
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      try {
+        const canvases = await captureDashboardCanvases(el);
+        printCanvases(canvases, template?.name || 'Report');
+      } finally {
+        el.classList.remove('rb-pdf-export');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+        }
+      }
+    } finally { setExporting(false); }
+  };
 
   const handleExportPDF = async () => {
     flushSync(() => setExporting(true));
     try {
       const el = document.getElementById('report-print-section');
+      if (!el) return;
       el.classList.add('rb-pdf-export');
       const scrollContainer = scrollContainerRef.current;
       const prevScrollOverflow = scrollContainer?.style.overflow;
@@ -169,7 +228,8 @@ export default function ReportBuilderPreview() {
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       const previewPageMode = template?.layout_config?.grid?.pageMode || 'a4';
       try {
-        await exportAsPDF(el, template?.name || 'report', { pageMode: previewPageMode, orientation: 'auto' });
+        const canvases = await captureDashboardCanvases(el);
+        await exportAsPDFFromCanvases(canvases, template?.name || 'report', { pageMode: previewPageMode, orientation: 'auto' });
       } finally {
         el.classList.remove('rb-pdf-export');
         if (scrollContainer) {
@@ -353,10 +413,12 @@ export default function ReportBuilderPreview() {
               }}
             >
               <button
-                onClick={handlePrint}
-                className="w-full text-left px-3 py-2 flex items-center gap-2 rounded-t-lg"
+                type="button"
+                onClick={() => { void handlePrintReport(); }}
+                disabled={exporting}
+                className="w-full text-left px-3 py-2 flex items-center gap-2 rounded-t-lg disabled:opacity-50"
                 style={{ fontSize: 'var(--rb-font-sm)', color: 'var(--rb-text)', transition: 'background var(--rb-transition-fast) ease' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-subtle)'; }}
+                onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'var(--rb-accent-subtle)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <FaPrint style={{ fontSize: '10px', color: 'var(--rb-text-muted)' }} /> Print
