@@ -3149,15 +3149,7 @@ def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=
             logger.warning("AI summary: failed to fetch previous period data: %s", prev_err)
 
     # Determine comparison label based on period duration
-    hours = period_duration.total_seconds() / 3600
-    if hours <= 25:
-        cmp_label = 'previous day'
-    elif hours <= 170:
-        cmp_label = 'previous week'
-    elif hours <= 745:
-        cmp_label = 'previous month'
-    else:
-        cmp_label = 'previous period'
+    cmp_label = ai_prompts.resolve_comparison_label(period_duration)
 
     # Build structured table with current AND previous values
     data_lines = []

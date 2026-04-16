@@ -6,6 +6,24 @@ Used by both the Insights Hub (hercules_ai_bp) and Distribution Engine.
 """
 
 
+def resolve_comparison_label(period_duration):
+    """Determine comparison period label based on duration.
+
+    Args:
+        period_duration: timedelta object
+    Returns:
+        One of: 'previous day', 'previous week', 'previous month', 'previous period'
+    """
+    hours = period_duration.total_seconds() / 3600
+    if hours <= 25:
+        return 'previous day'
+    elif hours <= 170:
+        return 'previous week'
+    elif hours <= 745:
+        return 'previous month'
+    return 'previous period'
+
+
 def build_insights_prompt(report_names, time_from, time_to, cmp_label,
                           prev_from_str, prev_to_str, structured_data,
                           report_context=''):

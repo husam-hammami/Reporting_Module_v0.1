@@ -1040,15 +1040,7 @@ def generate_insights():
     prev_to_str = prev_to.strftime('%Y-%m-%d %H:%M')
 
     # Determine comparison label based on period duration
-    hours = period_duration.total_seconds() / 3600
-    if hours <= 25:
-        cmp_label = 'previous day'
-    elif hours <= 170:
-        cmp_label = 'previous week'
-    elif hours <= 745:
-        cmp_label = 'previous month'
-    else:
-        cmp_label = 'previous period'
+    cmp_label = ai_prompts.resolve_comparison_label(period_duration)
 
     prompt = ai_prompts.build_insights_prompt(
         report_names=[t['name'] for t in templates],
