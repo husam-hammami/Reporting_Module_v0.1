@@ -8,10 +8,10 @@ import { useLanguage } from '../../Hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import TimePeriodTabs from '../Reports/TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
 /* ── Theme ────────────────────────────────────────────────────────────────── */
 function useTheme() {
@@ -79,86 +79,80 @@ function useCountUp(target, duration = 800) {
   return val;
 }
 
-/* ── Render AI markdown → styled React nodes ─────────────────────────────── */
+/* ── Helpers ──────────────────────────────────────────────────────────────── */
+const ICONS = { production: '📦', energy: '⚡', status: '⚙', alerts: '⚠', flow: '💧' };
+
+function parseVerdict(text) {
+  const vl = (text || '').toLowerCase();
+  if (/stopped|no data|offline|down|critical|fault|zero|tripped/.test(vl)) return '#dc2626';
+  if (/reduced|low|partial|warning|idle|standby|light/.test(vl)) return '#d97706';
+  return '#059669';
+}
+
+function parseBullets(text) {
+  if (!text) return [];
+  return text.split('\n').filter(l => l.trim()).map(line => {
+    const bm = line.match(/[•\-]\s*\*\*(.+?)\*\*:?\s*(.*)/);
+    if (!bm) return { label: '', content: line.replace(/\*\*/g, '').trim(), raw: true };
+    return { label: bm[1], content: bm[2] };
+  }).filter(b => b.content);
+}
+
+function BulletRow({ label, content, th }) {
+  const key = label.toLowerCase().split(/\s/)[0];
+  const icon = ICONS[key] || '•';
+  const isNone = key === 'alerts' && /^none\.?$/i.test(content.trim());
+  return (
+    <div style={{ display: 'flex', gap: 8, padding: '5px 10px', borderRadius: 8, marginBottom: 3, background: isNone ? th.successBg : th.surfaceAlt }}>
+      <span style={{ fontSize: 13, flexShrink: 0, lineHeight: '18px' }}>{isNone ? '✓' : icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {label && <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: isNone ? th.success : th.accent, marginBottom: 1 }}>{label}</div>}
+        <div style={{ fontSize: 12, color: th.text, lineHeight: 1.45 }} dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Report insight card — always open, compact ──────────────────────────── */
 function InsightCard({ text, th, defaultExpanded = false, name = '' }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
   if (!text) return null;
 
   const lines = text.split('\n').filter(l => l.trim());
   if (!lines.length) return null;
 
-  // Parse verdict line: **Title** — verdict
   const first = lines[0];
   const vm = first.match(/\*\*(.+?)\*\*\s*[—–-]\s*(.+)/);
-  let title = name, verdict = '', dotColor = '#059669';
-  if (vm) {
-    title = vm[1]; verdict = vm[2];
-  } else {
-    // No markdown title — treat first line as verdict
-    verdict = first.replace(/\*\*/g, '').trim();
-  }
-  const vl = verdict.toLowerCase();
-  if (/stopped|no data|offline|down|critical|fault|zero/.test(vl)) dotColor = '#dc2626';
-  else if (/reduced|low|partial|warning|idle|standby/.test(vl)) dotColor = '#d97706';
+  let title = name, verdict = '';
+  if (vm) { title = vm[1]; verdict = vm[2]; }
+  else { verdict = first.replace(/\*\*/g, '').trim(); }
+  const dotColor = parseVerdict(verdict);
+  const bullets = parseBullets(lines.slice(vm ? 1 : 0).join('\n'));
 
-  const bullets = lines.slice(vm ? 1 : 0).filter(l => /[•\-]/.test(l));
-  const ICONS = { production: '📦', energy: '⚡', status: '⚙', alerts: '⚠', flow: '💧' };
-
-  const renderBullet = (line, i) => {
-    const bm = line.match(/[•\-]\s*\*\*(.+?)\*\*:?\s*(.*)/);
-    if (!bm) return <div key={i} style={{ fontSize: 13, color: th.text, marginBottom: 2 }}>{line.replace(/\*\*/g, '')}</div>;
-    const label = bm[1];
-    const content = bm[2];
-    const key = label.toLowerCase().split(/\s/)[0];
-    const icon = ICONS[key] || '•';
-    const isNone = key === 'alerts' && /^none\.?$/i.test(content.trim());
-
-    return (
-      <div key={i} style={{ display: 'flex', gap: 8, padding: '6px 10px', borderRadius: 8, marginBottom: 4, background: isNone ? th.successBg : th.surfaceAlt }}>
-        <span style={{ fontSize: 14, flexShrink: 0, lineHeight: '20px' }}>{isNone ? '✓' : icon}</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: isNone ? th.success : th.accent, marginBottom: 1 }}>{label}</div>
-          <div style={{ fontSize: 13, color: th.text, lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
-        </div>
-      </div>
-    );
-  };
-
-  // For overview card — always expanded, no toggle
+  // Overview card — full width
   if (defaultExpanded) {
     return (
-      <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: '16px 20px', marginBottom: 12 }}>
-        {vm && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: th.text }}>{title}</span>
-            <span style={{ fontSize: 13, color: th.textSecondary }}>— {verdict}</span>
-          </div>
-        )}
-        {bullets.map(renderBullet)}
+      <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: '14px 18px', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: th.text }}>{title || 'Plant Status'}</span>
+          {verdict && <span style={{ fontSize: 13, color: th.textSecondary }}>— {verdict}</span>}
+        </div>
+        {bullets.map((b, i) => <BulletRow key={i} label={b.label} content={b.content} th={th} />)}
       </div>
     );
   }
 
-  // Per-report card — collapsible
+  // Per-report card — always open, compact, NO collapsible
   return (
-    <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, overflow: 'hidden' }}>
-      <button onClick={() => setExpanded(!expanded)} style={{
-        display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left',
-      }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: th.text }}>{title || 'Report'}</span>
-        <span style={{ fontSize: 12, color: th.textMuted }}>{verdict}</span>
-        {expanded ? <ChevronUp size={14} style={{ color: th.textMuted }} /> : <ChevronDown size={14} style={{ color: th.textMuted }} />}
-      </button>
-      <AnimatePresence>
-        {expanded && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-            style={{ padding: '0 16px 12px', overflow: 'hidden' }}>
-            {bullets.map(renderBullet)}
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '10px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: bullets.length ? 6 : 0 }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0, position: 'relative', top: 1 }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: th.text }}>{title}</span>
+        {verdict && <span style={{ fontSize: 11, color: th.textMuted, flex: 1 }}>{verdict}</span>}
+      </div>
+      {bullets.map((b, i) => <BulletRow key={i} label={b.label} content={b.content} th={th} />)}
+    </div>
+  );
     </div>
   );
 }
@@ -476,12 +470,96 @@ export default function HerculesAISetup() {
                 {insightsResult.tags_analyzed ? ` • ${insightsResult.tags_analyzed} tags analyzed` : ''}
               </p>
             )}
-            {/* Overview card */}
-            {insightsResult.overview && <InsightCard text={insightsResult.overview} th={th} defaultExpanded />}
 
-            {/* Per-report cards */}
+            {/* ── Dashboard Grid: Overview left, Equipment chart right ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: charts?.equipment ? '1fr 300px' : '1fr', gap: 12, marginBottom: 12 }}>
+              {/* Overview insights */}
+              {insightsResult.overview && <InsightCard text={insightsResult.overview} th={th} defaultExpanded />}
+
+              {/* Equipment donut — compact */}
+              {charts?.equipment && (() => {
+                const onCount = charts.equipment.states.filter(Boolean).length;
+                const offCount = charts.equipment.states.length - onCount;
+                return (
+                  <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: th.textSecondary, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Equipment</p>
+                    <div style={{ width: 120, height: 120, position: 'relative' }}>
+                      <Doughnut data={{
+                        labels: ['Running', 'Stopped'],
+                        datasets: [{ data: [onCount, offCount], backgroundColor: ['#059669', '#dc2626'], borderWidth: 0, cutout: '72%' }],
+                      }} options={{ plugins: { legend: { display: false }, tooltip: { enabled: true } }, responsive: true, maintainAspectRatio: true }} />
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 22, fontWeight: 800, color: th.text }}>{onCount}/{charts.equipment.states.length}</span>
+                        <span style={{ fontSize: 9, color: th.textMuted }}>RUNNING</span>
+                      </div>
+                    </div>
+                    {/* List */}
+                    <div style={{ width: '100%', marginTop: 10 }}>
+                      {charts.equipment.labels.map((label, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0', fontSize: 10 }}>
+                          <span style={{ color: th.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{label}</span>
+                          <span style={{ fontWeight: 700, color: charts.equipment.states[i] ? '#059669' : '#dc2626', fontSize: 9 }}>
+                            {charts.equipment.states[i] ? 'ON' : 'OFF'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* ── Charts row: Production + Rates side by side ── */}
+            {charts && (charts.production || charts.rates) && (
+              <div style={{ display: 'grid', gridTemplateColumns: charts.production && charts.rates ? '1fr 1fr' : '1fr', gap: 12, marginBottom: 12 }}>
+                {charts.production && (
+                  <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: '14px 16px' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: th.textSecondary, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Production Output</p>
+                    <Bar data={{
+                      labels: charts.production.labels,
+                      datasets: [
+                        { label: 'Current', data: charts.production.current, backgroundColor: '#0369a1', borderRadius: 4, barThickness: 18 },
+                        ...(charts.production.previous?.some(v => v > 0)
+                          ? [{ label: 'Previous', data: charts.production.previous, backgroundColor: '#cbd5e1', borderRadius: 4, barThickness: 18 }]
+                          : []),
+                      ],
+                    }} options={{
+                      responsive: true, maintainAspectRatio: true, aspectRatio: 1.8,
+                      plugins: { legend: { position: 'top', align: 'end', labels: { color: th.textMuted, font: { size: 10 }, boxWidth: 10, padding: 8 } } },
+                      scales: {
+                        x: { ticks: { color: th.textMuted, font: { size: 9 }, maxRotation: 40 }, grid: { display: false } },
+                        y: { ticks: { color: th.textMuted, font: { size: 9 }, callback: (v) => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v }, grid: { color: th.border + '30' } },
+                      },
+                    }} />
+                  </div>
+                )}
+                {charts.rates && (
+                  <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: '14px 16px' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: th.textSecondary, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Flow Rates</p>
+                    <Bar data={{
+                      labels: charts.rates.labels,
+                      datasets: [
+                        { label: 'Current', data: charts.rates.current, backgroundColor: '#0891b2', borderRadius: 4, barThickness: 18 },
+                        ...(charts.rates.previous?.some(v => v > 0)
+                          ? [{ label: 'Previous', data: charts.rates.previous, backgroundColor: '#cbd5e1', borderRadius: 4, barThickness: 18 }]
+                          : []),
+                      ],
+                    }} options={{
+                      responsive: true, maintainAspectRatio: true, aspectRatio: 1.8,
+                      plugins: { legend: { position: 'top', align: 'end', labels: { color: th.textMuted, font: { size: 10 }, boxWidth: 10, padding: 8 } } },
+                      scales: {
+                        x: { ticks: { color: th.textMuted, font: { size: 9 }, maxRotation: 40 }, grid: { display: false } },
+                        y: { ticks: { color: th.textMuted, font: { size: 9 } }, grid: { color: th.border + '30' } },
+                      },
+                    }} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Per-report insights — flat grid, all visible ── */}
             {insightsResult.reports?.length > 0 && (
-              <div style={{ display: 'grid', gridTemplateColumns: insightsResult.reports.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: 10, marginTop: 4 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
                 {insightsResult.reports.map((r, i) => (
                   <InsightCard key={r.id || i} text={r.summary} th={th} name={r.name} />
                 ))}
@@ -492,91 +570,6 @@ export default function HerculesAISetup() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, fontSize: 11, color: th.textMuted }}>
               <span>{insightsResult.tags_analyzed} tags analyzed</span>
               <span>Generated just now</span>
-            </div>
-
-            {/* ── Charts (auto-loaded with insights) ── */}
-            <div style={{ marginTop: 20 }}>
-
-              {chartError && (
-                <div style={{ padding: '8px 14px', borderRadius: 8, background: th.dangerBg, color: th.danger, fontSize: 12, fontWeight: 600, marginBottom: 12 }}>
-                  {chartError}
-                </div>
-              )}
-
-              {charts && (charts.production || charts.equipment || charts.rates) && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
-
-                  {charts.production && (
-                    <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: 16 }}>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: th.text, marginBottom: 12, marginTop: 0 }}>Production Output</p>
-                      <Bar data={{
-                        labels: charts.production.labels,
-                        datasets: [
-                          { label: 'Current', data: charts.production.current, backgroundColor: '#0369a1', borderRadius: 4 },
-                          ...(charts.production.previous?.some(v => v > 0)
-                            ? [{ label: 'Previous', data: charts.production.previous, backgroundColor: '#94a3b8', borderRadius: 4 }]
-                            : []),
-                        ],
-                      }} options={{
-                        responsive: true,
-                        plugins: { legend: { labels: { color: th.textSecondary, font: { size: 11 } } } },
-                        scales: {
-                          x: { ticks: { color: th.textMuted, font: { size: 10 }, maxRotation: 45 }, grid: { display: false } },
-                          y: { ticks: { color: th.textMuted, font: { size: 10 }, callback: (v) => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v }, grid: { color: th.border + '40' } },
-                        },
-                      }} />
-                    </div>
-                  )}
-
-                  {charts.equipment && (
-                    <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: 16 }}>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: th.text, marginBottom: 12, marginTop: 0 }}>Equipment Status</p>
-                      <Bar data={{
-                        labels: charts.equipment.labels,
-                        datasets: [{
-                          data: charts.equipment.states.map(() => 1),
-                          backgroundColor: charts.equipment.states.map(s => s ? '#059669' : '#dc2626'),
-                          borderRadius: 4,
-                        }],
-                      }} options={{
-                        indexAxis: 'y',
-                        responsive: true,
-                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => charts.equipment.states[ctx.dataIndex] ? 'ON' : 'OFF' } } },
-                        scales: {
-                          x: { display: false, max: 1 },
-                          y: { ticks: { color: th.textSecondary, font: { size: 10 } }, grid: { display: false } },
-                        },
-                      }} />
-                    </div>
-                  )}
-
-                  {charts.rates && (
-                    <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: 16 }}>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: th.text, marginBottom: 12, marginTop: 0 }}>Rate Comparison</p>
-                      <Bar data={{
-                        labels: charts.rates.labels,
-                        datasets: [
-                          { label: 'Current', data: charts.rates.current, backgroundColor: '#0891b2', borderRadius: 4 },
-                          ...(charts.rates.previous?.some(v => v > 0)
-                            ? [{ label: 'Previous', data: charts.rates.previous, backgroundColor: '#94a3b8', borderRadius: 4 }]
-                            : []),
-                        ],
-                      }} options={{
-                        responsive: true,
-                        plugins: { legend: { labels: { color: th.textSecondary, font: { size: 11 } } } },
-                        scales: {
-                          x: { ticks: { color: th.textMuted, font: { size: 10 }, maxRotation: 45 }, grid: { display: false } },
-                          y: { ticks: { color: th.textMuted, font: { size: 10 } }, grid: { color: th.border + '40' } },
-                        },
-                      }} />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {charts && !charts.production && !charts.equipment && !charts.rates && (
-                <p style={{ fontSize: 12, color: th.textMuted }}>No charts to generate — need counter, boolean, or rate tags.</p>
-              )}
             </div>
           </motion.div>
         )}
