@@ -285,6 +285,7 @@ export default function HerculesAISetup() {
   }, [dateRange, selectedReportIds]);
 
   const loadCharts = useCallback(async () => {
+    if (!dateRange) return;
     setLoadingCharts(true);
     setChartError(null);
     try {
@@ -446,8 +447,8 @@ export default function HerculesAISetup() {
                 <h3 style={{ fontSize: 14, fontWeight: 700, color: th.text, display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
                   <span style={{ color: th.accent }}>Chart Preview</span>
                 </h3>
-                <button onClick={loadCharts} disabled={loadingCharts}
-                  style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, border: `1px solid ${th.border}`, background: th.surfaceAlt, color: th.textSecondary, fontWeight: 600, cursor: 'pointer', opacity: loadingCharts ? 0.5 : 1 }}>
+                <button onClick={loadCharts} disabled={loadingCharts || !dateRange}
+                  style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, border: `1px solid ${th.border}`, background: th.surfaceAlt, color: th.textSecondary, fontWeight: 600, cursor: 'pointer', opacity: (loadingCharts || !dateRange) ? 0.5 : 1 }}>
                   {loadingCharts ? 'Generating...' : 'Generate Charts'}
                 </button>
               </div>
