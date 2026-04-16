@@ -80,25 +80,28 @@ function useCountUp(target, duration = 800) {
 }
 
 /* ── Render AI markdown → styled React nodes ─────────────────────────────── */
-function InsightCard({ text, th, defaultExpanded = false }) {
+function InsightCard({ text, th, defaultExpanded = false, name = '' }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   if (!text) return null;
 
   const lines = text.split('\n').filter(l => l.trim());
   if (!lines.length) return null;
 
-  // Parse verdict line
+  // Parse verdict line: **Title** — verdict
   const first = lines[0];
   const vm = first.match(/\*\*(.+?)\*\*\s*[—–-]\s*(.+)/);
-  let title = '', verdict = '', dotColor = '#059669';
+  let title = name, verdict = '', dotColor = '#059669';
   if (vm) {
     title = vm[1]; verdict = vm[2];
-    const vl = verdict.toLowerCase();
-    if (/stopped|no data|offline|down/.test(vl)) dotColor = '#dc2626';
-    else if (/reduced|low|partial|warning/.test(vl)) dotColor = '#d97706';
+  } else {
+    // No markdown title — treat first line as verdict
+    verdict = first.replace(/\*\*/g, '').trim();
   }
+  const vl = verdict.toLowerCase();
+  if (/stopped|no data|offline|down|critical|fault|zero/.test(vl)) dotColor = '#dc2626';
+  else if (/reduced|low|partial|warning|idle|standby/.test(vl)) dotColor = '#d97706';
 
-  const bullets = lines.slice(vm ? 1 : 0);
+  const bullets = lines.slice(vm ? 1 : 0).filter(l => /[•\-]/.test(l));
   const ICONS = { production: '📦', energy: '⚡', status: '⚙', alerts: '⚠', flow: '💧' };
 
   const renderBullet = (line, i) => {
@@ -282,7 +285,18 @@ export default function HerculesAISetup() {
       });
       const data = res.data || res;
       if (data.error) { setInsightsError(data.error); }
-      else { setInsightsResult(data); }
+      else {
+        setInsightsResult(data);
+        // Auto-load charts alongside insights
+        try {
+          const chartRes = await herculesAIApi.chartData({
+            report_ids: selectedReportIds,
+            from: dateRange.from.toISOString(),
+            to: dateRange.to.toISOString(),
+          });
+          setCharts(chartRes.data || {});
+        } catch (_) { /* charts are optional */ }
+      }
     } catch (e) {
       setInsightsError(e.response?.data?.error || e.response?.data?.message || e.message || 'Analysis failed');
     } finally { setAnalyzing(false); }
@@ -469,7 +483,7 @@ export default function HerculesAISetup() {
             {insightsResult.reports?.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: insightsResult.reports.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: 10, marginTop: 4 }}>
                 {insightsResult.reports.map((r, i) => (
-                  <InsightCard key={r.id || i} text={`${r.summary}`} th={th} />
+                  <InsightCard key={r.id || i} text={r.summary} th={th} name={r.name} />
                 ))}
               </div>
             )}
@@ -480,17 +494,8 @@ export default function HerculesAISetup() {
               <span>Generated just now</span>
             </div>
 
-            {/* ── Chart Preview ── */}
-            <div style={{ marginTop: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: th.text, display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-                  <span style={{ color: th.accent }}>Chart Preview</span>
-                </h3>
-                <button onClick={loadCharts} disabled={loadingCharts || !dateRange}
-                  style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, border: `1px solid ${th.border}`, background: th.surfaceAlt, color: th.textSecondary, fontWeight: 600, cursor: 'pointer', opacity: (loadingCharts || !dateRange) ? 0.5 : 1 }}>
-                  {loadingCharts ? 'Generating...' : 'Generate Charts'}
-                </button>
-              </div>
+            {/* ── Charts (auto-loaded with insights) ── */}
+            <div style={{ marginTop: 20 }}>
 
               {chartError && (
                 <div style={{ padding: '8px 14px', borderRadius: 8, background: th.dangerBg, color: th.danger, fontSize: 12, fontWeight: 600, marginBottom: 12 }}>

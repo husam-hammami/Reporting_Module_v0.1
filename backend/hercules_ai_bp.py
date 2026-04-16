@@ -926,6 +926,24 @@ def _safe_float(val):
         return None
 
 
+def _humanize_tag_name(tag_name):
+    """Convert raw PLC tag name to readable label.
+
+    MilB_C32_Total_Kwh → C32 Total Kwh
+    B1_Deopt_Emptying → B1 Deopt Emptying
+    """
+    name = re.sub(r'^(?:Mil(?:l)?[_ ]?[A-Z]?[_ ]?)', '', tag_name)
+    name = name.replace('_', ' ').strip()
+    parts = name.split()
+    result = []
+    for p in parts:
+        if p.isupper() or re.match(r'^[A-Z]\d', p):
+            result.append(p)
+        else:
+            result.append(p.capitalize())
+    return ' '.join(result) or tag_name
+
+
 def _collect_tag_data_for_period(report_ids, from_dt, to_dt):
     """Shared helper: load templates, fetch current + previous period tag data.
 
@@ -1259,11 +1277,13 @@ def generate_insights():
             lines = part.strip().split('\n', 1)
             rname = lines[0].replace('---', '').strip()
             rsummary = lines[1].strip() if len(lines) > 1 else ''
+            if not rsummary:
+                continue  # Skip reports with no insights
             # Match to template
             matched = next((r for r in report_map if r['name'].lower() == rname.lower()), None)
             report_summaries.append({
                 'id': matched['id'] if matched else None,
-                'name': rname,
+                'name': matched['name'] if matched else rname,
                 'summary': rsummary,
             })
 
@@ -1377,7 +1397,7 @@ def chart_data():
         agg = key.split('::')[0] if '::' in key else 'last'
         profile = profiles.get(tag_name, {})
         tag_type = profile.get('tag_type', 'unknown')
-        label = profile.get('label') or tag_name
+        label = profile.get('label') or _humanize_tag_name(tag_name)
         unit = profile.get('unit', '')
         prev_val = prev_tag_data.get(key)
 
