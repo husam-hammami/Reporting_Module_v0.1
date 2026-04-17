@@ -142,10 +142,21 @@ function InsightCard({ text, th, defaultExpanded = false, name = '' }) {
     );
   }
 
-  // Per-report card — always open, compact, NO collapsible
+  // Per-report card — compact, no collapsible
+  // Reports with no real bullets get a minimal inline treatment
+  if (!bullets.length) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: th.surface, border: `1px solid ${th.border}`, borderRadius: 8 }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: th.text }}>{title}</span>
+        {verdict && <span style={{ fontSize: 11, color: th.textMuted }}>— {verdict}</span>}
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '10px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: bullets.length ? 6 : 0 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
         <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0, position: 'relative', top: 1 }} />
         <span style={{ fontSize: 13, fontWeight: 700, color: th.text }}>{title}</span>
         {verdict && <span style={{ fontSize: 11, color: th.textMuted, flex: 1 }}>{verdict}</span>}

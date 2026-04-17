@@ -145,7 +145,7 @@ def _score_power(tag_data, prev_tag_data, profiles):
             is_pf = True
 
         # Power tags detection
-        if unit in ('kva', 'kw', 'kwh', 'mwh', 'w'):
+        if unit in ('kva', 'kw', 'kwh', 'mwh', 'w', 'kvah', 'kvarh', 'kvar', 'mvar', 'mvah', 'mvarh'):
             is_power = True
 
         if not is_pf and not is_power:
@@ -258,14 +258,14 @@ def _compute_efficiency(tag_data, prev_tag_data, profiles):
                 if prev_val is not None:
                     prev_production_kg += prev_val * 1000
 
-        # Energy tags
-        if unit in ('kwh', 'kw/h', 'kilowatt-hour', 'kilowatt-hours'):
-            if agg_prefix == 'delta':
+        # Energy tags — match all electrical energy units
+        if agg_prefix == 'delta':
+            if unit in ('kwh', 'kw/h', 'kilowatt-hour', 'kilowatt-hours',
+                        'kvah', 'kva/h', 'kvarh', 'kvar/h'):
                 total_energy_kwh += current
                 if prev_val is not None:
                     prev_energy_kwh += prev_val
-        elif unit in ('mwh', 'megawatt-hour'):
-            if agg_prefix == 'delta':
+            elif unit in ('mwh', 'megawatt-hour', 'mvah', 'mvarh'):
                 total_energy_kwh += current * 1000
                 if prev_val is not None:
                     prev_energy_kwh += prev_val * 1000
