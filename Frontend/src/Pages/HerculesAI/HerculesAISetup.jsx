@@ -10,6 +10,7 @@ import TimePeriodTabs from '../Reports/TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
+import { BriefingView } from './BriefingView';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -529,172 +530,26 @@ export default function HerculesAISetup() {
               </div>
             )}
 
-            {/* ── 2. "What happened?" — AI Verdict + Equipment donut ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: charts?.equipment ? '1fr 240px' : '1fr', gap: 10, marginBottom: 12 }}>
-              {insightsResult.overview && <InsightCard text={insightsResult.overview} th={th} defaultExpanded />}
-
-              {charts?.equipment && (() => {
-                const onCount = charts.equipment.states.filter(Boolean).length;
-                const offCount = charts.equipment.states.length - onCount;
-                return (
-                  <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <p style={{ fontSize: 9, fontWeight: 700, color: th.textSecondary, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Equipment</p>
-                    <div style={{ width: 70, height: 70, position: 'relative' }}>
-                      <Doughnut data={{
-                        labels: ['Running', 'Stopped'],
-                        datasets: [{ data: [onCount, offCount], backgroundColor: ['#059669', '#dc2626'], borderWidth: 0, cutout: '72%' }],
-                      }} options={{ plugins: { legend: { display: false }, tooltip: { enabled: true } }, responsive: true, maintainAspectRatio: true }} />
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: th.text }}>{onCount}/{charts.equipment.states.length}</span>
-                      </div>
-                    </div>
-                    <div style={{ width: '100%', marginTop: 6 }}>
-                      {charts.equipment.labels.map((label, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1px 0', fontSize: 9 }}>
-                          <span style={{ color: th.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>{label}</span>
-                          <span style={{ fontWeight: 700, color: charts.equipment.states[i] ? '#059669' : '#dc2626', fontSize: 8 }}>
-                            {charts.equipment.states[i] ? 'ON' : 'OFF'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* ── 3. "Show me proof" — Production + Flow charts ── */}
-            {charts && (charts.production || charts.rates) && (
-              <div style={{ display: 'grid', gridTemplateColumns: charts.production && charts.rates ? '1fr 1fr' : '1fr', gap: 10, marginBottom: 12 }}>
-                {charts.production && (
-                  <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '10px 14px' }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: th.textSecondary, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Production Output</p>
-                    <Bar data={{
-                      labels: charts.production.labels,
-                      datasets: [
-                        { label: 'Current', data: charts.production.current, backgroundColor: '#0369a1', borderRadius: 3, barThickness: 14 },
-                        ...(charts.production.previous?.some(v => v > 0)
-                          ? [{ label: 'Previous', data: charts.production.previous, backgroundColor: '#cbd5e1', borderRadius: 3, barThickness: 14 }]
-                          : []),
-                      ],
-                    }} options={{
-                      responsive: true, maintainAspectRatio: true, aspectRatio: 2.0,
-                      plugins: { legend: { position: 'top', align: 'end', labels: { color: th.textMuted, font: { size: 9 }, boxWidth: 8, padding: 6 } } },
-                      scales: {
-                        x: { ticks: { color: th.textMuted, font: { size: 8 }, maxRotation: 40 }, grid: { display: false } },
-                        y: { ticks: { color: th.textMuted, font: { size: 8 }, callback: (v) => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v }, grid: { color: th.border + '30' } },
-                      },
-                    }} />
-                  </div>
-                )}
-                {charts.rates && (
-                  <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '10px 14px' }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: th.textSecondary, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Flow Rates</p>
-                    <Bar data={{
-                      labels: charts.rates.labels,
-                      datasets: [
-                        { label: 'Current', data: charts.rates.current, backgroundColor: '#0891b2', borderRadius: 3, barThickness: 14 },
-                        ...(charts.rates.previous?.some(v => v > 0)
-                          ? [{ label: 'Previous', data: charts.rates.previous, backgroundColor: '#cbd5e1', borderRadius: 3, barThickness: 14 }]
-                          : []),
-                      ],
-                    }} options={{
-                      responsive: true, maintainAspectRatio: true, aspectRatio: 2.0,
-                      plugins: { legend: { position: 'top', align: 'end', labels: { color: th.textMuted, font: { size: 9 }, boxWidth: 8, padding: 6 } } },
-                      scales: {
-                        x: { ticks: { color: th.textMuted, font: { size: 8 }, maxRotation: 40 }, grid: { display: false } },
-                        y: { ticks: { color: th.textMuted, font: { size: 8 } }, grid: { color: th.border + '30' } },
-                      },
-                    }} />
-                  </div>
-                )}
+            {/* ── 2-6. New briefing (schema v3) or legacy fallback ── */}
+            {insightsResult.schema_version === 3 ? (
+              <div style={{ marginTop: 4 }}>
+                <BriefingView
+                  data={insightsResult}
+                  onDrill={(ref) => {
+                    // eslint-disable-next-line no-console
+                    console.log('[briefing] drill', ref);
+                  }}
+                />
               </div>
+            ) : (
+              <LegacyBriefingBody
+                insightsResult={insightsResult}
+                charts={charts}
+                withContent={withContent}
+                noContent={noContent}
+                th={th}
+              />
             )}
-
-            {/* ── 4. "Details?" — Per-report cards (with findings) + compact badges (no findings) ── */}
-            {withContent.length > 0 && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10, marginBottom: noContent.length > 0 ? 8 : 12 }}>
-                {withContent.map((r, i) => (
-                  <InsightCard key={r.id || i} text={r.summary} th={th} name={r.name} />
-                ))}
-              </div>
-            )}
-            {noContent.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, alignItems: 'center' }}>
-                {noContent.map((r, i) => {
-                  const first = r.summary?.split('\n').find(l => l.trim()) || '';
-                  const vm = first.match(/\*\*(.+?)\*\*\s*[—–-]\s*(.+)/);
-                  const verdict = vm ? vm[2] : first.replace(/\*\*/g, '').trim();
-                  const dotColor = parseVerdict(verdict);
-                  return (
-                    <span key={r.id || i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: th.textSecondary, padding: '3px 0' }}>
-                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-                      <span style={{ fontWeight: 600, color: th.text }}>{r.name}</span>
-                      {verdict && <span style={{ color: th.textMuted }}>{verdict}</span>}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* ── 5. "Raw data?" — Comparison table (collapsed by default, max 15 rows) ── */}
-            {insightsResult.comparison?.length > 0 && (
-              <details style={{ marginTop: 4 }}>
-                <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 700, color: th.text, padding: '6px 0', userSelect: 'none' }}>
-                  Detailed Comparison ({insightsResult.comparison.length} tags)
-                </summary>
-                <div style={{ overflowX: 'auto', marginTop: 6 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-                    <thead>
-                      <tr style={{ borderBottom: `2px solid ${th.border}` }}>
-                        <th style={{ textAlign: 'left', padding: '5px 8px', color: th.textSecondary, fontWeight: 600 }}>Tag</th>
-                        <th style={{ textAlign: 'left', padding: '5px 8px', color: th.textSecondary, fontWeight: 600 }}>Line</th>
-                        <th style={{ textAlign: 'right', padding: '5px 8px', color: th.textSecondary, fontWeight: 600 }}>Current</th>
-                        <th style={{ textAlign: 'right', padding: '5px 8px', color: th.textSecondary, fontWeight: 600 }}>Previous</th>
-                        <th style={{ textAlign: 'right', padding: '5px 8px', color: th.textSecondary, fontWeight: 600 }}>Change</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {insightsResult.comparison.slice(0, 15).map((row, i) => {
-                        const changeColor = row.change_pct == null ? th.textMuted
-                          : row.change_pct > 5 ? '#059669'
-                          : row.change_pct < -5 ? '#dc2626'
-                          : th.textSecondary;
-                        return (
-                          <tr key={i} style={{ borderBottom: `1px solid ${th.border}`, background: i % 2 === 0 ? 'transparent' : th.surfaceAlt }}>
-                            <td style={{ padding: '4px 8px', color: th.text, fontWeight: 500 }}>
-                              {row.label}
-                              {row.unit && <span style={{ color: th.textMuted, marginLeft: 4, fontSize: 9 }}>{row.unit}</span>}
-                            </td>
-                            <td style={{ padding: '4px 8px', color: th.textMuted }}>{row.line}</td>
-                            <td style={{ padding: '4px 8px', textAlign: 'right', color: th.text, fontFamily: 'monospace' }}>
-                              {row.current != null ? row.current.toLocaleString() : '\u2014'}
-                            </td>
-                            <td style={{ padding: '4px 8px', textAlign: 'right', color: th.textMuted, fontFamily: 'monospace' }}>
-                              {row.previous != null ? row.previous.toLocaleString() : '\u2014'}
-                            </td>
-                            <td style={{ padding: '4px 8px', textAlign: 'right', color: changeColor, fontWeight: 600, fontFamily: 'monospace' }}>
-                              {row.change_pct != null ? `${row.change_pct > 0 ? '+' : ''}${row.change_pct}%` : '\u2014'}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  {insightsResult.comparison.length > 15 && (
-                    <div style={{ fontSize: 10, color: th.textMuted, padding: '4px 8px', fontStyle: 'italic' }}>
-                      +{insightsResult.comparison.length - 15} more tags
-                    </div>
-                  )}
-                </div>
-              </details>
-            )}
-
-            {/* ── 6. Footer — single line ── */}
-            <div style={{ marginTop: 10, fontSize: 10, color: th.textMuted, textAlign: 'center' }}>
-              {insightsResult.tags_analyzed ? `${insightsResult.tags_analyzed} tags analyzed` : ''}
-              {insightsResult.period ? ` \u00b7 ${new Date(insightsResult.period.from).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} \u2014 ${new Date(insightsResult.period.to).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}
-            </div>
           </motion.div>
           );
         })()}
@@ -881,5 +736,184 @@ function ProviderForm({ th, provider, setProvider, apiKey, setApiKey, showKey, s
         </motion.div>
       )}
     </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEGACY BRIEFING BODY — preserved for schema_version !== 3 fallback.
+   Renders the pre-Plan-1 layout (overview + equipment donut + charts +
+   per-report cards + comparison table + footer). Will be removed once the
+   new schema is stable in production.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function LegacyBriefingBody({ insightsResult, charts, withContent, noContent, th }) {
+  return (
+    <>
+      {/* ── 2. "What happened?" — AI Verdict + Equipment donut ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: charts?.equipment ? '1fr 240px' : '1fr', gap: 10, marginBottom: 12 }}>
+        {insightsResult.overview && <InsightCard text={insightsResult.overview} th={th} defaultExpanded />}
+
+        {charts?.equipment && (() => {
+          const onCount = charts.equipment.states.filter(Boolean).length;
+          const offCount = charts.equipment.states.length - onCount;
+          return (
+            <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <p style={{ fontSize: 9, fontWeight: 700, color: th.textSecondary, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Equipment</p>
+              <div style={{ width: 70, height: 70, position: 'relative' }}>
+                <Doughnut data={{
+                  labels: ['Running', 'Stopped'],
+                  datasets: [{ data: [onCount, offCount], backgroundColor: ['#059669', '#dc2626'], borderWidth: 0, cutout: '72%' }],
+                }} options={{ plugins: { legend: { display: false }, tooltip: { enabled: true } }, responsive: true, maintainAspectRatio: true }} />
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: th.text }}>{onCount}/{charts.equipment.states.length}</span>
+                </div>
+              </div>
+              <div style={{ width: '100%', marginTop: 6 }}>
+                {charts.equipment.labels.map((label, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1px 0', fontSize: 9 }}>
+                    <span style={{ color: th.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>{label}</span>
+                    <span style={{ fontWeight: 700, color: charts.equipment.states[i] ? '#059669' : '#dc2626', fontSize: 8 }}>
+                      {charts.equipment.states[i] ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* ── 3. "Show me proof" — Production + Flow charts ── */}
+      {charts && (charts.production || charts.rates) && (
+        <div style={{ display: 'grid', gridTemplateColumns: charts.production && charts.rates ? '1fr 1fr' : '1fr', gap: 10, marginBottom: 12 }}>
+          {charts.production && (
+            <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '10px 14px' }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: th.textSecondary, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Production Output</p>
+              <Bar data={{
+                labels: charts.production.labels,
+                datasets: [
+                  { label: 'Current', data: charts.production.current, backgroundColor: '#0369a1', borderRadius: 3, barThickness: 14 },
+                  ...(charts.production.previous?.some(v => v > 0)
+                    ? [{ label: 'Previous', data: charts.production.previous, backgroundColor: '#cbd5e1', borderRadius: 3, barThickness: 14 }]
+                    : []),
+                ],
+              }} options={{
+                responsive: true, maintainAspectRatio: true, aspectRatio: 2.0,
+                plugins: { legend: { position: 'top', align: 'end', labels: { color: th.textMuted, font: { size: 9 }, boxWidth: 8, padding: 6 } } },
+                scales: {
+                  x: { ticks: { color: th.textMuted, font: { size: 8 }, maxRotation: 40 }, grid: { display: false } },
+                  y: { ticks: { color: th.textMuted, font: { size: 8 }, callback: (v) => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v }, grid: { color: th.border + '30' } },
+                },
+              }} />
+            </div>
+          )}
+          {charts.rates && (
+            <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '10px 14px' }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: th.textSecondary, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Flow Rates</p>
+              <Bar data={{
+                labels: charts.rates.labels,
+                datasets: [
+                  { label: 'Current', data: charts.rates.current, backgroundColor: '#0891b2', borderRadius: 3, barThickness: 14 },
+                  ...(charts.rates.previous?.some(v => v > 0)
+                    ? [{ label: 'Previous', data: charts.rates.previous, backgroundColor: '#cbd5e1', borderRadius: 3, barThickness: 14 }]
+                    : []),
+                ],
+              }} options={{
+                responsive: true, maintainAspectRatio: true, aspectRatio: 2.0,
+                plugins: { legend: { position: 'top', align: 'end', labels: { color: th.textMuted, font: { size: 9 }, boxWidth: 8, padding: 6 } } },
+                scales: {
+                  x: { ticks: { color: th.textMuted, font: { size: 8 }, maxRotation: 40 }, grid: { display: false } },
+                  y: { ticks: { color: th.textMuted, font: { size: 8 } }, grid: { color: th.border + '30' } },
+                },
+              }} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 4. "Details?" — Per-report cards (with findings) + compact badges (no findings) ── */}
+      {withContent.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10, marginBottom: noContent.length > 0 ? 8 : 12 }}>
+          {withContent.map((r, i) => (
+            <InsightCard key={r.id || i} text={r.summary} th={th} name={r.name} />
+          ))}
+        </div>
+      )}
+      {noContent.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, alignItems: 'center' }}>
+          {noContent.map((r, i) => {
+            const first = r.summary?.split('\n').find(l => l.trim()) || '';
+            const vm = first.match(/\*\*(.+?)\*\*\s*[—–-]\s*(.+)/);
+            const verdict = vm ? vm[2] : first.replace(/\*\*/g, '').trim();
+            const dotColor = parseVerdict(verdict);
+            return (
+              <span key={r.id || i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: th.textSecondary, padding: '3px 0' }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                <span style={{ fontWeight: 600, color: th.text }}>{r.name}</span>
+                {verdict && <span style={{ color: th.textMuted }}>{verdict}</span>}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── 5. "Raw data?" — Comparison table (collapsed by default, max 15 rows) ── */}
+      {insightsResult.comparison?.length > 0 && (
+        <details style={{ marginTop: 4 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 700, color: th.text, padding: '6px 0', userSelect: 'none' }}>
+            Detailed Comparison ({insightsResult.comparison.length} tags)
+          </summary>
+          <div style={{ overflowX: 'auto', marginTop: 6 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+              <thead>
+                <tr style={{ borderBottom: `2px solid ${th.border}` }}>
+                  <th style={{ textAlign: 'left', padding: '5px 8px', color: th.textSecondary, fontWeight: 600 }}>Tag</th>
+                  <th style={{ textAlign: 'left', padding: '5px 8px', color: th.textSecondary, fontWeight: 600 }}>Line</th>
+                  <th style={{ textAlign: 'right', padding: '5px 8px', color: th.textSecondary, fontWeight: 600 }}>Current</th>
+                  <th style={{ textAlign: 'right', padding: '5px 8px', color: th.textSecondary, fontWeight: 600 }}>Previous</th>
+                  <th style={{ textAlign: 'right', padding: '5px 8px', color: th.textSecondary, fontWeight: 600 }}>Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {insightsResult.comparison.slice(0, 15).map((row, i) => {
+                  const changeColor = row.change_pct == null ? th.textMuted
+                    : row.change_pct > 5 ? '#059669'
+                    : row.change_pct < -5 ? '#dc2626'
+                    : th.textSecondary;
+                  return (
+                    <tr key={i} style={{ borderBottom: `1px solid ${th.border}`, background: i % 2 === 0 ? 'transparent' : th.surfaceAlt }}>
+                      <td style={{ padding: '4px 8px', color: th.text, fontWeight: 500 }}>
+                        {row.label}
+                        {row.unit && <span style={{ color: th.textMuted, marginLeft: 4, fontSize: 9 }}>{row.unit}</span>}
+                      </td>
+                      <td style={{ padding: '4px 8px', color: th.textMuted }}>{row.line}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', color: th.text, fontFamily: 'monospace' }}>
+                        {row.current != null ? row.current.toLocaleString() : '\u2014'}
+                      </td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', color: th.textMuted, fontFamily: 'monospace' }}>
+                        {row.previous != null ? row.previous.toLocaleString() : '\u2014'}
+                      </td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', color: changeColor, fontWeight: 600, fontFamily: 'monospace' }}>
+                        {row.change_pct != null ? `${row.change_pct > 0 ? '+' : ''}${row.change_pct}%` : '\u2014'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {insightsResult.comparison.length > 15 && (
+              <div style={{ fontSize: 10, color: th.textMuted, padding: '4px 8px', fontStyle: 'italic' }}>
+                +{insightsResult.comparison.length - 15} more tags
+              </div>
+            )}
+          </div>
+        </details>
+      )}
+
+      {/* ── 6. Footer — single line ── */}
+      <div style={{ marginTop: 10, fontSize: 10, color: th.textMuted, textAlign: 'center' }}>
+        {insightsResult.tags_analyzed ? `${insightsResult.tags_analyzed} tags analyzed` : ''}
+        {insightsResult.period ? ` \u00b7 ${new Date(insightsResult.period.from).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} \u2014 ${new Date(insightsResult.period.to).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}
+      </div>
+    </>
   );
 }

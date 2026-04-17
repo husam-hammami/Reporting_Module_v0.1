@@ -10,7 +10,7 @@ import logging
 import re
 import sys
 from contextlib import closing
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
@@ -1111,13 +1111,338 @@ def _collect_tag_data_for_period(report_ids, from_dt, to_dt):
         return (f'Failed to collect data: {e}', 500)
 
 
+# =============================================================================
+# Structured-briefing helpers (Plan 1 — Phase B)
+# =============================================================================
+
+def _known_assets_from_profiles(profile_map):
+    """Derive the set of valid asset names from tag profiles (line_name)."""
+    assets = set()
+    for p in (profile_map or {}).values():
+        ln = (p.get('line_name') or '').strip()
+        if ln:
+            assets.add(ln)
+    return assets
+
+
+def _build_equipment_strip(all_tag_data, profile_map):
+    """Build the equipment strip: up to 10 boolean-tagged assets."""
+    items = []
+    seen_lines = set()
+    now_iso = datetime.now().isoformat()
+    for key, val in (all_tag_data or {}).items():
+        tag_name = key.split('::')[-1] if '::' in key else key
+        prof = (profile_map or {}).get(tag_name) or {}
+        if prof.get('tag_type') != 'boolean':
+            continue
+        line_name = (prof.get('line_name') or '').strip()
+        if not line_name or line_name in seen_lines:
+            continue
+        seen_lines.add(line_name)
+
+        is_on = False
+        try:
+            if isinstance(val, bool):
+                is_on = val
+            elif isinstance(val, (int, float)):
+                is_on = val > 0
+            elif val is not None:
+                is_on = str(val).strip().lower() in ('true', '1', 'on')
+        except Exception:
+            is_on = False
+
+        status = 'ok' if is_on else 'idle'
+        asset_short = (line_name[:4] or 'ASSET').upper()
+        items.append({
+            'asset_short': asset_short,
+            'asset_name': line_name,
+            'status': status,
+            'last_change': now_iso,
+        })
+        if len(items) >= 10:
+            break
+    return items
+
+
+def _build_production_ring(templates, all_tag_data, from_dt, to_dt):
+    """Return production-target ring data, or None if we have no target.
+
+    First ship: we do not have a server-side target registry. Return None so
+    the UI hides the ring gracefully.
+    """
+    return None
+
+
+def _build_timeline(templates, from_dt, to_dt):
+    """Build the timeline strip: order_change events from dynamic_orders table
+    + shift boundaries from shifts_config. OK to return empty events[] if the
+    query fails; UI handles empty gracefully.
+    """
+    events = []
+    shifts = []
+
+    # ── Events: dynamic_orders ──────────────────────────────────────────
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor(cursor_factory=RealDictCursor)
+            # Guard: table may not exist in all deployments
+            cur.execute("""
+                SELECT to_regclass('public.dynamic_orders') AS tbl
+            """)
+            row = cur.fetchone()
+            if row and row.get('tbl'):
+                cur.execute("""
+                    SELECT order_name, status, start_time, end_time
+                    FROM dynamic_orders
+                    WHERE (start_time BETWEEN %s AND %s)
+                       OR (end_time BETWEEN %s AND %s)
+                    ORDER BY COALESCE(start_time, end_time) ASC
+                    LIMIT 16
+                """, (from_dt, to_dt, from_dt, to_dt))
+                for r in cur.fetchall() or []:
+                    ts = r.get('start_time') or r.get('end_time')
+                    if not ts:
+                        continue
+                    events.append({
+                        'timestamp': ts.isoformat() if hasattr(ts, 'isoformat') else str(ts),
+                        'category': 'order_change',
+                        'title': (r.get('order_name') or 'Order change'),
+                        'description': f"status={r.get('status') or 'n/a'}",
+                    })
+            actual.commit()
+    except Exception as e:
+        logger.warning("_build_timeline: dynamic_orders query failed (non-blocking): %s", e)
+
+    # ── Shifts ──────────────────────────────────────────────────────────
+    try:
+        import shifts_config as _shifts_cfg
+        cfg = _shifts_cfg.get_shifts_config() or {}
+        shift_defs = cfg.get('shifts') or []
+
+        # Project shift boundaries across the period
+        day_cursor = from_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_day = to_dt.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        while day_cursor <= end_day and len(shifts) < 32:
+            for s in shift_defs:
+                try:
+                    sh, sm = [int(p) for p in (s.get('start') or '00:00').split(':')[:2]]
+                    eh, em = [int(p) for p in (s.get('end') or '00:00').split(':')[:2]]
+                except Exception:
+                    continue
+                start_dt = day_cursor.replace(hour=sh, minute=sm)
+                end_dt = day_cursor.replace(hour=eh, minute=em)
+                if end_dt <= start_dt:
+                    end_dt += timedelta(days=1)
+                # Keep only boundaries that touch our window
+                if end_dt < from_dt or start_dt > to_dt:
+                    continue
+                shifts.append({
+                    'start': start_dt.isoformat(),
+                    'end': end_dt.isoformat(),
+                    'label': s.get('name') or '',
+                })
+            day_cursor += timedelta(days=1)
+    except Exception as e:
+        logger.warning("_build_timeline: shifts_config read failed (non-blocking): %s", e)
+
+    # Rule 4: truncate events to 16
+    return {'events': events[:16], 'shifts': shifts}
+
+
+def _derive_overview_markdown(sanitised):
+    """Build a short markdown overview from status_hero + top 3 attention_items.
+
+    Used to populate the legacy `overview` field so distribution_engine and
+    the old HerculesAISetup.jsx:534 rendering path keep working.
+    """
+    try:
+        sh = sanitised.get('status_hero') or {}
+        verdict = sh.get('verdict') or 'Briefing ready'
+        lines = [f"**Plant Status** — {verdict}"]
+        items = (sanitised.get('attention_items') or [])[:3]
+        for it in items:
+            asset = it.get('asset', '')
+            headline = it.get('headline', '')
+            bullet = f"• **{asset}**: {headline}" if asset else f"• {headline}"
+            lines.append(bullet)
+        if not items:
+            lines.append("• **Alerts**: None")
+        return '\n\n'.join(lines)
+    except Exception as e:
+        logger.warning("_derive_overview_markdown failed: %s", e)
+        return '**Plant Status** — Briefing ready'
+
+
+def _derive_reports_from_assets(assets, report_map):
+    """Build the legacy `reports: [{id, name, summary}]` list by iterating
+    assets and mapping related_report_ids back to the report registry."""
+    report_by_id = {r['id']: r for r in (report_map or []) if r.get('id') is not None}
+    out = []
+    for a in (assets or []):
+        name = a.get('name', '')
+        notes = a.get('notes') or []
+        summary_parts = []
+        if notes:
+            summary_parts.extend(f"• {n}" for n in notes[:3])
+        hmetrics = a.get('headline_metrics') or []
+        for m in hmetrics[:2]:
+            label = m.get('label') or ''
+            value = m.get('value')
+            unit = m.get('unit') or ''
+            if value is not None:
+                summary_parts.append(f"• {label}: {value} {unit}".rstrip())
+        summary_text = '\n'.join(summary_parts) or f"Status: {a.get('status', 'ok')}"
+        related = a.get('related_report_ids') or []
+        if related:
+            # Emit one row per related report id (keeps old UI happy)
+            for rid in related:
+                r = report_by_id.get(rid)
+                out.append({
+                    'id': rid,
+                    'name': r['name'] if r else name,
+                    'summary': summary_text,
+                })
+        else:
+            out.append({'id': None, 'name': name, 'summary': summary_text})
+    return out
+
+
+def _call_llm_json(prompt_bundle, ai_config, known_assets, period_from,
+                   period_to, max_tokens=2000, timeout=45):
+    """Call the LLM with the JSON-mode prompt, parse + validate, and retry once
+    on validation failure. Returns a sanitised dict (never raises).
+    """
+    import ai_provider
+
+    def _single_call(bundle):
+        text = f"{bundle['system']}\n\n{bundle['user']}"
+        try:
+            return ai_provider.generate(
+                text, ai_config, timeout=timeout, max_tokens=max_tokens
+            )
+        except Exception as e:
+            logger.warning("_call_llm_json: provider raised %s", e)
+            return None
+
+    def _parse_json(raw_text):
+        if not raw_text:
+            return None, 'empty response'
+        s = raw_text.strip()
+        # Strip markdown code fences if the model wrapped the output
+        if s.startswith('```'):
+            s = re.sub(r'^```(?:json)?\s*', '', s)
+            s = re.sub(r'\s*```\s*$', '', s)
+        # Extract the outermost JSON object
+        first = s.find('{')
+        last = s.rfind('}')
+        if first == -1 or last == -1 or last <= first:
+            return None, 'no JSON object found'
+        try:
+            return json.loads(s[first:last + 1]), None
+        except Exception as e:
+            return None, f'JSON parse failed: {e}'
+
+    raw = _single_call(prompt_bundle)
+    parsed, parse_err = _parse_json(raw)
+    errs = ai_prompts.validate_insights_schema(parsed) if parsed is not None else [parse_err or 'no parse']
+
+    if errs:
+        logger.warning("LLM JSON validation failed on first try: %s", errs[:3])
+        # Retry once with the error fed back
+        retry_bundle = dict(prompt_bundle)
+        retry_bundle['user'] = (
+            prompt_bundle['user']
+            + '\n\nYour previous output failed validation:\n'
+            + '\n'.join(f'- {e}' for e in errs[:5])
+            + '\nReturn a new JSON object that fixes these issues.'
+        )
+        raw2 = _single_call(retry_bundle)
+        parsed2, parse_err2 = _parse_json(raw2)
+        errs2 = ai_prompts.validate_insights_schema(parsed2) if parsed2 is not None else [parse_err2 or 'no parse']
+        if not errs2:
+            parsed = parsed2
+        else:
+            logger.warning("LLM JSON validation failed on retry too: %s — using stub", errs2[:3])
+            parsed = ai_prompts.minimal_insights_stub()
+
+    sanitised = ai_prompts.sanitize_insights_payload(
+        parsed, known_assets, period_from, period_to
+    )
+    return sanitised
+
+
+def _assemble_insights_response(sanitised, computed, period, meta):
+    """Merge the sanitised LLM output with server-computed fields into the
+    final /insights response dict. Does NOT include legacy fields — those
+    are appended by the endpoint after calling this.
+    """
+    # data_age_minutes: how old is the newest data point (best-effort 0)
+    data_age_minutes = 0
+    try:
+        to_dt = datetime.fromisoformat(period['to'].replace('Z', '+00:00')).replace(tzinfo=None)
+        delta = datetime.now() - to_dt
+        data_age_minutes = max(0, int(delta.total_seconds() // 60))
+    except Exception:
+        data_age_minutes = 0
+
+    status_hero = dict(sanitised.get('status_hero') or {})
+    status_hero.setdefault('level', 'warn')
+    status_hero.setdefault('verdict', 'Briefing ready')
+    status_hero['data_age_minutes'] = data_age_minutes
+
+    # Ensure attention_items carry the period-scoped drill object
+    cleaned_attn = []
+    for it in (sanitised.get('attention_items') or []):
+        entry = dict(it)
+        drill = dict(entry.get('drill') or {})
+        drill.setdefault('from', period.get('from', ''))
+        drill.setdefault('to', period.get('to', ''))
+        entry['drill'] = drill
+        cleaned_attn.append(entry)
+
+    # Ensure every asset has full_metrics + normalised notes
+    cleaned_assets = []
+    for a in (sanitised.get('assets') or []):
+        a2 = dict(a)
+        a2.setdefault('headline_metrics', [])
+        a2.setdefault('full_metrics', list(a2['headline_metrics']))
+        a2.setdefault('notes', [])
+        a2.setdefault('related_report_ids', [])
+        cleaned_assets.append(a2)
+
+    response = {
+        'schema_version': 3,
+        'generated_at': datetime.now().isoformat(),
+        'period': period,
+        'status_hero': status_hero,
+        'attention_items': cleaned_attn,
+        'assets': cleaned_assets,
+        'equipment_strip': computed.get('equipment_strip') or [],
+        'meta': meta,
+    }
+
+    ring = computed.get('production_ring')
+    if ring:
+        response['production_ring'] = ring
+    timeline = computed.get('timeline')
+    if timeline:
+        response['timeline'] = timeline
+
+    return response
+
+
 @hercules_ai_bp.route('/hercules-ai/insights', methods=['POST'])
 @login_required
 def generate_insights():
     """Generate AI insights for selected reports and time range.
 
     Body: { report_ids?: int[], from: ISO8601, to: ISO8601 }
-    Returns: { overview, reports: [{id, name, summary}], period, tags_analyzed }
+    Returns: InsightsResponse (see Frontend/src/Pages/HerculesAI/schemas.ts)
+             plus backward-compat fields (overview, reports, tags_analyzed,
+             kpi, comparison). If ?format=markdown is set, returns only the
+             legacy markdown-compatible fields for the distribution engine.
     """
     data = request.get_json() or {}
     from_str = data.get('from')
@@ -1293,52 +1618,123 @@ def generate_insights():
 
         trend_lines.append(f"{label}: {' -> '.join(vals)} {direction}")
 
-    prompt = ai_prompts.build_insights_prompt(
-        report_names=[t['name'] for t in templates],
-        time_from=time_from,
-        time_to=time_to,
-        cmp_label=cmp_label,
-        prev_from_str=prev_from_str,
-        prev_to_str=prev_to_str,
-        structured_data=structured_data,
-        report_context=report_context,
-        trend_summary='\n'.join(trend_lines) if trend_lines else '',
-    )
+    trend_summary = '\n'.join(trend_lines) if trend_lines else ''
 
-    try:
-        import ai_provider
-        result = ai_provider.generate(prompt, ai_config, timeout=45, max_tokens=min(700 + 150 * len(templates), 2000))
-        if not result:
-            return jsonify({'error': 'Could not generate insights. Check your provider settings.'}), 400
+    # ── Legacy markdown pathway (distribution engine, old UI) ───────────
+    if request.args.get('format') == 'markdown':
+        prompt = ai_prompts.build_insights_prompt(
+            report_names=[t['name'] for t in templates],
+            time_from=time_from,
+            time_to=time_to,
+            cmp_label=cmp_label,
+            prev_from_str=prev_from_str,
+            prev_to_str=prev_to_str,
+            structured_data=structured_data,
+            report_context=report_context,
+            trend_summary=trend_summary,
+        )
+        try:
+            import ai_provider
+            result = ai_provider.generate(
+                prompt, ai_config, timeout=45,
+                max_tokens=min(700 + 150 * len(templates), 2000)
+            )
+            if not result:
+                return jsonify({'error': 'Could not generate insights. Check your provider settings.'}), 400
 
-        # Parse response into overview + per-report sections
-        overview = ''
-        report_summaries = []
-        parts = result.split('---REPORT:')
-        overview = parts[0].strip()
+            overview = ''
+            report_summaries = []
+            parts = result.split('---REPORT:')
+            overview = parts[0].strip()
+            for part in parts[1:]:
+                lines = part.strip().split('\n', 1)
+                rname = lines[0].replace('---', '').strip()
+                rsummary = lines[1].strip() if len(lines) > 1 else ''
+                if not rsummary:
+                    continue
+                matched = next((r for r in report_map if r['name'].lower() == rname.lower()), None)
+                report_summaries.append({
+                    'id': matched['id'] if matched else None,
+                    'name': matched['name'] if matched else rname,
+                    'summary': rsummary,
+                })
 
-        for part in parts[1:]:
-            lines = part.strip().split('\n', 1)
-            rname = lines[0].replace('---', '').strip()
-            rsummary = lines[1].strip() if len(lines) > 1 else ''
-            if not rsummary:
-                continue  # Skip reports with no insights
-            # Match to template
-            matched = next((r for r in report_map if r['name'].lower() == rname.lower()), None)
-            report_summaries.append({
-                'id': matched['id'] if matched else None,
-                'name': matched['name'] if matched else rname,
-                'summary': rsummary,
+            return jsonify({
+                'overview': overview,
+                'reports': report_summaries,
+                'period': {'from': from_str, 'to': to_str},
+                'tags_analyzed': len(data_rows),
+                'kpi': kpi,
+                'comparison': comparison_rows[:15],
             })
+        except Exception as e:
+            logger.warning("Insights (markdown) generation failed: %s", e)
+            err_msg = str(e)
+            if 'authentication' in err_msg.lower() or '401' in err_msg:
+                return jsonify({'error': 'Invalid API key. Please check your provider settings.'}), 400
+            if 'timeout' in err_msg.lower():
+                return jsonify({'error': 'Analysis timed out. Try a shorter time range or fewer reports.'}), 504
+            return jsonify({'error': f'Insights failed: {err_msg}'}), 500
 
-        return jsonify({
-            'overview': overview,
-            'reports': report_summaries,
-            'period': {'from': from_str, 'to': to_str},
-            'tags_analyzed': len(data_rows),
-            'kpi': kpi,
-            'comparison': comparison_rows[:15],
-        })
+    # ── New JSON-mode pathway (primary) ─────────────────────────────────
+    try:
+        known_assets = _known_assets_from_profiles(profile_map)
+
+        # Compute structured fields server-side
+        production_ring = _build_production_ring(templates, all_tag_data, from_dt, to_dt)
+        timeline = _build_timeline(templates, from_dt, to_dt)
+        equipment_strip = _build_equipment_strip(all_tag_data, profile_map)
+
+        # Build JSON-mode prompt
+        prompt_bundle = ai_prompts.build_insights_prompt_json(
+            report_names=[t['name'] for t in templates],
+            time_from=time_from,
+            time_to=time_to,
+            cmp_label=cmp_label,
+            prev_from_str=prev_from_str,
+            prev_to_str=prev_to_str,
+            structured_data=structured_data,
+            known_assets=known_assets,
+            report_context=report_context,
+            trend_summary=trend_summary,
+        )
+
+        # Call LLM with JSON mode (retry-once-on-failure inside)
+        sanitised = _call_llm_json(
+            prompt_bundle, ai_config, known_assets,
+            period_from=from_str, period_to=to_str,
+            max_tokens=min(900 + 200 * len(templates), 2500),
+            timeout=60,
+        )
+
+        # Assemble final response
+        period = {'from': from_str, 'to': to_str, 'label': cmp_label}
+        meta = {
+            'model': ai_config.get('llm_model', 'unknown'),
+            'prompt_version': ai_prompts.INSIGHTS_PROMPT_VERSION,
+            'tokens_in': 0,
+            'tokens_out': 0,
+            'source_report_ids': [r['id'] for r in report_map if r.get('id') is not None],
+        }
+        response = _assemble_insights_response(
+            sanitised,
+            {
+                'production_ring': production_ring,
+                'timeline': timeline,
+                'equipment_strip': equipment_strip,
+            },
+            period=period,
+            meta=meta,
+        )
+
+        # ── Backward-compat fields (derived; no second LLM call) ────────
+        response['overview'] = _derive_overview_markdown(sanitised)
+        response['reports'] = _derive_reports_from_assets(sanitised.get('assets') or [], report_map)
+        response['tags_analyzed'] = len(data_rows)
+        response['kpi'] = kpi
+        response['comparison'] = comparison_rows[:15]
+
+        return jsonify(response)
 
     except Exception as e:
         logger.warning("Insights generation failed: %s", e)
