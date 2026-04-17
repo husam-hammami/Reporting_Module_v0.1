@@ -259,16 +259,26 @@ def _compute_efficiency(tag_data, prev_tag_data, profiles):
                     prev_production_kg += prev_val * 1000
 
         # Energy tags — match all electrical energy units
-        if agg_prefix == 'delta':
-            if unit in ('kwh', 'kw/h', 'kilowatt-hour', 'kilowatt-hours',
-                        'kvah', 'kva/h', 'kvarh', 'kvar/h'):
-                total_energy_kwh += current
+        energy_units_kwh = ('kwh', 'kw/h', 'kilowatt-hour', 'kilowatt-hours',
+                            'kvah', 'kva/h', 'kvarh', 'kvar/h')
+        energy_units_mwh = ('mwh', 'megawatt-hour', 'mvah', 'mvarh')
+
+        if unit in energy_units_kwh or unit in energy_units_mwh:
+            multiplier = 1000 if unit in energy_units_mwh else 1
+
+            if agg_prefix == 'delta':
+                # Delta = energy consumed during the period
+                total_energy_kwh += current * multiplier
                 if prev_val is not None:
-                    prev_energy_kwh += prev_val
-            elif unit in ('mwh', 'megawatt-hour', 'mvah', 'mvarh'):
-                total_energy_kwh += current * 1000
-                if prev_val is not None:
-                    prev_energy_kwh += prev_val * 1000
+                    prev_energy_kwh += prev_val * multiplier
+            elif agg_prefix == 'last' and prev_val is not None:
+                # Last = cumulative meter reading; delta = current - previous
+                consumed = current - prev_val
+                if consumed > 0:
+                    total_energy_kwh += consumed * multiplier
+                    # For previous period comparison we can't compute without period-2 data
+                    # so we use the same consumed value as an estimate
+                    prev_energy_kwh += consumed * multiplier
 
     if total_production_kg == 0 or total_energy_kwh == 0:
         return None
