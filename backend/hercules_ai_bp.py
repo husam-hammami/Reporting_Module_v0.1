@@ -1193,6 +1193,41 @@ def generate_insights():
     if not data_rows:
         return jsonify({'error': 'No tag data available for the selected period'}), 400
 
+    # Build structured comparison data for frontend table
+    comparison_rows = []
+    for key, val in all_tag_data.items():
+        tag_name = key.split('::')[-1] if '::' in key else key
+        agg = key.split('::')[0] if '::' in key else 'last'
+        prof = profile_map.get(tag_name, {})
+        label = prof.get('label') or tag_name
+        unit = prof.get('unit', '')
+        tag_type = prof.get('tag_type', '')
+        line = prof.get('line_name', '')
+        prev_val = prev_tag_data.get(key)
+
+        now_f = _safe_float(val)
+        prev_f = _safe_float(prev_val)
+        change = None
+        if now_f is not None and prev_f is not None and prev_f != 0:
+            change = round(((now_f - prev_f) / prev_f) * 100, 1)
+
+        comparison_rows.append({
+            'label': label,
+            'type': tag_type,
+            'unit': unit,
+            'line': line,
+            'aggregation': agg,
+            'current': round(now_f, 2) if now_f is not None else None,
+            'previous': round(prev_f, 2) if prev_f is not None else None,
+            'change_pct': change,
+        })
+
+    # Sort: counters first, then by absolute change descending
+    comparison_rows.sort(key=lambda r: (
+        0 if r['type'] == 'counter' else 1 if r['type'] == 'rate' else 2,
+        -(abs(r['change_pct']) if r['change_pct'] is not None else 0)
+    ))
+
     from distribution_engine import _extract_report_context
     report_context = _extract_report_context(all_layout_configs)
 
@@ -1293,6 +1328,7 @@ def generate_insights():
             'period': {'from': from_str, 'to': to_str},
             'tags_analyzed': len(data_rows),
             'kpi': kpi,
+            'comparison': comparison_rows[:30],
         })
 
     except Exception as e:
