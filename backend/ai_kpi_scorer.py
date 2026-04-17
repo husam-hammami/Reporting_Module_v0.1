@@ -217,6 +217,82 @@ def _score_flow(tag_data, prev_tag_data, profiles):
     return sum(scores) / len(scores)
 
 
+def _compute_efficiency(tag_data, prev_tag_data, profiles):
+    """Compute production efficiency: ton/kWh.
+
+    Finds counter tags with weight units (kg, ton, t) and energy tags (kWh, MWh).
+    Returns dict with current and previous efficiency, or None if insufficient data.
+    """
+    total_production_kg = 0
+    prev_production_kg = 0
+    total_energy_kwh = 0
+    prev_energy_kwh = 0
+
+    for key, value in tag_data.items():
+        if '::' in key:
+            agg_prefix, tag_name = key.split('::', 1)
+        else:
+            tag_name = key
+            agg_prefix = 'last'
+
+        prof = profiles.get(tag_name)
+        if not prof:
+            continue
+
+        tag_type = (prof.get('tag_type') or '').lower()
+        unit = (prof.get('unit') or '').lower().strip()
+        current = _safe_float(value)
+        prev_val = _safe_float(prev_tag_data.get(key))
+
+        if current is None:
+            continue
+
+        # Production tags (weight units with delta aggregation)
+        if tag_type == 'counter' and agg_prefix == 'delta':
+            if unit in ('kg', 'kilogram', 'kilograms'):
+                total_production_kg += current
+                if prev_val is not None:
+                    prev_production_kg += prev_val
+            elif unit in ('t', 'ton', 'tons', 'tonne', 'tonnes'):
+                total_production_kg += current * 1000  # convert to kg
+                if prev_val is not None:
+                    prev_production_kg += prev_val * 1000
+
+        # Energy tags
+        if unit in ('kwh', 'kw/h', 'kilowatt-hour', 'kilowatt-hours'):
+            if agg_prefix == 'delta':
+                total_energy_kwh += current
+                if prev_val is not None:
+                    prev_energy_kwh += prev_val
+        elif unit in ('mwh', 'megawatt-hour'):
+            if agg_prefix == 'delta':
+                total_energy_kwh += current * 1000
+                if prev_val is not None:
+                    prev_energy_kwh += prev_val * 1000
+
+    if total_production_kg == 0 or total_energy_kwh == 0:
+        return None
+
+    # Convert kg to tons for the ratio
+    current_ton_per_kwh = (total_production_kg / 1000) / total_energy_kwh
+    prev_ton_per_kwh = None
+    if prev_production_kg > 0 and prev_energy_kwh > 0:
+        prev_ton_per_kwh = (prev_production_kg / 1000) / prev_energy_kwh
+
+    # Change percentage
+    change_pct = None
+    if prev_ton_per_kwh and prev_ton_per_kwh > 0:
+        change_pct = ((current_ton_per_kwh - prev_ton_per_kwh) / prev_ton_per_kwh) * 100
+
+    return {
+        'current': round(current_ton_per_kwh, 4),
+        'previous': round(prev_ton_per_kwh, 4) if prev_ton_per_kwh else None,
+        'change_pct': round(change_pct, 1) if change_pct is not None else None,
+        'production_tons': round(total_production_kg / 1000, 2),
+        'energy_kwh': round(total_energy_kwh, 2),
+    }
+
+
 def compute_kpi_score(tag_data, prev_tag_data, profiles):
     """Compute plant health KPI score from tag data.
 
@@ -233,7 +309,8 @@ def compute_kpi_score(tag_data, prev_tag_data, profiles):
                 'equipment': {'score': int, 'label': 'Equipment'},
                 'power': {'score': int, 'label': 'Power Quality'},
                 'flow': {'score': int, 'label': 'Flow Rates'},
-            }
+            },
+            'efficiency': dict or None,
         }
     """
     tag_data = tag_data or {}
@@ -252,6 +329,9 @@ def compute_kpi_score(tag_data, prev_tag_data, profiles):
         flow * 0.15
     ))
 
+    # Efficiency: tons produced per kWh consumed
+    efficiency = _compute_efficiency(tag_data, prev_tag_data, profiles)
+
     return {
         'score': _clamp(composite),
         'breakdown': {
@@ -259,5 +339,6 @@ def compute_kpi_score(tag_data, prev_tag_data, profiles):
             'equipment': {'score': _clamp(equipment), 'label': 'Equipment'},
             'power': {'score': _clamp(power), 'label': 'Power Quality'},
             'flow': {'score': _clamp(flow), 'label': 'Flow Rates'},
-        }
+        },
+        'efficiency': efficiency,
     }
