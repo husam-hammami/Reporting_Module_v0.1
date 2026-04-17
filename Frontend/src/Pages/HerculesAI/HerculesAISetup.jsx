@@ -216,6 +216,18 @@ export default function HerculesAISetup() {
       } finally {
         setLoading(false);
       }
+      // Restore cached insights
+      try {
+        const cached = localStorage.getItem('hercules_ai_insights');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          // Only use cache if less than 2 hours old
+          if (parsed._timestamp && Date.now() - parsed._timestamp < 2 * 60 * 60 * 1000) {
+            setInsightsResult(parsed.insights);
+            setCharts(parsed.charts);
+          }
+        }
+      } catch (_) {}
     })();
     // Load reports for filter + shifts for time tabs
     reportBuilderApi.list().then(res => {
@@ -280,14 +292,24 @@ export default function HerculesAISetup() {
       else {
         setInsightsResult(data);
         // Auto-load charts alongside insights
+        let chartData = {};
         try {
           const chartRes = await herculesAIApi.chartData({
             report_ids: selectedReportIds,
             from: dateRange.from.toISOString(),
             to: dateRange.to.toISOString(),
           });
-          setCharts(chartRes.data || {});
+          chartData = chartRes.data || {};
+          setCharts(chartData);
         } catch (_) { /* charts are optional */ }
+        // Cache results
+        try {
+          localStorage.setItem('hercules_ai_insights', JSON.stringify({
+            insights: data,
+            charts: chartData,
+            _timestamp: Date.now(),
+          }));
+        } catch (_) {}
       }
     } catch (e) {
       setInsightsError(e.response?.data?.error || e.response?.data?.message || e.message || 'Analysis failed');
@@ -456,6 +478,23 @@ export default function HerculesAISetup() {
                     ))}
                   </div>
                 </div>
+                {insightsResult.kpi.efficiency && (
+                  <div style={{ marginLeft: 'auto', textAlign: 'right', borderLeft: `1px solid ${th.border}`, paddingLeft: 16 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Efficiency</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: th.text }}>
+                      {insightsResult.kpi.efficiency.current.toFixed(3)}
+                      <span style={{ fontSize: 11, fontWeight: 500, color: th.textMuted, marginLeft: 4 }}>ton/kWh</span>
+                    </div>
+                    {insightsResult.kpi.efficiency.change_pct != null && (
+                      <div style={{ fontSize: 11, color: insightsResult.kpi.efficiency.change_pct >= 0 ? '#059669' : '#dc2626', fontWeight: 600 }}>
+                        {insightsResult.kpi.efficiency.change_pct >= 0 ? '\u2191' : '\u2193'}{Math.abs(insightsResult.kpi.efficiency.change_pct).toFixed(1)}% vs previous
+                      </div>
+                    )}
+                    <div style={{ fontSize: 9, color: th.textMuted, marginTop: 2 }}>
+                      {insightsResult.kpi.efficiency.production_tons?.toFixed(1)} tons / {insightsResult.kpi.efficiency.energy_kwh?.toFixed(0)} kWh
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -562,6 +601,54 @@ export default function HerculesAISetup() {
                   <InsightCard key={r.id || i} text={r.summary} th={th} name={r.name} />
                 ))}
               </div>
+            )}
+
+            {/* Comparison table */}
+            {insightsResult.comparison?.length > 0 && (
+              <details style={{ marginTop: 16 }}>
+                <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 700, color: th.text, padding: '8px 0', userSelect: 'none' }}>
+                  Detailed Comparison ({insightsResult.comparison.length} tags)
+                </summary>
+                <div style={{ overflowX: 'auto', marginTop: 8 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${th.border}` }}>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', color: th.textSecondary, fontWeight: 600 }}>Tag</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', color: th.textSecondary, fontWeight: 600 }}>Line</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px', color: th.textSecondary, fontWeight: 600 }}>Current</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px', color: th.textSecondary, fontWeight: 600 }}>Previous</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px', color: th.textSecondary, fontWeight: 600 }}>Change</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {insightsResult.comparison.map((row, i) => {
+                        const changeColor = row.change_pct == null ? th.textMuted
+                          : row.change_pct > 5 ? '#059669'
+                          : row.change_pct < -5 ? '#dc2626'
+                          : th.textSecondary;
+                        return (
+                          <tr key={i} style={{ borderBottom: `1px solid ${th.border}`, background: i % 2 === 0 ? 'transparent' : th.surfaceAlt }}>
+                            <td style={{ padding: '5px 8px', color: th.text, fontWeight: 500 }}>
+                              {row.label}
+                              {row.unit && <span style={{ color: th.textMuted, marginLeft: 4, fontSize: 9 }}>{row.unit}</span>}
+                            </td>
+                            <td style={{ padding: '5px 8px', color: th.textMuted }}>{row.line}</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: th.text, fontFamily: 'monospace' }}>
+                              {row.current != null ? row.current.toLocaleString() : '\u2014'}
+                            </td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: th.textMuted, fontFamily: 'monospace' }}>
+                              {row.previous != null ? row.previous.toLocaleString() : '\u2014'}
+                            </td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: changeColor, fontWeight: 600, fontFamily: 'monospace' }}>
+                              {row.change_pct != null ? `${row.change_pct > 0 ? '+' : ''}${row.change_pct}%` : '\u2014'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
             )}
 
             {/* Footer */}
