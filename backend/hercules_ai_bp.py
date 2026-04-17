@@ -1194,14 +1194,23 @@ def generate_insights():
         return jsonify({'error': 'No tag data available for the selected period'}), 400
 
     # Build structured comparison data for frontend table
+    # Only show meaningful values: deltas (production), rates, and key booleans
+    # Skip raw counter readings (last aggregation on counters = cumulative, not useful)
     comparison_rows = []
     for key, val in all_tag_data.items():
         tag_name = key.split('::')[-1] if '::' in key else key
         agg = key.split('::')[0] if '::' in key else 'last'
         prof = profile_map.get(tag_name, {})
+        tag_type = prof.get('tag_type', '')
+
+        # Filter: only deltas (production amounts), rates, percentages, and booleans
+        if tag_type == 'counter' and agg != 'delta':
+            continue  # skip raw meter readings
+        if tag_type in ('unknown', 'id_selector', 'setpoint'):
+            continue  # skip non-actionable tags
+
         label = prof.get('label') or tag_name
         unit = prof.get('unit', '')
-        tag_type = prof.get('tag_type', '')
         line = prof.get('line_name', '')
         prev_val = prev_tag_data.get(key)
 
@@ -1222,7 +1231,7 @@ def generate_insights():
             'change_pct': change,
         })
 
-    # Sort: counters first, then by absolute change descending
+    # Sort: counters (delta) first, then rates, then by absolute change
     comparison_rows.sort(key=lambda r: (
         0 if r['type'] == 'counter' else 1 if r['type'] == 'rate' else 2,
         -(abs(r['change_pct']) if r['change_pct'] is not None else 0)
@@ -1328,7 +1337,7 @@ def generate_insights():
             'period': {'from': from_str, 'to': to_str},
             'tags_analyzed': len(data_rows),
             'kpi': kpi,
-            'comparison': comparison_rows[:30],
+            'comparison': comparison_rows[:15],
         })
 
     except Exception as e:
