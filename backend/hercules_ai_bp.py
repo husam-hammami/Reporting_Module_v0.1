@@ -1316,11 +1316,13 @@ def _call_llm_json(prompt_bundle, ai_config, known_assets, period_from,
     """
     import ai_provider
 
-    def _single_call(bundle):
-        text = f"{bundle['system']}\n\n{bundle['user']}"
+    def _single_call(bundle, call_timeout=None):
         try:
             return ai_provider.generate(
-                text, ai_config, timeout=timeout, max_tokens=max_tokens
+                bundle['user'], ai_config,
+                timeout=call_timeout or timeout,
+                max_tokens=max_tokens,
+                system=bundle.get('system'),
             )
         except Exception as e:
             logger.warning("_call_llm_json: provider raised %s", e)
@@ -1358,7 +1360,7 @@ def _call_llm_json(prompt_bundle, ai_config, known_assets, period_from,
             + '\n'.join(f'- {e}' for e in errs[:5])
             + '\nReturn a new JSON object that fixes these issues.'
         )
-        raw2 = _single_call(retry_bundle)
+        raw2 = _single_call(retry_bundle, call_timeout=30)  # shorter retry
         parsed2, parse_err2 = _parse_json(raw2)
         errs2 = ai_prompts.validate_insights_schema(parsed2) if parsed2 is not None else [parse_err2 or 'no parse']
         if not errs2:
@@ -1704,7 +1706,7 @@ def generate_insights():
             prompt_bundle, ai_config, known_assets,
             period_from=from_str, period_to=to_str,
             max_tokens=min(900 + 200 * len(templates), 2500),
-            timeout=60,
+            timeout=90,
         )
 
         # Assemble final response
