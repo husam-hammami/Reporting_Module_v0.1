@@ -171,6 +171,19 @@ function HeroRow({
   const topMetric = pickHeadlineMetric(data);
   const cells = 1 + (ring ? 1 : 0) + (topMetric ? 1 : 0);
 
+  const kpiData = useMemo(() => {
+    const eff = (data as any).kpi?.efficiency;
+    const eqOn = data.equipment_strip?.filter((e: any) => e.status === 'ok' || e.status === 'warn').length ?? 0;
+    return {
+      production_tons: eff?.production_tons ?? null,
+      energy_kwh: eff?.energy_kwh ?? null,
+      energy_cost_omr: eff?.energy_cost_omr ?? null,
+      equipmentOnCount: eqOn,
+      equipmentTotal: data.equipment_strip?.length ?? 0,
+      attentionCount: data.attention_items?.length ?? 0,
+    };
+  }, [data]);
+
   return (
     <div
       style={{
@@ -190,6 +203,7 @@ function HeroRow({
         period={data.period}
         generatedAt={data.generated_at}
         dataAgeMinutes={data.status_hero.data_age_minutes}
+        kpiData={kpiData}
       />
 
       {ring ? (
@@ -369,35 +383,6 @@ export function BriefingView(props: BriefingViewProps) {
         {/* ② HERO ROW */}
         <HeroRow data={data} onDrill={onDrill} />
 
-        {/* ②½ EXECUTIVE SUMMARY — plain language for management */}
-        <div style={{
-          background: 'var(--hai-surface-100)',
-          border: '1px solid var(--hai-surface-border)',
-          borderRadius: 'var(--hai-radius-lg)',
-          padding: 'var(--hai-space-4) var(--hai-space-5)',
-        }}>
-          <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--hai-text-tertiary)', marginBottom: 'var(--hai-space-2)' }}>
-            Summary for Management
-          </div>
-          <div style={{ fontSize: '0.875rem', lineHeight: 1.6, color: 'var(--hai-text-primary)' }}>
-            {data.status_hero.verdict}
-            {data.attention_items.length > 0 && (
-              <span>
-                {' — '}
-                {data.attention_items.length} item{data.attention_items.length > 1 ? 's' : ''} need{data.attention_items.length === 1 ? 's' : ''} attention
-                {data.attention_items.map((a: AttentionItem, i: number) => (
-                  <span key={i}>
-                    {i === 0 ? ': ' : ', '}
-                    <strong>{a.headline}</strong>
-                  </span>
-                ))}
-                .
-              </span>
-            )}
-            {data.attention_items.length === 0 && <span>. No issues require attention.</span>}
-          </div>
-        </div>
-
         {/* ③ ATTENTION */}
         {data.attention_items.length > 0 ? (
           <AttentionCard
@@ -500,7 +485,7 @@ export function BriefingView(props: BriefingViewProps) {
                 <Bar data={{
                   labels: charts.rates.labels,
                   datasets: [
-                    { label: 'Current', data: charts.rates.current, backgroundColor: 'var(--hai-data-5, #0891b2)', borderRadius: 3, barThickness: 14 },
+                    { label: 'Current', data: charts.rates.current, backgroundColor: 'var(--hai-data-2, #d97706)', borderRadius: 3, barThickness: 14 },
                     ...(charts.rates.previous?.some((v: number) => v > 0)
                       ? [{ label: 'Previous', data: charts.rates.previous, backgroundColor: 'var(--hai-text-disabled, #94a3b8)', borderRadius: 3, barThickness: 14 }]
                       : []),

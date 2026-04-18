@@ -197,6 +197,9 @@ export default function HerculesAISetup() {
   // Step 2
   const [completing, setCompleting] = useState(false);
 
+  // Tariff
+  const [tariff, setTariff] = useState(0.025);
+
   // Post-setup: Insights
   const [editingProvider, setEditingProvider] = useState(false);
   const [shiftsConfig, setShiftsConfig] = useState(null);
@@ -222,6 +225,7 @@ export default function HerculesAISetup() {
         setProvider(cfg.ai_provider || 'cloud');
         setModel(cfg.llm_model || 'claude-sonnet-4-6');
         if (cfg.local_server_url) setLocalUrl(cfg.local_server_url);
+        if (cfg.electricity_tariff_omr_per_kwh != null) setTariff(cfg.electricity_tariff_omr_per_kwh);
         if (cfg.setup_completed) setStep(3);
       } catch (e) {
         toast.error('Failed to load AI configuration');
@@ -256,7 +260,7 @@ export default function HerculesAISetup() {
   const saveProvider = useCallback(async () => {
     setSaving(true);
     try {
-      const payload = { ai_provider: provider, llm_model: model };
+      const payload = { ai_provider: provider, llm_model: model, electricity_tariff_omr_per_kwh: tariff };
       if (provider === 'cloud' && apiKey) payload.llm_api_key = apiKey;
       if (provider === 'local') payload.local_server_url = localUrl;
       const res = await herculesAIApi.updateConfig(payload);
@@ -265,7 +269,7 @@ export default function HerculesAISetup() {
     } catch (e) {
       toast.error('Failed to save: ' + (e.response?.data?.message || e.response?.data?.error || e.message));
     } finally { setSaving(false); }
-  }, [provider, apiKey, model, localUrl]);
+  }, [provider, apiKey, model, localUrl, tariff]);
 
   const testConnection = useCallback(async () => {
     setTesting(true); setTestResult(null);
@@ -393,6 +397,22 @@ export default function HerculesAISetup() {
                 <ProviderForm th={th} provider={provider} setProvider={setProvider} apiKey={apiKey} setApiKey={setApiKey}
                   showKey={showKey} setShowKey={setShowKey} model={model} setModel={setModel} localUrl={localUrl} setLocalUrl={setLocalUrl}
                   testing={testing} testConnection={testConnection} testResult={testResult} config={config} saving={saving} />
+                <div style={{ marginTop: 12, padding: '12px 0', borderTop: `1px solid ${th.border}` }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: th.textSecondary, marginBottom: 6 }}>
+                    Energy Rate (OMR/kWh)
+                  </label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      value={tariff}
+                      onChange={e => setTariff(parseFloat(e.target.value) || 0)}
+                      style={{ width: 120, padding: '8px 12px', borderRadius: 8, border: `1px solid ${th.inputBorder}`, background: th.inputBg, color: th.text, fontSize: 13, fontFamily: 'monospace' }}
+                    />
+                    <span style={{ fontSize: 11, color: th.textMuted }}>Default: 0.025 (Oman industrial)</span>
+                  </div>
+                </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button onClick={() => { setScanResult(null); goTo(1); }} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: `1px solid ${th.border}`, background: th.surfaceAlt, color: th.textSecondary, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <RefreshCw size={12} /> Re-scan Tags
@@ -474,7 +494,7 @@ export default function HerculesAISetup() {
 
             {/* ── 1. "How are we doing?" — KPI Cards Row ── */}
             {insightsResult.kpi && (
-              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
                 {/* Plant Score */}
                 <div style={{ flex: 1, background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '12px 14px' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Plant Score</div>
@@ -520,13 +540,28 @@ export default function HerculesAISetup() {
                   <div style={{ fontSize: 10, color: th.textMuted, marginTop: 2 }}>tons</div>
                 </div>
                 {/* Energy */}
-                <div style={{ flex: 1, background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ flex: 1, minWidth: 120, background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '12px 14px' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Energy</div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: th.text, lineHeight: 1 }}>
                     {eff?.energy_kwh != null ? (eff.energy_kwh / 1000).toFixed(1) : '\u2014'}
                   </div>
                   <div style={{ fontSize: 10, color: th.textMuted, marginTop: 2 }}>MWh</div>
                 </div>
+                {/* Energy Cost */}
+                {eff?.energy_cost_omr != null && (
+                  <div style={{ flex: 1, minWidth: 120, background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Energy Cost</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: th.text, lineHeight: 1 }}>
+                      {eff.energy_cost_omr.toFixed(0)}
+                    </div>
+                    <div style={{ fontSize: 10, color: th.textMuted, marginTop: 2 }}>OMR</div>
+                    {eff.cost_per_ton_omr != null && (
+                      <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: th.textSecondary }}>
+                        {eff.cost_per_ton_omr.toFixed(3)} OMR/ton
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -814,7 +849,7 @@ function LegacyBriefingBody({ insightsResult, charts, withContent, noContent, th
               <Bar data={{
                 labels: charts.rates.labels,
                 datasets: [
-                  { label: 'Current', data: charts.rates.current, backgroundColor: '#0891b2', borderRadius: 3, barThickness: 14 },
+                  { label: 'Current', data: charts.rates.current, backgroundColor: '#d97706', borderRadius: 3, barThickness: 14 },
                   ...(charts.rates.previous?.some(v => v > 0)
                     ? [{ label: 'Previous', data: charts.rates.previous, backgroundColor: '#cbd5e1', borderRadius: 3, barThickness: 14 }]
                     : []),

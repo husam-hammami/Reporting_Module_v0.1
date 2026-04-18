@@ -23,6 +23,14 @@ export interface StatusHeroProps {
   state?: StatusHeroState;
   onRetry?: () => void;
   className?: string;
+  kpiData?: {
+    production_tons?: number | null;
+    energy_kwh?: number | null;
+    energy_cost_omr?: number | null;
+    equipmentOnCount?: number;
+    equipmentTotal?: number;
+    attentionCount?: number;
+  };
 }
 
 function freshnessTone(mins: number): 'ok' | 'warn' | 'crit' {
@@ -61,7 +69,33 @@ export function StatusHero(props: StatusHeroProps) {
     className,
   } = props;
 
+  const { kpiData } = props;
+
   const prefersReducedMotion = useReducedMotion();
+
+  const plainSummary = useMemo(() => {
+    if (!kpiData) return null;
+    const parts: string[] = [];
+    if (kpiData.production_tons != null && kpiData.production_tons > 0) {
+      parts.push(`Plant produced ${kpiData.production_tons.toLocaleString(undefined, {maximumFractionDigits: 0})} tons`);
+    }
+    if (kpiData.energy_kwh != null && kpiData.energy_kwh > 0) {
+      const mwh = kpiData.energy_kwh / 1000;
+      parts.push(`using ${mwh.toFixed(1)} MWh of energy`);
+    }
+    if (kpiData.energy_cost_omr != null && kpiData.energy_cost_omr > 0) {
+      parts.push(`energy costs at ${kpiData.energy_cost_omr.toFixed(0)} OMR`);
+    }
+    if (kpiData.equipmentTotal != null && kpiData.equipmentOnCount != null) {
+      parts.push(`${kpiData.equipmentOnCount} of ${kpiData.equipmentTotal} machines running`);
+    }
+    if (kpiData.attentionCount != null && kpiData.attentionCount > 0) {
+      parts.push(`${kpiData.attentionCount} item${kpiData.attentionCount > 1 ? 's' : ''} need${kpiData.attentionCount === 1 ? 's' : ''} attention`);
+    } else if (kpiData.attentionCount === 0) {
+      parts.push('no issues require attention');
+    }
+    return parts.length > 0 ? parts.join('. ') + '.' : null;
+  }, [kpiData]);
 
   const tint = useMemo(() => {
     // 2% overlay of the status tint over surface/100
@@ -153,25 +187,46 @@ export function StatusHero(props: StatusHeroProps) {
         }}
       >
         <StatusBadge level={level} pulse={shouldPulse} dotSizePx={24} />
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.span
-            key={verdict}
-            className="hai-text-primary"
-            style={{
-              fontFamily: 'var(--hai-font-sans)',
-              fontSize: '1.25rem',
-              fontWeight: 620,
-              lineHeight: 1.3,
-              letterSpacing: '-0.01em',
-            }}
-            initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4 }}
-            transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: [0.25, 1, 0.5, 1] }}
-          >
-            {verdict}
-          </motion.span>
-        </AnimatePresence>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={plainSummary || verdict}
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: [0.25, 1, 0.5, 1] }}
+            >
+              <span
+                className="hai-text-primary"
+                style={{
+                  fontFamily: 'var(--hai-font-sans)',
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  letterSpacing: '-0.01em',
+                  display: 'block',
+                }}
+              >
+                {plainSummary || verdict}
+              </span>
+              {plainSummary && verdict && (
+                <span
+                  className="hai-text-tertiary"
+                  style={{
+                    fontFamily: 'var(--hai-font-sans)',
+                    fontSize: '0.75rem',
+                    fontWeight: 400,
+                    lineHeight: 1.4,
+                    display: 'block',
+                    marginTop: '4px',
+                  }}
+                >
+                  {verdict}
+                </span>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
 
       <div
