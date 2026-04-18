@@ -217,7 +217,7 @@ def _score_flow(tag_data, prev_tag_data, profiles):
     return sum(scores) / len(scores)
 
 
-def _compute_efficiency(tag_data, prev_tag_data, profiles):
+def _compute_efficiency(tag_data, prev_tag_data, profiles, tariff_omr_per_kwh=0.025):
     """Compute production efficiency: ton/kWh.
 
     Finds counter tags with weight units (kg, ton, t) and energy tags (kWh, MWh).
@@ -304,6 +304,11 @@ def _compute_efficiency(tag_data, prev_tag_data, profiles):
     if current_kwh_per_ton and prev_kwh_per_ton and prev_kwh_per_ton > 0:
         kwh_change = ((current_kwh_per_ton - prev_kwh_per_ton) / prev_kwh_per_ton) * 100
 
+    energy_cost_omr = round(total_energy_kwh * tariff_omr_per_kwh, 2)
+    cost_per_ton_omr = None
+    if total_production_kg > 0:
+        cost_per_ton_omr = round(energy_cost_omr / (total_production_kg / 1000), 3)
+
     return {
         'current': round(current_ton_per_kwh, 4),
         'previous': round(prev_ton_per_kwh, 4) if prev_ton_per_kwh else None,
@@ -313,10 +318,13 @@ def _compute_efficiency(tag_data, prev_tag_data, profiles):
         'kwh_per_ton': round(current_kwh_per_ton, 2) if current_kwh_per_ton else None,
         'prev_kwh_per_ton': round(prev_kwh_per_ton, 2) if prev_kwh_per_ton else None,
         'kwh_change_pct': round(kwh_change, 1) if kwh_change is not None else None,
+        'energy_cost_omr': energy_cost_omr,
+        'cost_per_ton_omr': cost_per_ton_omr,
+        'tariff_rate': tariff_omr_per_kwh,
     }
 
 
-def compute_kpi_score(tag_data, prev_tag_data, profiles):
+def compute_kpi_score(tag_data, prev_tag_data, profiles, tariff_omr_per_kwh=0.025):
     """Compute plant health KPI score from tag data.
 
     Args:
@@ -353,7 +361,7 @@ def compute_kpi_score(tag_data, prev_tag_data, profiles):
     ))
 
     # Efficiency: tons produced per kWh consumed
-    efficiency = _compute_efficiency(tag_data, prev_tag_data, profiles)
+    efficiency = _compute_efficiency(tag_data, prev_tag_data, profiles, tariff_omr_per_kwh)
 
     return {
         'score': _clamp(composite),

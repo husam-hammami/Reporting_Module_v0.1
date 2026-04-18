@@ -118,6 +118,7 @@ _CONFIG_DEFAULTS = {
     'llm_model': {'value': 'claude-opus-4-6'},
     'local_server_url': {'value': 'http://localhost:1234/v1'},
     'local_model': {'value': ''},
+    'electricity_tariff_omr_per_kwh': {'value': 0.025},
 }
 
 
@@ -1478,10 +1479,12 @@ def generate_insights():
     # Compute KPI score (no LLM, fast)
     try:
         import ai_kpi_scorer
+        tariff = float(ai_config.get('electricity_tariff_omr_per_kwh', 0.025))
         kpi = ai_kpi_scorer.compute_kpi_score(
             tag_data=all_tag_data,
             prev_tag_data=prev_tag_data,
             profiles=profile_map,
+            tariff_omr_per_kwh=tariff,
         )
     except Exception as e:
         logger.warning("KPI scoring failed: %s", e)
