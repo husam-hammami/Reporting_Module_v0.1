@@ -35,9 +35,9 @@ export interface MetricCardProps {
 }
 
 const SIZE_HEIGHT: Record<MetricCardSize, number> = {
-  sm: 120,
-  md: 140,
-  lg: 180,
+  sm: 88,
+  md: 104,
+  lg: 140,
 };
 
 function formatValue(value: number | string | null, precision?: number): string {
@@ -120,7 +120,7 @@ export function MetricCard(props: MetricCardProps) {
     border: '1px solid var(--hai-surface-border)',
     borderRadius: 'var(--hai-radius-lg)',
     boxShadow: 'var(--hai-elev-1)',
-    padding: 'var(--hai-space-5)',
+    padding: 'var(--hai-space-3)',
     minHeight: SIZE_HEIGHT[size],
     transition: prefersReducedMotion
       ? undefined
@@ -239,7 +239,7 @@ export function MetricCard(props: MetricCardProps) {
             style={{
               color: status ? `var(--hai-status-${status}-600)` : 'var(--hai-text-primary)',
               lineHeight: 1,
-              fontSize: size === 'lg' ? '4rem' : undefined,
+              fontSize: size === 'lg' ? '3rem' : undefined,
             }}
           >
             {formatted}

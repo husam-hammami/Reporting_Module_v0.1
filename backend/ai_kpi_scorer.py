@@ -294,12 +294,25 @@ def _compute_efficiency(tag_data, prev_tag_data, profiles):
     if prev_ton_per_kwh and prev_ton_per_kwh > 0:
         change_pct = ((current_ton_per_kwh - prev_ton_per_kwh) / prev_ton_per_kwh) * 100
 
+    # Inverse metric: kWh per ton (cost perspective — lower is better)
+    current_kwh_per_ton = total_energy_kwh / (total_production_kg / 1000) if total_production_kg > 0 else None
+    prev_kwh_per_ton = None
+    if prev_energy_kwh > 0 and prev_production_kg > 0:
+        prev_kwh_per_ton = prev_energy_kwh / (prev_production_kg / 1000)
+
+    kwh_change = None
+    if current_kwh_per_ton and prev_kwh_per_ton and prev_kwh_per_ton > 0:
+        kwh_change = ((current_kwh_per_ton - prev_kwh_per_ton) / prev_kwh_per_ton) * 100
+
     return {
         'current': round(current_ton_per_kwh, 4),
         'previous': round(prev_ton_per_kwh, 4) if prev_ton_per_kwh else None,
         'change_pct': round(change_pct, 1) if change_pct is not None else None,
         'production_tons': round(total_production_kg / 1000, 2),
         'energy_kwh': round(total_energy_kwh, 2),
+        'kwh_per_ton': round(current_kwh_per_ton, 2) if current_kwh_per_ton else None,
+        'prev_kwh_per_ton': round(prev_kwh_per_ton, 2) if prev_kwh_per_ton else None,
+        'kwh_change_pct': round(kwh_change, 1) if kwh_change is not None else None,
     }
 
 

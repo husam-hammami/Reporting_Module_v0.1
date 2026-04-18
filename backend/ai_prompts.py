@@ -54,10 +54,23 @@ def build_insights_prompt(report_names, time_from, time_to, cmp_label,
     """
     names_str = ', '.join(report_names) if isinstance(report_names, list) else str(report_names)
 
+    # Day of week for context (Oman weekend = Fri-Sat)
+    day_line = ''
+    try:
+        from datetime import datetime as _dt
+        _tf = time_from
+        if 'T' in _tf:
+            dt = _dt.fromisoformat(_tf.replace('Z', '+00:00'))
+        else:
+            dt = _dt.strptime(_tf, '%Y-%m-%d %H:%M')
+        day_line = f"\nDAY: {dt.strftime('%A')}"
+    except Exception:
+        pass
+
     prompt = f"""You are a senior plant engineer writing a shift handover briefing. Be direct, technical, action-oriented. Use industrial language: "line stopped", "tripped", "running light", "at capacity", "below nameplate". Never say "I", "we", "the data shows", or "it appears". State facts as facts.
 
 REPORTS: {names_str}
-PERIOD: {time_from} to {time_to}
+PERIOD: {time_from} to {time_to}{day_line}
 COMPARED AGAINST: {cmp_label} ({prev_from_str} to {prev_to_str})
 """
     if report_context:
@@ -114,7 +127,8 @@ STRICT RULES:
 8. No paragraphs, no explanations, no recommendations, no greetings.
 9. NEVER use internal terms "delta", "first", "last", "aggregation" in output. Say "produced 113,926 kg" not "delta: 113926".
 10. ALWAYS include units. Say "113,926 kg" not "113,926".
-11. Use the Change% column directly — do not calculate percentages yourself."""
+11. Use the Change% column directly — do not calculate percentages yourself.
+12. CONTEXT: Oman weekend is Friday-Saturday. Reduced output or idle equipment on Fri/Sat is EXPECTED — do NOT flag as abnormal unless production was supposed to run (indicated by non-zero flow rates)."""
 
     return prompt
 
@@ -439,7 +453,10 @@ def build_insights_prompt_json(report_names, time_from, time_to, cmp_label,
         "7. Numeric precision: ratios 1 decimal, weights > 1000 zero decimals,\n"
         "   small flows 3 decimals, currency 0 or 2 decimals.\n\n"
         "8. `verdict` tone is operator-calm. No alarmism. No \"critical failure\"\n"
-        "   unless severity is crit. No exclamation marks. Ever.\n"
+        "   unless severity is crit. No exclamation marks. Ever.\n\n"
+        "9. CONTEXT: Oman weekend is Friday-Saturday. Reduced output or idle equipment\n"
+        "   on Fri/Sat is EXPECTED — do NOT flag as 'warn' or 'crit' unless\n"
+        "   production was supposed to run (indicated by non-zero flow rates).\n"
     )
 
     system_msg = (
@@ -457,12 +474,29 @@ def build_insights_prompt_json(report_names, time_from, time_to, cmp_label,
     # -------------------------------------------------------------------
     # User message: the actual data bundle
     # -------------------------------------------------------------------
+    # Day of week for context (Oman weekend = Fri-Sat)
+    day_part = None
+    try:
+        from datetime import datetime as _dt
+        _tf = time_from
+        if 'T' in _tf:
+            dt = _dt.fromisoformat(_tf.replace('Z', '+00:00'))
+        else:
+            dt = _dt.strptime(_tf, '%Y-%m-%d %H:%M')
+        day_part = dt.strftime('%A')
+    except Exception:
+        pass
+
     user_parts = [
         f"REPORTS: {names_str}",
         f"PERIOD: {time_from} to {time_to}",
+    ]
+    if day_part:
+        user_parts.append(f"DAY: {day_part}")
+    user_parts.extend([
         f"COMPARED AGAINST: {cmp_label} ({prev_from_str} to {prev_to_str})",
         f"KNOWN ASSETS (attention_items.asset MUST be one of these): {known_assets_str}",
-    ]
+    ])
     if report_context:
         user_parts.append("")
         user_parts.append("STRUCTURE:")

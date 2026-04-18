@@ -417,10 +417,10 @@ export function BriefingView(props: BriefingViewProps) {
           </div>
         ) : null}
 
-        {/* ⑤ TIMELINE */}
-        {data.timeline ? (
+        {/* ⑤ TIMELINE — only render when there are actual events */}
+        {data.timeline && data.timeline.events && data.timeline.events.length > 0 ? (
           <TimelineStrip
-            events={data.timeline.events ?? []}
+            events={data.timeline.events}
             shifts={data.timeline.shifts ?? []}
             rangeFrom={new Date(data.period.from)}
             rangeTo={new Date(data.period.to)}

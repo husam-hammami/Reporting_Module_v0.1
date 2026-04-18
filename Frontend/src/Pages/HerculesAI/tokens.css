@@ -174,7 +174,7 @@
    TYPOGRAPHY UTILITY CLASSES
    ========================================================================= */
 .hai-text-display-xl {
-  font-size: 3.5rem;    /* 56px */
+  font-size: 2.5rem;    /* 40px — reduced from 56px for briefing density */
   font-weight: 620;
   line-height: 1.0;
   letter-spacing: -0.03em;
@@ -244,7 +244,7 @@
   --hai-density-text: 1.5;
 }
 [data-hai-density='wallboard'] .hai-text-display-xl {
-  font-size: 5.25rem;   /* 84px */
+  font-size: 4rem;      /* 64px — reduced from 84px */
   font-weight: 680;
 }
 [data-hai-density='wallboard'] .hai-text-body {

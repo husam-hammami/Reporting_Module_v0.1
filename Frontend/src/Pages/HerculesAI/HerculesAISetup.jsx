@@ -502,12 +502,12 @@ export default function HerculesAISetup() {
                 <div style={{ flex: 1, background: th.surface, border: `1px solid ${th.border}`, borderRadius: 10, padding: '12px 14px' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: th.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Efficiency</div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: th.text, lineHeight: 1 }}>
-                    {eff ? eff.current.toFixed(3) : '\u2014'}
+                    {eff?.kwh_per_ton != null ? eff.kwh_per_ton.toFixed(1) : '\u2014'}
                   </div>
-                  <div style={{ fontSize: 10, color: th.textMuted, marginTop: 2 }}>ton/kWh</div>
-                  {eff?.change_pct != null && (
-                    <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: eff.change_pct >= 0 ? '#059669' : '#dc2626' }}>
-                      {eff.change_pct >= 0 ? '\u2191' : '\u2193'}{Math.abs(eff.change_pct).toFixed(1)}% vs previous
+                  <div style={{ fontSize: 10, color: th.textMuted, marginTop: 2 }}>kWh/ton</div>
+                  {eff?.kwh_change_pct != null && (
+                    <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: eff.kwh_change_pct <= 0 ? '#059669' : '#dc2626' }}>
+                      {eff.kwh_change_pct <= 0 ? '\u2193' : '\u2191'}{Math.abs(eff.kwh_change_pct).toFixed(1)}% vs previous
                     </div>
                   )}
                 </div>
@@ -536,8 +536,9 @@ export default function HerculesAISetup() {
                 <BriefingView
                   data={insightsResult}
                   onDrill={(ref) => {
-                    // eslint-disable-next-line no-console
-                    console.log('[briefing] drill', ref);
+                    if (ref.report_id) {
+                      window.open(`/reports/${ref.report_id}?from=${encodeURIComponent(ref.from)}&to=${encodeURIComponent(ref.to)}`, '_blank');
+                    }
                   }}
                 />
               </div>

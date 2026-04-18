@@ -179,18 +179,18 @@ export function AssetPanel(props: AssetPanelProps) {
           >
             <div
               style={{
-                padding: 'var(--hai-space-6)',
+                padding: 'var(--hai-space-4)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 'var(--hai-space-5)',
+                gap: 'var(--hai-space-3)',
                 borderTop: '1px solid var(--hai-surface-border)',
               }}
             >
               <div
                 style={{
                   display: 'grid',
-                  gap: 'var(--hai-space-4)',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: 'var(--hai-space-3)',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 }}
               >
                 {fullMetrics.map((m, i) => (
