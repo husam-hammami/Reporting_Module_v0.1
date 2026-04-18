@@ -106,7 +106,7 @@ export function StatusHero(props: StatusHeroProps) {
     return (
       <div className={className} style={bandStyle} role="alert">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--hai-space-5)' }}>
-          <StatusBadge level="idle" dotSizePx={48} />
+          <StatusBadge level="idle" dotSizePx={24} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--hai-space-1)' }}>
             <span className="hai-text-heading-md text-hai-secondary">
               Unable to generate briefing — last successful run 2 hrs ago
@@ -152,17 +152,17 @@ export function StatusHero(props: StatusHeroProps) {
           minWidth: 0,
         }}
       >
-        <StatusBadge level={level} pulse={shouldPulse} dotSizePx={48} />
+        <StatusBadge level={level} pulse={shouldPulse} dotSizePx={24} />
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={verdict}
             className="hai-text-primary"
             style={{
               fontFamily: 'var(--hai-font-sans)',
-              fontSize: '2.5rem',
+              fontSize: '1.25rem',
               fontWeight: 620,
-              lineHeight: 1.05,
-              letterSpacing: '-0.025em',
+              lineHeight: 1.3,
+              letterSpacing: '-0.01em',
             }}
             initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}

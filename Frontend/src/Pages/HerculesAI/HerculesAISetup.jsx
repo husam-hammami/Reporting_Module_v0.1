@@ -419,7 +419,7 @@ export default function HerculesAISetup() {
       />
 
       {/* ── Analyze bar + Filter ── */}
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 24px' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <button onClick={runInsights} disabled={analyzing || !dateRange}
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 10, background: th.accent, color: th.btnText, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', opacity: (analyzing || !dateRange) ? 0.5 : 1 }}>

@@ -9,20 +9,19 @@
    DARK MODE (primary — default)
    ========================================================================= */
 [data-theme='dark'],
-.dark,
-:root {
-  /* Neutral — surfaces & text */
-  --hai-surface-canvas: #0B0C0E;
-  --hai-surface-100: #131418;
-  --hai-surface-200: #1A1C21;
-  --hai-surface-300: #23262C;
-  --hai-surface-border: #2B2E35;
-  --hai-surface-border-strong: #3A3E47;
+.dark {
+  /* Dark mode — matches existing Hercules dark theme */
+  --hai-surface-canvas: #0a0f1a;
+  --hai-surface-100: #111827;
+  --hai-surface-200: #0d1422;
+  --hai-surface-300: #1e293b;
+  --hai-surface-border: #1e293b;
+  --hai-surface-border-strong: #334155;
 
-  --hai-text-primary: #F2F3F5;
-  --hai-text-secondary: #B8BBC2;
-  --hai-text-tertiary: #7C818C;
-  --hai-text-disabled: #4A4E57;
+  --hai-text-primary: #f0f4f8;
+  --hai-text-secondary: #8899ab;
+  --hai-text-tertiary: #556677;
+  --hai-text-disabled: #334155;
 
   /* Semantic — status (dark) */
   --hai-status-ok-600: #2E9E6A;
@@ -58,18 +57,20 @@
    LIGHT MODE
    ========================================================================= */
 [data-theme='light'],
-.light {
-  --hai-surface-canvas: #FAFAF7;
-  --hai-surface-100: #FFFFFF;
-  --hai-surface-200: #F4F4F0;
-  --hai-surface-300: #E8E8E2;
-  --hai-surface-border: #DFDFD7;
-  --hai-surface-border-strong: #BFC0B6;
+.light,
+:root {
+  /* Light mode — matches existing Hercules slate/blue theme */
+  --hai-surface-canvas: #f1f5f9;
+  --hai-surface-100: #ffffff;
+  --hai-surface-200: #f8fafc;
+  --hai-surface-300: #f1f5f9;
+  --hai-surface-border: #e2e8f0;
+  --hai-surface-border-strong: #cbd5e1;
 
-  --hai-text-primary: #17181B;
-  --hai-text-secondary: #42454C;
-  --hai-text-tertiary: #6B6E77;
-  --hai-text-disabled: #A1A3AA;
+  --hai-text-primary: #0f172a;
+  --hai-text-secondary: #475569;
+  --hai-text-tertiary: #64748b;
+  --hai-text-disabled: #94a3b8;
 
   /* Status (light) */
   --hai-status-ok-600: #15804A;
