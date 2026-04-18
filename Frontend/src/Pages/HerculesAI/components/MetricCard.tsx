@@ -239,7 +239,7 @@ export function MetricCard(props: MetricCardProps) {
             style={{
               color: status ? `var(--hai-status-${status}-600)` : 'var(--hai-text-primary)',
               lineHeight: 1,
-              fontSize: size === 'lg' ? '3rem' : undefined,
+              fontSize: size === 'lg' ? '2rem' : size === 'md' ? '1.75rem' : undefined,
             }}
           >
             {formatted}

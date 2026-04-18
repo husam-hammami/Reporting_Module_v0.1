@@ -1429,7 +1429,7 @@ def _assemble_insights_response(sanitised, computed, period, meta):
     if ring:
         response['production_ring'] = ring
     timeline = computed.get('timeline')
-    if timeline:
+    if timeline and timeline.get('events'):
         response['timeline'] = timeline
 
     return response
@@ -1728,6 +1728,26 @@ def generate_insights():
             period=period,
             meta=meta,
         )
+
+        # ── Inject report_ids into attention_items + assets for "Open" button ──
+        name_to_id = {r['name'].lower(): r['id'] for r in report_map if r.get('id')}
+        for item in response.get('attention_items', []):
+            asset = (item.get('asset') or '').lower()
+            drill = item.get('drill') or {}
+            if not drill.get('report_id'):
+                # Match asset name to any report name (fuzzy)
+                for rname, rid in name_to_id.items():
+                    if asset in rname or rname in asset:
+                        drill['report_id'] = rid
+                        break
+                item['drill'] = drill
+        for asset in response.get('assets', []):
+            name = (asset.get('name') or '').lower()
+            if not asset.get('related_report_ids'):
+                for rname, rid in name_to_id.items():
+                    if name in rname or rname in name:
+                        asset['related_report_ids'] = [rid]
+                        break
 
         # ── Backward-compat fields (derived; no second LLM call) ────────
         response['overview'] = _derive_overview_markdown(sanitised)
