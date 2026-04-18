@@ -535,6 +535,7 @@ export default function HerculesAISetup() {
               <div style={{ marginTop: 4 }}>
                 <BriefingView
                   data={insightsResult}
+                  charts={charts}
                   onDrill={(ref) => {
                     if (ref.report_id) {
                       window.open(`/reports/${ref.report_id}?from=${encodeURIComponent(ref.from)}&to=${encodeURIComponent(ref.to)}`, '_blank');

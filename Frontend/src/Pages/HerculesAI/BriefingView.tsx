@@ -15,6 +15,7 @@
 import './tokens.css';
 
 import { useMemo } from 'react';
+import { Bar, Doughnut } from 'react-chartjs-2';
 import {
   AssetPanel,
   AttentionCard,
@@ -43,6 +44,7 @@ export interface BriefingDrillRef {
 
 export interface BriefingViewProps {
   data: InsightsResponse;
+  charts?: { production?: any; equipment?: any; rates?: any } | null;
   onDrill?: (ref: BriefingDrillRef) => void;
   /** When true, renders the side-panel variant (reduced content). */
   compact?: boolean;
@@ -277,7 +279,7 @@ function Footer({ data }: { data: InsightsResponse }) {
 /* ── main component ────────────────────────────────────────────────────── */
 
 export function BriefingView(props: BriefingViewProps) {
-  const { data: raw, onDrill, compact = false, density, className } = props;
+  const { data: raw, charts, onDrill, compact = false, density, className } = props;
 
   // Runtime-validate defensively. Backend returns the clean shape, but this is
   // cheap and guards the UI from shape drift.
@@ -367,6 +369,35 @@ export function BriefingView(props: BriefingViewProps) {
         {/* ② HERO ROW */}
         <HeroRow data={data} onDrill={onDrill} />
 
+        {/* ②½ EXECUTIVE SUMMARY — plain language for management */}
+        <div style={{
+          background: 'var(--hai-surface-100)',
+          border: '1px solid var(--hai-surface-border)',
+          borderRadius: 'var(--hai-radius-lg)',
+          padding: 'var(--hai-space-4) var(--hai-space-5)',
+        }}>
+          <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--hai-text-tertiary)', marginBottom: 'var(--hai-space-2)' }}>
+            Summary for Management
+          </div>
+          <div style={{ fontSize: '0.875rem', lineHeight: 1.6, color: 'var(--hai-text-primary)' }}>
+            {data.status_hero.verdict}
+            {data.attention_items.length > 0 && (
+              <span>
+                {' — '}
+                {data.attention_items.length} item{data.attention_items.length > 1 ? 's' : ''} need{data.attention_items.length === 1 ? 's' : ''} attention
+                {data.attention_items.map((a: AttentionItem, i: number) => (
+                  <span key={i}>
+                    {i === 0 ? ': ' : ', '}
+                    <strong>{a.headline}</strong>
+                  </span>
+                ))}
+                .
+              </span>
+            )}
+            {data.attention_items.length === 0 && <span>. No issues require attention.</span>}
+          </div>
+        </div>
+
         {/* ③ ATTENTION */}
         {data.attention_items.length > 0 ? (
           <AttentionCard
@@ -384,6 +415,108 @@ export function BriefingView(props: BriefingViewProps) {
             }
           />
         ) : null}
+
+        {/* ③½ CHARTS — visual proof alongside text */}
+        {charts && (charts.production || charts.equipment || charts.rates) && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: 'var(--hai-space-4)',
+          }}>
+            {charts.production && (
+              <div style={{
+                background: 'var(--hai-surface-100)',
+                border: '1px solid var(--hai-surface-border)',
+                borderRadius: 'var(--hai-radius-lg)',
+                padding: 'var(--hai-space-3) var(--hai-space-4)',
+              }}>
+                <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--hai-text-tertiary)', marginBottom: 'var(--hai-space-2)' }}>
+                  Production Output
+                </div>
+                <Bar data={{
+                  labels: charts.production.labels,
+                  datasets: [
+                    { label: 'Current', data: charts.production.current, backgroundColor: 'var(--hai-data-1, #0369a1)', borderRadius: 3, barThickness: 14 },
+                    ...(charts.production.previous?.some((v: number) => v > 0)
+                      ? [{ label: 'Previous', data: charts.production.previous, backgroundColor: 'var(--hai-text-disabled, #94a3b8)', borderRadius: 3, barThickness: 14 }]
+                      : []),
+                  ],
+                }} options={{
+                  responsive: true, maintainAspectRatio: true, aspectRatio: 2.2,
+                  plugins: { legend: { position: 'top' as const, align: 'end' as const, labels: { color: 'var(--hai-text-tertiary)', font: { size: 9 }, boxWidth: 8, padding: 6 } } },
+                  scales: {
+                    x: { ticks: { color: 'var(--hai-text-tertiary)', font: { size: 8 }, maxRotation: 35 }, grid: { display: false } },
+                    y: { ticks: { color: 'var(--hai-text-tertiary)', font: { size: 8 }, callback: (v: any) => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v }, grid: { color: 'rgba(128,128,128,0.1)' } },
+                  },
+                }} />
+              </div>
+            )}
+
+            {charts.equipment && (() => {
+              const onCount = charts.equipment.states.filter(Boolean).length;
+              const offCount = charts.equipment.states.length - onCount;
+              return (
+                <div style={{
+                  background: 'var(--hai-surface-100)',
+                  border: '1px solid var(--hai-surface-border)',
+                  borderRadius: 'var(--hai-radius-lg)',
+                  padding: 'var(--hai-space-3) var(--hai-space-4)',
+                  display: 'flex', alignItems: 'center', gap: 'var(--hai-space-4)',
+                }}>
+                  <div style={{ width: 80, height: 80, position: 'relative', flexShrink: 0 }}>
+                    <Doughnut data={{
+                      labels: ['Running', 'Stopped'],
+                      datasets: [{ data: [onCount, offCount], backgroundColor: ['#059669', '#dc2626'], borderWidth: 0, cutout: '70%' }],
+                    }} options={{ plugins: { legend: { display: false }, tooltip: { enabled: false } }, responsive: true, maintainAspectRatio: true }} />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--hai-text-primary)' }}>{onCount}/{charts.equipment.states.length}</span>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--hai-text-tertiary)', marginBottom: 'var(--hai-space-1)' }}>Equipment</div>
+                    {charts.equipment.labels.map((label: string, i: number) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.5625rem', padding: '1px 0' }}>
+                        <span style={{ color: 'var(--hai-text-secondary)' }}>{label}</span>
+                        <span style={{ fontWeight: 700, color: charts.equipment.states[i] ? '#059669' : '#dc2626' }}>
+                          {charts.equipment.states[i] ? 'ON' : 'OFF'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {charts.rates && (
+              <div style={{
+                background: 'var(--hai-surface-100)',
+                border: '1px solid var(--hai-surface-border)',
+                borderRadius: 'var(--hai-radius-lg)',
+                padding: 'var(--hai-space-3) var(--hai-space-4)',
+              }}>
+                <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--hai-text-tertiary)', marginBottom: 'var(--hai-space-2)' }}>
+                  Flow Rates
+                </div>
+                <Bar data={{
+                  labels: charts.rates.labels,
+                  datasets: [
+                    { label: 'Current', data: charts.rates.current, backgroundColor: 'var(--hai-data-5, #0891b2)', borderRadius: 3, barThickness: 14 },
+                    ...(charts.rates.previous?.some((v: number) => v > 0)
+                      ? [{ label: 'Previous', data: charts.rates.previous, backgroundColor: 'var(--hai-text-disabled, #94a3b8)', borderRadius: 3, barThickness: 14 }]
+                      : []),
+                  ],
+                }} options={{
+                  responsive: true, maintainAspectRatio: true, aspectRatio: 2.2,
+                  plugins: { legend: { position: 'top' as const, align: 'end' as const, labels: { color: 'var(--hai-text-tertiary)', font: { size: 9 }, boxWidth: 8, padding: 6 } } },
+                  scales: {
+                    x: { ticks: { color: 'var(--hai-text-tertiary)', font: { size: 8 }, maxRotation: 35 }, grid: { display: false } },
+                    y: { ticks: { color: 'var(--hai-text-tertiary)', font: { size: 8 } }, grid: { color: 'rgba(128,128,128,0.1)' } },
+                  },
+                }} />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ④ ASSET GRID */}
         {data.assets.length > 0 ? (
