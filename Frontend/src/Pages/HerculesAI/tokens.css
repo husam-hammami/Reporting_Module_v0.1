@@ -174,22 +174,22 @@
    TYPOGRAPHY UTILITY CLASSES
    ========================================================================= */
 .hai-text-display-xl {
-  font-size: 2.5rem;    /* 40px — reduced from 56px for briefing density */
+  font-size: 1.75rem;   /* 28px — compact for briefing */
   font-weight: 620;
-  line-height: 1.0;
-  letter-spacing: -0.03em;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 .hai-text-display-lg {
-  font-size: 4.5rem;    /* 72px — wallboard */
+  font-size: 2.25rem;   /* 36px — large metric */
   font-weight: 600;
-  line-height: 1.0;
-  letter-spacing: -0.035em;
-}
-.hai-text-display-md {
-  font-size: 2.5rem;    /* 40px */
-  font-weight: 620;
   line-height: 1.05;
   letter-spacing: -0.025em;
+}
+.hai-text-display-md {
+  font-size: 1.5rem;    /* 24px */
+  font-weight: 620;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 .hai-text-heading-lg {
   font-size: 0.8125rem; /* 13px */
@@ -244,7 +244,7 @@
   --hai-density-text: 1.5;
 }
 [data-hai-density='wallboard'] .hai-text-display-xl {
-  font-size: 4rem;      /* 64px — reduced from 84px */
+  font-size: 2.5rem;    /* 40px */
   font-weight: 680;
 }
 [data-hai-density='wallboard'] .hai-text-body {

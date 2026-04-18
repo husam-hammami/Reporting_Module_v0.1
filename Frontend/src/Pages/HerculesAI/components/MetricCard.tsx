@@ -35,9 +35,9 @@ export interface MetricCardProps {
 }
 
 const SIZE_HEIGHT: Record<MetricCardSize, number> = {
-  sm: 88,
-  md: 104,
-  lg: 140,
+  sm: 72,
+  md: 84,
+  lg: 100,
 };
 
 function formatValue(value: number | string | null, precision?: number): string {
@@ -239,7 +239,7 @@ export function MetricCard(props: MetricCardProps) {
             style={{
               color: status ? `var(--hai-status-${status}-600)` : 'var(--hai-text-primary)',
               lineHeight: 1,
-              fontSize: size === 'lg' ? '2rem' : size === 'md' ? '1.75rem' : undefined,
+              fontSize: size === 'lg' ? '1.5rem' : size === 'md' ? '1.25rem' : undefined,
             }}
           >
             {formatted}

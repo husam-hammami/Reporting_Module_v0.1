@@ -417,26 +417,7 @@ export function BriefingView(props: BriefingViewProps) {
           </div>
         ) : null}
 
-        {/* ⑤ TIMELINE — only render when there are actual events */}
-        {data.timeline && data.timeline.events && data.timeline.events.length > 0 ? (
-          <TimelineStrip
-            events={data.timeline.events}
-            shifts={data.timeline.shifts ?? []}
-            rangeFrom={new Date(data.period.from)}
-            rangeTo={new Date(data.period.to)}
-            onSelectEvent={
-              onDrill
-                ? (ev) =>
-                    onDrill({
-                      report_id: ev.drill?.report_id,
-                      tag_name: ev.drill?.tag_name,
-                      from: data.period.from,
-                      to: data.period.to,
-                    })
-                : undefined
-            }
-          />
-        ) : null}
+        {/* ⑤ TIMELINE — completely hidden until real event data exists */}
 
         {/* ⑥ FOOTER */}
         <Footer data={data} />
