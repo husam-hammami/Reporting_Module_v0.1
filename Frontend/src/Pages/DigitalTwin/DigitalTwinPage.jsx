@@ -15,32 +15,39 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useSocket } from '../../Context/SocketContext';
 
-// Tag names in the PLC that map to the Digital Twin's internal tags.
-// The twin strips "MilB_" / "Mil_B_" prefix and lowercases to match.
+// Actual PLC tag names from the database (lowercase, underscore-separated).
+// These match the twin's internal `tags` object keys exactly.
 const TWIN_TAGS = [
   // Electrical — C32 Cleaning
-  'MilB_C32_Effective_Power', 'MilB_C32_Cos_Phi', 'MilB_C32_Apparent_Power',
-  'MilB_C32_Reactive_Power', 'MilB_C32_Total_Active_Energy',
-  'MilB_C32_L1_Current', 'MilB_C32_L2_Current', 'MilB_C32_L3_Current',
-  'MilB_C32_L1_Voltage', 'MilB_C32_L2_Voltage', 'MilB_C32_L3_Voltage',
+  'c32_effective_power', 'c32_cos_phi', 'c32_apparent_power',
+  'c32_reactive_power', 'c32_total_active_energy',
+  'c32_l1_current', 'c32_l2_current', 'c32_l3_current',
+  'c32_l1_voltage', 'c32_l2_voltage', 'c32_l3_voltage',
   // M30 Break
-  'MilB_M30_Effective_Power', 'MilB_M30_Cos_Phi', 'MilB_M30_Apparent_Power',
-  'MilB_M30_Reactive_Power', 'MilB_M30_Total_Active_Energy',
-  'MilB_M30_L1_Current', 'MilB_M30_L2_Current', 'MilB_M30_L3_Current',
+  'm30_effective_power', 'm30_cos_phi', 'm30_apparent_power',
+  'm30_reactive_power', 'm30_total_active_energy',
+  'm30_l1_current', 'm30_l2_current', 'm30_l3_current',
   // M31 Reduction
-  'MilB_M31_Effective_Power', 'MilB_M31_Cos_Phi', 'MilB_M31_Apparent_Power',
-  'MilB_M31_Reactive_Power', 'MilB_M31_Total_Active_Energy',
-  'MilB_M31_L1_Current', 'MilB_M31_L2_Current', 'MilB_M31_L3_Current',
+  'm31_effective_power', 'm31_cos_phi', 'm31_apparent_power',
+  'm31_reactive_power', 'm31_total_active_energy',
+  'm31_l1_current', 'm31_l2_current', 'm31_l3_current',
   // Production flows & totalizers
-  'MilB_Flour_FlowRate', 'MilB_Flour_Percentage', 'Flour',
-  'MilB_Bran_FlowRate', 'MilB_Bran_Percentage', 'mil_b_bran_totalizer',
-  'MilB_B1_FlowRate', 'MilB_B1_Percentage', 'B1',
-  'MilB_Job_FlowRate',
+  'mil_b_flour_flowrate', 'mil_b_flour_percentage', 'mil_b_flour_totalizer',
+  'mil_b_bran_flowrate', 'mil_b_bran_percentage', 'mil_b_bran_totalizer',
+  'mil_b_b1_flowrate', 'mil_b_b1_percentage', 'mil_b_b1_totalizer',
+  'mil_b_job_flowrate',
   // Booleans
-  'Dampening_On', 'Vitamin_Feeder_On', 'MilB_Vitamin_Feeder_Percentage',
-  'MilB_Enable_Small_Sifters', 'Filter_Flour_Feeder', 'Mill_Emptying',
-  // Bin levels
-  'B1_Percentage', 'Bin_32_Flowrate',
+  'mil_b_dampening_on', 'mil_b_vitamin_feeder_on', 'mil_b_vitamin_feeder_percentage',
+  'mil_b_enable_small_sifters', 'mil_b_filter_flour_feeder', 'mil_b_mill_emptying',
+  'mil_b_order_active', 'mil_b_order_active_499',
+  // Senders
+  'mil_b_sender_id_1', 'mil_b_sender_qty_pct_1',
+  'mil_b_sender_id_2', 'mil_b_sender_qty_pct_2',
+  'mil_b_sender_id_3', 'mil_b_sender_qty_pct_3',
+  // Destinations
+  'mil_b_dest_id_1', 'mil_b_dest_id_2',
+  // Pasta
+  'pasta_1_521we_totalizer', 'pasta_4_830we_totalizer', 'pasta_e_1010_totalizer',
 ];
 
 const DigitalTwinPage = () => {
