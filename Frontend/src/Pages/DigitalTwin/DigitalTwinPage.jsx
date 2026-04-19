@@ -1,24 +1,17 @@
 /**
- * DigitalTwinPage
- * ----------------
- * Loads the Mill B 3D digital-twin prototype via iframe and bridges
- * live PLC tag data from SocketIO into the Three.js scene.
+ * DigitalTwinPage — Live PLC data bridge for the 3D Digital Twin.
  *
- * Data flow:
- *   1. On mount, fetches initial tag values via REST API
- *   2. Subscribes to SocketIO 'live_tag_data' events for real-time updates
- *   3. Posts FILTERED tag values into the iframe via postMessage
- *   4. The HTML listens for 'hercules-live-tags' messages and updates its tags object
- *
- * The iframe HTML is at Frontend/public/mill-b-digital-twin.html
+ * Bridges live tag data from the Hercules backend into the Three.js iframe
+ * via postMessage. Two data paths:
+ *   - SocketIO 'live_tag_data' (every 1s, ALL tags from cache)
+ *   - REST fallback '/api/live-monitor/tags' (every 3s, when SocketIO disconnected)
  */
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useSocket } from '../../Context/SocketContext';
 import axios from '../../API/axios';
 
-// Actual PLC tag names from the database (lowercase, underscore-separated).
-// These match the twin's internal `tags` object keys exactly.
-// Source: backend/tools/setup/seed_mil_b_tags.py + seed_power_tags.py
+// PLC tag names from the database (see seed_mil_b_tags.py + seed_power_tags.py).
+// These match the twin's `tags` object keys exactly (lowercase, underscore-separated).
 const TWIN_TAGS = [
   // Electrical — C32 Cleaning
   'c32_effective_power', 'c32_cos_phi', 'c32_apparent_power',
@@ -52,9 +45,8 @@ const TWIN_TAGS = [
   'mil_b_dest_id_1', 'mil_b_dest_id_2',
   // Pasta
   'pasta_1_521we_totalizer', 'pasta_4_830we_totalizer', 'pasta_e_1010_totalizer',
-  // NOTE: Silo fill percentages (silo_021_fill etc.) and FCL bin tags (fcl_bin_1 etc.)
-  // are display-only values computed inside the twin — no PLC source.
-  // Internal tags (_orderId, _productCode, _orderState) are also twin-only.
+  // NOTE: Silo fills (silo_021_fill etc.), FCL bins (fcl_bin_*), and internal
+  // tags (_orderId etc.) are twin-only computed values — no PLC source.
 ];
 
 const TWIN_TAG_SET = new Set(TWIN_TAGS);
@@ -62,29 +54,32 @@ const TWIN_TAG_SET = new Set(TWIN_TAGS);
 const DigitalTwinPage = () => {
   const iframeRef = useRef(null);
   const pollerRef = useRef(null);
+  const [iframeReady, setIframeReady] = useState(false);
   const { socket, isConnected } = useSocket();
 
-  // Send filtered tag values to the iframe (only tags the twin cares about)
+  // Post filtered tag values into the iframe
   const pushToTwin = useCallback((tagValues) => {
     const iframe = iframeRef.current;
-    if (!iframe?.contentWindow) return;
+    if (!iframe?.contentWindow || !iframeReady) return;
 
-    // Filter to only twin-relevant tags to avoid posting hundreds of PLC tags
     const filtered = {};
     for (const [k, v] of Object.entries(tagValues)) {
-      if (TWIN_TAG_SET.has(k) || TWIN_TAG_SET.has(k.toLowerCase())) {
-        filtered[k] = v;
-      }
+      const key = k.toLowerCase();
+      if (TWIN_TAG_SET.has(key)) filtered[key] = v;
     }
     if (!Object.keys(filtered).length) return;
 
-    iframe.contentWindow.postMessage(
-      { type: 'hercules-live-tags', values: filtered },
-      window.location.origin
-    );
-  }, []);
+    try {
+      iframe.contentWindow.postMessage(
+        { type: 'hercules-live-tags', values: filtered },
+        '*' // same-origin would be ideal but iframe served from same host
+      );
+    } catch (e) {
+      // iframe may have navigated away or been destroyed
+    }
+  }, [iframeReady]);
 
-  // Fetch tag values via REST and push to twin
+  // Fetch via REST API
   const fetchAndPush = useCallback(async () => {
     try {
       const res = await axios.get('/api/live-monitor/tags', {
@@ -94,60 +89,30 @@ const DigitalTwinPage = () => {
       if (res.data?.status === 'success' && res.data.tag_values) {
         pushToTwin(res.data.tag_values);
       }
-    } catch (e) {
-      console.warn('[DigitalTwin] Tag fetch failed:', e.message);
-    }
+    } catch (_) { /* silent — will retry */ }
   }, [pushToTwin]);
 
-  // Initial load + REST polling fallback (only when SocketIO is disconnected)
+  // When iframe is ready, do initial fetch + start polling
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
+    if (!iframeReady) return;
 
-    const onLoad = () => {
-      fetchAndPush();
-      // Poll only when SocketIO is not connected
-      if (!isConnected) {
-        pollerRef.current = setInterval(fetchAndPush, 3000);
-      }
-    };
+    // Immediate fetch
+    fetchAndPush();
 
-    iframe.addEventListener('load', onLoad);
+    // Always poll every 3s — SocketIO supplements this but REST is the reliable path
+    pollerRef.current = setInterval(fetchAndPush, 3000);
 
-    return () => {
-      iframe.removeEventListener('load', onLoad);
-      if (pollerRef.current) {
-        clearInterval(pollerRef.current);
-        pollerRef.current = null;
-      }
-    };
-  }, [fetchAndPush, isConnected]);
-
-  // Start/stop REST polling based on SocketIO connection state
-  useEffect(() => {
-    if (isConnected) {
-      // SocketIO is live — stop redundant polling
-      if (pollerRef.current) {
-        clearInterval(pollerRef.current);
-        pollerRef.current = null;
-      }
-    } else {
-      // SocketIO disconnected — start polling as fallback
-      if (!pollerRef.current) {
-        pollerRef.current = setInterval(fetchAndPush, 3000);
-      }
-    }
     return () => {
       if (pollerRef.current) {
         clearInterval(pollerRef.current);
         pollerRef.current = null;
       }
     };
-  }, [isConnected, fetchAndPush]);
+  }, [iframeReady, fetchAndPush]);
 
-  // Subscribe to SocketIO for real-time updates (filtered)
+  // SocketIO subscription — pushes data on top of REST polling
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !iframeReady) return;
 
     const handleLiveData = (data) => {
       if (data?.tag_values) {
@@ -157,7 +122,7 @@ const DigitalTwinPage = () => {
 
     socket.on('live_tag_data', handleLiveData);
     return () => socket.off('live_tag_data', handleLiveData);
-  }, [socket, pushToTwin]);
+  }, [socket, iframeReady, pushToTwin]);
 
   return (
     <div
@@ -173,6 +138,7 @@ const DigitalTwinPage = () => {
         ref={iframeRef}
         title="Salalah Mill B — Digital Twin"
         src="/mill-b-digital-twin.html"
+        onLoad={() => setIframeReady(true)}
         style={{
           border: 'none',
           width: '100%',

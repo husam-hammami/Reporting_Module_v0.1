@@ -4014,8 +4014,6 @@ let _liveDataActive = false;
 let _lastLiveDataTime = 0;
 
 window.addEventListener('message', (e) => {
-  // Only accept messages from same origin (security)
-  if (e.origin !== window.location.origin) return;
   if (!e.data || e.data.type !== 'hercules-live-tags') return;
   const liveValues = e.data.values;
   if (!liveValues || typeof liveValues !== 'object') return;
