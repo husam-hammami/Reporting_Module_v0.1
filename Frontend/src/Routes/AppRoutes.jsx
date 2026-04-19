@@ -35,6 +35,7 @@ import AppSettingsPage from '../Pages/AppSettings/AppSettingsPage';
 import SystemLogs from '../Pages/Settings/Logs/SystemLogs';
 import HerculesAISetup from '../Pages/HerculesAI/HerculesAISetup';
 import JobLogsPage from '../Pages/JobLogs/JobLogsPage';
+import DigitalTwinPage from '../Pages/DigitalTwin/DigitalTwinPage';
 import { useContext } from 'react';
 import { AuthContext } from '../Context/AuthProvider';
 
@@ -209,6 +210,16 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute roles={[Roles.Admin]}>
                 <HerculesAISetup />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Digital Twin — 3D plant view (Salalah Mill B) */}
+          <Route
+            path="digital-twin"
+            element={
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+                <DigitalTwinPage />
               </ProtectedRoute>
             }
           />

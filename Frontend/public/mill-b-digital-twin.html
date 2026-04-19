@@ -1,0 +1,3989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hercules — Mill B Digital Twin v3 · Salalah Flour Mills</title>
+<style>
+  :root {
+    --brand: #0ea5e9;
+    --brand-2: #22d3ee;
+    --brand-warm: #f59e0b;
+    --brand-ring: rgba(14,165,233,0.22);
+    --bg: #04070c;
+    --bg-2: #07101b;
+    --bg-panel: rgba(9, 15, 25, 0.82);
+    --bg-panel-solid: #091422;
+    --bg-card: rgba(13,22,36,0.72);
+    --border: rgba(34,211,238,0.14);
+    --border-strong: rgba(34,211,238,0.30);
+    --border-warm: rgba(245,158,11,0.30);
+    --text: #e8edf5;
+    --text-muted: #6b7f94;
+    --text-dim: #445566;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --fault: #f87171;
+    --paused: #a78bfa;
+    --gold: #fbd04a;
+    --wheat: #d9b77c;
+    --flour: #f3e9d2;
+    --bran: #92683d;
+    --semolina: #edc97a;
+    --accent-bar: linear-gradient(180deg, #22d3ee 0%, #0ea5e9 100%);
+    --accent-warm: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+    --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+    --s-5: 20px; --s-6: 24px; --s-7: 32px;
+    --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px;
+    --t-9: 9px;  --t-10: 10px; --t-11: 11px; --t-12: 12px;
+    --t-13: 13px; --t-14: 14px; --t-15: 15px; --t-17: 17px;
+    --t-20: 20px; --t-24: 24px; --t-32: 32px;
+    --shadow-panel: 0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(34,211,238,0.08);
+    --shadow-card: 0 4px 20px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin:0; padding:0; height:100%; overflow:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif;
+    color: var(--text); background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv11","ss01","ss02";
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+
+  canvas.bg-canvas { position:fixed; inset:0; z-index:0; display:block; }
+
+  /* ================= HTML DATA LABEL OVERLAYS (the big addition) ================= */
+  #hud-layer {
+    /* Confined to the 3D viewport area (between left rail and right panel, under top chrome, over bottom strip) */
+    position: fixed;
+    top: 72px; bottom: 56px; left: 0; right: 400px;
+    z-index: 3;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .scene-label {
+    position: absolute;
+    /* Bottom-center sits 44px ABOVE the projected anchor so there is clear visual separation */
+    transform: translate(-50%, calc(-100% - 44px));
+    pointer-events: auto;
+    cursor: pointer;
+    transition: opacity .25s;
+    will-change: transform;
+    /* prevent any child flex:1 from ballooning the label */
+    width: max-content;
+    max-width: 220px;
+  }
+  .scene-label.dim { opacity: 0.5; }
+  .scene-label.hidden { opacity: 0; pointer-events: none; }
+
+  /* Leader line from label bottom down to the anchor point.
+     Label is offset by 44px (see .scene-label transform), so leader is 44px tall
+     and the anchor dot lands exactly on the projected anchor point. */
+  .scene-label .lead {
+    position: absolute;
+    left: 50%; top: 100%;
+    transform: translateX(-50%);
+    width: 1.5px; height: 44px;
+    background: linear-gradient(180deg, var(--brand-2) 0%, rgba(34,211,238,0.25) 100%);
+    pointer-events: none;
+  }
+  .scene-label .lead::after {
+    /* Bright anchor dot exactly at the equipment */
+    content: "";
+    position: absolute;
+    left: 50%; bottom: -4px;
+    transform: translateX(-50%);
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--brand-2);
+    box-shadow: 0 0 10px var(--brand-2), inset 0 0 0 1.5px rgba(4,7,12,0.9);
+  }
+  .scene-label.warm .lead { background: linear-gradient(180deg, var(--brand-warm) 0%, rgba(245,158,11,0.25) 100%); }
+  .scene-label.warm .lead::after { background: var(--brand-warm); box-shadow: 0 0 8px var(--brand-warm), 0 0 2px #fff inset; }
+
+  /* Silo label card */
+  .silo-tag {
+    width: 150px;
+    padding: 6px 8px 7px 10px;
+    background: linear-gradient(180deg, rgba(13,22,36,0.96) 0%, rgba(9,15,25,0.94) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-card);
+    font-size: var(--t-10);
+    backdrop-filter: blur(8px);
+    position: relative;
+  }
+  .silo-tag::before {
+    content:""; position:absolute; left:0; top:6px; bottom:6px;
+    width: 3px; border-radius: 2px;
+    background: var(--accent-bar);
+  }
+  .silo-tag.warm::before { background: var(--accent-warm); }
+  .silo-tag.danger::before { background: linear-gradient(180deg,#fca5a5 0%,#f87171 100%); }
+  .silo-tag .head {
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap: 6px; margin-left: 6px;
+  }
+  .silo-tag .title {
+    font-size: var(--t-9); letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text-muted); font-weight: 600;
+  }
+  .silo-tag .code {
+    font-size: var(--t-9); color: var(--brand-2); font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .silo-tag .mat {
+    margin: 2px 0 0 6px;
+    font-size: var(--t-11); font-weight: 600; color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .silo-tag .row {
+    margin-left: 6px; margin-top: 4px;
+    display:flex; align-items:center; gap: 6px;
+  }
+  .silo-tag .fill-bar {
+    flex:1; height: 5px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .silo-tag .fill-bar > span {
+    display:block; height:100%;
+    background: linear-gradient(90deg, var(--brand-2) 0%, var(--brand) 100%);
+    box-shadow: 0 0 6px var(--brand-ring);
+    transition: width .4s ease;
+  }
+  .silo-tag.warm .fill-bar > span { background: linear-gradient(90deg, #fcd34d 0%, #f59e0b 100%); }
+  .silo-tag .pct {
+    font-size: var(--t-10); font-variant-numeric: tabular-nums;
+    color: var(--text); font-weight: 600; min-width: 30px; text-align: right;
+  }
+  .silo-tag .leader {
+    position: absolute;
+    width: 2px; background: var(--border-strong);
+    left: 50%; top: 100%; transform: translateX(-50%);
+    box-shadow: 0 0 4px var(--brand-ring);
+  }
+
+  /* Zone/equipment label — bigger with L1/L2/L3 amps row */
+  .zone-tag {
+    width: 210px;
+    padding: 8px 10px 9px 12px;
+    background: linear-gradient(180deg, rgba(13,22,36,0.96) 0%, rgba(9,15,25,0.94) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(8px);
+    position: relative;
+  }
+  .zone-tag::before {
+    content:""; position:absolute; left:0; top:8px; bottom:8px;
+    width: 3px; border-radius: 2px;
+    background: var(--accent-bar);
+  }
+  .zone-tag.warm::before { background: var(--accent-warm); }
+  .zone-tag .zone-head {
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-left: 6px; gap: 8px;
+  }
+  .zone-tag .zone-code {
+    font-size: var(--t-11); font-weight: 700; color: var(--text);
+    letter-spacing: .05em;
+  }
+  .zone-tag .zone-role {
+    font-size: var(--t-9); text-transform: uppercase; letter-spacing: .1em;
+    color: var(--text-muted);
+  }
+  .zone-tag .zone-kw {
+    margin-left: 6px; margin-top: 4px;
+    display: flex; align-items: baseline; gap: 4px;
+  }
+  .zone-tag .zone-kw .val {
+    font-size: var(--t-17); font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .zone-tag .zone-kw .unit { font-size: var(--t-10); color: var(--text-muted); }
+  .zone-tag .zone-kw .cosphi {
+    margin-left: auto;
+    font-size: var(--t-10); color: var(--brand-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .zone-tag .amps-row {
+    margin-left: 6px; margin-top: 6px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  }
+  .zone-tag .amp {
+    padding: 2px 4px;
+    background: rgba(34,211,238,0.06);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-size: var(--t-9);
+    display: flex; justify-content: space-between;
+  }
+  .zone-tag .amp .lab { color: var(--text-muted); }
+  .zone-tag .amp .v { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  /* Flow/stream mid-label */
+  .stream-tag {
+    padding: 4px 8px;
+    background: rgba(4,7,12,0.88);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    font-size: var(--t-10);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    backdrop-filter: blur(6px);
+    white-space: nowrap;
+  }
+  .stream-tag .qty { color: var(--brand-2); font-weight: 600; }
+  .stream-tag.warm { border-color: var(--border-warm); }
+  .stream-tag.warm .qty { color: var(--warn); }
+
+  /* FCL bin label */
+  .fcl-tag {
+    width: 130px;
+    padding: 5px 8px 6px 10px;
+    background: linear-gradient(180deg, rgba(13,22,36,0.95) 0%, rgba(9,15,25,0.92) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-size: var(--t-10);
+    position: relative;
+  }
+  .fcl-tag::before {
+    content:""; position:absolute; left:0; top:4px; bottom:4px;
+    width: 2px; border-radius: 1px;
+    background: var(--brand);
+  }
+  .fcl-tag.active::before { background: var(--ok); box-shadow: 0 0 6px rgba(52,211,153,0.6); }
+  .fcl-tag .bin-id { font-size: var(--t-10); color: var(--brand-2); font-weight: 700; margin-left: 5px; }
+  .fcl-tag .bin-src { font-size: var(--t-9); color: var(--text); margin-left: 5px; margin-top: 2px; }
+  .fcl-tag .bin-mat { font-size: var(--t-9); color: var(--text-muted); margin-left: 5px; }
+
+  /* ================= STAGE GRID ================= */
+  #stage {
+    position: fixed; inset: 0; z-index: 5;
+    display: grid;
+    grid-template-rows: 72px 1fr 56px;
+    grid-template-columns: 1fr 400px;
+    pointer-events: none;
+  }
+  #stage > * { pointer-events: auto; }
+
+  /* ================= TOP CHROME ================= */
+  .chrome-top {
+    grid-column: 1 / -1; grid-row: 1;
+    display: flex; align-items: center;
+    gap: var(--s-4);
+    padding: 0 var(--s-5);
+    background: linear-gradient(180deg, rgba(4,7,12,0.92) 0%, rgba(4,7,12,0.40) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding-left: var(--s-2);
+    position: relative;
+  }
+  .brand::before {
+    content:""; position:absolute; left:0; top:50%;
+    transform: translateY(-50%);
+    width: 3px; height: 36px;
+    border-radius: 2px;
+    background: var(--accent-bar);
+  }
+  .brand .wordmark {
+    font-size: var(--t-14); font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .brand .wordmark .sep { color: var(--text-dim); margin: 0 6px; font-weight: 400; }
+  .brand .wordmark .loc { color: var(--brand-2); font-weight: 600; }
+  .brand .sub {
+    font-size: var(--t-10); color: var(--text-muted);
+    letter-spacing: .04em;
+    margin-top: 2px;
+  }
+
+  .order-banner {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: 8px 14px;
+    background: rgba(13,22,36,0.75);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    margin-left: var(--s-4);
+  }
+  .order-banner .label {
+    font-size: var(--t-9); color: var(--text-muted);
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .order-banner .order-id {
+    font-size: var(--t-13); font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .order-banner .product {
+    font-size: var(--t-11); color: var(--brand-2); font-weight: 600;
+  }
+  .order-banner .state {
+    display: flex; align-items: center; gap: 6px;
+    padding: 3px 8px;
+    background: rgba(52,211,153,0.12);
+    border: 1px solid rgba(52,211,153,0.30);
+    border-radius: 999px;
+    font-size: var(--t-10);
+    color: var(--ok);
+    font-weight: 600;
+  }
+  .order-banner .state.paused {
+    background: rgba(167,139,250,0.12);
+    border-color: rgba(167,139,250,0.30);
+    color: var(--paused);
+  }
+  .order-banner .state .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+
+  .chrome-spacer { flex: 1; }
+
+  .shift-indicator {
+    display: flex; gap: 4px;
+    padding: 4px;
+    background: rgba(13,22,36,0.75);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+  }
+  .shift-indicator .shift {
+    padding: 3px 10px;
+    font-size: var(--t-10);
+    color: var(--text-muted);
+    border-radius: var(--r-sm);
+    transition: all .2s;
+  }
+  .shift-indicator .shift.active {
+    background: rgba(34,211,238,0.10);
+    color: var(--brand-2);
+    font-weight: 600;
+  }
+
+  /* ================= HERO KPI STRIP (top) ================= */
+  .kpi-strip {
+    display: flex; gap: var(--s-2);
+  }
+  .kpi-chip {
+    padding: 6px 12px;
+    background: rgba(13,22,36,0.70);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    min-width: 110px;
+  }
+  .kpi-chip .k-lab {
+    font-size: var(--t-9); color: var(--text-muted);
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  .kpi-chip .k-val {
+    font-size: var(--t-17); font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .kpi-chip .k-val .u { font-size: var(--t-10); color: var(--text-muted); font-weight: 400; margin-left: 2px; }
+
+  /* ================= CAMERA PRESET RAIL ================= */
+  .cam-rail {
+    position: fixed; left: 20px; top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 10px 8px;
+    background: rgba(9,15,25,0.82);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    backdrop-filter: blur(8px);
+  }
+  .cam-btn {
+    width: 80px; padding: 8px 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--r-sm);
+    color: var(--text-muted);
+    font-size: var(--t-10);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .cam-btn:hover {
+    background: rgba(34,211,238,0.06);
+    color: var(--text);
+  }
+  .cam-btn.active {
+    background: rgba(34,211,238,0.10);
+    border-color: var(--border-strong);
+    color: var(--brand-2);
+  }
+  .cam-btn::before {
+    content: "";
+    width: 4px; height: 4px; border-radius: 50%;
+    background: currentColor; opacity: 0.5;
+    flex-shrink: 0;
+  }
+  .cam-btn.active::before { opacity: 1; box-shadow: 0 0 6px currentColor; }
+
+  /* ================= RIGHT PANEL ================= */
+  .panel-right {
+    grid-column: 2; grid-row: 2;
+    overflow: hidden;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex; flex-direction: column;
+  }
+  .panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-tab {
+    flex: 1; padding: 12px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    font-size: var(--t-11); font-family: inherit;
+    cursor: pointer; transition: all .2s;
+    letter-spacing: .04em;
+  }
+  .panel-tab:hover { color: var(--text); }
+  .panel-tab.active {
+    color: var(--brand-2);
+    border-bottom-color: var(--brand-2);
+    font-weight: 600;
+  }
+  .panel-body {
+    flex: 1; overflow-y: auto;
+    padding: var(--s-5);
+  }
+  .panel-body::-webkit-scrollbar { width: 6px; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .section-title {
+    font-size: var(--t-9);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 var(--s-3) 0;
+    padding-left: var(--s-3);
+    position: relative;
+  }
+  .section-title::before {
+    content:""; position:absolute; left:0; top:3px; bottom:3px;
+    width: 3px; border-radius: 2px;
+    background: var(--accent-bar);
+  }
+
+  /* Hero metric */
+  .hero-metric {
+    display: flex; align-items: baseline; gap: var(--s-3);
+    padding: var(--s-4);
+    background: linear-gradient(135deg, rgba(34,211,238,0.06) 0%, rgba(14,165,233,0.02) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-lg);
+    margin-bottom: var(--s-4);
+  }
+  .hero-metric .big {
+    font-size: var(--t-32); font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums; line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .hero-metric .unit {
+    font-size: var(--t-13); color: var(--text-muted);
+  }
+  .hero-metric .meta {
+    margin-left: auto; text-align: right;
+  }
+  .hero-metric .m-lab {
+    font-size: var(--t-9); color: var(--text-muted);
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .hero-metric .m-val {
+    font-size: var(--t-11); color: var(--brand-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Formula KPI grid */
+  .formula-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2);
+    margin-bottom: var(--s-4);
+  }
+  .formula-card {
+    padding: var(--s-3);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    position: relative;
+  }
+  .formula-card .f-lab {
+    font-size: var(--t-9); color: var(--text-muted);
+    letter-spacing: .06em; text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .formula-card .f-val {
+    font-size: var(--t-20); font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .formula-card .f-unit { font-size: var(--t-10); color: var(--text-muted); margin-left: 2px; }
+  .formula-card .f-trend {
+    font-size: var(--t-9); margin-top: 2px;
+    color: var(--ok);
+  }
+  .formula-card .f-trend.down { color: var(--fault); }
+
+  /* Equipment row — used in a list */
+  .eq-row {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: 8px var(--s-3);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .eq-row:hover {
+    border-color: var(--border-strong);
+    transform: translateX(2px);
+  }
+  .eq-row .eq-icon {
+    width: 28px; height: 28px;
+    border-radius: var(--r-sm);
+    background: rgba(34,211,238,0.08);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--t-12); color: var(--brand-2);
+  }
+  .eq-row .eq-name {
+    flex: 1;
+    font-size: var(--t-11); color: var(--text);
+    font-weight: 500;
+  }
+  .eq-row .eq-sub {
+    font-size: var(--t-9); color: var(--text-muted);
+  }
+  .eq-row .eq-val {
+    font-size: var(--t-11); color: var(--brand-2);
+    font-variant-numeric: tabular-nums; font-weight: 600;
+  }
+
+  /* Flag row */
+  .flag-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+  }
+  .flag {
+    padding: 6px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-size: var(--t-10);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .flag .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-dim);
+  }
+  .flag.on .dot {
+    background: var(--ok);
+    box-shadow: 0 0 6px var(--ok);
+  }
+  .flag.warn .dot {
+    background: var(--warn);
+    box-shadow: 0 0 6px var(--warn);
+  }
+
+  /* ================= BOTTOM CHROME ================= */
+  .chrome-bottom {
+    grid-column: 1 / -1; grid-row: 3;
+    display: flex; align-items: center;
+    padding: 0 var(--s-5);
+    gap: var(--s-4);
+    background: linear-gradient(0deg, rgba(4,7,12,0.92) 0%, rgba(4,7,12,0.40) 100%);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    font-size: var(--t-10);
+  }
+  .progress-order {
+    flex: 1;
+    display: flex; align-items: center; gap: var(--s-3);
+  }
+  .progress-order .p-lab {
+    font-size: var(--t-10); color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .08em;
+  }
+  .progress-order .bar {
+    flex: 1; max-width: 420px;
+    height: 6px; background: rgba(255,255,255,0.04);
+    border-radius: 3px; overflow: hidden;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .progress-order .bar > span {
+    display:block; height:100%;
+    background: linear-gradient(90deg, var(--brand-2), var(--brand));
+    box-shadow: 0 0 8px var(--brand-ring);
+    transition: width .5s ease;
+  }
+  .progress-order .qty {
+    font-size: var(--t-11); color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .progress-order .qty .u { color: var(--text-muted); font-size: var(--t-9); }
+
+  .bot-meta {
+    font-size: var(--t-10); color: var(--text-muted);
+    display: flex; gap: var(--s-4);
+  }
+  .bot-meta .m { display: flex; align-items: center; gap: 6px; }
+  .bot-meta .m .v { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  /* ================= DRILL-DOWN DRAWER ================= */
+  .drill-drawer {
+    position: fixed;
+    right: 400px; top: 72px; bottom: 56px;
+    width: 400px;
+    background: linear-gradient(180deg, rgba(9,15,25,0.95) 0%, rgba(4,7,12,0.95) 100%);
+    border-left: 1px solid var(--border-strong);
+    border-right: 1px solid var(--border);
+    z-index: 8;
+    padding: var(--s-5);
+    transform: translateX(20px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s, transform .3s;
+    overflow-y: auto;
+    backdrop-filter: blur(14px);
+  }
+  .drill-drawer.open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .drill-drawer .close-x {
+    position: absolute; top: 12px; right: 12px;
+    width: 24px; height: 24px;
+    border-radius: var(--r-sm);
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: var(--t-14); line-height: 1;
+  }
+  .drill-drawer .close-x:hover { color: var(--text); border-color: var(--border-strong); }
+  .drill-drawer h3 {
+    margin: 0 0 4px 0;
+    font-size: var(--t-15); color: var(--text);
+    font-weight: 600; letter-spacing: -0.01em;
+  }
+  .drill-drawer .subtitle {
+    font-size: var(--t-10); color: var(--text-muted);
+    margin-bottom: var(--s-4);
+    letter-spacing: .04em;
+  }
+  .drill-drawer .detail-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2);
+    margin-bottom: var(--s-3);
+  }
+  .drill-drawer .detail {
+    padding: var(--s-3);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+  }
+  .drill-drawer .detail .lab {
+    font-size: var(--t-9); color: var(--text-muted);
+    letter-spacing: .06em; text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .drill-drawer .detail .v {
+    font-size: var(--t-14); color: var(--text); font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .drill-drawer .detail .v .u { color: var(--text-muted); font-size: var(--t-10); margin-left: 2px; font-weight: 400; }
+
+  .mini-trend {
+    height: 40px; margin-top: var(--s-2);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .mini-trend svg { width: 100%; height: 100%; }
+
+  /* ================= SETTINGS DRAWER ================= */
+  .settings-toggle {
+    position: fixed; top: 90px; right: 420px;
+    z-index: 11;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(9,15,25,0.88);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--t-15); cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: all .2s;
+  }
+  .settings-toggle:hover {
+    color: var(--brand-2);
+    border-color: var(--border-strong);
+  }
+  .settings-drawer {
+    position: fixed; top: 72px; right: 400px;
+    width: 280px; max-height: 0;
+    overflow: hidden;
+    background: rgba(9,15,25,0.96);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    z-index: 9;
+    transition: max-height .3s;
+    backdrop-filter: blur(12px);
+  }
+  .settings-drawer.open { max-height: 500px; }
+  .settings-drawer .settings-body { padding: var(--s-4); }
+  .settings-drawer h4 {
+    margin: 0 0 var(--s-3) 0;
+    font-size: var(--t-11); color: var(--text);
+    letter-spacing: .04em;
+  }
+  .settings-drawer label {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: 8px 0;
+    font-size: var(--t-10); color: var(--text-muted);
+    cursor: pointer;
+  }
+  .settings-drawer label:hover { color: var(--text); }
+  .settings-drawer input[type="checkbox"] { accent-color: var(--brand); }
+
+  /* ================= PROCESS FLOW STRIP (new bottom info) ================= */
+  .flow-path {
+    display: flex; align-items: center; gap: 4px;
+    font-size: var(--t-10); color: var(--text-muted);
+  }
+  .flow-path .node {
+    padding: 2px 8px;
+    background: rgba(13,22,36,0.65);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    color: var(--text);
+  }
+  .flow-path .node.active { color: var(--brand-2); border-color: var(--border-strong); }
+  .flow-path .arrow { color: var(--text-dim); }
+
+  /* ================= LOADING ================= */
+  .loading {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    transition: opacity .5s;
+  }
+  .loading.hide { opacity: 0; pointer-events: none; }
+  .loading .load-brand {
+    font-size: var(--t-24); color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .loading .load-sub {
+    font-size: var(--t-12); color: var(--text-muted);
+    margin-top: var(--s-3);
+    letter-spacing: .04em;
+  }
+  .loading .load-dots::after {
+    content: "";
+    animation: dots 1.5s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: "."; }
+    40% { content: ".."; }
+    60%, 100% { content: "..."; }
+  }
+
+  /* ================= STICKY HERO PRODUCTION CARD ================= */
+  .hero-card {
+    position: fixed;
+    right: 424px;         /* 400px panel + 24px gutter */
+    bottom: 24px;
+    z-index: 25;
+    min-width: 320px;
+    max-width: 380px;
+    padding: 14px 18px 14px 16px;
+    background: linear-gradient(180deg, rgba(8,16,28,0.88) 0%, rgba(8,16,28,0.72) 100%);
+    border: 1px solid rgba(34,211,238,0.35);
+    border-radius: 12px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.45),
+                0 0 0 1px rgba(34,211,238,0.08) inset;
+    color: var(--text);
+    font-family: inherit;
+    pointer-events: none;      /* purely informational */
+    user-select: none;
+  }
+  .hero-card::before {
+    /* soft cyan glow above the border */
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 12px;
+    background: linear-gradient(90deg, transparent, rgba(34,211,238,0.18), transparent);
+    opacity: 0.6;
+    pointer-events: none;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    padding: 1px;
+  }
+  .hero-card .hc-row1 {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--brand-2);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .hero-card .hc-pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 0 0 rgba(52,211,153,0.7);
+    animation: hcpulse 1.8s ease-out infinite;
+  }
+  @keyframes hcpulse {
+    0%   { box-shadow: 0 0 0 0   rgba(52,211,153,0.65); }
+    70%  { box-shadow: 0 0 0 10px rgba(52,211,153,0);   }
+    100% { box-shadow: 0 0 0 0   rgba(52,211,153,0);   }
+  }
+  .hero-card .hc-product {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+  .hero-card .hc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .hero-card .hc-meta .sep { opacity: 0.35; }
+  .hero-card .hc-rate {
+    color: var(--brand-2);
+    font-weight: 600;
+  }
+  .hero-card .hc-rate .u {
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 2px;
+    font-size: 11px;
+  }
+  .hero-card .hc-state.running  { color: #34d399; }
+  .hero-card .hc-state.changeover { color: #fbd04a; }
+  .hero-card .hc-state.idle     { color: #8aa0b5; }
+  .hero-card .hc-state.fault    { color: #f87171; }
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div style="text-align:center">
+    <div class="load-brand">Hercules <span style="color:var(--brand-2)">· Mill B</span></div>
+    <div class="load-sub">Digital Twin · Salalah Flour Mills<span class="load-dots"></span></div>
+  </div>
+</div>
+
+<!-- 3D scene canvas -->
+<canvas id="scene" class="bg-canvas"></canvas>
+
+<!-- HTML label overlay layer (floats on top of 3D) -->
+<div id="hud-layer"></div>
+
+<!-- Camera preset rail -->
+<div class="cam-rail">
+  <button class="cam-btn active" data-cam="overview">Overview</button>
+  <button class="cam-btn" data-cam="wheat">Wheat Bank</button>
+  <button class="cam-btn" data-cam="cleaning">Cleaning</button>
+  <button class="cam-btn" data-cam="mill">Mill Tower</button>
+  <button class="cam-btn" data-cam="outputs">Outputs</button>
+  <button class="cam-btn" data-cam="fcl">Packaging</button>
+  <button class="cam-btn" data-cam="pasta">Pasta</button>
+</div>
+
+<!-- Sticky "Now Producing" hero card (bottom-right, left of right panel) -->
+<div class="hero-card" id="heroCard">
+  <div class="hc-row1">
+    <span class="hc-pulse"></span>
+    <span>Now Producing</span>
+  </div>
+  <div class="hc-product" id="heroProduct">—</div>
+  <div class="hc-meta">
+    <span class="hc-rate"><span id="heroRate">—</span><span class="u">t/h</span></span>
+    <span class="sep">·</span>
+    <span>Order <span id="heroOrder">—</span></span>
+    <span class="sep">·</span>
+    <span class="hc-state" id="heroState">—</span>
+  </div>
+</div>
+
+<!-- Settings toggle + drawer -->
+<button class="settings-toggle" id="settingsToggle">⚙</button>
+<div class="settings-drawer" id="settingsDrawer">
+  <div class="settings-body">
+    <h4>Scene</h4>
+    <label><input type="checkbox" id="optBreathing" checked> Idle camera breathing</label>
+    <label><input type="checkbox" id="optGodRays" checked> Volumetric light shafts</label>
+    <label><input type="checkbox" id="optParticles" checked> Mass-flow particles</label>
+    <label><input type="checkbox" id="optLabels" checked> Floating data labels</label>
+    <label><input type="checkbox" id="optHuman" checked> Scale reference</label>
+    <label><input type="checkbox" id="optReduced"> Respect reduced motion</label>
+  </div>
+</div>
+
+<!-- Stage grid -->
+<div id="stage">
+
+  <!-- TOP CHROME -->
+  <header class="chrome-top">
+    <div class="brand">
+      <div>
+        <div class="wordmark">Hercules<span class="sep">·</span>Mill B<span class="sep">·</span><span class="loc">Salalah</span></div>
+        <div class="sub">DIGITAL TWIN · V3 · LIVE</div>
+      </div>
+    </div>
+
+    <div class="order-banner">
+      <div>
+        <div class="label">Active Order</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="order-id" id="ordId">#499</span>
+          <span class="product" id="ordProduct">9101 · Premium Flour 50kg</span>
+        </div>
+      </div>
+      <div class="state" id="ordState"><span class="dot"></span><span id="ordStateLabel">Running</span></div>
+    </div>
+
+    <div class="chrome-spacer"></div>
+
+    <div class="shift-indicator" id="shiftInd">
+      <div class="shift" data-shift="Morning">Morning</div>
+      <div class="shift" data-shift="Evening">Evening</div>
+      <div class="shift" data-shift="Night">Night</div>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kpi-chip">
+        <div class="k-lab">Specific Energy</div>
+        <div class="k-val"><span id="kpiSE">—</span><span class="u">kWh/t</span></div>
+      </div>
+      <div class="kpi-chip">
+        <div class="k-lab">Extraction</div>
+        <div class="k-val"><span id="kpiEx">—</span><span class="u">%</span></div>
+      </div>
+      <div class="kpi-chip">
+        <div class="k-lab">Throughput</div>
+        <div class="k-val"><span id="kpiTp">—</span><span class="u">t/h</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- DRILL-DOWN DRAWER -->
+  <div class="drill-drawer" id="drillDrawer">
+    <button class="close-x" id="drillClose">×</button>
+    <h3 id="drillTitle">Equipment</h3>
+    <div class="subtitle" id="drillSubtitle">—</div>
+    <div class="detail-grid" id="drillDetails"></div>
+    <div class="section-title" style="margin-top:16px">Last 30 min trend</div>
+    <div class="mini-trend" id="drillTrend">
+      <svg viewBox="0 0 300 40" preserveAspectRatio="none">
+        <path id="drillTrendPath" d="" fill="none" stroke="#22d3ee" stroke-width="1.5"/>
+        <path id="drillTrendFill" d="" fill="rgba(34,211,238,0.12)" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <aside class="panel-right">
+    <div class="panel-tabs">
+      <button class="panel-tab active" data-tab="overview">Overview</button>
+      <button class="panel-tab" data-tab="equipment">Equipment</button>
+      <button class="panel-tab" data-tab="process">Process</button>
+    </div>
+
+    <div class="panel-body" id="panelBody">
+      <!-- Tab: Overview -->
+      <div class="panel-view" data-view="overview">
+        <div class="section-title">Hero Metric</div>
+        <div class="hero-metric">
+          <span class="big" id="heroKwhT">—</span>
+          <span class="unit">kWh / tonne flour</span>
+          <div class="meta">
+            <div class="m-lab">Target</div>
+            <div class="m-val">&lt; 55 kWh/t</div>
+          </div>
+        </div>
+
+        <div class="section-title">Formulas (live)</div>
+        <div class="formula-grid">
+          <div class="formula-card">
+            <div class="f-lab">Milling Loss</div>
+            <div class="f-val"><span id="fLoss">—</span><span class="f-unit">%</span></div>
+            <div class="f-trend" id="fLossTrend">—</div>
+          </div>
+          <div class="formula-card">
+            <div class="f-lab">Extraction Total</div>
+            <div class="f-val"><span id="fExt">—</span><span class="f-unit">%</span></div>
+            <div class="f-trend" id="fExtTrend">—</div>
+          </div>
+          <div class="formula-card">
+            <div class="f-lab">Water Ratio</div>
+            <div class="f-val"><span id="fWR">—</span><span class="f-unit">L/t</span></div>
+            <div class="f-trend" id="fWRTrend">—</div>
+          </div>
+          <div class="formula-card">
+            <div class="f-lab">Spec. Energy</div>
+            <div class="f-val"><span id="fSE">—</span><span class="f-unit">kWh/t</span></div>
+            <div class="f-trend" id="fSETrend">—</div>
+          </div>
+        </div>
+
+        <div class="section-title">Production Streams</div>
+        <div id="streamsList"></div>
+
+        <div class="section-title" style="margin-top:16px">Process Flags</div>
+        <div class="flag-grid" id="flagGrid"></div>
+      </div>
+
+      <!-- Tab: Equipment -->
+      <div class="panel-view" data-view="equipment" style="display:none">
+        <div class="section-title">Silos (7)</div>
+        <div id="siloList"></div>
+
+        <div class="section-title" style="margin-top:16px">Mill Zones (3)</div>
+        <div id="zoneList"></div>
+
+        <div class="section-title" style="margin-top:16px">FCL Packaging Bins (5)</div>
+        <div id="fclList"></div>
+      </div>
+
+      <!-- Tab: Process -->
+      <div class="panel-view" data-view="process" style="display:none">
+        <div class="section-title">Process Flow</div>
+        <div class="flow-path" style="flex-wrap:wrap; gap:6px; margin-bottom:16px;">
+          <span class="node" id="fpReception">021 Reception</span><span class="arrow">→</span>
+          <span class="node" id="fpClean1">021A 1st Clean</span><span class="arrow">→</span>
+          <span class="node" id="fpClean2">021B 2nd Clean</span><span class="arrow">→</span>
+          <span class="node" id="fpTemper">021C Tempering</span><span class="arrow">→</span>
+          <span class="node" id="fpMill">Mill Tower</span><span class="arrow">→</span>
+          <span class="node" id="fpFlour">029 Flour</span>
+          <span class="node" id="fpSemo">031 Semolina</span>
+          <span class="node" id="fpBran">032 Bran</span>
+        </div>
+
+        <div class="section-title">Wheat Tempering</div>
+        <div style="padding:12px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r-sm); margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="font-size:var(--t-10); color:var(--text-muted);">Water addition</span>
+            <span style="font-size:var(--t-11); color:var(--brand-2); font-variant-numeric:tabular-nums;" id="waterRate">— L/h</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="font-size:var(--t-10); color:var(--text-muted);">Moisture target</span>
+            <span style="font-size:var(--t-11); color:var(--text); font-variant-numeric:tabular-nums;">16.0 %</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="font-size:var(--t-10); color:var(--text-muted);">Rest time</span>
+            <span style="font-size:var(--t-11); color:var(--text); font-variant-numeric:tabular-nums;">16–24 h</span>
+          </div>
+        </div>
+
+        <div class="section-title">Shift Totals (today)</div>
+        <div id="shiftList"></div>
+
+        <div class="section-title" style="margin-top:16px">Product Catalog</div>
+        <div id="productList" style="font-size:var(--t-10);"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- BOTTOM CHROME -->
+  <footer class="chrome-bottom">
+    <div class="progress-order">
+      <div class="p-lab">Order #499 · Flour Totalizer</div>
+      <div class="bar"><span id="ordBar" style="width:0%"></span></div>
+      <div class="qty"><span id="ordNow">0</span> / <span id="ordTarget">200000</span><span class="u"> kg</span></div>
+    </div>
+
+    <div class="bot-meta">
+      <div class="m">UPTIME <span class="v" id="upt">—</span></div>
+      <div class="m">OEE <span class="v" id="oee">—</span></div>
+      <div class="m">LAST TELEGRAM <span class="v" id="lastTel">—</span></div>
+    </div>
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =====================================================================
+   Hercules Mill B · Digital Twin v3
+   Built from real tag export + mapping dictionary (Apr 2026)
+   ===================================================================== */
+
+const DEG = Math.PI / 180;
+const TAU = Math.PI * 2;
+
+/* ========= Plant dictionary from the real mapping ========= */
+const PLANT = {
+  silos: {
+    '021':  { name: 'Silo 021',  role: 'Wheat Reception', capacity: 800, material: 'WHEAT' },
+    '021A': { name: 'Silo 021A', role: '1st Clean',      capacity: 400, material: 'WHEAT' },
+    '021B': { name: 'Silo 021B', role: '2nd Clean',      capacity: 400, material: 'WHEAT' },
+    '021C': { name: 'Silo 021C', role: 'Tempering',       capacity: 400, material: 'WHEAT+WATER' },
+    '029':  { name: 'Silo 029',  role: 'Flour Storage',   capacity: 500, material: 'FLOUR' },
+    '031':  { name: 'Silo 031',  role: 'Semolina Storage',capacity: 300, material: 'SEMOLINA' },
+    '032':  { name: 'Silo 032',  role: 'Bran Storage',    capacity: 200, material: 'BRAN' },
+  },
+  products: {
+    '9101': 'Premium Flour 50kg',
+    '9102': 'Standard Flour 50kg',
+    '9103': 'Semolina 25kg',
+    '9104': 'Bran (Coarse) Bulk',
+    '9105': 'Bran (Fine) Bulk',
+    '9201': 'Whole Wheat Flour 25kg',
+    '9301': 'Animal Feed Mix',
+  },
+  orderStates: {
+    0: {label:'Stopped',   color:'#6b7f94'},
+    1: {label:'Running',   color:'#34d399'},
+    2: {label:'Running',   color:'#34d399'},
+    3: {label:'Paused',    color:'#a78bfa'},
+    4: {label:'Stopping',  color:'#fbbf24'},
+    5: {label:'Completed', color:'#22d3ee'},
+    6: {label:'Error',     color:'#f87171'},
+    7: {label:'Cleaning',  color:'#fbd04a'},
+  },
+  shifts: [
+    {name:'Morning', start:'06:00', end:'14:00', startH:6,  endH:14},
+    {name:'Evening', start:'14:00', end:'22:00', startH:14, endH:22},
+    {name:'Night',   start:'22:00', end:'06:00', startH:22, endH:30},
+  ],
+};
+
+/* ========= Simulated live tag values (drift, realistic ranges) ========= */
+const tags = {
+  // Electrical — C32 Cleaning
+  c32_effective_power: 247, c32_cos_phi: 0.88, c32_apparent_power: 280, c32_reactive_power: 120,
+  c32_l1_current: 385, c32_l2_current: 392, c32_l3_current: 388,
+  c32_l1_voltage: 398, c32_l2_voltage: 401, c32_l3_voltage: 400,
+  c32_total_active_energy: 18247300,
+  // M30 Break
+  m30_effective_power: 492, m30_cos_phi: 0.91, m30_apparent_power: 540, m30_reactive_power: 225,
+  m30_l1_current: 772, m30_l2_current: 768, m30_l3_current: 776,
+  m30_l1_voltage: 399, m30_l2_voltage: 402, m30_l3_voltage: 400,
+  m30_total_active_energy: 29834100,
+  // M31 Reduction
+  m31_effective_power: 438, m31_cos_phi: 0.89, m31_apparent_power: 492, m31_reactive_power: 210,
+  m31_l1_current: 691, m31_l2_current: 685, m31_l3_current: 695,
+  m31_l1_voltage: 400, m31_l2_voltage: 399, m31_l3_voltage: 401,
+  m31_total_active_energy: 26541800,
+  // Production
+  mil_b_flour_flowrate: 17.2, mil_b_flour_percentage: 74.0, mil_b_flour_totalizer: 128420,
+  mil_b_bran_flowrate: 3.4,   mil_b_bran_percentage: 15.0,  mil_b_bran_totalizer: 24810,
+  mil_b_b1_flowrate: 2.6,     mil_b_b1_percentage: 11.0,    mil_b_b1_totalizer: 18220,
+  mil_b_job_flowrate: 23.2,
+  // Senders (blend %)
+  mil_b_sender_qty_pct_1: 55, mil_b_sender_qty_pct_2: 30, mil_b_sender_qty_pct_3: 15,
+  mil_b_sender_id_1: 211, mil_b_sender_id_2: 212, mil_b_sender_id_3: 213,
+  // Destinations
+  mil_b_dest_id_1: 29, mil_b_dest_id_2: 31,
+  // Flags
+  mil_b_dampening_on: true, mil_b_vitamin_feeder_on: true, mil_b_vitamin_feeder_percentage: 0.3,
+  mil_b_enable_small_sifters: true, mil_b_filter_flour_feeder: true, mil_b_mill_emptying: false,
+  mil_b_order_active: true, mil_b_order_active_499: true,
+  // Pasta
+  pasta_1_521we_totalizer: 4820140,
+  pasta_4_830we_totalizer: 3120550,
+  pasta_e_1010_totalizer: 7420330,
+  // Order
+  _orderId: 499, _productCode: 9101, _orderState: 1,
+  // Formula inputs
+  _waterUsed: 2400, _millThroughput: 23.2,
+  // Silo fill percentages
+  silo_021_fill: 72, silo_021A_fill: 58, silo_021B_fill: 64, silo_021C_fill: 88,
+  silo_029_fill: 42, silo_031_fill: 18, silo_032_fill: 31,
+  // FCL bins (all real lookup IDs from mapping)
+  fcl_bin_1: 213, fcl_bin_2: 21, fcl_bin_3: 25, fcl_bin_4: 212, fcl_bin_5: 29,
+  fcl_active: 1,
+};
+
+function driftTag(key, base, amp, minV, maxV) {
+  const next = tags[key] + (Math.random() - 0.5) * amp;
+  tags[key] = Math.max(minV, Math.min(maxV, next));
+}
+function driftAll() {
+  driftTag('c32_effective_power', 247, 12, 180, 320);
+  driftTag('m30_effective_power', 492, 20, 420, 580);
+  driftTag('m31_effective_power', 438, 18, 380, 520);
+  driftTag('c32_cos_phi', 0.88, 0.01, 0.84, 0.93);
+  driftTag('m30_cos_phi', 0.91, 0.01, 0.87, 0.95);
+  driftTag('m31_cos_phi', 0.89, 0.01, 0.85, 0.93);
+  ['c32','m30','m31'].forEach(z => {
+    [1,2,3].forEach(p => {
+      const key = `${z}_l${p}_current`;
+      const base = {c32:388, m30:770, m31:690}[z];
+      driftTag(key, base, base*0.02, base*0.85, base*1.15);
+    });
+  });
+  driftTag('mil_b_flour_flowrate', 17.2, 0.6, 14, 22);
+  driftTag('mil_b_bran_flowrate', 3.4, 0.2, 2.5, 4.5);
+  driftTag('mil_b_b1_flowrate', 2.6, 0.2, 1.8, 3.8);
+  driftTag('mil_b_job_flowrate', 23.2, 0.8, 19, 28);
+
+  // totalizers increase
+  tags.mil_b_flour_totalizer  += tags.mil_b_flour_flowrate * 1000 / 3600 * 0.5;
+  tags.mil_b_bran_totalizer   += tags.mil_b_bran_flowrate  * 1000 / 3600 * 0.5;
+  tags.mil_b_b1_totalizer     += tags.mil_b_b1_flowrate    * 1000 / 3600 * 0.5;
+
+  // silo fills slowly drift
+  ['021','021A','021B','021C','029','031','032'].forEach(id => {
+    const k = `silo_${id}_fill`;
+    const d = (Math.random() - 0.5) * 0.6;
+    tags[k] = Math.max(5, Math.min(98, tags[k] + d));
+  });
+}
+
+/* ==========================================================
+   THREE.JS SCENE
+   ========================================================== */
+const canvas = document.getElementById('scene');
+const scene = new THREE.Scene();
+// Dark futuristic void — but BREATHABLE. A deep indigo, not pitch-black, so
+// the silos read clearly against the background. Fog kept very thin so the
+// spotlights don't show as searchlight cones cutting through smog.
+scene.background = new THREE.Color(0x06101c);
+scene.fog = new THREE.FogExp2(0x06101c, 0.0045);
+
+const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 600);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.35;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+/* ========= Futuristic "digital twin" lighting =========
+   Plant should look POWERED ON. Bright cool sky-fill for readability, strong
+   directional key for shape, cyan rim + warm accent for that sci-fi pop. */
+// Strong ambient — the plant is fully energised, not abandoned.
+const hemi = new THREE.HemisphereLight(0x6fa8d6, 0x0a1422, 1.15);
+scene.add(hemi);
+const ambient = new THREE.AmbientLight(0x3a5870, 0.55);
+scene.add(ambient);
+
+// Key light — cool studio softbox
+const sun = new THREE.DirectionalLight(0xf2f7ff, 1.55);
+sun.position.set(40, 70, 30);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 200;
+sun.shadow.camera.left = -60;
+sun.shadow.camera.right = 60;
+sun.shadow.camera.top = 60;
+sun.shadow.camera.bottom = -60;
+sun.shadow.bias = -0.0002;
+scene.add(sun);
+
+// Cyan rim from the back-left — lifts silo edges
+const rim = new THREE.DirectionalLight(0x22d3ee, 1.4);
+rim.position.set(-40, 25, -30);
+scene.add(rim);
+
+// Warm accent from the mill-tower side to pop the hero building
+const warm = new THREE.DirectionalLight(0xffb473, 0.7);
+warm.position.set(12, 18, 24);
+scene.add(warm);
+
+/* Underfloor rim spotlights — bathe each plant zone in a brighter blue glow
+   from below. No volumetric beams (fog is thin) — they just paint the silo
+   undersides with a sci-fi rim. */
+function addUnderGlow(x, z, color = 0x2e5a8e, intensity = 3.2, dist = 26, angle = Math.PI * 0.45) {
+  const sp = new THREE.SpotLight(color, intensity, dist, angle, 0.85, 1.5);
+  sp.position.set(x, -0.5, z);   // just below floor
+  const target = new THREE.Object3D();
+  target.position.set(x, 8, z);
+  scene.add(target);
+  sp.target = target;
+  scene.add(sp);
+  return sp;
+}
+addUnderGlow(-17, 2, 0x2e5a8e, 3.0);     // wheat bank
+addUnderGlow(-8,  0, 0x2e5a8e, 2.6);     // cleaning house
+addUnderGlow( 2,  0, 0x3d7ab8, 3.6);     // mill tower (stronger)
+addUnderGlow(14,  0, 0x2e5a8e, 2.6);     // output silos
+addUnderGlow(14, -10, 0x2c5f9c, 2.6);    // FCL
+addUnderGlow(-18, -14, 0x2e5a8e, 2.4);   // pasta corner
+
+/* ========= Materials registry ========= */
+function concreteTexture(tint, variation=12) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = tint;
+  ctx.fillRect(0, 0, 512, 512);
+  // Noise
+  const img = ctx.getImageData(0,0,512,512);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * variation;
+    img.data[i]   += n;
+    img.data[i+1] += n;
+    img.data[i+2] += n;
+  }
+  ctx.putImageData(img, 0, 0);
+  // Formwork horizontal seams
+  ctx.fillStyle = 'rgba(0,0,0,0.10)';
+  for (let y = 64; y < 512; y += 64) {
+    ctx.fillRect(0, y-1, 512, 2);
+  }
+  // Vertical form marks
+  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  for (let x = 96; x < 512; x += 96) {
+    ctx.fillRect(x, 0, 2, 512);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+function steelTexture(tint) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = tint;
+  ctx.fillRect(0,0,256,256);
+  // vertical panel seams
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  for (let x = 0; x < 256; x += 32) ctx.fillRect(x, 0, 1, 256);
+  // random streaks
+  for (let i = 0; i < 30; i++) {
+    ctx.fillStyle = `rgba(0,0,0,${Math.random()*0.05})`;
+    ctx.fillRect(Math.random()*256, 0, 2, 256);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+const concreteTex  = concreteTexture('#cdcac2', 14);
+const concreteTex2 = concreteTexture('#b9b4a7', 12);
+const steelTex     = steelTexture('#8892a0');
+const steelWarm    = steelTexture('#9b7a4a');
+const floorTex     = concreteTexture('#4a4c50', 8);
+
+// (concrete silos retained — no metal-band override here)
+
+const MAT = {
+  concrete:  new THREE.MeshStandardMaterial({ map: concreteTex,  color: 0xcdcac2, roughness: 0.88, metalness: 0.08 }),
+  concrete2: new THREE.MeshStandardMaterial({ map: concreteTex2, color: 0xb9b4a7, roughness: 0.92, metalness: 0.06 }),
+  steel:     new THREE.MeshStandardMaterial({ map: steelTex,     color: 0x8892a0, roughness: 0.42, metalness: 0.78 }),
+  steelDark: new THREE.MeshStandardMaterial({ color: 0x4a525e, roughness: 0.55, metalness: 0.65 }),
+  steelWarm: new THREE.MeshStandardMaterial({ map: steelWarm, color: 0x9b7a4a, roughness: 0.55, metalness: 0.55 }),
+  glass:     new THREE.MeshStandardMaterial({ color: 0x88c6e0, roughness: 0.12, metalness: 0.45, transparent: true, opacity: 0.35 }),
+  glassDark: new THREE.MeshStandardMaterial({ color: 0x1a3040, roughness: 0.20, metalness: 0.60, transparent: true, opacity: 0.65 }),
+  floor:     new THREE.MeshStandardMaterial({ map: floorTex, color: 0x4a4c50, roughness: 0.94, metalness: 0.04 }),
+  ladder:    new THREE.MeshStandardMaterial({ color: 0xfcd34d, roughness: 0.55, metalness: 0.35 }),
+  safety:    new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.60, metalness: 0.20 }),
+  pipe:      new THREE.MeshStandardMaterial({ color: 0x6b7f94, roughness: 0.45, metalness: 0.60 }),
+  pipeWarm:  new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.45, metalness: 0.60 }),
+  water:     new THREE.MeshStandardMaterial({ color: 0x60a5fa, roughness: 0.12, metalness: 0.30, emissive: 0x2563eb, emissiveIntensity: 0.15 }),
+  wheat:     new THREE.MeshStandardMaterial({ color: 0xd9b77c, roughness: 0.90, metalness: 0.05 }),
+  flour:     new THREE.MeshStandardMaterial({ color: 0xf3e9d2, roughness: 0.95, metalness: 0.02 }),
+  bran:      new THREE.MeshStandardMaterial({ color: 0x92683d, roughness: 0.88, metalness: 0.06 }),
+  semolina:  new THREE.MeshStandardMaterial({ color: 0xedc97a, roughness: 0.90, metalness: 0.04 }),
+  gold:      new THREE.MeshStandardMaterial({ color: 0xfbd04a, roughness: 0.30, metalness: 0.75, emissive: 0xca9b13, emissiveIntensity: 0.20 }),
+  zoneC:     new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x0c8cae, emissiveIntensity: 0.45, transparent: true, opacity: 0.55 }),
+  zoneM30:   new THREE.MeshStandardMaterial({ color: 0x60a5fa, emissive: 0x2663c4, emissiveIntensity: 0.50, transparent: true, opacity: 0.55 }),
+  zoneM31:   new THREE.MeshStandardMaterial({ color: 0xfbd04a, emissive: 0xca8813, emissiveIntensity: 0.50, transparent: true, opacity: 0.55 }),
+  signage:   new THREE.MeshStandardMaterial({ color: 0x0b1320, roughness: 0.40, metalness: 0.30 }),
+};
+
+/* Registry of clickable objects with metadata */
+const PICKABLE = new Map();   // obj.uuid -> { type, id, label, ... }
+const LABEL_ANCHORS = [];     // list of {el, obj, offsetY, type, id, baseline}
+let selectedPick = null;
+
+/* ========= Ground — dark indigo studio floor with a soft sheen.
+   Bright enough to show shadow + rim contact under each silo. */
+const groundGeo = new THREE.PlaneGeometry(260, 260, 1, 1);
+const groundMat = new THREE.MeshStandardMaterial({
+  color:     0x131a2a,   // dark indigo with a hint of blue
+  roughness: 0.45,       // more specular so rim lights reflect crisply
+  metalness: 0.55,
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.05;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Bright cyan radial wash under the whole plant — the "powered-on" pool of light.
+(function addFloorFalloff() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const ctx = c.getContext('2d');
+  const gr = ctx.createRadialGradient(256, 256, 40, 256, 256, 230);
+  gr.addColorStop(0.00, 'rgba(60,120,180,0.55)');
+  gr.addColorStop(0.45, 'rgba(36,72,120,0.30)');
+  gr.addColorStop(1.00, 'rgba(8,16,28,0.0)');
+  ctx.fillStyle = gr;
+  ctx.fillRect(0, 0, 512, 512);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex, transparent: true, depthWrite: false, fog: true,
+    blending: THREE.AdditiveBlending,
+  });
+  const pad = new THREE.Mesh(new THREE.PlaneGeometry(150, 130), mat);
+  pad.rotation.x = -Math.PI / 2;
+  pad.position.y = 0.01;
+  scene.add(pad);
+})();
+
+/* ========= Holographic ground PADS under each equipment cluster.
+   Glowing concentric rings + scanline ring — the digital-twin "footprint"
+   that anchors each piece of equipment. Always faces up, additive blend. */
+const HOLO_PADS = [];
+function makeHoloPad(cx, cz, radius = 6, color = 0x22d3ee) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 1024;
+  const ctx = c.getContext('2d');
+  // dark base
+  ctx.clearRect(0, 0, 1024, 1024);
+  const cx2 = 512, cy2 = 512;
+  // outer ring
+  ctx.strokeStyle = `rgba(${(color>>16)&255}, ${(color>>8)&255}, ${color&255}, 0.95)`;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.arc(cx2, cy2, 460, 0, Math.PI * 2);
+  ctx.stroke();
+  // dashed mid ring
+  ctx.lineWidth = 3;
+  ctx.setLineDash([18, 14]);
+  ctx.beginPath();
+  ctx.arc(cx2, cy2, 380, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // inner ring
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = `rgba(${(color>>16)&255}, ${(color>>8)&255}, ${color&255}, 0.55)`;
+  ctx.beginPath();
+  ctx.arc(cx2, cy2, 280, 0, Math.PI * 2);
+  ctx.stroke();
+  // crosshair ticks at N/E/S/W
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = `rgba(${(color>>16)&255}, ${(color>>8)&255}, ${color&255}, 0.85)`;
+  for (let a = 0; a < 4; a++) {
+    const ang = a * Math.PI / 2;
+    const x1 = cx2 + Math.cos(ang) * 440, y1 = cy2 + Math.sin(ang) * 440;
+    const x2 = cx2 + Math.cos(ang) * 480, y2 = cy2 + Math.sin(ang) * 480;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  // soft inner glow fill
+  const gr = ctx.createRadialGradient(cx2, cy2, 40, cx2, cy2, 260);
+  gr.addColorStop(0, `rgba(${(color>>16)&255}, ${(color>>8)&255}, ${color&255}, 0.35)`);
+  gr.addColorStop(1, `rgba(${(color>>16)&255}, ${(color>>8)&255}, ${color&255}, 0.0)`);
+  ctx.fillStyle = gr;
+  ctx.fillRect(0, 0, 1024, 1024);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex, transparent: true, depthWrite: false, fog: true,
+    blending: THREE.AdditiveBlending, toneMapped: false,
+  });
+  const pad = new THREE.Mesh(new THREE.PlaneGeometry(radius * 2, radius * 2), mat);
+  pad.rotation.x = -Math.PI / 2;
+  pad.position.set(cx, 0.02, cz);
+  pad.userData = { baseY: 0.02 };
+  HOLO_PADS.push(pad);
+  scene.add(pad);
+  return pad;
+}
+makeHoloPad(-17,   2,  7.5, 0x22d3ee); // wheat bank
+makeHoloPad(-8,    0,  5.5, 0x22d3ee); // cleaning house
+makeHoloPad( 2,    0,  6.0, 0x34ffb1); // mill tower (hero green)
+makeHoloPad(14,    0,  6.0, 0xfbd04a); // output silos (gold)
+makeHoloPad(14,  -10,  6.5, 0xffa340); // FCL (amber)
+makeHoloPad(-18, -14,  5.5, 0xff7a40); // pasta corner
+
+/* ========================================================
+   PROCESS SPINE — ground-plane zones + flow arrows
+   Turns the scene into a process sentence read left-to-right.
+   ======================================================== */
+function makeStageStrip(cx, cz, w, d, colorHex, opacity = 0.22) {
+  const geo = new THREE.PlaneGeometry(w, d);
+  const mat = new THREE.MeshBasicMaterial({
+    color: colorHex, transparent: true, opacity,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(cx, 0.04, cz);
+  m.renderOrder = -1; // draw behind everything
+  return m;
+}
+
+function makeStageLabel(text, number, cx, cz, width = 7, accent = '#22d3ee') {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+  // Badge circle on the left
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.arc(60, 64, 44, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#04070c';
+  ctx.font = 'bold 64px -apple-system, "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(number), 60, 64);
+  // Stage name
+  ctx.fillStyle = '#e8edf5';
+  ctx.font = 'bold 64px -apple-system, "Segoe UI", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 130, 66);
+  // Subtle shadow / stroke for readability against floor
+  ctx.strokeStyle = 'rgba(4,7,12,0.65)';
+  ctx.lineWidth = 4;
+  ctx.strokeText(text, 130, 66);
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter; tex.anisotropy = 4;
+  const worldW = width;
+  const worldH = width * (c.height / c.width);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(worldW, worldH), mat);
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(cx, 0.06, cz);
+  m.renderOrder = 0;
+  return m;
+}
+
+function makeFlowArrow(fromX, fromZ, toX, toZ, color = 0x22d3ee) {
+  const g = new THREE.Group();
+  const dx = toX - fromX, dz = toZ - fromZ;
+  const len = Math.sqrt(dx * dx + dz * dz);
+  const angle = Math.atan2(dz, dx);
+  // Shaft
+  const shaft = new THREE.Mesh(
+    new THREE.PlaneGeometry(len * 0.7, 0.25),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false })
+  );
+  shaft.rotation.x = -Math.PI / 2;
+  shaft.rotation.z = -angle;
+  shaft.position.set((fromX + toX) / 2 - Math.cos(angle) * len * 0.15, 0.05, (fromZ + toZ) / 2 - Math.sin(angle) * len * 0.15);
+  g.add(shaft);
+  // Head (triangle)
+  const headShape = new THREE.Shape();
+  headShape.moveTo(0, 0);
+  headShape.lineTo(-0.9, 0.55);
+  headShape.lineTo(-0.9, -0.55);
+  headShape.lineTo(0, 0);
+  const head = new THREE.Mesh(
+    new THREE.ShapeGeometry(headShape),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false })
+  );
+  head.rotation.x = -Math.PI / 2;
+  head.rotation.z = -angle;
+  head.position.set(toX, 0.055, toZ);
+  g.add(head);
+  return g;
+}
+
+function buildProcessSpine() {
+  // Intentionally empty — the colored floor zones + arrow stickers were
+  // making the scene read like a kids' playmat. Process narrative is
+  // carried by the neon flow cables below and by the side HUD.
+  return new THREE.Group();
+}
+const processSpine = buildProcessSpine();
+scene.add(processSpine);
+
+/* ========================================================
+   NEON FLOW CABLES — glowing emissive paths along the floor.
+   Each cable is a TubeGeometry following a few CatmullRom points,
+   rendered with an additive transparent material so it reads like a
+   light line on the dark floor. Throughput makes them pulse.
+   Signature "futuristic digital twin" look from the references.
+   ======================================================== */
+const FLOW_CABLES = [];
+function buildFlowCable(points, color = 0x22ffa2, radius = 0.14) {
+  const curve = new THREE.CatmullRomCurve3(
+    points.map(p => new THREE.Vector3(p[0], p[1] ?? 0.22, p[2])),
+    false, 'catmullrom', 0.5
+  );
+  // Inner bright core — thicker, full-bright emissive
+  const core = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, 80, radius, 10, false),
+    new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: 1.0, toneMapped: false, depthWrite: false,
+    })
+  );
+  // Outer glow halo — much wider and brighter
+  const halo = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, 80, radius * 3.5, 10, false),
+    new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: 0.45, toneMapped: false, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+  );
+  // Second outer wash for extra bloom
+  const wash = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, 80, radius * 6.0, 10, false),
+    new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: 0.18, toneMapped: false, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+  );
+  const g = new THREE.Group();
+  g.add(wash); g.add(halo); g.add(core);
+  g.userData = { core, halo, wash, baseOpacity: 1.0, baseHalo: 0.45, baseWash: 0.18 };
+  FLOW_CABLES.push(g);
+  return g;
+}
+
+// Green = "flow active" cables (wheat → cleaning → mill → outputs)
+// Orange/amber = secondary branches (to FCL, to pasta)
+const flowGroup = new THREE.Group();
+// Wheat bank → cleaning house (three cables fanning in)
+flowGroup.add(buildFlowCable([[-14.5, 0.22, 2.5], [-12, 0.22, 2], [-9.5, 0.22, 0.5]]));
+flowGroup.add(buildFlowCable([[-14.5, 0.22, 0],   [-12, 0.22, 0],  [-9.5, 0.22, 0]]));
+flowGroup.add(buildFlowCable([[-14.5, 0.22, -2.5],[-12, 0.22, -2], [-9.5, 0.22, -0.5]]));
+// Cleaning → mill tower (main hero cable — bright neon green)
+flowGroup.add(buildFlowCable([[-6, 0.24, 0], [-3, 0.24, 0.4], [0, 0.24, 0]], 0x34ffb1, 0.18));
+// Mill tower → output silos (three flour/bran/semolina streams)
+flowGroup.add(buildFlowCable([[4, 0.22, 0.8],  [8, 0.22, 1.2], [12, 0.22, 1.0]]));
+flowGroup.add(buildFlowCable([[4, 0.22, 0],    [8, 0.22, 0],   [12, 0.22, 0]]));
+flowGroup.add(buildFlowCable([[4, 0.22, -0.8], [8, 0.22, -1.2],[12, 0.22, -1.0]]));
+// Outputs → FCL packaging (amber)
+flowGroup.add(buildFlowCable([[14, 0.22, -2], [14.3, 0.22, -5], [14, 0.22, -8]], 0xffa340, 0.14));
+// Pasta branch from cleaning (orange)
+flowGroup.add(buildFlowCable([[-9, 0.22, -1.5], [-13, 0.22, -6], [-17, 0.22, -12]], 0xff7a40, 0.12));
+scene.add(flowGroup);
+
+// Data "packets" — small emissive dots that travel along each cable, pulsing
+// down the process chain. Gives the scene motion even at idle.
+const FLOW_PACKETS = [];
+function spawnFlowPacket(curve, color = 0xbbffcc, speed = 0.25, size = 0.11) {
+  const geo = new THREE.SphereGeometry(size, 10, 10);
+  const mat = new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity: 0.95, toneMapped: false, depthWrite: false,
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.userData = { curve, t: Math.random(), speed };
+  FLOW_PACKETS.push(m);
+  scene.add(m);
+  return m;
+}
+// Spawn a few packets on the hero main cable (cleaning → mill)
+const heroCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(-6, 0.30, 0), new THREE.Vector3(-3, 0.30, 0.4), new THREE.Vector3(0, 0.30, 0),
+]);
+for (let i = 0; i < 4; i++) spawnFlowPacket(heroCurve, 0xbbffcc, 0.20 + i * 0.05, 0.18);
+
+// Packets on mill → outputs (three streams)
+const out1 = new THREE.CatmullRomCurve3([new THREE.Vector3(4,0.28,0.8),new THREE.Vector3(8,0.28,1.2),new THREE.Vector3(12,0.28,1.0)]);
+const out2 = new THREE.CatmullRomCurve3([new THREE.Vector3(4,0.28,0),  new THREE.Vector3(8,0.28,0),  new THREE.Vector3(12,0.28,0)]);
+const out3 = new THREE.CatmullRomCurve3([new THREE.Vector3(4,0.28,-0.8),new THREE.Vector3(8,0.28,-1.2),new THREE.Vector3(12,0.28,-1.0)]);
+spawnFlowPacket(out1, 0xbbffcc, 0.24, 0.16);
+spawnFlowPacket(out2, 0xbbffcc, 0.22, 0.16);
+spawnFlowPacket(out3, 0xbbffcc, 0.20, 0.16);
+// Wheat bank → cleaning (three streams)
+const win1 = new THREE.CatmullRomCurve3([new THREE.Vector3(-14.5,0.28,2.5),new THREE.Vector3(-12,0.28,2),new THREE.Vector3(-9.5,0.28,0.5)]);
+const win2 = new THREE.CatmullRomCurve3([new THREE.Vector3(-14.5,0.28,0),  new THREE.Vector3(-12,0.28,0),  new THREE.Vector3(-9.5,0.28,0)]);
+const win3 = new THREE.CatmullRomCurve3([new THREE.Vector3(-14.5,0.28,-2.5),new THREE.Vector3(-12,0.28,-2),new THREE.Vector3(-9.5,0.28,-0.5)]);
+spawnFlowPacket(win1, 0xbbffcc, 0.20, 0.14);
+spawnFlowPacket(win2, 0xbbffcc, 0.22, 0.14);
+spawnFlowPacket(win3, 0xbbffcc, 0.18, 0.14);
+// Outputs → FCL (amber)
+const fclCurve = new THREE.CatmullRomCurve3([new THREE.Vector3(14,0.28,-2),new THREE.Vector3(14.3,0.28,-5),new THREE.Vector3(14,0.28,-8)]);
+spawnFlowPacket(fclCurve, 0xffd280, 0.24, 0.16);
+spawnFlowPacket(fclCurve, 0xffd280, 0.20, 0.16);
+// Pasta branch (orange)
+const pastaCurve = new THREE.CatmullRomCurve3([new THREE.Vector3(-9,0.28,-1.5),new THREE.Vector3(-13,0.28,-6),new THREE.Vector3(-17,0.28,-12)]);
+spawnFlowPacket(pastaCurve, 0xffc080, 0.18, 0.14);
+spawnFlowPacket(pastaCurve, 0xffc080, 0.22, 0.14);
+
+/* ========= Orbit controls ========= */
+const orbit = { azimuth: Math.PI * 0.65, polar: Math.PI * 0.36, distance: 68, target: new THREE.Vector3(-1, 5, -3) };
+function applyOrbit() {
+  const x = orbit.target.x + orbit.distance * Math.sin(orbit.polar) * Math.cos(orbit.azimuth);
+  const y = orbit.target.y + orbit.distance * Math.cos(orbit.polar);
+  const z = orbit.target.z + orbit.distance * Math.sin(orbit.polar) * Math.sin(orbit.azimuth);
+  camera.position.set(x, y, z);
+  camera.lookAt(orbit.target);
+}
+applyOrbit();
+
+let isDragging = false, lastX=0, lastY=0, lastMoveTime = 0;
+canvas.addEventListener('mousedown', (e) => {
+  isDragging = true; lastX = e.clientX; lastY = e.clientY; lastMoveTime = performance.now();
+});
+window.addEventListener('mouseup', () => { isDragging = false; });
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - lastX, dy = e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY; lastMoveTime = performance.now();
+  orbit.azimuth -= dx * 0.005;
+  orbit.polar = Math.max(0.12, Math.min(Math.PI * 0.48, orbit.polar - dy * 0.005));
+  applyOrbit();
+});
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  orbit.distance = Math.max(8, Math.min(120, orbit.distance + e.deltaY * 0.05));
+  applyOrbit(); lastMoveTime = performance.now();
+}, { passive: false });
+
+/* ========= Geometry helpers ========= */
+function makeGroup(parent, x=0, y=0, z=0) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  parent.add(g);
+  return g;
+}
+function makeBox(parent, w, h, d, mat, x=0, y=0, z=0) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  m.castShadow = true; m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+function makeCyl(parent, rT, rB, h, mat, x=0, y=0, z=0, segs=32) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rT, rB, h, segs), mat);
+  m.position.set(x, y, z);
+  m.castShadow = true; m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+function makeCone(parent, r, h, mat, x=0, y=0, z=0, segs=24) {
+  const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, segs), mat);
+  m.position.set(x, y, z);
+  m.castShadow = true; m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+function makeTorus(parent, r, tube, mat, x=0, y=0, z=0) {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(r, tube, 12, 32), mat);
+  m.position.set(x, y, z);
+  parent.add(m);
+  return m;
+}
+
+/* ========= IN-WORLD HOLOGRAPHIC DATA ELEMENTS =========
+   These replace the floating HTML cards for silos and zones.
+   Data lives INSIDE the plant: grain volumes inside translucent silos,
+   glowing fill rings, mounted HMI glass panels, billboarded readouts.
+============================================================= */
+
+/* Create a canvas-textured sprite that always faces the camera.
+   Call `sprite.userData.redraw(text, sublabel)` to update the readout.
+   The sprite is visible in 3D space, perspective-correct, but always billboarded. */
+function makeHoloReadout(opts = {}) {
+  const {
+    w = 256, h = 120,            // canvas pixel size (higher = sharper)
+    scaleX = 2.4, scaleY = 1.1,  // world-space size of the sprite
+    fg = '#22d3ee', accent = '#22d3ee',
+    bg = 'rgba(4,10,18,0.78)',
+    initial = '—', sublabel = ''
+  } = opts;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.anisotropy = 4;
+
+  const material = new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthTest: true, depthWrite: false,
+    opacity: 1.0
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(scaleX, scaleY, 1);
+
+  function drawFrame(bigText, subText) {
+    ctx.clearRect(0, 0, w, h);
+    // Outer frame with corner ticks (feels like a HUD)
+    ctx.fillStyle = bg;
+    const radius = 14;
+    ctx.beginPath();
+    ctx.moveTo(radius, 0); ctx.lineTo(w - radius, 0);
+    ctx.quadraticCurveTo(w, 0, w, radius);
+    ctx.lineTo(w, h - radius);
+    ctx.quadraticCurveTo(w, h, w - radius, h);
+    ctx.lineTo(radius, h);
+    ctx.quadraticCurveTo(0, h, 0, h - radius);
+    ctx.lineTo(0, radius);
+    ctx.quadraticCurveTo(0, 0, radius, 0);
+    ctx.closePath();
+    ctx.fill();
+    // Corner ticks (cyan)
+    ctx.strokeStyle = accent; ctx.lineWidth = 2.5;
+    const tk = 14;
+    const corners = [[2,2,1,1],[w-2,2,-1,1],[2,h-2,1,-1],[w-2,h-2,-1,-1]];
+    corners.forEach(([x,y,dx,dy])=>{
+      ctx.beginPath();
+      ctx.moveTo(x, y + tk*dy); ctx.lineTo(x, y); ctx.lineTo(x + tk*dx, y);
+      ctx.stroke();
+    });
+    // Big value
+    ctx.fillStyle = fg;
+    ctx.font = 'bold 64px -apple-system, "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(bigText, w/2, h/2 - (subText ? 14 : 0));
+    // Sublabel
+    if (subText) {
+      ctx.fillStyle = '#8aa0b5';
+      ctx.font = '600 18px -apple-system, "Segoe UI", sans-serif';
+      ctx.fillText(subText, w/2, h - 20);
+    }
+    tex.needsUpdate = true;
+  }
+
+  sprite.userData = { canvas, ctx, tex, redraw: drawFrame, w, h, opts };
+  drawFrame(initial, sublabel);
+  return sprite;
+}
+
+/* Create a flat HMI panel (plane geometry with canvas texture) that reads like
+   a mounted industrial display. Unlike a sprite this does NOT billboard — it stays
+   fixed to the equipment it's bolted onto (e.g. a glass wall of the tower). */
+function makeHMIPanel(opts = {}) {
+  const {
+    w = 640, h = 320,
+    worldW = 3.4, worldH = 1.7,
+    title = 'PANEL', code = '—',
+    roleName = '',  // e.g. "BREAK MILL" — shown big as header
+  } = opts;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.anisotropy = 4;
+
+  const material = new THREE.MeshBasicMaterial({
+    map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(worldW, worldH), material);
+
+  function draw(state) {
+    const { kw='—', cosphi='—', l1='—', l2='—', l3='—', role='', active=true } = state || {};
+    const headerName = (roleName || role || '').toUpperCase();
+    ctx.clearRect(0, 0, w, h);
+    // Panel body
+    const grd = ctx.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, 'rgba(6,14,24,0.97)');
+    grd.addColorStop(1, 'rgba(4,8,14,0.97)');
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, w, h);
+    // Accent bar (left edge)
+    ctx.fillStyle = active ? '#22d3ee' : '#f87171';
+    ctx.fillRect(0, 0, 8, h);
+    // Bezel outline
+    ctx.strokeStyle = 'rgba(34,211,238,0.40)'; ctx.lineWidth = 2;
+    ctx.strokeRect(4, 4, w - 8, h - 8);
+
+    // ===== HEADER (role big, code smaller on right) =====
+    ctx.fillStyle = '#e8edf5';
+    ctx.font = 'bold 44px -apple-system, "Segoe UI", sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(headerName, 28, 22);
+    // Underline accent
+    ctx.fillStyle = 'rgba(34,211,238,0.55)';
+    const nameWidth = ctx.measureText(headerName).width;
+    ctx.fillRect(28, 72, Math.min(nameWidth, w - 140), 2);
+    // Code pill on right
+    ctx.fillStyle = '#22d3ee';
+    ctx.font = 'bold 36px -apple-system, "Segoe UI", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(code, w - 28, 26);
+
+    // ===== kW HUGE with clearly sized unit =====
+    const kwText = String(kw);
+    ctx.fillStyle = '#e8edf5';
+    ctx.font = 'bold 128px -apple-system, "Segoe UI", sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(kwText, 28, 210);
+    const kwW = ctx.measureText(kwText).width;
+    ctx.fillStyle = '#22d3ee';
+    ctx.font = 'bold 56px -apple-system, "Segoe UI", sans-serif';
+    ctx.fillText('kW', 40 + kwW, 210);
+
+    // ===== cos φ on right =====
+    ctx.fillStyle = '#8aa0b5';
+    ctx.font = '600 22px -apple-system, "Segoe UI", sans-serif';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+    ctx.fillText('POWER FACTOR', w - 28, 110);
+    ctx.fillStyle = '#22d3ee';
+    ctx.font = 'bold 48px -apple-system, "Segoe UI", sans-serif';
+    ctx.fillText(`cos φ ${cosphi}`, w - 28, 138);
+
+    // ===== L1 / L2 / L3 amps row (bottom) =====
+    const amps = [l1, l2, l3];
+    const labels = ['L1', 'L2', 'L3'];
+    const barY = 240;
+    const barW = (w - 80) / 3;
+    amps.forEach((a, i) => {
+      const x = 28 + i * (barW + 12);
+      ctx.fillStyle = 'rgba(34,211,238,0.10)';
+      ctx.fillRect(x, barY, barW, 56);
+      ctx.strokeStyle = 'rgba(34,211,238,0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, barY, barW, 56);
+      ctx.fillStyle = '#8aa0b5';
+      ctx.font = '600 20px -apple-system, "Segoe UI", sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText(labels[i], x + 12, barY + 10);
+      ctx.fillStyle = '#e8edf5';
+      ctx.font = 'bold 30px -apple-system, "Segoe UI", sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${a} A`, x + barW - 12, barY + 14);
+    });
+    tex.needsUpdate = true;
+  }
+
+  mesh.userData = { canvas, ctx, tex, redraw: draw, opts };
+  draw({});
+  return mesh;
+}
+
+/* Compact 3-line sprite used for FCL bins — billboarded so it always faces camera.
+   Line 1: BIN n (header, cyan)
+   Line 2: ← Silo XXX (source, bright)
+   Line 3: MATERIAL (muted)                                              */
+function makeFclChip(opts = {}) {
+  const w = 256, h = 180;
+  const scaleX = 2.2, scaleY = 1.55;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.anisotropy = 4;
+  const material = new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthTest: true, depthWrite: false, opacity: 1.0
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(scaleX, scaleY, 1);
+
+  function draw(binHeader, sourceLine, materialLine, active) {
+    ctx.clearRect(0, 0, w, h);
+    // Rounded rect frame
+    const radius = 14;
+    ctx.fillStyle = 'rgba(4,10,18,0.80)';
+    ctx.beginPath();
+    ctx.moveTo(radius, 0); ctx.lineTo(w - radius, 0);
+    ctx.quadraticCurveTo(w, 0, w, radius);
+    ctx.lineTo(w, h - radius);
+    ctx.quadraticCurveTo(w, h, w - radius, h);
+    ctx.lineTo(radius, h);
+    ctx.quadraticCurveTo(0, h, 0, h - radius);
+    ctx.lineTo(0, radius);
+    ctx.quadraticCurveTo(0, 0, radius, 0);
+    ctx.closePath(); ctx.fill();
+    // Corner ticks
+    ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2.5;
+    const tk = 14;
+    [[2,2,1,1],[w-2,2,-1,1],[2,h-2,1,-1],[w-2,h-2,-1,-1]].forEach(([x,y,dx,dy])=>{
+      ctx.beginPath();
+      ctx.moveTo(x, y + tk*dy); ctx.lineTo(x, y); ctx.lineTo(x + tk*dx, y);
+      ctx.stroke();
+    });
+    // Active dot (top-left inside frame)
+    ctx.fillStyle = active ? '#34d399' : '#6b7f94';
+    ctx.beginPath(); ctx.arc(22, 24, 5, 0, Math.PI * 2); ctx.fill();
+    if (active) {
+      ctx.fillStyle = 'rgba(52,211,153,0.25)';
+      ctx.beginPath(); ctx.arc(22, 24, 9, 0, Math.PI * 2); ctx.fill();
+    }
+    // BIN header
+    ctx.fillStyle = '#22d3ee';
+    ctx.font = 'bold 28px -apple-system, "Segoe UI", sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(binHeader, 40, 12);
+    // Source line
+    ctx.fillStyle = '#e8edf5';
+    ctx.font = 'bold 32px -apple-system, "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(sourceLine, w/2, 62);
+    // Material
+    ctx.fillStyle = '#8aa0b5';
+    ctx.font = '600 22px -apple-system, "Segoe UI", sans-serif';
+    ctx.fillText(materialLine, w/2, 118);
+    tex.needsUpdate = true;
+  }
+
+  sprite.userData = { canvas, ctx, tex, redraw: draw, w, h };
+  draw('BIN —', '—', '—', false);
+  return sprite;
+}
+
+/* In-scene registries for animation */
+const SILO_REGISTRY = [];    // { group, id, role, material }
+const ZONE_REGISTRY = [];    // { panel, id, role }
+const FCL_REGISTRY  = [];    // { chip, id, binIdx }
+const LED_REGISTRY  = [];    // { mesh, halo, colorOk, colorAlert, isActiveFn, phase }
+
+/* ========= Status LED beacon (red/green) =========
+   A small glowing disk + additive halo. Mounted atop silos and equipment.
+   Pulses slowly. Calls `isActiveFn()` every frame to decide colour. */
+function makeStatusLED({ colorOk = 0x22ff8a, colorAlert = 0xff4d4d, isActiveFn = () => true, phase = 0 } = {}) {
+  const group = new THREE.Group();
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 14, 14),
+    new THREE.MeshBasicMaterial({ color: colorOk, toneMapped: false })
+  );
+  const halo = new THREE.Mesh(
+    new THREE.SphereGeometry(0.45, 14, 14),
+    new THREE.MeshBasicMaterial({
+      color: colorOk, transparent: true, opacity: 0.55,
+      depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending,
+    })
+  );
+  // Outer wash for distance visibility
+  const wash = new THREE.Mesh(
+    new THREE.SphereGeometry(0.85, 14, 14),
+    new THREE.MeshBasicMaterial({
+      color: colorOk, transparent: true, opacity: 0.18,
+      depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending,
+    })
+  );
+  group.add(wash); group.add(halo); group.add(core);
+  LED_REGISTRY.push({ core, halo, wash, colorOk, colorAlert, isActiveFn, phase });
+  return group;
+}
+
+/* Register an anchor for HTML label */
+function registerAnchor(obj, offsetY, type, id) {
+  LABEL_ANCHORS.push({ obj, offsetY, type, id, el: null });
+}
+function registerPickable(obj, type, id, meta={}) {
+  obj.traverse(child => {
+    if (child.isMesh) PICKABLE.set(child.uuid, { type, id, ...meta });
+  });
+  PICKABLE.set(obj.uuid, { type, id, ...meta });
+}
+
+/* ========= Ladder with safety cage ========= */
+function buildCagedLadder(parent, height, mat=MAT.ladder) {
+  const g = makeGroup(parent);
+  const stileL = new THREE.Mesh(new THREE.BoxGeometry(0.08, height, 0.08), mat);
+  stileL.position.set(-0.28, height/2, 0);
+  const stileR = stileL.clone(); stileR.position.x = 0.28;
+  g.add(stileL, stileR);
+  // Rungs
+  const rungCount = Math.floor(height / 0.35);
+  for (let i = 0; i < rungCount; i++) {
+    const rung = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.04, 0.04), mat);
+    rung.position.set(0, 0.3 + i*0.35, 0);
+    g.add(rung);
+  }
+  // Cage hoops (every 2m, starting at 2.5m)
+  for (let y = 2.5; y < height - 0.5; y += 0.6) {
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.02, 6, 12, Math.PI*1.1), mat);
+    hoop.rotation.x = Math.PI/2;
+    hoop.rotation.z = -0.1;
+    hoop.position.set(0, y, -0.25);
+    g.add(hoop);
+  }
+  return g;
+}
+
+/* ========= Catwalk with railing ========= */
+function buildCatwalk(parent, length, width=1.2, mat=MAT.steel) {
+  const g = makeGroup(parent);
+  // Deck
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(length, 0.10, width), mat);
+  deck.position.set(0, 0, 0);
+  deck.castShadow = deck.receiveShadow = true;
+  g.add(deck);
+  // Rails (top and mid-rail)
+  [0.5, 1.05].forEach(h => {
+    const r1 = new THREE.Mesh(new THREE.BoxGeometry(length, 0.03, 0.03), MAT.safety);
+    r1.position.set(0, h, width/2);
+    const r2 = r1.clone(); r2.position.z = -width/2;
+    g.add(r1, r2);
+  });
+  // Vertical posts
+  const postCount = Math.floor(length / 1.5);
+  for (let i = 0; i <= postCount; i++) {
+    const x = -length/2 + (length/postCount) * i;
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.10, 0.04), MAT.safety);
+    p1.position.set(x, 0.55, width/2);
+    const p2 = p1.clone(); p2.position.z = -width/2;
+    g.add(p1, p2);
+  }
+  return g;
+}
+
+/* ========= TALL SILO — HOLOGRAPHIC EMBEDDED PLANT MODE =========
+   The silo shell is translucent so the grain level is visible INSIDE.
+   A glowing fill ring rises and falls with actual material level, and a
+   billboarded HUD readout shows the percentage + material type right at the
+   grain surface — no floating sidebar cards. */
+function buildTallSilo(parent, opts) {
+  const { id, role, material, x, z, h=12, r=1.8, matTop='concrete', fill=50, cluster=null } = opts;
+  const g = makeGroup(parent, x, 0, z);
+  g.userData = { type: 'silo', id, role, material, capacity: opts.capacity || 400 };
+
+  const grainColorHex = MAT[materialToMat(material)].color.getHex();
+
+  /* ---- Translucent holographic shell ---- */
+  const shellMat = new THREE.MeshStandardMaterial({
+    color: 0xc6d4e0,
+    roughness: 0.35,
+    metalness: 0.05,
+    transparent: true,
+    opacity: 0.22,
+    emissive: 0x1c3040,
+    emissiveIntensity: 0.12,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const body = makeCyl(g, r, r, h, shellMat, 0, h/2, 0, 32);
+  body.castShadow = false; body.receiveShadow = false;
+
+  /* ---- Edge wireframe for silhouette definition ---- */
+  const edgeGeo = new THREE.EdgesGeometry(body.geometry, 15);
+  const edgeMat = new THREE.LineBasicMaterial({
+    color: 0x22d3ee, transparent: true, opacity: 0.45
+  });
+  const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+  edges.position.y = h/2;
+  g.add(edges);
+
+  /* ---- Cone discharge (opaque, stays industrial) ---- */
+  const cone = makeCone(g, r * 0.95, 1.5, MAT.steelDark, 0, 0.5, 0);
+  cone.scale.y = -1;
+  makeCyl(g, 0.18, 0.18, 0.8, MAT.steelDark, 0, 0.05, 0);
+
+  /* ---- Cap + rim + inlet chute + ladder ---- */
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(r, r*1.02, 0.25, 32), MAT.steelDark);
+  cap.position.y = h + 0.12;
+  g.add(cap);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(r*1.02, 0.05, 8, 32), MAT.safety);
+  rim.rotation.x = Math.PI/2;
+  rim.position.y = h + 0.30;
+  g.add(rim);
+  const ladder = buildCagedLadder(g, h, MAT.ladder);
+  ladder.position.set(r + 0.15, 0, 0);
+  const inlet = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.45), MAT.steel);
+  inlet.position.set(0, h + 0.6, 0);
+  g.add(inlet);
+  const sensor = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 0.20), MAT.signage);
+  sensor.position.set(-r - 0.20, h * 0.85, 0);
+  g.add(sensor);
+
+  // Silo ID stencil — reads naturally through the translucent shell
+  const idPlane = buildSiloStencil(id, role);
+  idPlane.position.set(0, h * 0.55, r + 0.02);
+  g.add(idPlane);
+
+  /* ---- INTERIOR GRAIN COLUMN — the key embedded-plant element ----
+     A cylinder sitting inside the silo whose height = fill% × usable height.
+     Its material is tinted to the commodity (wheat / flour / bran / semolina). */
+  const usableH = h - 1.2; // space above the cone, below the cap
+  const grainRadius = r * 0.88;
+  const grainMat = new THREE.MeshStandardMaterial({
+    color: grainColorHex,
+    roughness: 0.78,
+    metalness: 0.0,
+    emissive: grainColorHex,
+    emissiveIntensity: 0.18,
+    transparent: true,
+    opacity: 0.92,
+  });
+  // We build the cylinder at unit height and scale its Y to match fill
+  const grain = new THREE.Mesh(
+    new THREE.CylinderGeometry(grainRadius, grainRadius, 1, 28, 1, false),
+    grainMat
+  );
+  grain.castShadow = false; grain.receiveShadow = false;
+  const fill0 = Math.max(0.001, fill / 100);
+  grain.scale.y = fill0 * usableH;
+  // Position: base of grain sits at y=0.7 (just above the cone tip), top rises with fill
+  const grainBaseY = 0.7;
+  grain.position.y = grainBaseY + (grain.scale.y) / 2;
+  g.add(grain);
+
+  /* ---- GLOWING FILL RING at grain surface ----
+     A torus ring that rides at the top of the grain column. Pulses subtly.
+     Colour is per-material so operators can recognise content at a glance. */
+  const RING_COLOR_BY_MATERIAL = {
+    'WHEAT':       0xf5b942, // amber wheat
+    'WHEAT+WATER': 0x60a5fa, // cool blue for tempered wheat
+    'FLOUR':       0xf3e9d2, // warm cream (flour)
+    'SEMOLINA':    0xfbd04a, // golden yellow
+    'BRAN':        0xc88a4a, // toasted brown-amber
+  };
+  const RING_ACCENT_CSS = {
+    0xf5b942: '#f5b942',
+    0x60a5fa: '#60a5fa',
+    0xf3e9d2: '#f3e9d2',
+    0xfbd04a: '#fbd04a',
+    0xc88a4a: '#c88a4a',
+    0x22d3ee: '#22d3ee',
+  };
+  const ringColor = RING_COLOR_BY_MATERIAL[material] ?? 0x22d3ee;
+  const fillRingMat = new THREE.MeshStandardMaterial({
+    color: ringColor, emissive: ringColor, emissiveIntensity: 2.0,
+    transparent: true, opacity: 0.95,
+    toneMapped: false
+  });
+  const fillRing = new THREE.Mesh(
+    new THREE.TorusGeometry(grainRadius + 0.02, 0.04, 10, 40),
+    fillRingMat
+  );
+  fillRing.rotation.x = Math.PI/2;
+  fillRing.position.y = grainBaseY + grain.scale.y;
+  g.add(fillRing);
+
+  // Secondary outer ring (glow halo)
+  const haloMat = new THREE.MeshBasicMaterial({
+    color: ringColor, transparent: true, opacity: 0.18, toneMapped: false
+  });
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(grainRadius + 0.15, 0.08, 8, 36),
+    haloMat
+  );
+  halo.rotation.x = Math.PI/2;
+  halo.position.y = grainBaseY + grain.scale.y;
+  g.add(halo);
+
+  /* ---- BILLBOARDED HUD READOUT at grain surface ----
+     World-space sprite that always faces the camera. Replaces the old HTML card. */
+  const readout = makeHoloReadout({
+    scaleX: 2.6, scaleY: 1.2,
+    fg: '#e8edf5', accent: RING_ACCENT_CSS[ringColor] || '#22d3ee',
+    initial: `${Math.round(fill)}%`,
+    sublabel: `${id} · ${material}`
+  });
+  readout.position.set(0, grainBaseY + grain.scale.y + 1.3, 0);
+  readout.userData.role = role;
+  g.add(readout);
+
+  g.userData.grain = grain;
+  g.userData.fillRing = fillRing;
+  g.userData.halo = halo;
+  g.userData.readout = readout;
+  g.userData.siloHeight = h;
+  g.userData.siloRadius = r;
+  g.userData.grainBaseY = grainBaseY;
+  g.userData.usableH = usableH;
+
+  /* Rooftop status LEDs — two beacons on opposite sides of the top rim.
+     Green when fill is in the healthy 15–90% band, red when critically
+     low or over-capacity. Matches the reference-image beacon look. */
+  const ledActiveFn = () => {
+    const f = tags[`silo_${id}_fill`] ?? fill;
+    return f >= 15 && f <= 92;
+  };
+  const led1 = makeStatusLED({ isActiveFn: ledActiveFn, phase: 0.0 });
+  led1.position.set( r * 0.85, h + 0.25,  r * 0.0);
+  g.add(led1);
+  const led2 = makeStatusLED({ isActiveFn: ledActiveFn, phase: 0.5 });
+  led2.position.set(-r * 0.85, h + 0.25,  r * 0.0);
+  g.add(led2);
+
+  registerPickable(g, 'silo', id, { role, material });
+  SILO_REGISTRY.push({ group: g, id, role, material });
+  // No more HTML anchor for silos — the hologram is in the scene itself
+  return g;
+}
+
+function materialToMat(m) {
+  if (m === 'WHEAT' || m === 'WHEAT+WATER') return 'wheat';
+  if (m === 'FLOUR') return 'flour';
+  if (m === 'BRAN') return 'bran';
+  if (m === 'SEMOLINA') return 'semolina';
+  return 'concrete';
+}
+
+function buildSiloStencil(id, role) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,256,128);
+  // Stencil background (faint)
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillRect(0, 24, 256, 80);
+  // ID text
+  ctx.fillStyle = '#e8edf5';
+  ctx.font = 'bold 48px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(id, 128, 54);
+  // Role
+  ctx.fillStyle = '#22d3ee';
+  ctx.font = '14px -apple-system, sans-serif';
+  ctx.fillText(role.toUpperCase(), 128, 86);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.25), mat);
+  return plane;
+}
+
+/* ========= WHEAT SILO BANK (4 concrete silos: 021, 021A, 021B, 021C with headhouse) ========= */
+function buildWheatBank() {
+  const g = makeGroup(scene, -18, 0, 0);
+
+  // Slab base under all 4 silos
+  const slab = makeBox(g, 13, 0.5, 6, MAT.concrete2, 0, -0.25, 0);
+
+  // Four tall concrete silos in a row
+  const silos = [
+    { id: '021',  role: 'Wheat Reception', x: -4.5,  z: 0, h: 16, r: 1.9, fill: tags.silo_021_fill },
+    { id: '021A', role: '1st Clean',       x: -1.5,  z: 0, h: 14, r: 1.6, fill: tags.silo_021A_fill },
+    { id: '021B', role: '2nd Clean',       x:  1.5,  z: 0, h: 14, r: 1.6, fill: tags.silo_021B_fill },
+    { id: '021C', role: 'Tempering',       x:  4.5,  z: 0, h: 14, r: 1.6, fill: tags.silo_021C_fill, matTop: 'concrete2' },
+  ];
+  silos.forEach(s => buildTallSilo(g, {
+    id: s.id, role: s.role, material: s.id === '021C' ? 'WHEAT+WATER' : 'WHEAT',
+    x: s.x, z: s.z, h: s.h, r: s.r, fill: s.fill, capacity: s.r > 1.7 ? 800 : 400,
+    matTop: s.matTop || 'concrete'
+  }));
+
+  // Top headhouse spanning all silos (key visual marker)
+  const hhHeight = 3.5;
+  const hhY = 16 + 0.5;
+  const hh = makeBox(g, 12, hhHeight, 4.5, MAT.steel, 0, hhY + hhHeight/2, 0);
+  // Headhouse roof overhang
+  makeBox(g, 12.6, 0.2, 5, MAT.steelDark, 0, hhY + hhHeight + 0.1, 0);
+  // Headhouse cladding lines — vertical panels
+  for (let x = -5.5; x <= 5.5; x += 1.5) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.04, hhHeight, 4.6), MAT.steelDark);
+    panel.position.set(x, hhY + hhHeight/2, 0);
+    g.add(panel);
+  }
+  // Dust collector cyclones on top
+  for (let i = 0; i < 3; i++) {
+    const dc = makeGroup(g, -3.5 + i*3.5, hhY + hhHeight + 0.1, -1.5);
+    makeCyl(dc, 0.35, 0.35, 1.0, MAT.steel, 0, 0.5, 0);
+    makeCone(dc, 0.35, 0.6, MAT.steelDark, 0, 1.3, 0);
+    // vent stack
+    makeCyl(dc, 0.12, 0.12, 1.2, MAT.steelDark, 0, 2.2, 0);
+  }
+  // Bucket elevator tower (ties into headhouse)
+  const be = makeGroup(g, -6.2, 0, -2.2);
+  makeBox(be, 1.2, hhY + hhHeight + 0.5, 1.2, MAT.steel, 0, (hhY + hhHeight + 0.5)/2, 0);
+  // Conveyor covering atop silos (rectangular tube spanning)
+  makeBox(g, 11, 0.6, 0.8, MAT.steelWarm, 0, hhY + 0.35, 2.0);
+
+  // Catwalk connecting silo tops (front side)
+  const cw = buildCatwalk(g, 12, 1.0);
+  cw.position.set(0, hhY - 0.05, 3.2);
+
+  // Water addition pipe to 021C from overhead (key detail)
+  const waterG = makeGroup(g, 4.5, 0, 2.2);
+  makeCyl(waterG, 0.06, 0.06, 1.0, MAT.water, 0, 14, 0);
+  makeBox(waterG, 0.4, 0.3, 0.3, MAT.water, 0, 13.4, 0);
+  // Water valve indicator
+  const valve = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.03, 8, 16), MAT.safety);
+  valve.rotation.x = Math.PI/2;
+  valve.position.set(0, 13, 0.2);
+  waterG.add(valve);
+
+  // Overall BANK signage
+  const bankSign = buildSignage('WHEAT STORAGE BANK', 'SILO 021 · 021A · 021B · 021C', 3.2, 0.9);
+  bankSign.position.set(0, 1.8, 3.1);
+  g.add(bankSign);
+
+  // --- Status LED beacons on headhouse roof corners ---
+  const bankRoofY = hhY + hhHeight + 0.35;
+  const bankActive = () => {
+    // Active when at least one wheat silo is in healthy fill range
+    const fills = [
+      tags.silo_021_fill, tags.silo_021A_fill, tags.silo_021B_fill, tags.silo_021C_fill
+    ];
+    return fills.some(f => (f ?? 0) >= 15 && (f ?? 0) <= 92);
+  };
+  [[ -5.6, bankRoofY,  2.0, 0.0 ],
+   [  5.6, bankRoofY,  2.0, 0.5 ],
+   [ -5.6, bankRoofY, -2.0, 0.25 ],
+   [  5.6, bankRoofY, -2.0, 0.75 ],
+  ].forEach(([x, y, z, ph]) => {
+    const led = makeStatusLED({ isActiveFn: bankActive, phase: ph });
+    led.position.set(x, y, z);
+    g.add(led);
+  });
+
+  return g;
+}
+
+function buildSignage(title, sub, w, h) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  const ctx = c.getContext('2d');
+  // Bg
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, 512, 128);
+  // Brand accent bar (left)
+  const grad = ctx.createLinearGradient(0, 0, 0, 128);
+  grad.addColorStop(0, '#22d3ee'); grad.addColorStop(1, '#0ea5e9');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 6, 128);
+  // Title
+  ctx.fillStyle = '#e8edf5';
+  ctx.font = 'bold 38px -apple-system';
+  ctx.textAlign = 'left';
+  ctx.fillText(title, 20, 58);
+  // Sub
+  ctx.fillStyle = '#22d3ee';
+  ctx.font = '18px -apple-system';
+  ctx.fillText(sub, 20, 92);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.2, emissive: 0x11212e, emissiveIntensity: 0.12 });
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  return plane;
+}
+
+/* ========= CLEANING HOUSE (C32 electrical zone, real cleaning equipment) ========= */
+function buildCleaningHouse() {
+  const g = makeGroup(scene, -8, 0, 0);
+  g.userData = { type: 'zone', id: 'C32', role: 'Cleaning' };
+
+  // Main enclosure — industrial box with glass panels
+  const H = 9;
+  const W = 7, D = 5;
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), MAT.steelDark);
+  frame.position.set(0, H/2, 0);
+  frame.castShadow = frame.receiveShadow = true;
+  g.add(frame);
+
+  // Glass panels on long sides
+  [-D/2 - 0.01, D/2 + 0.01].forEach(zo => {
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.92, H * 0.85), MAT.glassDark);
+    glass.position.set(0, H/2, zo);
+    if (zo < 0) glass.rotation.y = Math.PI;
+    g.add(glass);
+  });
+
+  // Window frame divisions (mullions)
+  for (let x = -W/2 + 1; x < W/2 - 0.5; x += 1) {
+    [-D/2 - 0.02, D/2 + 0.02].forEach(zo => {
+      const mull = new THREE.Mesh(new THREE.BoxGeometry(0.05, H * 0.85, 0.05), MAT.steelDark);
+      mull.position.set(x, H/2, zo);
+      g.add(mull);
+    });
+  }
+
+  // Internal equipment (visible through glass):
+  // 1. Drum separator
+  const drum = makeCyl(g, 0.9, 0.9, 2.5, MAT.steel, -2, 2, 0);
+  drum.rotation.z = Math.PI/2;
+  // 2. Aspirator (tall vertical cylinder)
+  makeCyl(g, 0.55, 0.55, 4, MAT.steelDark, 0, 3, 0);
+  makeCone(g, 0.55, 0.8, MAT.steel, 0, 5.4, 0);
+  // 3. Stoner (sloped box)
+  const stoner = makeBox(g, 1.5, 0.8, 0.9, MAT.steelWarm, 2, 1.5, 0);
+  stoner.rotation.z = -0.2;
+  // 4. Scourer (ribbed cylinder, rotated)
+  const scourer = makeCyl(g, 0.45, 0.45, 1.8, MAT.steelWarm, -2, 5.5, 0);
+  scourer.rotation.z = Math.PI/2;
+  // 5. Magnet separator (rect with yellow tag)
+  const magnet = makeBox(g, 0.8, 0.6, 0.5, MAT.gold, 2, 3.8, 0);
+
+  // Zone glow ring (top)
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(W/2 - 0.2, 0.12, 8, 32), MAT.zoneC);
+  ring.rotation.x = Math.PI/2;
+  ring.position.y = H - 0.3;
+  g.add(ring);
+  g.userData.zoneRing = ring;
+  // Expose globally for emissive pulsing by kW load
+  window._ringC32Ref = ring;
+
+  // Mounted HMI panel — C32 Cleaning — on the front glass wall, upper section
+  const hmiC32 = makeHMIPanel({ code: 'C32', roleName: 'CLEANING HOUSE', worldW: 3.4, worldH: 1.7 });
+  hmiC32.position.set(0, H * 0.68, D/2 + 0.05);
+  g.add(hmiC32);
+  ZONE_REGISTRY.push({ panel: hmiC32, id: 'C32', role: 'Cleaning House' });
+  registerPickable(hmiC32, 'zone', 'C32', { role: 'Cleaning House' });
+
+  // Vent stacks on roof
+  for (let i = 0; i < 2; i++) {
+    const vs = makeGroup(g, -1.5 + i*3, H, 0);
+    makeCyl(vs, 0.2, 0.2, 1.8, MAT.steel, 0, 0.9, 0);
+    makeCone(vs, 0.25, 0.3, MAT.steelDark, 0, 1.9, 0);
+  }
+
+  // Signage on front
+  const sign = buildSignage('C32 · CLEANING HOUSE', 'DRUM · ASPIRATOR · MAGNET · STONER', 3.5, 0.9);
+  sign.position.set(0, 1.5, D/2 + 0.01);
+  g.add(sign);
+
+  // Door
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.8, 0.08), MAT.steelDark);
+  door.position.set(-W/2 + 0.5, 0.9, D/2 + 0.04);
+  g.add(door);
+  const doorHandle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.20, 0.04), MAT.gold);
+  doorHandle.position.set(-W/2 + 0.3, 0.9, D/2 + 0.08);
+  g.add(doorHandle);
+
+  registerPickable(g, 'zone', 'C32', { role: 'Cleaning' });
+  registerAnchor(g, H + 1.0, 'zone', 'C32');
+
+  // --- Status LED beacons on cleaning house roof corners ---
+  const cleanActive = () => (tags.c32_effective_power ?? 0) > 30;
+  [[ -W/2 + 0.4, H + 0.2,  D/2 - 0.4, 0.1 ],
+   [  W/2 - 0.4, H + 0.2,  D/2 - 0.4, 0.6 ],
+   [ -W/2 + 0.4, H + 0.2, -D/2 + 0.4, 0.35 ],
+   [  W/2 - 0.4, H + 0.2, -D/2 + 0.4, 0.85 ],
+  ].forEach(([x, y, z, ph]) => {
+    const led = makeStatusLED({ isActiveFn: cleanActive, phase: ph });
+    led.position.set(x, y, z);
+    g.add(led);
+  });
+
+  return g;
+}
+
+/* ========= MILL TOWER (M30 + M31 — the core) ========= */
+function buildMillTower() {
+  const g = makeGroup(scene, 2, 0, 0);
+
+  const zones = [
+    { id: 'M31', role: 'Reduction', yBase: 0,  yTop: 7,  mat: 'zoneM31', color: 0xfbd04a },
+    { id: 'M30', role: 'Break',     yBase: 7,  yTop: 14, mat: 'zoneM30', color: 0x60a5fa },
+  ];
+
+  // Main tower shell (glass-walled)
+  const W = 5.2, D = 4.8;
+  const H = 14;
+  // Concrete corners/pillars
+  [-W/2, W/2].forEach(xo => {
+    [-D/2, D/2].forEach(zo => {
+      const col = new THREE.Mesh(new THREE.BoxGeometry(0.35, H + 1, 0.35), MAT.concrete);
+      col.position.set(xo, (H + 1)/2, zo);
+      col.castShadow = true;
+      g.add(col);
+    });
+  });
+  // Top slab
+  makeBox(g, W + 0.3, 0.25, D + 0.3, MAT.concrete, 0, H + 0.9, 0);
+  // Floor slab between M31 and M30
+  makeBox(g, W - 0.2, 0.15, D - 0.2, MAT.concrete2, 0, 7, 0);
+
+  // Glass panels (transparent walls)
+  [-D/2 + 0.01, D/2 - 0.01].forEach(zo => {
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.5, H - 0.3), MAT.glass);
+    glass.position.set(0, H/2, zo);
+    if (zo < 0) glass.rotation.y = Math.PI;
+    g.add(glass);
+  });
+  [-W/2 + 0.01, W/2 - 0.01].forEach(xo => {
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(D - 0.5, H - 0.3), MAT.glass);
+    glass.position.set(xo, H/2, 0);
+    glass.rotation.y = xo < 0 ? Math.PI/2 : -Math.PI/2;
+    g.add(glass);
+  });
+
+  // --- Internal equipment by zone ---
+  // Helper: build a feed hopper (inverted truncated cone) above a roller mill
+  function addFeedHopper(parent, x, y, z) {
+    const hop = makeGroup(parent, x, y, z);
+    const cone = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55, 0.18, 0.9, 14, 1, true),
+      MAT.steelWarm
+    );
+    cone.position.y = 0;
+    hop.add(cone);
+    // short stub pipe down to mill housing
+    makeCyl(hop, 0.12, 0.12, 0.35, MAT.steelDark, 0, -0.55, 0, 12);
+    // small glass sight tube
+    const sight = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.06, 0.35, 10),
+      MAT.glass
+    );
+    sight.position.set(0.55, 0, 0);
+    hop.add(sight);
+    return hop;
+  }
+  // Helper: purifier/sifter box (flat inclined box with screens)
+  function addPurifier(parent, x, y, z, w = 1.4, d = 0.9) {
+    const p = makeGroup(parent, x, y, z);
+    makeBox(p, w, 0.55, d, MAT.steelWarm, 0, 0, 0);
+    // inspection window
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.6, 0.22), MAT.glass);
+    win.position.set(0, 0.1, d/2 + 0.002);
+    p.add(win);
+    // drive motor stub on side
+    const motor = makeBox(p, 0.35, 0.25, 0.3, MAT.steelDark, -w/2 - 0.2, 0.05, 0);
+    return p;
+  }
+  // Helper: vertical pneumatic conveyor pipe (painted metal)
+  function addPneumaticPipe(parent, x, z, yBase, yTop, color = 0x9ca8b4) {
+    const h = yTop - yBase;
+    const mat = new THREE.MeshStandardMaterial({
+      color, roughness: 0.55, metalness: 0.75
+    });
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, h, 14), mat);
+    p.position.set(x, yBase + h/2, z);
+    parent.add(p);
+    // coupling collars every 2m
+    for (let yy = yBase + 1; yy < yTop - 0.3; yy += 2) {
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.12, 14), MAT.steelWarm);
+      col.position.set(x, yy, z);
+      parent.add(col);
+    }
+    return p;
+  }
+  // Helper: electrical cabinet (grey with vents + indicator lights)
+  function addElectricalCabinet(parent, x, y, z, w = 0.9, h = 1.6, d = 0.45) {
+    const c = makeGroup(parent, x, y, z);
+    makeBox(c, w, h, d, MAT.steelDark, 0, 0, 0);
+    // vent grill strip
+    const vent = new THREE.Mesh(
+      new THREE.PlaneGeometry(w * 0.7, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0x1a1d22, roughness: 0.9 })
+    );
+    vent.position.set(0, h/2 - 0.25, d/2 + 0.002);
+    c.add(vent);
+    // three indicator LEDs
+    ['#34d399', '#fbd04a', '#f87171'].forEach((hex, i) => {
+      const led = new THREE.Mesh(
+        new THREE.CircleGeometry(0.04, 12),
+        new THREE.MeshBasicMaterial({ color: hex, toneMapped: false })
+      );
+      led.position.set(-0.2 + i * 0.2, h/2 - 0.12, d/2 + 0.003);
+      c.add(led);
+    });
+    return c;
+  }
+
+  // M31 zone: Reduction roller mills (3 clusters) with feed hoppers + collector below
+  for (let i = 0; i < 3; i++) {
+    const x = -1.5 + i * 1.5;
+    // Roller mill pair
+    const rm = makeGroup(g, x, 3 + (i%2)*0.5, 0);
+    const rollerL = makeCyl(rm, 0.25, 0.25, 1.4, MAT.steel, -0.3, 0, 0, 20);
+    rollerL.rotation.z = Math.PI/2;
+    const rollerR = rollerL.clone();
+    rollerR.position.x = 0.3;
+    rm.add(rollerR);
+    // Mill housing
+    makeBox(rm, 1.2, 0.6, 0.9, MAT.steelDark, 0, -0.5, 0);
+    // belt drive pulley on side
+    const pulley = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.18, 0.08, 16),
+      MAT.steelWarm
+    );
+    pulley.position.set(-0.75, 0, 0.5);
+    pulley.rotation.z = Math.PI/2;
+    rm.add(pulley);
+    // feed hopper above roller
+    addFeedHopper(g, x, 3 + (i%2)*0.5 + 1.3, 0);
+    // small collection cone below housing
+    const cone = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.35, 0.12, 0.55, 12, 1, true),
+      MAT.steelWarm
+    );
+    cone.position.set(x, 3 + (i%2)*0.5 - 1.05, 0);
+    g.add(cone);
+  }
+  // Purifier boxes along back wall of M31 zone
+  addPurifier(g, -1.8, 4.2, -1.5);
+  addPurifier(g, 0.6, 4.2, -1.5);
+  // Electrical cabinets at ground level
+  addElectricalCabinet(g, -W/2 + 0.55, 0.85, -D/2 + 0.3);
+  addElectricalCabinet(g, -W/2 + 0.55, 0.85, 0);
+  addElectricalCabinet(g,  W/2 - 0.55, 0.85, -D/2 + 0.3);
+
+  // Pneumatic conveyor risers (carry stock between zones and to the plansifter)
+  addPneumaticPipe(g, -W/2 + 0.7,  D/2 - 0.6, 0.1, H + 0.8, 0x8fa2b5);
+  addPneumaticPipe(g,  W/2 - 0.7,  D/2 - 0.6, 0.1, H + 0.8, 0x8fa2b5);
+  addPneumaticPipe(g, -W/2 + 0.7, -D/2 + 0.6, 0.1, H + 0.8, 0xb8a07a);
+  addPneumaticPipe(g,  W/2 - 0.7, -D/2 + 0.6, 0.1, H + 0.8, 0xb8a07a);
+
+  // M31 zone glow ring
+  const ringM31 = new THREE.Mesh(new THREE.TorusGeometry(W/2 - 0.3, 0.08, 8, 32), MAT.zoneM31);
+  ringM31.rotation.x = Math.PI/2;
+  ringM31.position.y = 6.5;
+  g.add(ringM31);
+
+  // M30 zone: Break roller mills (4 clusters) with feed hoppers
+  for (let i = 0; i < 4; i++) {
+    const x = -1.6 + i * 1.2;
+    const rm = makeGroup(g, x, 10 + (i%2)*0.3, 0);
+    const rollerL = makeCyl(rm, 0.28, 0.28, 1.2, MAT.steelWarm, -0.22, 0, 0, 20);
+    rollerL.rotation.z = Math.PI/2;
+    const rollerR = rollerL.clone();
+    rollerR.position.x = 0.22;
+    rm.add(rollerR);
+    makeBox(rm, 1.0, 0.5, 0.8, MAT.steelDark, 0, -0.4, 0);
+    // Belt drive pulley
+    const pulley = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.15, 0.15, 0.07, 16),
+      MAT.steelWarm
+    );
+    pulley.position.set(-0.62, 0, 0.45);
+    pulley.rotation.z = Math.PI/2;
+    rm.add(pulley);
+    // feed hopper above roller (smaller for break zone)
+    addFeedHopper(g, x, 10 + (i%2)*0.3 + 1.2, 0);
+  }
+  // Purifier boxes in M30 zone
+  addPurifier(g, -1.2, 11.2, -1.5, 1.2, 0.8);
+  addPurifier(g,  0.8, 11.2, -1.5, 1.2, 0.8);
+
+  // M30 zone glow ring
+  const ringM30 = new THREE.Mesh(new THREE.TorusGeometry(W/2 - 0.3, 0.08, 8, 32), MAT.zoneM30);
+  ringM30.rotation.x = Math.PI/2;
+  ringM30.position.y = 13.5;
+  g.add(ringM30);
+
+  // Plansifter on roof (signature flour mill equipment)
+  const ps = makeGroup(g, 0, H + 1, 0);
+  // Plansifter body: stacked flat boxes with outer frame
+  for (let i = 0; i < 4; i++) {
+    const layer = makeBox(ps, 3.5, 0.35, 3.0, i%2===0 ? MAT.steelWarm : MAT.steel, 0, i*0.38, 0);
+  }
+  // Drive pulley (visible on the side)
+  const psPulley = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.3, 0.3, 0.18, 20),
+    MAT.steelDark
+  );
+  psPulley.position.set(1.85, 0.8, 0);
+  psPulley.rotation.z = Math.PI/2;
+  ps.add(psPulley);
+  // Drive motor
+  makeBox(ps, 0.55, 0.4, 0.55, MAT.steelDark, 2.3, 0.8, 0);
+  // Suspension rods (4 corners)
+  [-1.8, 1.8].forEach(xo => {
+    [-1.5, 1.5].forEach(zo => {
+      makeCyl(ps, 0.04, 0.04, 2.5, MAT.steelDark, xo, 2.0, zo);
+    });
+  });
+  // Top support beam
+  makeBox(ps, 4, 0.3, 0.3, MAT.steelDark, 0, 3.2, 1.5);
+  makeBox(ps, 4, 0.3, 0.3, MAT.steelDark, 0, 3.2, -1.5);
+  // Flour spouts from plansifter down through roof
+  [[-1.2, -1.0], [0.2, -1.0], [1.2, 1.0]].forEach(([sx, sz]) => {
+    const spout = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.1, 0.1, 1.2, 10),
+      MAT.steelWarm
+    );
+    spout.position.set(sx, -0.6, sz);
+    ps.add(spout);
+  });
+
+  // External catwalk around level 7 (operator platform between zones)
+  const cw1 = buildCatwalk(g, W + 0.8, 1.0);
+  cw1.position.set(0, 7.1, D/2 + 0.5);
+  const cw2 = buildCatwalk(g, W + 0.8, 1.0);
+  cw2.position.set(0, 7.1, -D/2 - 0.5);
+
+  // External ladder
+  const lad = buildCagedLadder(g, H + 1, MAT.ladder);
+  lad.position.set(W/2 + 0.25, 0, D/2 - 0.3);
+
+  // Signage panels (both sides)
+  const sign1 = buildSignage('MILL TOWER', 'M30 BREAK · M31 REDUCTION', 3.5, 0.9);
+  sign1.position.set(0, 1.2, D/2 + 0.02);
+  g.add(sign1);
+
+  // Mounted HMI panel — M30 (Break), on the FRONT glass wall, upper zone
+  const hmiM30 = makeHMIPanel({ code: 'M30', roleName: 'BREAK MILL', worldW: 3.6, worldH: 1.8 });
+  hmiM30.position.set(0, 10.8, D/2 + 0.04);
+  g.add(hmiM30);
+  ZONE_REGISTRY.push({ panel: hmiM30, id: 'M30', role: 'Break Mill' });
+
+  // Mounted HMI panel — M31 (Reduction), on the FRONT glass wall, lower zone
+  const hmiM31 = makeHMIPanel({ code: 'M31', roleName: 'REDUCTION MILL', worldW: 3.6, worldH: 1.8 });
+  hmiM31.position.set(0, 3.8, D/2 + 0.04);
+  g.add(hmiM31);
+  ZONE_REGISTRY.push({ panel: hmiM31, id: 'M31', role: 'Reduction Mill' });
+
+  // Register pickables
+  registerPickable(ringM30, 'zone', 'M30', { role: 'Break' });
+  registerPickable(ringM31, 'zone', 'M31', { role: 'Reduction' });
+  registerPickable(hmiM30, 'zone', 'M30', { role: 'Break' });
+  registerPickable(hmiM31, 'zone', 'M31', { role: 'Reduction' });
+
+  g.userData.ringM30 = ringM30;
+  g.userData.ringM31 = ringM31;
+  // Expose ring refs globally so updateMountedHMIs() can modulate emissive intensity
+  window._ringM30Ref = ringM30;
+  window._ringM31Ref = ringM31;
+
+  // --- Status LED beacons on roof corners (M30 break + M31 reduction) ---
+  const m30Active = () => (tags.m30_effective_power ?? 0) > 80;
+  const m31Active = () => (tags.m31_effective_power ?? 0) > 80;
+  const ledRoofY = H + 1.15;
+  // M31 (reduction) at front edge
+  [[ -W/2 + 0.4, ledRoofY,  D/2 - 0.4, 0.0, m31Active ],
+   [  W/2 - 0.4, ledRoofY,  D/2 - 0.4, 0.5, m31Active ],
+   // M30 (break) at back edge
+   [ -W/2 + 0.4, ledRoofY, -D/2 + 0.4, 0.25, m30Active ],
+   [  W/2 - 0.4, ledRoofY, -D/2 + 0.4, 0.75, m30Active ],
+  ].forEach(([x, y, z, ph, fn]) => {
+    const led = makeStatusLED({ isActiveFn: fn, phase: ph });
+    led.position.set(x, y, z);
+    g.add(led);
+  });
+
+  return g;
+}
+
+function buildZoneLabel(code, role) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = 'rgba(4, 7, 12, 0.85)';
+  ctx.fillRect(0, 0, 256, 128);
+  ctx.strokeStyle = '#22d3ee';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, 254, 126);
+  ctx.fillStyle = '#fbd04a';
+  ctx.font = 'bold 56px -apple-system';
+  ctx.textAlign = 'center';
+  ctx.fillText(code, 128, 62);
+  ctx.fillStyle = '#e8edf5';
+  ctx.font = '18px -apple-system';
+  ctx.fillText(role.toUpperCase(), 128, 94);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+  return new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.9), mat);
+}
+
+/* ========= OUTPUT SILOS (029 Flour, 031 Semolina, 032 Bran) ========= */
+function buildOutputSilos() {
+  const g = makeGroup(scene, 14, 0, 0);
+
+  // Smaller output silos — still concrete, but narrower
+  const outs = [
+    { id: '029', role: 'Flour Storage',    material: 'FLOUR',    x: -3, z: 0, h: 11, r: 1.5, fill: tags.silo_029_fill },
+    { id: '031', role: 'Semolina Storage', material: 'SEMOLINA', x:  0, z: 0, h: 10, r: 1.3, fill: tags.silo_031_fill },
+    { id: '032', role: 'Bran Storage',     material: 'BRAN',     x:  3, z: 0, h:  9, r: 1.1, fill: tags.silo_032_fill },
+  ];
+  outs.forEach(s => buildTallSilo(g, s));
+
+  // Common slab under 3 silos
+  const slab = makeBox(g, 9, 0.3, 4, MAT.concrete2, 0, -0.15, 0);
+
+  // Headhouse (smaller)
+  const hh = makeBox(g, 8, 2.2, 3, MAT.steel, 0, 12.2, 0);
+  // Conveyor covers feeding each from above
+  makeBox(g, 7.5, 0.4, 0.6, MAT.steelWarm, 0, 11.3, 0.8);
+  makeBox(g, 7.5, 0.4, 0.6, MAT.steelWarm, 0, 11.3, -0.8);
+
+  // Bottom discharge pipes -> feed FCL
+  const dischargeAll = makeGroup(g, 0, 0.5, -1.8);
+  makeBox(dischargeAll, 7, 0.5, 0.4, MAT.pipe, 0, 0, 0);
+
+  // Signage
+  const sign = buildSignage('FINISHED GOODS SILOS', '029 FLOUR · 031 SEMOLINA · 032 BRAN', 3.4, 0.9);
+  sign.position.set(0, 1.4, 2.1);
+  g.add(sign);
+
+  // --- Status LED beacons on headhouse roof corners ---
+  const outRoofY = 13.45;
+  const outActive = () => {
+    const f = [tags.silo_029_fill, tags.silo_031_fill, tags.silo_032_fill];
+    return f.some(v => (v ?? 0) >= 15 && (v ?? 0) <= 92);
+  };
+  [[ -3.6, outRoofY,  1.3, 0.0 ],
+   [  3.6, outRoofY,  1.3, 0.5 ],
+   [ -3.6, outRoofY, -1.3, 0.25 ],
+   [  3.6, outRoofY, -1.3, 0.75 ],
+  ].forEach(([x, y, z, ph]) => {
+    const led = makeStatusLED({ isActiveFn: outActive, phase: ph });
+    led.position.set(x, y, z);
+    g.add(led);
+  });
+
+  return g;
+}
+
+/* ========= VITAMIN FEEDER ========= */
+function buildVitaminFeeder() {
+  const g = makeGroup(scene, 9, 0, 2.5);
+  g.userData = { type: 'vitamin' };
+  // Small gold vessel
+  const body = makeCyl(g, 0.45, 0.45, 1.2, MAT.gold, 0, 0.8, 0);
+  // Agitator rod on top
+  makeCyl(g, 0.04, 0.04, 0.6, MAT.steelDark, 0, 1.9, 0);
+  // Outlet pipe to flour line
+  makeCyl(g, 0.08, 0.08, 0.6, MAT.pipe, 0, 0.2, 0.3);
+  // Base support
+  makeBox(g, 1.1, 0.3, 0.8, MAT.steelDark, 0, 0.15, 0);
+  // Beacon lamp (yellow, animated)
+  const beacon = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12, 12, 12),
+    new THREE.MeshStandardMaterial({
+      color: 0xfbd04a, emissive: 0xfbd04a, emissiveIntensity: 0.8,
+      transparent: true, opacity: 0.9
+    })
+  );
+  beacon.position.set(0, 2.4, 0);
+  g.add(beacon);
+  g.userData.beacon = beacon;
+  registerPickable(g, 'vitamin', 'VitaminFeeder');
+  return g;
+}
+
+/* ========= FCL PACKAGING LINE (5 bins + dispensing + stacker) ========= */
+function buildFCL() {
+  const g = makeGroup(scene, 14, 0, -10);
+
+  // Base platform
+  const base = makeBox(g, 12, 0.4, 3, MAT.concrete2, 0, -0.2, 0);
+  floorTex.repeat.set(5, 3);
+
+  // 5 packaging bins with hoppers
+  for (let i = 0; i < 5; i++) {
+    const x = -5 + i*2.5;
+    const bg = makeGroup(g, x, 0, 0);
+    bg.userData = { type: 'fcl', id: `bin${i+1}` };
+
+    // Hopper body (inverted cone + cylinder)
+    makeCyl(bg, 0.8, 0.8, 2.5, MAT.steel, 0, 3.5, 0, 16);
+    const hopper = makeCone(bg, 0.8, 1.5, MAT.steelWarm, 0, 1.7, 0);
+    hopper.scale.y = -1;
+    // Discharge gate
+    makeBox(bg, 0.4, 0.3, 0.4, MAT.gold, 0, 0.8, 0);
+    // Bag conveyor
+    makeBox(bg, 1.8, 0.15, 0.6, MAT.steelDark, 0, 0.4, 0);
+    // Bag stack
+    for (let j = 0; j < 3; j++) {
+      const bag = makeBox(bg, 0.5, 0.18, 0.5, MAT.flour, 0.4 - j*0.35, 0.6 + j*0.18, 0);
+    }
+    // Top feed pipe from above
+    makeCyl(bg, 0.15, 0.15, 3.5, MAT.pipe, 0, 6.8, 0);
+
+    // In-world holographic chip — floats just above the bin, always faces camera
+    const chip = makeFclChip();
+    chip.position.set(0, 6.2, 0);
+    bg.add(chip);
+    FCL_REGISTRY.push({ chip, id: `bin${i+1}`, binIdx: i + 1 });
+
+    registerPickable(bg, 'fcl', `bin${i+1}`);
+    // No HTML anchor — the chip lives in the scene
+
+    // Status LED on top of each FCL bin — green when bin is filling, red if low/idle.
+    const binId = i + 1;
+    const binActive = () => {
+      // Active if there is any throughput on this bin
+      const v = tags[`fcl_bin${binId}_filled`] ?? tags[`fcl_bin${binId}_throughput`] ?? 0;
+      return v > 0.05;
+    };
+    const ledFcl = makeStatusLED({ isActiveFn: binActive, phase: i * 0.18 });
+    ledFcl.position.set(0, 4.85, 0); // just atop the cylinder body
+    bg.add(ledFcl);
+  }
+
+  // Overhead conveyor (distribution network feeding bins from output silos)
+  makeBox(g, 13, 0.35, 0.6, MAT.steelWarm, 0, 8.5, 0);
+  // Conveyor support pillars
+  for (let x = -6; x <= 6; x += 3) {
+    makeBox(g, 0.2, 8.5, 0.2, MAT.steelDark, x, 4.25, -1);
+  }
+  // Bagger / palletizer area
+  const pallet = makeGroup(g, 6.5, 0, 0);
+  makeBox(pallet, 1.6, 0.4, 1.6, MAT.steelDark, 0, 0.2, 0);
+  // Pallet stack
+  for (let i = 0; i < 4; i++) {
+    makeBox(pallet, 1.2, 0.15, 1.2, MAT.flour, 0, 0.4 + i*0.2, 0);
+  }
+  // Robot arm
+  const arm = makeGroup(pallet, -0.5, 0.4, 0.5);
+  makeCyl(arm, 0.15, 0.15, 1.5, MAT.safety, 0, 0.75, 0);
+  const elbow = makeBox(arm, 0.8, 0.15, 0.15, MAT.safety, 0.3, 1.5, 0);
+  elbow.rotation.z = -0.3;
+
+  // Signage
+  const sign = buildSignage('FCL · FLOUR COLLECTION LINE', '5 BINS · BULK-TO-BAG PACKAGING', 3.4, 0.9);
+  sign.position.set(0, 1.2, 1.6);
+  g.add(sign);
+
+  return g;
+}
+
+function buildBinPlate(text) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 96;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, 256, 96);
+  ctx.fillStyle = '#22d3ee';
+  ctx.fillRect(0, 0, 4, 96);
+  ctx.fillStyle = '#e8edf5';
+  ctx.font = 'bold 32px -apple-system';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, 128, 58);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+  return new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.45), mat);
+}
+
+/* ========= PASTA MILL CORNER ========= */
+function buildPastaCorner() {
+  const g = makeGroup(scene, -18, 0, -14);
+  // Small warehouse-like building
+  const bldg = makeBox(g, 10, 5, 6, MAT.steel, 0, 2.5, 0);
+  // Roof
+  makeBox(g, 10.5, 0.2, 6.3, MAT.steelDark, 0, 5.1, 0);
+  // Door
+  const door = makeBox(g, 1.5, 2.2, 0.1, MAT.steelDark, -2, 1.1, 3.02);
+  // Windows (small rectangles)
+  for (let x = -3; x <= 3; x += 2) {
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.8), MAT.glassDark);
+    win.position.set(x, 3.5, 3.01);
+    g.add(win);
+  }
+  // 3 scales visible outside or through open door
+  for (let i = 0; i < 3; i++) {
+    const x = -3 + i * 3;
+    const scale = makeGroup(g, x, 0, 4);
+    makeBox(scale, 1, 0.3, 1, MAT.steelWarm, 0, 0.15, 0);
+    makeCyl(scale, 0.3, 0.3, 0.05, MAT.steelDark, 0, 0.32, 0);
+    // Display pole
+    makeCyl(scale, 0.04, 0.04, 1.2, MAT.steelDark, 0.4, 0.9, 0);
+    makeBox(scale, 0.3, 0.2, 0.1, MAT.signage, 0.4, 1.55, 0);
+  }
+  // Signage
+  const sign = buildSignage('PASTA LINE', '521WE · 830WE · 1010 TRANSFER SCALES', 3.2, 0.8);
+  sign.position.set(0, 1.2, 3.03);
+  g.add(sign);
+
+  // --- Status LED beacons on roof corners ---
+  const pastaActive = () => true; // pasta line is always-running ambient process for the demo
+  [[ -4.6, 5.25,  2.6, 0.0 ],
+   [  4.6, 5.25,  2.6, 0.5 ],
+   [ -4.6, 5.25, -2.6, 0.25 ],
+   [  4.6, 5.25, -2.6, 0.75 ],
+  ].forEach(([x, y, z, ph]) => {
+    const led = makeStatusLED({ isActiveFn: pastaActive, phase: ph, colorOk: 0xfbd04a });
+    led.position.set(x, y, z);
+    g.add(led);
+  });
+
+  return g;
+}
+
+/* ========= Pipes between units ========= */
+function buildPipeBetween(pA, pB, radius=0.10, mat=MAT.pipe) {
+  const mid = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
+  const dist = pA.distanceTo(pB);
+  const cyl = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, dist, 12), mat);
+  cyl.position.copy(mid);
+  cyl.lookAt(pB);
+  cyl.rotation.x += Math.PI/2;
+  cyl.castShadow = true;
+  scene.add(cyl);
+  return cyl;
+}
+
+/* ========= Particle stream (mass flow) ========= */
+function buildParticleStream(from, to, density, color) {
+  const count = density;
+  const positions = new Float32Array(count * 3);
+  const velocities = [];
+  for (let i = 0; i < count; i++) {
+    const t = Math.random();
+    positions[i*3+0] = from.x + (to.x - from.x) * t;
+    positions[i*3+1] = from.y + (to.y - from.y) * t;
+    positions[i*3+2] = from.z + (to.z - from.z) * t;
+    velocities.push(0.3 + Math.random() * 0.5);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({
+    color, size: 0.08, transparent: true, opacity: 0.82,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const pts = new THREE.Points(geo, mat);
+  scene.add(pts);
+  return { points: pts, from, to, velocities, positions, count };
+}
+
+/* ========= Human silhouette (scale reference) ========= */
+function buildHuman() {
+  const g = makeGroup(scene, 2, 0, 4.5);
+  const mat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.6 });
+  makeCyl(g, 0.15, 0.2, 0.8, mat, 0, 0.4, 0, 12);
+  makeCyl(g, 0.25, 0.28, 0.7, mat, 0, 1.15, 0, 12);
+  makeCyl(g, 0.07, 0.08, 0.5, mat, 0, 1.75, 0, 10);  // neck
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), mat);
+  head.position.y = 2.1;
+  g.add(head);
+  g.userData.type = 'human';
+  return g;
+}
+
+/* ========= Build the scene ========= */
+const wheatBank = buildWheatBank();
+const cleaningHouse = buildCleaningHouse();
+const millTower = buildMillTower();
+const outputSilos = buildOutputSilos();
+const vitaminFeeder = buildVitaminFeeder();
+const fcl = buildFCL();
+const pastaCorner = buildPastaCorner();
+const human = buildHuman();
+
+/* ========= Hero tag moved to sticky HTML card (#heroCard) — no 3D sprite ========= */
+
+/* ========= Pipes (simplified connectivity) ========= */
+// Wheat bank -> cleaning house (3 pipes for 3 wheat sources)
+const pipes = [];
+pipes.push(buildPipeBetween(new THREE.Vector3(-13.5, 12, 2), new THREE.Vector3(-8, 7, 0), 0.12));
+pipes.push(buildPipeBetween(new THREE.Vector3(-8, 9, 0), new THREE.Vector3(2, 14, 0), 0.18));
+// Mill tower -> outputs (3 output pipes)
+pipes.push(buildPipeBetween(new THREE.Vector3(2, 7, 0), new THREE.Vector3(11, 10, 0), 0.14));
+pipes.push(buildPipeBetween(new THREE.Vector3(2, 5.5, 0), new THREE.Vector3(14, 9, 0), 0.12));
+pipes.push(buildPipeBetween(new THREE.Vector3(2, 4, 0), new THREE.Vector3(17, 8, 0), 0.11));
+// Output silos -> FCL
+pipes.push(buildPipeBetween(new THREE.Vector3(14, 5, 0), new THREE.Vector3(14, 8, -10), 0.10));
+
+/* ========= Particle streams ========= */
+const streams = {
+  wheat_021A_to_clean: buildParticleStream(new THREE.Vector3(-19.5, 12, 0), new THREE.Vector3(-8, 7, 0), 80, 0xd9b77c),
+  wheat_to_mill: buildParticleStream(new THREE.Vector3(-8, 9, 0), new THREE.Vector3(2, 14, 0), 100, 0xdcc299),
+  flour_out: buildParticleStream(new THREE.Vector3(2, 7, 0), new THREE.Vector3(11, 10, 0), 120, 0xf3e9d2),
+  semo_out: buildParticleStream(new THREE.Vector3(2, 5.5, 0), new THREE.Vector3(14, 9, 0), 80, 0xedc97a),
+  bran_out: buildParticleStream(new THREE.Vector3(2, 4, 0), new THREE.Vector3(17, 8, 0), 50, 0x92683d),
+  to_fcl: buildParticleStream(new THREE.Vector3(14, 5, 0), new THREE.Vector3(14, 8, -10), 60, 0xf3e9d2),
+};
+
+/* ========= God rays (volumetric light shafts) ========= */
+function buildGodRay(x, z) {
+  const geo = new THREE.ConeGeometry(2.5, 20, 16, 1, true);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xffe8b0,
+    transparent: true, opacity: 0.10,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  const cone = new THREE.Mesh(geo, mat);
+  cone.position.set(x, 18, z);
+  cone.rotation.x = 0.4;
+  cone.rotation.z = -0.3;
+  scene.add(cone);
+  return cone;
+}
+const godRay1 = buildGodRay(-15, 3);
+const godRay2 = buildGodRay(2, 5);
+const godRay3 = buildGodRay(14, 3);
+
+/* ========================================================
+   HTML LABEL OVERLAY SYSTEM
+   ======================================================== */
+const hudLayer = document.getElementById('hud-layer');
+function createLabelElements() {
+  LABEL_ANCHORS.forEach(anchor => {
+    const { type, id } = anchor;
+    let el;
+    // NOTE: silo, zone, and FCL bin labels are now rendered IN-WORLD
+    // (holographic grain columns, mounted HMI panels, and billboarded FCL chips)
+    // — skip them in the HTML overlay.
+    if (type === 'silo' || type === 'zone' || type === 'fcl') {
+      return;
+    }
+    if (type === 'fcl') {
+      el = document.createElement('div');
+      el.className = 'scene-label fcl-tag';
+      const idx = parseInt(id.replace('bin','')) - 1;
+      el.innerHTML = `
+        <div class="bin-id">FCL ${id.toUpperCase()}</div>
+        <div class="bin-src" data-field="src">—</div>
+        <div class="bin-mat" data-field="mat">—</div>
+      `;
+      el.addEventListener('click', () => openDrill('fcl', id));
+    }
+    if (el) {
+      // Leader line from label bottom down to the anchor dot
+      const lead = document.createElement('div');
+      lead.className = 'lead';
+      el.appendChild(lead);
+      anchor.el = el;
+      hudLayer.appendChild(el);
+    }
+  });
+}
+createLabelElements();
+
+/* ========= Update labels in animate loop ========= */
+const tmpVec = new THREE.Vector3();
+function updateLabels() {
+  if (!labelsEnabled) return;
+  // #hud-layer is confined to the 3D viewport area (left:0, top:72, right:400, bottom:56 from the window)
+  // Label positions are relative to #hud-layer, but camera projection maps to the full window. Subtract the layer offset.
+  const hudRect = hudLayer.getBoundingClientRect();
+  const winW = window.innerWidth;
+  const winH = window.innerHeight;
+  const padding = 12; // inner padding so labels don't hug the edges
+  LABEL_ANCHORS.forEach(anchor => {
+    if (!anchor.el) return;
+    // Get world position of anchor with offset
+    tmpVec.set(0, 0, 0);
+    if (anchor.obj.getWorldPosition) anchor.obj.getWorldPosition(tmpVec);
+    else if (anchor.obj.position) tmpVec.copy(anchor.obj.position);
+    tmpVec.y += anchor.offsetY;
+
+    // Project to screen (window coords)
+    const worldPos = tmpVec.clone();
+    worldPos.project(camera);
+    const sx = (worldPos.x * 0.5 + 0.5) * winW;
+    const sy = (-worldPos.y * 0.5 + 0.5) * winH;
+
+    // Hide if behind camera or outside the visible 3D viewport region
+    const inside =
+      worldPos.z <= 1 &&
+      sx >= hudRect.left + padding &&
+      sx <= hudRect.right - padding &&
+      sy >= hudRect.top + padding &&
+      sy <= hudRect.bottom - padding;
+    if (!inside) {
+      anchor.el.classList.add('hidden');
+      return;
+    }
+    anchor.el.classList.remove('hidden');
+
+    // Distance-based dimming
+    const d = camera.position.distanceTo(tmpVec);
+    if (d > 55) anchor.el.classList.add('dim');
+    else anchor.el.classList.remove('dim');
+
+    // Position RELATIVE to #hud-layer
+    anchor.el.style.left = `${sx - hudRect.left}px`;
+    anchor.el.style.top = `${sy - hudRect.top}px`;
+
+    // Update values
+    updateLabelValues(anchor);
+  });
+}
+
+function updateLabelValues(anchor) {
+  const { type, id, el } = anchor;
+  if (type === 'silo') {
+    const fillKey = `silo_${id}_fill`;
+    const fill = tags[fillKey] ?? 0;
+    el.querySelector('[data-field="fill"]').style.width = `${fill}%`;
+    el.querySelector('[data-field="pct"]').textContent = `${fill.toFixed(0)}%`;
+  } else if (type === 'zone') {
+    const base = id.toLowerCase();
+    const kw = tags[`${base}_effective_power`];
+    const cp = tags[`${base}_cos_phi`];
+    el.querySelector('[data-field="kw"]').textContent = kw.toFixed(0);
+    el.querySelector('[data-field="cosphi"]').textContent = `cos φ ${cp.toFixed(2)}`;
+    el.querySelector('[data-field="l1"]').textContent = `${tags[`${base}_l1_current`].toFixed(0)}A`;
+    el.querySelector('[data-field="l2"]').textContent = `${tags[`${base}_l2_current`].toFixed(0)}A`;
+    el.querySelector('[data-field="l3"]').textContent = `${tags[`${base}_l3_current`].toFixed(0)}A`;
+  } else if (type === 'fcl') {
+    const binIdx = parseInt(id.replace('bin','')) || 1;
+    const srcId = tags[`fcl_bin_${binIdx}`];
+    const srcName = PLANT.silos[mapFclToSilo(srcId)]?.name || `Silo ${srcId}`;
+    const matMap = { 21: 'WHEAT', 211: 'WHEAT', 212: 'WHEAT', 213: 'WHEAT', 29: 'FLOUR', 31: 'SEMOLINA', 32: 'BRAN', 25: 'SEMI-119' };
+    const mat = matMap[srcId] || 'UNKNOWN';
+    el.querySelector('[data-field="src"]').textContent = `← ${srcName}`;
+    el.querySelector('[data-field="mat"]').textContent = mat;
+    if (tags.fcl_active === 1) el.classList.add('active');
+    else el.classList.remove('active');
+  }
+}
+
+function mapFclToSilo(id) {
+  const m = { 21: '021', 211: '021A', 212: '021B', 213: '021C', 29: '029', 31: '031', 32: '032' };
+  return m[id] || '021';
+}
+
+/* ========================================================
+   RIGHT PANEL UPDATES
+   ======================================================== */
+function updatePanels() {
+  // Hero kWh/t
+  const sumKW = tags.c32_effective_power + tags.m30_effective_power + tags.m31_effective_power;
+  const kwhPerT = tags.mil_b_flour_flowrate > 0 ? sumKW / tags.mil_b_flour_flowrate : 0;
+  document.getElementById('heroKwhT').textContent = kwhPerT.toFixed(1);
+  document.getElementById('kpiSE').textContent = kwhPerT.toFixed(1);
+  document.getElementById('fSE').textContent = kwhPerT.toFixed(1);
+
+  // Formula: Milling Loss = 100 - Flour% - Bran%
+  const loss = Math.max(0, 100 - tags.mil_b_flour_percentage - tags.mil_b_bran_percentage);
+  document.getElementById('fLoss').textContent = loss.toFixed(1);
+
+  // Extraction Total = Flour% + Bran%
+  const extract = tags.mil_b_flour_percentage + tags.mil_b_bran_percentage;
+  document.getElementById('fExt').textContent = extract.toFixed(1);
+  document.getElementById('kpiEx').textContent = extract.toFixed(0);
+
+  // Water ratio
+  const wr = tags.mil_b_job_flowrate > 0 ? tags._waterUsed / tags.mil_b_job_flowrate : 0;
+  document.getElementById('fWR').textContent = wr.toFixed(0);
+
+  // Throughput
+  document.getElementById('kpiTp').textContent = tags.mil_b_job_flowrate.toFixed(1);
+
+  // Streams list
+  const streamList = document.getElementById('streamsList');
+  if (streamList) {
+    streamList.innerHTML = [
+      ['Flour',    tags.mil_b_flour_flowrate, 't/h', tags.mil_b_flour_totalizer/1000, 'kg'],
+      ['Semolina/B1', tags.mil_b_b1_flowrate, 't/h', tags.mil_b_b1_totalizer/1000, 'kg'],
+      ['Bran',     tags.mil_b_bran_flowrate, 't/h', tags.mil_b_bran_totalizer/1000, 'kg'],
+      ['Job',      tags.mil_b_job_flowrate, 't/h', null, null],
+    ].map(([n, rate, u, tot, tu]) => `
+      <div class="eq-row">
+        <div class="eq-icon">●</div>
+        <div style="flex:1">
+          <div class="eq-name">${n}</div>
+          <div class="eq-sub">${tot !== null ? `${tot.toFixed(0)} ${tu} total` : 'in-line'}</div>
+        </div>
+        <div class="eq-val">${rate.toFixed(1)} ${u}</div>
+      </div>
+    `).join('');
+  }
+
+  // Flags
+  const fg = document.getElementById('flagGrid');
+  if (fg) {
+    const flags = [
+      { k: 'mil_b_dampening_on', label: 'Dampening' },
+      { k: 'mil_b_vitamin_feeder_on', label: 'Vitamin Feed' },
+      { k: 'mil_b_enable_small_sifters', label: 'Small Sifters' },
+      { k: 'mil_b_filter_flour_feeder', label: 'Filter Feeder' },
+      { k: 'mil_b_mill_emptying', label: 'Mill Emptying', warn: true },
+      { k: 'mil_b_order_active', label: 'Order Active' },
+    ];
+    fg.innerHTML = flags.map(f => `
+      <div class="flag ${tags[f.k] ? (f.warn ? 'warn' : 'on') : ''}">
+        <span class="dot"></span>${f.label}
+      </div>
+    `).join('');
+  }
+
+  // Order bar
+  const pct = Math.min(100, (tags.mil_b_flour_totalizer / 200000) * 100);
+  const ob = document.getElementById('ordBar'); if (ob) ob.style.width = `${pct}%`;
+  const on = document.getElementById('ordNow'); if (on) on.textContent = tags.mil_b_flour_totalizer.toFixed(0);
+
+  // Order state
+  const state = PLANT.orderStates[tags._orderState] || PLANT.orderStates[0];
+  const osl = document.getElementById('ordStateLabel'); if (osl) osl.textContent = state.label;
+
+  // Zone ring emission is now driven by updateMountedHMIs() (heartbeat modulated by kW)
+
+  // Vitamin beacon pulses
+  if (vitaminFeeder.userData.beacon) {
+    vitaminFeeder.userData.beacon.visible = tags.mil_b_vitamin_feeder_on;
+    if (tags.mil_b_vitamin_feeder_on) {
+      const pulse = 0.6 + Math.sin(performance.now() * 0.003) * 0.3;
+      vitaminFeeder.userData.beacon.material.emissiveIntensity = pulse;
+    }
+  }
+}
+
+/* Equipment tab content */
+function buildEquipmentLists() {
+  const sl = document.getElementById('siloList');
+  sl.innerHTML = Object.entries(PLANT.silos).map(([id, s]) => `
+    <div class="eq-row" onclick="openDrill('silo','${id}')">
+      <div class="eq-icon">⬢</div>
+      <div style="flex:1">
+        <div class="eq-name">${s.name}</div>
+        <div class="eq-sub">${s.role} · ${s.material}</div>
+      </div>
+      <div class="eq-val" id="silo_list_${id}">—%</div>
+    </div>
+  `).join('');
+
+  const zl = document.getElementById('zoneList');
+  zl.innerHTML = [
+    ['C32', 'Cleaning', 'c32'], ['M30', 'Break', 'm30'], ['M31', 'Reduction', 'm31']
+  ].map(([code, role, k]) => `
+    <div class="eq-row" onclick="openDrill('zone','${code}')">
+      <div class="eq-icon">⚡</div>
+      <div style="flex:1">
+        <div class="eq-name">${code}</div>
+        <div class="eq-sub">${role}</div>
+      </div>
+      <div class="eq-val" id="zone_list_${code}">—kW</div>
+    </div>
+  `).join('');
+
+  const fl = document.getElementById('fclList');
+  fl.innerHTML = [1,2,3,4,5].map(i => `
+    <div class="eq-row" onclick="openDrill('fcl','bin${i}')">
+      <div class="eq-icon">▦</div>
+      <div style="flex:1">
+        <div class="eq-name">Bin ${i}</div>
+        <div class="eq-sub" id="fcl_list_sub_${i}">—</div>
+      </div>
+      <div class="eq-val" id="fcl_list_${i}">—</div>
+    </div>
+  `).join('');
+
+  // Products
+  const pl = document.getElementById('productList');
+  pl.innerHTML = Object.entries(PLANT.products).map(([c,n]) => `
+    <div style="padding:5px 0; border-bottom:1px solid var(--border);">
+      <span style="color:var(--brand-2); font-variant-numeric:tabular-nums;">${c}</span>
+      <span style="color:var(--text); margin-left:10px;">${n}</span>
+    </div>
+  `).join('');
+
+  // Shifts
+  const shL = document.getElementById('shiftList');
+  shL.innerHTML = PLANT.shifts.map(s => `
+    <div class="eq-row">
+      <div class="eq-icon">${s.name[0]}</div>
+      <div style="flex:1">
+        <div class="eq-name">${s.name}</div>
+        <div class="eq-sub">${s.start} – ${s.end}</div>
+      </div>
+      <div class="eq-val">~${Math.round(tags.mil_b_job_flowrate * 8)} t</div>
+    </div>
+  `).join('');
+}
+
+function updateEquipmentList() {
+  Object.keys(PLANT.silos).forEach(id => {
+    const v = tags[`silo_${id}_fill`]; if (v !== undefined) {
+      const el = document.getElementById(`silo_list_${id}`); if (el) el.textContent = `${v.toFixed(0)}%`;
+    }
+  });
+  ['C32','M30','M31'].forEach(code => {
+    const kw = tags[`${code.toLowerCase()}_effective_power`];
+    const el = document.getElementById(`zone_list_${code}`); if (el) el.textContent = `${kw.toFixed(0)} kW`;
+  });
+  [1,2,3,4,5].forEach(i => {
+    const srcId = tags[`fcl_bin_${i}`];
+    const src = PLANT.silos[mapFclToSilo(srcId)];
+    const el = document.getElementById(`fcl_list_${i}`); if (el) el.textContent = src?.material || '—';
+    const sub = document.getElementById(`fcl_list_sub_${i}`); if (sub) sub.textContent = src?.name || `← ID ${srcId}`;
+  });
+}
+
+/* ========= Current shift indicator ========= */
+function updateShift() {
+  const h = new Date().getHours();
+  let active = 'Morning';
+  if (h >= 14 && h < 22) active = 'Evening';
+  else if (h >= 22 || h < 6) active = 'Night';
+  document.querySelectorAll('.shift-indicator .shift').forEach(s => {
+    s.classList.toggle('active', s.dataset.shift === active);
+  });
+}
+
+/* ========= Drill-down drawer ========= */
+window.openDrill = function(type, id) {
+  const drawer = document.getElementById('drillDrawer');
+  const title = document.getElementById('drillTitle');
+  const sub = document.getElementById('drillSubtitle');
+  const grid = document.getElementById('drillDetails');
+
+  let details = [];
+  if (type === 'silo') {
+    const s = PLANT.silos[id];
+    const fill = tags[`silo_${id}_fill`];
+    title.textContent = `${s.name}`;
+    sub.textContent = `${s.role} · ${s.material} · Capacity ${s.capacity} t`;
+    details = [
+      ['Fill Level', `${fill.toFixed(1)}`, '%'],
+      ['Stock', `${(fill/100 * s.capacity).toFixed(0)}`, 't'],
+      ['Material', s.material, ''],
+      ['Silo ID', s.name, ''],
+    ];
+  } else if (type === 'zone') {
+    const base = id.toLowerCase();
+    title.textContent = `${id} Zone`;
+    const roleMap = { C32: 'Cleaning Section', M30: 'Break Roller Floor', M31: 'Reduction Roller Floor' };
+    sub.textContent = `${roleMap[id]} · Wago power meter`;
+    details = [
+      ['Effective Power', `${tags[`${base}_effective_power`].toFixed(1)}`, 'kW'],
+      ['Apparent Power', `${tags[`${base}_apparent_power`].toFixed(1)}`, 'kVA'],
+      ['Reactive Power', `${tags[`${base}_reactive_power`].toFixed(1)}`, 'kvar'],
+      ['Cos φ', `${tags[`${base}_cos_phi`].toFixed(3)}`, ''],
+      ['L1 Current', `${tags[`${base}_l1_current`].toFixed(1)}`, 'A'],
+      ['L2 Current', `${tags[`${base}_l2_current`].toFixed(1)}`, 'A'],
+      ['L3 Current', `${tags[`${base}_l3_current`].toFixed(1)}`, 'A'],
+      ['Total kWh', `${(tags[`${base}_total_active_energy`]/1000).toFixed(0)}`, 'MWh'],
+    ];
+  } else if (type === 'fcl') {
+    const binIdx = parseInt(id.replace('bin','')) || 1;
+    const srcId = tags[`fcl_bin_${binIdx}`];
+    const siloKey = mapFclToSilo(srcId);
+    const silo = PLANT.silos[siloKey];
+    title.textContent = `FCL Bin ${binIdx}`;
+    sub.textContent = `Packaging bin · Currently pulling from ${silo?.name || srcId}`;
+    details = [
+      ['Source ID', srcId, ''],
+      ['Source Silo', silo?.name || 'Unknown', ''],
+      ['Material', silo?.material || '—', ''],
+      ['Bag Format', binIdx <= 2 ? '50 kg' : '25 kg', ''],
+      ['Status', tags.fcl_active === 1 ? 'Running' : 'Stopped', ''],
+      ['Bin Number', binIdx, ''],
+    ];
+  } else if (type === 'vitamin') {
+    title.textContent = 'Vitamin Feeder';
+    sub.textContent = 'Gold-metered micro-dosing on flour line';
+    details = [
+      ['State', tags.mil_b_vitamin_feeder_on ? 'ON' : 'OFF', ''],
+      ['Dose %', `${tags.mil_b_vitamin_feeder_percentage.toFixed(2)}`, '%'],
+    ];
+  }
+
+  grid.innerHTML = details.map(([lab, v, u]) => `
+    <div class="detail">
+      <div class="lab">${lab}</div>
+      <div class="v">${v}${u ? `<span class="u"> ${u}</span>` : ''}</div>
+    </div>
+  `).join('');
+
+  drawer.classList.add('open');
+  // Build a fake trend
+  updateDrillTrend();
+};
+document.getElementById('drillClose').addEventListener('click', () => {
+  document.getElementById('drillDrawer').classList.remove('open');
+});
+function updateDrillTrend() {
+  // Generate a plausible sparkline
+  const pts = [];
+  for (let i = 0; i < 60; i++) {
+    const y = 20 + Math.sin(i*0.3) * 6 + (Math.random() - 0.5) * 3;
+    pts.push(`${i*5},${40-y}`);
+  }
+  const path = document.getElementById('drillTrendPath');
+  const fill = document.getElementById('drillTrendFill');
+  path.setAttribute('d', 'M' + pts.join(' L'));
+  fill.setAttribute('d', 'M0,40 L' + pts.join(' L') + ' L300,40 Z');
+}
+
+/* ========= Panel tab switching ========= */
+document.querySelectorAll('.panel-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.panel-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    const tab = t.dataset.tab;
+    document.querySelectorAll('.panel-view').forEach(v => v.style.display = 'none');
+    const view = document.querySelector(`.panel-view[data-view="${tab}"]`);
+    if (view) view.style.display = 'block';
+  });
+});
+
+/* ========= Settings drawer ========= */
+document.getElementById('settingsToggle').addEventListener('click', () => {
+  document.getElementById('settingsDrawer').classList.toggle('open');
+});
+
+let labelsEnabled = true;
+let particlesEnabled = true;
+let godRaysEnabled = true;
+let humanEnabled = true;
+let breathingEnabled = true;
+let reducedMotion = false;
+
+document.getElementById('optLabels').addEventListener('change', e => {
+  labelsEnabled = e.target.checked;
+  LABEL_ANCHORS.forEach(a => a.el?.classList.toggle('hidden', !labelsEnabled));
+});
+document.getElementById('optParticles').addEventListener('change', e => {
+  particlesEnabled = e.target.checked;
+  Object.values(streams).forEach(s => s.points.visible = particlesEnabled);
+});
+document.getElementById('optGodRays').addEventListener('change', e => {
+  godRaysEnabled = e.target.checked;
+  [godRay1, godRay2, godRay3].forEach(g => g.visible = godRaysEnabled);
+});
+document.getElementById('optHuman').addEventListener('change', e => {
+  humanEnabled = e.target.checked;
+  human.visible = humanEnabled;
+});
+document.getElementById('optBreathing').addEventListener('change', e => {
+  breathingEnabled = e.target.checked;
+});
+document.getElementById('optReduced').addEventListener('change', e => {
+  reducedMotion = e.target.checked;
+});
+
+/* ========= Camera presets ========= */
+const CAM_PRESETS = {
+  overview:  { azimuth: Math.PI * 0.65, polar: Math.PI * 0.36, distance: 68, target: [-1, 5, -3] },
+  wheat:     { azimuth: Math.PI * 0.55, polar: Math.PI * 0.40, distance: 26, target: [-17, 10, 0] },
+  cleaning:  { azimuth: Math.PI * 0.60, polar: Math.PI * 0.40, distance: 20, target: [-8, 5, 0] },
+  mill:      { azimuth: Math.PI * 0.70, polar: Math.PI * 0.38, distance: 22, target: [2, 8, 0] },
+  outputs:   { azimuth: Math.PI * 0.75, polar: Math.PI * 0.40, distance: 22, target: [14, 6, 0] },
+  fcl:       { azimuth: Math.PI * 1.15, polar: Math.PI * 0.42, distance: 24, target: [14, 4, -8] },
+  pasta:     { azimuth: Math.PI * 0.45, polar: Math.PI * 0.40, distance: 22, target: [-18, 3, -14] },
+};
+
+document.querySelectorAll('.cam-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const p = CAM_PRESETS[btn.dataset.cam];
+    animateCameraTo(p);
+  });
+});
+
+function animateCameraTo(preset) {
+  const start = {
+    azimuth: orbit.azimuth, polar: orbit.polar, distance: orbit.distance,
+    tx: orbit.target.x, ty: orbit.target.y, tz: orbit.target.z,
+  };
+  const end = {
+    azimuth: preset.azimuth, polar: preset.polar, distance: preset.distance,
+    tx: preset.target[0], ty: preset.target[1], tz: preset.target[2],
+  };
+  const dur = 1400;
+  const t0 = performance.now();
+  function step() {
+    const t = Math.min(1, (performance.now() - t0) / dur);
+    const e = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+    orbit.azimuth  = start.azimuth  + (end.azimuth  - start.azimuth)  * e;
+    orbit.polar    = start.polar    + (end.polar    - start.polar)    * e;
+    orbit.distance = start.distance + (end.distance - start.distance) * e;
+    orbit.target.x = start.tx + (end.tx - start.tx) * e;
+    orbit.target.y = start.ty + (end.ty - start.ty) * e;
+    orbit.target.z = start.tz + (end.tz - start.tz) * e;
+    applyOrbit();
+    if (t < 1) requestAnimationFrame(step);
+  }
+  step();
+}
+
+/* ========= Click detection on canvas for 3D pick ========= */
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2();
+canvas.addEventListener('click', (e) => {
+  if (isDragging) return;
+  const rect = canvas.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouseNDC, camera);
+  const hits = raycaster.intersectObjects(scene.children, true);
+  for (const h of hits) {
+    let obj = h.object;
+    while (obj) {
+      if (PICKABLE.has(obj.uuid)) {
+        const meta = PICKABLE.get(obj.uuid);
+        openDrill(meta.type, meta.id);
+        return;
+      }
+      obj = obj.parent;
+    }
+  }
+});
+
+/* ========= Animate ========= */
+let orbitBaselineAz = null, orbitBaselinePolar = null, orbitBaselineStart = 0;
+let lastDrift = 0;
+
+function animate() {
+  const now = performance.now();
+
+  // Drift tag values every second
+  if (now - lastDrift > 1000) {
+    driftAll();
+    lastDrift = now;
+  }
+
+  // Particle streams motion
+  if (particlesEnabled) {
+    Object.entries(streams).forEach(([name, s]) => {
+      const arr = s.points.geometry.attributes.position.array;
+      for (let i = 0; i < s.count; i++) {
+        const idx = i*3;
+        // Move toward 'to' then reset
+        const dx = s.to.x - s.from.x;
+        const dy = s.to.y - s.from.y;
+        const dz = s.to.z - s.from.z;
+        const L = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        const stepSize = 0.015 * s.velocities[i];
+        // progress along stream
+        const t0 = (arr[idx] - s.from.x) / (dx || 1);
+        let t = isFinite(t0) ? t0 : 0;
+        t += stepSize / (L || 1);
+        if (t > 1) { t = 0; }
+        arr[idx]   = s.from.x + dx * t;
+        arr[idx+1] = s.from.y + dy * t;
+        arr[idx+2] = s.from.z + dz * t;
+      }
+      s.points.geometry.attributes.position.needsUpdate = true;
+    });
+  }
+
+  // Idle breathing (bounded arc)
+  const idleFor = (now - lastMoveTime) / 1000;
+  if (breathingEnabled && !reducedMotion && idleFor > 30 && !isDragging) {
+    if (orbitBaselineAz === null) {
+      orbitBaselineAz = orbit.azimuth;
+      orbitBaselinePolar = orbit.polar;
+      orbitBaselineStart = now;
+    }
+    const el = (now - orbitBaselineStart) / 1000;
+    const PERIOD = 22;
+    const w = TAU / PERIOD;
+    orbit.azimuth = orbitBaselineAz + Math.sin(el * w) * 15 * DEG;
+    orbit.polar = orbitBaselinePolar + Math.sin(el * w * 0.5) * 2 * DEG;
+    applyOrbit();
+  } else if (idleFor < 1) {
+    orbitBaselineAz = null;
+  }
+
+  // God ray flicker
+  if (godRaysEnabled && !reducedMotion) {
+    const flick = 0.08 + Math.sin(now * 0.0008) * 0.02;
+    godRay1.material.opacity = flick;
+    godRay2.material.opacity = flick * 1.1;
+    godRay3.material.opacity = flick * 0.9;
+  }
+
+  updateLabels();
+  updatePanels();
+  updateEquipmentList();
+  updateHolographicSilos(now);
+  updateMountedHMIs(now);
+  updateFclChips(now);
+  updateHeroCard();
+  updateFlowCables(now);
+  updateFlowPackets(now);
+  updateLEDs(now);
+  updateHoloPads(now);
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+
+/* Status LEDs — switch core/halo color based on isActiveFn(), pulse halo. */
+function updateLEDs(now) {
+  if (!LED_REGISTRY.length) return;
+  for (let i = 0; i < LED_REGISTRY.length; i++) {
+    const led = LED_REGISTRY[i];
+    let active = true;
+    try { active = !!led.isActiveFn(); } catch (e) { active = true; }
+    const target = active ? led.colorOk : led.colorAlert;
+    led.core.material.color.setHex(target);
+    led.halo.material.color.setHex(target);
+    if (led.wash) led.wash.material.color.setHex(target);
+    // Slow pulse, offset per-LED via phase so they don't all blink together.
+    const pulse = 0.5 + 0.5 * Math.sin(now * 0.004 + led.phase * Math.PI * 2);
+    led.halo.material.opacity = 0.42 + pulse * 0.30;
+    if (led.wash) led.wash.material.opacity = 0.12 + pulse * 0.18;
+    const s = 0.9 + pulse * 0.30;
+    led.halo.scale.set(s, s, s);
+    if (led.wash) led.wash.scale.set(s * 0.95, s * 0.95, s * 0.95);
+    // Faulted LEDs blink hard
+    if (!active) {
+      const blink = (Math.sin(now * 0.012 + led.phase) > 0) ? 1 : 0.25;
+      led.core.material.opacity = blink;
+      led.core.material.transparent = true;
+    } else {
+      led.core.material.opacity = 1;
+    }
+  }
+}
+
+/* Flow cables — pulse emissive opacity with plant throughput */
+function updateFlowCables(now) {
+  // Throughput 14–22 t/h → map to 0.0–1.0 intensity
+  const tp = tags.mil_b_flour_flowrate ?? 17;
+  const load = Math.max(0, Math.min(1, (tp - 14) / 8));
+  const breath = 0.5 + 0.5 * Math.sin(now * 0.003);
+  const coreOpacity = 0.95 + load * 0.05;
+  const haloOpacity = 0.40 + load * 0.20 + breath * 0.10;
+  const washOpacity = 0.16 + load * 0.10 + breath * 0.06;
+  FLOW_CABLES.forEach(g => {
+    g.userData.core.material.opacity = coreOpacity;
+    g.userData.halo.material.opacity = haloOpacity;
+    if (g.userData.wash) g.userData.wash.material.opacity = washOpacity;
+  });
+}
+
+/* Holographic ground pads — slow rotation + breathing opacity */
+function updateHoloPads(now) {
+  if (!HOLO_PADS.length) return;
+  for (let i = 0; i < HOLO_PADS.length; i++) {
+    const pad = HOLO_PADS[i];
+    pad.rotation.z = now * 0.00015 * (i % 2 === 0 ? 1 : -1);
+    const breath = 0.85 + 0.15 * Math.sin(now * 0.0018 + i * 0.7);
+    pad.material.opacity = breath;
+  }
+}
+
+/* Flow packets — travelling light dots along each cable */
+function updateFlowPackets(now) {
+  // dtFrame ~ 16ms typical; speed is in units of curve-length / second
+  const dt = 1 / 60;
+  FLOW_PACKETS.forEach(p => {
+    p.userData.t += p.userData.speed * dt;
+    if (p.userData.t > 1) p.userData.t -= 1;
+    const pos = p.userData.curve.getPoint(p.userData.t);
+    p.position.copy(pos);
+    // subtle size pulse
+    const s = 1 + 0.2 * Math.sin(now * 0.01 + p.userData.t * 6);
+    p.scale.set(s, s, s);
+  });
+}
+
+/* ========= Embedded-plant animation ========= */
+function updateHolographicSilos(now) {
+  if (!SILO_REGISTRY.length) return;
+  const pulse = 1.8 + Math.sin(now * 0.0025) * 0.4; // breathing glow intensity
+  SILO_REGISTRY.forEach(({ group, id, material }) => {
+    const u = group.userData;
+    if (!u.grain) return;
+    const fill = Math.max(0, Math.min(100, tags[`silo_${id}_fill`] ?? 0));
+    const t = fill / 100;
+    // Scale grain height smoothly
+    const targetH = Math.max(0.05, t * u.usableH);
+    const currentH = u.grain.scale.y;
+    const newH = currentH + (targetH - currentH) * 0.08; // eased
+    u.grain.scale.y = newH;
+    u.grain.position.y = u.grainBaseY + newH / 2;
+    // Ride the ring + halo at the grain surface
+    const ringY = u.grainBaseY + newH;
+    u.fillRing.position.y = ringY;
+    u.halo.position.y = ringY;
+    u.halo.scale.set(1 + Math.sin(now * 0.002) * 0.08, 1, 1 + Math.sin(now * 0.002) * 0.08);
+    // Pulse the emissive intensity
+    u.fillRing.material.emissiveIntensity = pulse;
+    // Position the billboarded readout just above the ring
+    u.readout.position.y = ringY + 1.2;
+    // Redraw readout text (throttle: only if value moved)
+    if (!u._lastPct || Math.abs(u._lastPct - fill) > 0.3) {
+      u.readout.userData.redraw(`${fill.toFixed(0)}%`, `${id} · ${material}`);
+      u._lastPct = fill;
+    }
+  });
+}
+
+/* Sticky HTML hero card — Now Producing.  Lighter than a 3D sprite, always readable. */
+const _heroEls = {
+  card:    document.getElementById('heroCard'),
+  product: document.getElementById('heroProduct'),
+  rate:    document.getElementById('heroRate'),
+  order:   document.getElementById('heroOrder'),
+  state:   document.getElementById('heroState'),
+};
+const _heroLast = { sig: '' };
+function updateHeroCard() {
+  if (!_heroEls.card) return;
+  const productCode = tags._productCode;
+  const productName = (PLANT.products?.[productCode]) || '—';
+  const rate        = (tags.mil_b_flour_flowrate ?? 0).toFixed(1);
+  const orderId     = tags._orderId ?? '—';
+  const stateEntry  = PLANT.orderStates?.[tags._orderState] || PLANT.orderStates?.[0] || { label: '—' };
+  const stateLabel  = stateEntry.label || '—';
+  const stateKey    = stateLabel.toLowerCase().replace(/[^a-z]/g, '');
+  const sig = `${productName}|${rate}|${orderId}|${stateLabel}`;
+  if (sig === _heroLast.sig) return;
+  _heroLast.sig = sig;
+  _heroEls.product.textContent = productName;
+  _heroEls.rate.textContent    = rate;
+  _heroEls.order.textContent   = `#${orderId}`;
+  _heroEls.state.textContent   = stateLabel;
+  _heroEls.state.className     = 'hc-state ' + (stateKey || 'idle');
+}
+
+function updateFclChips(now) {
+  if (!FCL_REGISTRY.length) return;
+  const active = tags.fcl_active === 1;
+  FCL_REGISTRY.forEach(({ chip, binIdx }) => {
+    const u = chip.userData;
+    const srcId = tags[`fcl_bin_${binIdx}`];
+    const siloKey = mapFclToSilo(srcId);
+    const src = PLANT.silos?.[siloKey];
+    const srcLabel = src ? `← ${src.name}` : `← ID ${srcId}`;
+    const material = src?.material || '—';
+    const sig = `${binIdx}-${srcId}-${material}-${active ? 1 : 0}`;
+    if (u._last !== sig) {
+      u.redraw(`BIN ${binIdx}`, srcLabel, material, active);
+      u._last = sig;
+    }
+  });
+}
+
+function updateMountedHMIs(now) {
+  if (!ZONE_REGISTRY.length) return;
+  ZONE_REGISTRY.forEach(({ panel, id, role }) => {
+    const u = panel.userData;
+    const base = id.toLowerCase();
+    const kw = Math.round(tags[`${base}_effective_power`] ?? 0);
+    const cosphi = (tags[`${base}_cos_phi`] ?? 0).toFixed(2);
+    const l1 = Math.round(tags[`${base}_l1_current`] ?? 0);
+    const l2 = Math.round(tags[`${base}_l2_current`] ?? 0);
+    const l3 = Math.round(tags[`${base}_l3_current`] ?? 0);
+    const sig = `${kw}-${cosphi}-${l1}-${l2}-${l3}`;
+    if (u._last !== sig) {
+      u.redraw({ kw, cosphi, l1, l2, l3, role: role || '', active: kw > 50 });
+      u._last = sig;
+    }
+  });
+  // Pulse zone glow rings by kW load — amplitude beats with actual load
+  const heartbeat = Math.sin(now * 0.004);
+  if (window._ringM30Ref) {
+    const load = Math.min(1, (tags.m30_effective_power ?? 0) / 600);
+    window._ringM30Ref.material.emissiveIntensity = 0.6 + load * 1.3 + heartbeat * (0.10 + load * 0.20);
+  }
+  if (window._ringM31Ref) {
+    const load = Math.min(1, (tags.m31_effective_power ?? 0) / 520);
+    window._ringM31Ref.material.emissiveIntensity = 0.6 + load * 1.3 + Math.sin(now * 0.004 + 1) * (0.10 + load * 0.20);
+  }
+  if (window._ringC32Ref) {
+    const load = Math.min(1, (tags.c32_effective_power ?? 0) / 320);
+    window._ringC32Ref.material.emissiveIntensity = 0.5 + load * 1.2 + Math.sin(now * 0.004 + 2) * (0.08 + load * 0.18);
+  }
+}
+
+/* ========= Resize ========= */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* ========= Init ========= */
+buildEquipmentLists();
+updateShift();
+setInterval(updateShift, 60000);
+
+/* Product code display in order banner */
+(function setProductBanner() {
+  const code = tags._productCode;
+  document.getElementById('ordProduct').textContent = `${code} · ${PLANT.products[code]}`;
+  document.getElementById('ordId').textContent = `#${tags._orderId}`;
+})();
+
+setTimeout(() => {
+  document.getElementById('loading').classList.add('hide');
+  animate();
+}, 400);
+</script>
+</body>
+</html>

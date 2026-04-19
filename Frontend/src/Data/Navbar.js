@@ -1,4 +1,4 @@
-import { LayoutGrid, BarChart2, Settings, Table2, Send, Sparkles, ClipboardList } from 'lucide-react';
+import { LayoutGrid, BarChart2, Settings, Table2, Send, Sparkles, ClipboardList, Box } from 'lucide-react';
 import { Roles } from './Roles';
 
 export const getMenuItems = (t) => [
@@ -8,6 +8,13 @@ export const getMenuItems = (t) => [
     tooltip: t('nav.tooltip.builder'),
     link: '/report-builder',
     roles: [Roles.Admin, Roles.Manager],
+  },
+  {
+    name: t('nav.digitalTwin'),
+    icon: Box,
+    tooltip: t('nav.tooltip.digitalTwin'),
+    link: '/digital-twin',
+    roles: [Roles.Admin, Roles.Manager, Roles.Operator],
   },
   {
     name: t('nav.dashboards'),
@@ -59,6 +66,7 @@ export const getMenuItems = (t) => [
 export const menuItems = getMenuItems((key) => {
   const fallback = {
     'nav.builder': 'Builder',
+    'nav.digitalTwin': 'Digital Twin',
     'nav.dashboards': 'Dashboards',
     'nav.tableReports': 'Table Reports',
     'nav.jobLogs': 'Job Logs',
@@ -66,6 +74,7 @@ export const menuItems = getMenuItems((key) => {
     'nav.herculesAI': 'Hercules AI',
     'nav.engineering': 'Engineering',
     'nav.tooltip.builder': 'Design and build reports',
+    'nav.tooltip.digitalTwin': '3D plant view',
     'nav.tooltip.dashboards': 'View released dashboards',
     'nav.tooltip.tableReports': 'View released table reports',
     'nav.tooltip.jobLogs': 'Production order history',

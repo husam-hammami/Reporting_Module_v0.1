@@ -18,6 +18,8 @@
   "nav.tooltip.herculesAI": "رؤى وملخصات مدعومة بالذكاء الاصطناعي",
   "nav.tooltip.engineering": "العلامات، المجموعات، الصيغ، التعيينات",
   "nav.herculesAI": "هرقل AI",
+  "nav.digitalTwin": "التوأم الرقمي",
+  "nav.tooltip.digitalTwin": "عرض المصنع ثلاثي الأبعاد",
 
   "login.welcome": "مرحباً بعودتك",
   "login.subtitle": "سجّل الدخول إلى لوحة التحكم",

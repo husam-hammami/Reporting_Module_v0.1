@@ -18,6 +18,8 @@
   "nav.tooltip.herculesAI": "AI-powered insights and summaries",
   "nav.tooltip.engineering": "Tags, groups, formulas, mappings",
   "nav.herculesAI": "Hercules AI",
+  "nav.digitalTwin": "Digital Twin",
+  "nav.tooltip.digitalTwin": "3D plant view",
 
   "login.welcome": "Welcome back",
   "login.subtitle": "Sign in to your control panel",
