@@ -4011,45 +4011,45 @@ setTimeout(() => {
 
 /* ========= Live Data Bridge (postMessage from React wrapper) ========= */
 let _liveDataActive = false;
+let _lastLiveDataTime = 0;
+
 window.addEventListener('message', (e) => {
+  // Only accept messages from same origin (security)
+  if (e.origin !== window.location.origin) return;
   if (!e.data || e.data.type !== 'hercules-live-tags') return;
   const liveValues = e.data.values;
   if (!liveValues || typeof liveValues !== 'object') return;
 
-  // Map PLC tag names → twin tag keys and update
-  // Try multiple normalization strategies to match twin's tags object
-  for (const [plcTag, val] of Object.entries(liveValues)) {
-    const parsed = typeof val === 'boolean' ? val : (parseFloat(val) || 0);
-    const lower = plcTag.toLowerCase();
-
-    // Strategy 1: exact match (already lowercase)
-    if (lower in tags) { tags[lower] = parsed; continue; }
-
-    // Strategy 2: strip MilB_ prefix → lowercase (MilB_C32_Effective_Power → c32_effective_power)
-    const stripped = lower.replace(/^milb_/, '').replace(/^mil_b_/, '');
-    if (stripped in tags) { tags[stripped] = parsed; continue; }
-
-    // Strategy 3: add mil_b_ prefix (Flour_FlowRate → mil_b_flour_flowrate)
-    const prefixed = 'mil_b_' + stripped;
-    if (prefixed in tags) { tags[prefixed] = parsed; continue; }
-
-    // Strategy 4: direct PLC name patterns
-    // Dampening_On → mil_b_dampening_on, Vitamin_Feeder_On → mil_b_vitamin_feeder_on
-    const withPrefix = 'mil_b_' + lower;
-    if (withPrefix in tags) { tags[withPrefix] = parsed; continue; }
+  // Tags arrive pre-filtered and lowercase from the React wrapper.
+  // Direct key match against the twin's tags object.
+  for (const [key, val] of Object.entries(liveValues)) {
+    const lower = key.toLowerCase();
+    if (lower in tags) {
+      tags[lower] = typeof val === 'boolean' ? val : (parseFloat(val) || 0);
+    }
   }
 
-  // Disable simulation drift when receiving live data
+  _lastLiveDataTime = Date.now();
+
   if (!_liveDataActive) {
     _liveDataActive = true;
     console.log('[DigitalTwin] Live data connected — simulation drift disabled');
   }
 });
 
-// Override driftAll to no-op when live data is active
+// Override driftAll: disabled when live data is active,
+// re-enables if no live data received for 10 seconds (PLC disconnect fallback).
+// Works because driftAll is a function declaration (hoisted, reassignable).
 const _origDriftAll = driftAll;
 driftAll = function() {
-  if (_liveDataActive) return;
+  if (_liveDataActive) {
+    // Check for data loss — re-enable drift if no data for 10 seconds
+    if (_lastLiveDataTime > 0 && Date.now() - _lastLiveDataTime > 10000) {
+      _liveDataActive = false;
+      console.log('[DigitalTwin] Live data lost — simulation drift re-enabled');
+    }
+    return;
+  }
   _origDriftAll();
 };
 </script>
