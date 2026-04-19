@@ -61,7 +61,11 @@ let backendProcess = null;
 let backendRestarts = 0;
 let pgStarted = false;
 let otaInProgress = false;
+let lastUserActivity = Date.now();
+let liveOtaInterval = null;
 const MAX_BACKEND_RESTARTS = 3;
+const OTA_POLL_INTERVAL = 5 * 60 * 1000; // check every 5 minutes
+const IDLE_THRESHOLD = 60 * 1000;         // 60 seconds of no interaction
 
 // ─── Machine ID (must match backend/machine_id.py exactly) ──────────────────
 function getMachineId() {
@@ -724,6 +728,176 @@ async function checkAndApplyUpdate() {
   }
 }
 
+// ─── Live OTA (background polling + idle-aware restart) ─────────────────────
+
+/**
+ * Check for update silently (no splash, no UI). Returns release info or null.
+ */
+async function checkForUpdateSilently() {
+  if (otaInProgress) return null;
+  const localVer = getLocalVersion();
+  const branch = getReleaseBranch();
+  const slug = branch.replace(/\//g, '-').toLowerCase();
+  const prefix = slug + '-v';
+
+  let releases;
+  try {
+    releases = await httpsGetJSON(`${GITHUB_RELEASES_URL}?per_page=10`);
+  } catch { return null; }
+
+  if (!Array.isArray(releases)) return null;
+
+  let bestRelease = null;
+  let bestVersion = localVer;
+  for (const rel of releases) {
+    if (!rel.tag_name || !rel.tag_name.startsWith(prefix)) continue;
+    const ver = rel.tag_name.substring(prefix.length);
+    if (isNewer(ver, bestVersion)) {
+      bestVersion = ver;
+      bestRelease = rel;
+    }
+  }
+
+  if (!bestRelease) return null;
+
+  const zipAsset = (bestRelease.assets || []).find(a => a.name.endsWith('.zip'));
+  if (!zipAsset) return null;
+
+  return { version: bestVersion, zipUrl: zipAsset.browser_download_url, zipName: zipAsset.name };
+}
+
+/**
+ * Download, extract, and restart — called only when idle.
+ */
+async function applyUpdateAndRestart(updateInfo) {
+  if (otaInProgress) return;
+  otaInProgress = true;
+  console.log(`[LiveOTA] Applying update to v${updateInfo.version}...`);
+
+  const tmpZip = path.join(os.tmpdir(), updateInfo.zipName);
+  try {
+    // Download silently (no splash)
+    await downloadFile(updateInfo.zipUrl, tmpZip, (pct) => {
+      console.log(`[LiveOTA] Downloading... ${Math.round(pct)}%`);
+    });
+
+    // Stop the running backend
+    stopBackend();
+    killExistingBackend();
+
+    // Backup + extract (same logic as startup OTA)
+    const backupDir = BACKEND_DIR + '_backup';
+    if (fs.existsSync(backupDir)) {
+      fs.rmSync(backupDir, { recursive: true, force: true });
+    }
+    if (fs.existsSync(BACKEND_DIR)) {
+      fs.renameSync(BACKEND_DIR, backupDir);
+    }
+
+    execSync(
+      `powershell -NoProfile -Command "Expand-Archive -Path '${tmpZip}' -DestinationPath '${RESOURCES_DIR}' -Force"`,
+      { stdio: 'pipe', timeout: 120000 }
+    );
+
+    if (!fs.existsSync(BACKEND_EXE)) {
+      throw new Error('Backend exe not found after extraction');
+    }
+
+    fs.writeFileSync(VERSION_FILE, updateInfo.version, 'utf-8');
+
+    // Clean up
+    if (fs.existsSync(backupDir)) {
+      fs.rmSync(backupDir, { recursive: true, force: true });
+    }
+    try { fs.unlinkSync(tmpZip); } catch { /* ignore */ }
+
+    console.log(`[LiveOTA] Updated to v${updateInfo.version}. Restarting backend...`);
+
+    // Restart backend
+    backendRestarts = 0;
+    startBackend();
+    await waitForBackend();
+
+    // Reload the main window to pick up new frontend
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('ota-updated', updateInfo.version);
+      mainWindow.reload();
+    }
+
+    otaInProgress = false;
+    console.log(`[LiveOTA] v${updateInfo.version} is live.`);
+
+  } catch (err) {
+    console.error('[LiveOTA] Update failed, rolling back:', err.message);
+    const backupDir = BACKEND_DIR + '_backup';
+    if (fs.existsSync(BACKEND_DIR) && fs.existsSync(backupDir)) {
+      try { fs.rmSync(BACKEND_DIR, { recursive: true, force: true }); } catch { /* */ }
+    }
+    if (fs.existsSync(backupDir)) {
+      try { fs.renameSync(backupDir, BACKEND_DIR); } catch { /* */ }
+    }
+    try { fs.unlinkSync(tmpZip); } catch { /* */ }
+
+    // Restart backend from backup
+    backendRestarts = 0;
+    try { startBackend(); await waitForBackend(); } catch { /* */ }
+
+    otaInProgress = false;
+  }
+}
+
+/**
+ * Start periodic background OTA check. Called after app is fully loaded.
+ */
+function startLiveOTA() {
+  if (liveOtaInterval) return;
+  console.log('[LiveOTA] Background update check enabled (every 5 min, restart when idle).');
+
+  liveOtaInterval = setInterval(async () => {
+    if (otaInProgress) return;
+
+    const updateInfo = await checkForUpdateSilently();
+    if (!updateInfo) return;
+
+    console.log(`[LiveOTA] Update found: v${updateInfo.version}. Waiting for idle...`);
+
+    // Wait for idle before applying
+    const waitForIdle = () => {
+      const idleCheck = setInterval(async () => {
+        const idleMs = Date.now() - lastUserActivity;
+        if (idleMs >= IDLE_THRESHOLD && !otaInProgress) {
+          clearInterval(idleCheck);
+          console.log(`[LiveOTA] User idle for ${Math.round(idleMs / 1000)}s. Applying update...`);
+          await applyUpdateAndRestart(updateInfo);
+        }
+      }, 10000); // check every 10 seconds
+
+      // Give up after 30 minutes of waiting for idle
+      setTimeout(() => clearInterval(idleCheck), 30 * 60 * 1000);
+    };
+
+    waitForIdle();
+  }, OTA_POLL_INTERVAL);
+}
+
+/**
+ * Track user activity in the main window for idle detection.
+ */
+function trackUserActivity() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  // Track mouse/keyboard events via the web contents
+  mainWindow.webContents.on('before-input-event', () => {
+    lastUserActivity = Date.now();
+  });
+
+  // Also track window focus
+  mainWindow.on('focus', () => { lastUserActivity = Date.now(); });
+
+  // Track mouse movement via IPC (optional, the input event covers keyboard + clicks)
+  console.log('[LiveOTA] User activity tracking enabled.');
+}
+
 // ─── Windows ─────────────────────────────────────────────────────────────────
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
@@ -1018,6 +1192,10 @@ app.on('ready', async () => {
     createMainWindow();
     createTray();
     startPeriodicLicenseCheck();
+
+    // 8. Start live OTA (background polling + idle-aware auto-restart)
+    trackUserActivity();
+    startLiveOTA();
 
   } catch (err) {
     console.error('[Electron] Startup error:', err);
