@@ -951,7 +951,7 @@
   <div class="settings-body">
     <h4>Scene</h4>
     <label><input type="checkbox" id="optBreathing" checked> Idle camera breathing</label>
-    <label><input type="checkbox" id="optGodRays" checked> Volumetric light shafts</label>
+    <label><input type="checkbox" id="optGodRays"> Volumetric light shafts</label>
     <label><input type="checkbox" id="optParticles" checked> Mass-flow particles</label>
     <label><input type="checkbox" id="optLabels" checked> Floating data labels</label>
     <label><input type="checkbox" id="optHuman" checked> Scale reference</label>
@@ -1325,11 +1325,11 @@ const warm = new THREE.DirectionalLight(0xffb473, 0.7);
 warm.position.set(12, 18, 24);
 scene.add(warm);
 
-/* Underfloor rim spotlights — bathe each plant zone in a brighter blue glow
-   from below. No volumetric beams (fog is thin) — they just paint the silo
-   undersides with a sci-fi rim. */
-function addUnderGlow(x, z, color = 0x2e5a8e, intensity = 3.2, dist = 26, angle = Math.PI * 0.45) {
-  const sp = new THREE.SpotLight(color, intensity, dist, angle, 0.85, 1.5);
+/* Underfloor rim spotlights — paint a subtle blue wash on each zone's silo
+   undersides. Kept deliberately low-intensity + narrower cone so they don't
+   read as visible volumetric shafts in the overview. */
+function addUnderGlow(x, z, color = 0x2e5a8e, intensity = 1.3, dist = 22, angle = Math.PI * 0.30) {
+  const sp = new THREE.SpotLight(color, intensity, dist, angle, 0.9, 1.8);
   sp.position.set(x, -0.5, z);   // just below floor
   const target = new THREE.Object3D();
   target.position.set(x, 8, z);
@@ -1338,12 +1338,12 @@ function addUnderGlow(x, z, color = 0x2e5a8e, intensity = 3.2, dist = 26, angle 
   scene.add(sp);
   return sp;
 }
-addUnderGlow(-17, 2, 0x2e5a8e, 3.0);     // wheat bank
-addUnderGlow(-8,  0, 0x2e5a8e, 2.6);     // cleaning house
-addUnderGlow( 2,  0, 0x3d7ab8, 3.6);     // mill tower (stronger)
-addUnderGlow(14,  0, 0x2e5a8e, 2.6);     // output silos
-addUnderGlow(14, -10, 0x2c5f9c, 2.6);    // FCL
-addUnderGlow(-18, -14, 0x2e5a8e, 2.4);   // pasta corner
+addUnderGlow(-17, 2, 0x2e5a8e, 1.2);     // wheat bank
+addUnderGlow(-8,  0, 0x2e5a8e, 1.0);     // cleaning house
+addUnderGlow( 2,  0, 0x3d7ab8, 1.5);     // mill tower (slightly stronger)
+addUnderGlow(14,  0, 0x2e5a8e, 1.0);     // output silos
+addUnderGlow(14, -10, 0x2c5f9c, 1.0);    // FCL
+addUnderGlow(-18, -14, 0x2e5a8e, 0.9);   // pasta corner
 
 /* ========= Materials registry ========= */
 function concreteTexture(tint, variation=12) {
@@ -1473,51 +1473,69 @@ scene.add(ground);
    Glowing concentric rings + scanline ring — the digital-twin "footprint"
    that anchors each piece of equipment. Always faces up, additive blend. */
 const HOLO_PADS = [];
+/* Premium hologram badge — a single thin outer rim with four corner brackets
+   and a soft radial fade. No busy concentric rings, no dashed scan lines.
+   Reads as a "registered zone" marker, not a VFX flourish. */
 function makeHoloPad(cx, cz, radius = 6, color = 0x22d3ee) {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 1024;
   const ctx = c.getContext('2d');
-  // dark base
   ctx.clearRect(0, 0, 1024, 1024);
   const cx2 = 512, cy2 = 512;
-  // outer ring
-  ctx.strokeStyle = `rgba(${(color>>16)&255}, ${(color>>8)&255}, ${color&255}, 0.95)`;
-  ctx.lineWidth = 6;
+  const r = (color >> 16) & 255, g = (color >> 8) & 255, b = color & 255;
+  const rgba = (a) => `rgba(${r}, ${g}, ${b}, ${a})`;
+
+  // Soft radial fill — the zone "lights up" subtly from the centre outward.
+  const gr = ctx.createRadialGradient(cx2, cy2, 20, cx2, cy2, 460);
+  gr.addColorStop(0,    rgba(0.28));
+  gr.addColorStop(0.55, rgba(0.10));
+  gr.addColorStop(1,    rgba(0.0));
+  ctx.fillStyle = gr;
+  ctx.fillRect(0, 0, 1024, 1024);
+
+  // Single thin outer rim — premium look, not busy.
+  ctx.strokeStyle = rgba(0.80);
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
   ctx.arc(cx2, cy2, 460, 0, Math.PI * 2);
   ctx.stroke();
-  // dashed mid ring
-  ctx.lineWidth = 3;
-  ctx.setLineDash([18, 14]);
+
+  // Very faint inner rim for depth, no dashes.
+  ctx.strokeStyle = rgba(0.22);
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(cx2, cy2, 380, 0, Math.PI * 2);
+  ctx.arc(cx2, cy2, 350, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.setLineDash([]);
-  // inner ring
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = `rgba(${(color>>16)&255}, ${(color>>8)&255}, ${color&255}, 0.55)`;
-  ctx.beginPath();
-  ctx.arc(cx2, cy2, 280, 0, Math.PI * 2);
-  ctx.stroke();
-  // crosshair ticks at N/E/S/W
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = `rgba(${(color>>16)&255}, ${(color>>8)&255}, ${color&255}, 0.85)`;
-  for (let a = 0; a < 4; a++) {
-    const ang = a * Math.PI / 2;
-    const x1 = cx2 + Math.cos(ang) * 440, y1 = cy2 + Math.sin(ang) * 440;
-    const x2 = cx2 + Math.cos(ang) * 480, y2 = cy2 + Math.sin(ang) * 480;
-    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+  // Four corner brackets — L-shaped ticks at NE/NW/SE/SW (45° offsets) —
+  // registers the zone like a selected map feature. Thicker, short strokes.
+  ctx.strokeStyle = rgba(0.92);
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  const bracketR = 470, armLen = 38, gap = 10;
+  for (let k = 0; k < 4; k++) {
+    const ang = Math.PI / 4 + k * (Math.PI / 2); // NE, NW, SW, SE
+    const ux = Math.cos(ang), uy = Math.sin(ang);
+    // tangent unit vector (perpendicular to radial)
+    const tx = -uy, ty = ux;
+    const bx = cx2 + ux * bracketR, by = cy2 + uy * bracketR;
+    // two short arms forming an L along the tangent direction, either side
+    ctx.beginPath();
+    ctx.moveTo(bx + tx * gap,          by + ty * gap);
+    ctx.lineTo(bx + tx * (gap + armLen), by + ty * (gap + armLen));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(bx - tx * gap,          by - ty * gap);
+    ctx.lineTo(bx - tx * (gap + armLen), by - ty * (gap + armLen));
+    ctx.stroke();
   }
-  // soft inner glow fill
-  const gr = ctx.createRadialGradient(cx2, cy2, 40, cx2, cy2, 260);
-  gr.addColorStop(0, `rgba(${(color>>16)&255}, ${(color>>8)&255}, ${color&255}, 0.35)`);
-  gr.addColorStop(1, `rgba(${(color>>16)&255}, ${(color>>8)&255}, ${color&255}, 0.0)`);
-  ctx.fillStyle = gr;
-  ctx.fillRect(0, 0, 1024, 1024);
+
   const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
   const mat = new THREE.MeshBasicMaterial({
     map: tex, transparent: true, depthWrite: false, fog: true,
     blending: THREE.AdditiveBlending, toneMapped: false,
+    opacity: 0.85,
   });
   const pad = new THREE.Mesh(new THREE.PlaneGeometry(radius * 2, radius * 2), mat);
   pad.rotation.x = -Math.PI / 2;
@@ -3184,7 +3202,7 @@ function buildGodRay(x, z) {
   const geo = new THREE.ConeGeometry(2.5, 20, 16, 1, true);
   const mat = new THREE.MeshBasicMaterial({
     color: 0xffe8b0,
-    transparent: true, opacity: 0.10,
+    transparent: true, opacity: 0.05,
     blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide, depthWrite: false,
   });
@@ -3198,6 +3216,11 @@ function buildGodRay(x, z) {
 const godRay1 = buildGodRay(-15, 3);
 const godRay2 = buildGodRay(2, 5);
 const godRay3 = buildGodRay(14, 3);
+// Off by default — they read as distracting "flashing lights" in the overview shot.
+// Users can still toggle them on from settings if they want the volumetric effect.
+godRay1.visible = false;
+godRay2.visible = false;
+godRay3.visible = false;
 
 /* ========================================================
    HTML LABEL OVERLAY SYSTEM
@@ -3603,7 +3626,7 @@ document.getElementById('settingsToggle').addEventListener('click', () => {
 
 let labelsEnabled = true;
 let particlesEnabled = true;
-let godRaysEnabled = true;
+let godRaysEnabled = false;
 let humanEnabled = true;
 let breathingEnabled = true;
 let reducedMotion = false;
@@ -3738,30 +3761,32 @@ function animate() {
     });
   }
 
-  // Idle breathing (bounded arc)
+  // Idle breathing — kicks in later, moves less, moves slower. The camera
+  // should feel like it's gently holding its framing, not panning.
   const idleFor = (now - lastMoveTime) / 1000;
-  if (breathingEnabled && !reducedMotion && idleFor > 30 && !isDragging) {
+  if (breathingEnabled && !reducedMotion && idleFor > 45 && !isDragging) {
     if (orbitBaselineAz === null) {
       orbitBaselineAz = orbit.azimuth;
       orbitBaselinePolar = orbit.polar;
       orbitBaselineStart = now;
     }
     const el = (now - orbitBaselineStart) / 1000;
-    const PERIOD = 22;
+    const PERIOD = 40;
     const w = TAU / PERIOD;
-    orbit.azimuth = orbitBaselineAz + Math.sin(el * w) * 15 * DEG;
-    orbit.polar = orbitBaselinePolar + Math.sin(el * w * 0.5) * 2 * DEG;
+    orbit.azimuth = orbitBaselineAz + Math.sin(el * w) * 2.5 * DEG;
+    orbit.polar = orbitBaselinePolar + Math.sin(el * w * 0.5) * 0.4 * DEG;
     applyOrbit();
   } else if (idleFor < 1) {
     orbitBaselineAz = null;
   }
 
-  // God ray flicker
+  // God ray flicker — tightened range so even when user toggles them on they
+  // don't pulse aggressively. Small amplitude, slow sinusoid, no hard jumps.
   if (godRaysEnabled && !reducedMotion) {
-    const flick = 0.08 + Math.sin(now * 0.0008) * 0.02;
+    const flick = 0.055 + Math.sin(now * 0.0005) * 0.008;
     godRay1.material.opacity = flick;
-    godRay2.material.opacity = flick * 1.1;
-    godRay3.material.opacity = flick * 0.9;
+    godRay2.material.opacity = flick * 1.05;
+    godRay3.material.opacity = flick * 0.95;
   }
 
   updateLabels();
@@ -3780,7 +3805,9 @@ function animate() {
   requestAnimationFrame(animate);
 }
 
-/* Status LEDs — switch core/halo color based on isActiveFn(), pulse halo. */
+/* Status LEDs — subtle heartbeat, no blinking.
+   Colour still switches on fault (active/alert), but the motion is a slow,
+   tiny breath so the overview reads calm and "in control" rather than alarmed. */
 function updateLEDs(now) {
   if (!LED_REGISTRY.length) return;
   for (let i = 0; i < LED_REGISTRY.length; i++) {
@@ -3791,21 +3818,16 @@ function updateLEDs(now) {
     led.core.material.color.setHex(target);
     led.halo.material.color.setHex(target);
     if (led.wash) led.wash.material.color.setHex(target);
-    // Slow pulse, offset per-LED via phase so they don't all blink together.
-    const pulse = 0.5 + 0.5 * Math.sin(now * 0.004 + led.phase * Math.PI * 2);
-    led.halo.material.opacity = 0.42 + pulse * 0.30;
-    if (led.wash) led.wash.material.opacity = 0.12 + pulse * 0.18;
-    const s = 0.9 + pulse * 0.30;
+    // Very slow pulse, phase-offset so LEDs drift out of sync — no visible "flash".
+    const pulse = 0.5 + 0.5 * Math.sin(now * 0.0012 + led.phase * Math.PI * 2);
+    led.halo.material.opacity = 0.26 + pulse * 0.10;
+    if (led.wash) led.wash.material.opacity = 0.06 + pulse * 0.05;
+    const s = 0.97 + pulse * 0.05;
     led.halo.scale.set(s, s, s);
-    if (led.wash) led.wash.scale.set(s * 0.95, s * 0.95, s * 0.95);
-    // Faulted LEDs blink hard
-    if (!active) {
-      const blink = (Math.sin(now * 0.012 + led.phase) > 0) ? 1 : 0.25;
-      led.core.material.opacity = blink;
-      led.core.material.transparent = true;
-    } else {
-      led.core.material.opacity = 1;
-    }
+    if (led.wash) led.wash.scale.set(s * 0.98, s * 0.98, s * 0.98);
+    // Faulted LEDs just dim slightly — no hard blink.
+    led.core.material.transparent = true;
+    led.core.material.opacity = active ? 1 : (0.55 + pulse * 0.15);
   }
 }
 
@@ -3825,13 +3847,15 @@ function updateFlowCables(now) {
   });
 }
 
-/* Holographic ground pads — slow rotation + breathing opacity */
+/* Holographic ground pads — very slow counter-rotation + barely-there breathing.
+   Motion is deliberately subtle so the badges read as installed registry marks,
+   not animated VFX. */
 function updateHoloPads(now) {
   if (!HOLO_PADS.length) return;
   for (let i = 0; i < HOLO_PADS.length; i++) {
     const pad = HOLO_PADS[i];
-    pad.rotation.z = now * 0.00015 * (i % 2 === 0 ? 1 : -1);
-    const breath = 0.85 + 0.15 * Math.sin(now * 0.0018 + i * 0.7);
+    pad.rotation.z = now * 0.00005 * (i % 2 === 0 ? 1 : -1);
+    const breath = 0.80 + 0.06 * Math.sin(now * 0.0008 + i * 0.7);
     pad.material.opacity = breath;
   }
 }
@@ -3984,6 +4008,50 @@ setTimeout(() => {
   document.getElementById('loading').classList.add('hide');
   animate();
 }, 400);
+
+/* ========= Live Data Bridge (postMessage from React wrapper) ========= */
+let _liveDataActive = false;
+window.addEventListener('message', (e) => {
+  if (!e.data || e.data.type !== 'hercules-live-tags') return;
+  const liveValues = e.data.values;
+  if (!liveValues || typeof liveValues !== 'object') return;
+
+  // Map PLC tag names → twin tag keys and update
+  // Try multiple normalization strategies to match twin's tags object
+  for (const [plcTag, val] of Object.entries(liveValues)) {
+    const parsed = typeof val === 'boolean' ? val : (parseFloat(val) || 0);
+    const lower = plcTag.toLowerCase();
+
+    // Strategy 1: exact match (already lowercase)
+    if (lower in tags) { tags[lower] = parsed; continue; }
+
+    // Strategy 2: strip MilB_ prefix → lowercase (MilB_C32_Effective_Power → c32_effective_power)
+    const stripped = lower.replace(/^milb_/, '').replace(/^mil_b_/, '');
+    if (stripped in tags) { tags[stripped] = parsed; continue; }
+
+    // Strategy 3: add mil_b_ prefix (Flour_FlowRate → mil_b_flour_flowrate)
+    const prefixed = 'mil_b_' + stripped;
+    if (prefixed in tags) { tags[prefixed] = parsed; continue; }
+
+    // Strategy 4: direct PLC name patterns
+    // Dampening_On → mil_b_dampening_on, Vitamin_Feeder_On → mil_b_vitamin_feeder_on
+    const withPrefix = 'mil_b_' + lower;
+    if (withPrefix in tags) { tags[withPrefix] = parsed; continue; }
+  }
+
+  // Disable simulation drift when receiving live data
+  if (!_liveDataActive) {
+    _liveDataActive = true;
+    console.log('[DigitalTwin] Live data connected — simulation drift disabled');
+  }
+});
+
+// Override driftAll to no-op when live data is active
+const _origDriftAll = driftAll;
+driftAll = function() {
+  if (_liveDataActive) return;
+  _origDriftAll();
+};
 </script>
 </body>
 </html>
