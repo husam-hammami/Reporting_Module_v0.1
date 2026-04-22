@@ -1204,6 +1204,9 @@ def _get_logo_data_uris():
 
 _SHARED_CSS = """
 @page { size: A4; margin: 6mm 10mm; }
+/* xhtml2pdf uses content-box by default; width + padding on body otherwise exceeds the page box */
+html { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
 body {
   font-family: Inter, system-ui, -apple-system, sans-serif;
   font-size: 12px;
@@ -1211,6 +1214,8 @@ body {
   line-height: 1.35;
   margin: 0;
   padding: 0;
+  width: 100%;
+  max-width: 100%;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
@@ -1278,6 +1283,8 @@ table.data-table th {
   letter-spacing: 0.03em;
   overflow: hidden;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 table.data-table td {
   padding: 4px 8px;
@@ -1286,6 +1293,8 @@ table.data-table td {
   color: #1e293b;
   overflow: hidden;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 table.data-table .alt-row { background-color: #f1f5f9; }
 table.data-table .summary-row { font-weight: 700; background-color: #e0f2fe; }
@@ -1689,7 +1698,7 @@ def _generate_dashboard_html(report_name, layout_config, tag_data, from_dt, to_d
 
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>{_SHARED_CSS}</style></head>
-<body style="padding: 3mm 8mm 5mm 8mm; width: 194mm;">
+<body style="padding: 3mm 8mm 5mm 8mm; width: 100%;">
 {logo_html}
 <h1 class="report-title" style="text-align:center">{_esc(report_name)}</h1>
 <p class="period" style="text-align:center"><strong>From:</strong> {_esc(period_start)} &nbsp;&mdash;&nbsp; <strong>To:</strong> {_esc(period_end)}</p>
@@ -2006,7 +2015,7 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
     )
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>{_SHARED_CSS}</style></head>
-<body style="padding: 3mm 10mm 5mm 10mm; width: 190mm;">
+<body style="padding: 3mm 10mm 5mm 10mm; width: 100%;">
 {content_html}
 {footer_tbl}
 </body></html>"""
