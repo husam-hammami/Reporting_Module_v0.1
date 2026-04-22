@@ -1495,6 +1495,21 @@
   max-width: none !important;
 }
 
+/* Dashboard reports with grid.pageMode === 'a4': match @media print #report-print-section
+   so PDF/PNG raster matches an A4-style band instead of full wide canvas. */
+#report-print-section.rb-pdf-export.rb-pdf-export-a4-dashboard {
+  zoom: 0.58;
+  padding: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  background: #ffffff !important;
+  box-sizing: border-box !important;
+}
+
 /* Table styling for PDF — larger fonts, better spacing, forced light colors */
 .rb-pdf-export .rb-production-table {
   padding: 0 !important;

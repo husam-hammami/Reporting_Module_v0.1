@@ -459,6 +459,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
       const el = document.getElementById('report-print-section');
       if (!el) return;
       el.classList.add('rb-pdf-export');
+      if (pageMode === 'a4') el.classList.add('rb-pdf-export-a4-dashboard');
 
       const scrollContainer = scrollContainerRef.current;
       const prevScrollOverflow = scrollContainer?.style.overflow;
@@ -483,7 +484,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
           orientation: viewMode === 'tabular' ? 'landscape' : 'auto',
         });
       } finally {
-        el.classList.remove('rb-pdf-export');
+        el.classList.remove('rb-pdf-export', 'rb-pdf-export-a4-dashboard');
         if (scrollContainer) {
           scrollContainer.style.overflow = prevScrollOverflow || '';
           scrollContainer.style.height = prevScrollHeight || '';
@@ -501,6 +502,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
       const el = document.getElementById('report-print-section');
       if (!el) return;
       el.classList.add('rb-pdf-export');
+      if (pageMode === 'a4') el.classList.add('rb-pdf-export-a4-dashboard');
       const scrollContainer = scrollContainerRef.current;
       const prevScrollOverflow = scrollContainer?.style.overflow;
       const prevScrollHeight = scrollContainer?.style.height;
@@ -519,7 +521,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         const canvases = await captureDashboardCanvases(el);
         printCanvases(canvases, template?.name || 'Report');
       } finally {
-        el.classList.remove('rb-pdf-export');
+        el.classList.remove('rb-pdf-export', 'rb-pdf-export-a4-dashboard');
         if (scrollContainer) {
           scrollContainer.style.overflow = prevScrollOverflow || '';
           scrollContainer.style.height = prevScrollHeight || '';
@@ -535,6 +537,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     try {
       const el = document.getElementById('report-print-section');
       el.classList.add('rb-pdf-export');
+      if (pageMode === 'a4') el.classList.add('rb-pdf-export-a4-dashboard');
       const scrollContainer = scrollContainerRef.current;
       const prevScrollOverflow = scrollContainer?.style.overflow;
       const prevScrollHeight = scrollContainer?.style.height;
@@ -552,7 +555,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
       try {
         await exportAsPNG(el, template?.name || 'report');
       } finally {
-        el.classList.remove('rb-pdf-export');
+        el.classList.remove('rb-pdf-export', 'rb-pdf-export-a4-dashboard');
         if (scrollContainer) {
           scrollContainer.style.overflow = prevScrollOverflow || '';
           scrollContainer.style.height = prevScrollHeight || '';
