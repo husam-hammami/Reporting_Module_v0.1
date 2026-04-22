@@ -1480,6 +1480,21 @@
   overflow: visible !important;
 }
 
+/* Table Report (paginated): match print layout during html-to-image capture */
+#paginated-report-print:has(.rb-pdf-export.paginated-preview-root) {
+  max-width: none !important;
+  width: 100% !important;
+}
+.rb-pdf-export.paginated-preview-root {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+.rb-pdf-export.paginated-preview-root .rb-paginated-table-wrap {
+  overflow: visible !important;
+  max-width: none !important;
+}
+
 /* Table styling for PDF — larger fonts, better spacing, forced light colors */
 .rb-pdf-export .rb-production-table {
   padding: 0 !important;

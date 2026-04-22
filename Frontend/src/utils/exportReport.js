@@ -50,6 +50,22 @@ async function settle(element) {
   await new Promise((r) => setTimeout(r, 500));
 }
 
+/** Max dimension for html-to-image (pixelRatio multiplies; stay under ~16k canvas limits). */
+const CAPTURE_DIM_MAX = 8192;
+
+/**
+ * Size for SVG foreignObject: html-to-image defaults to clientWidth/Height, which
+ * clips overflow; use the larger of offset vs scroll so Table Report PDFs match print.
+ */
+function getCaptureDimensions(el) {
+  const w = Math.ceil(Math.max(el.offsetWidth, el.scrollWidth));
+  const h = Math.ceil(Math.max(el.offsetHeight, el.scrollHeight));
+  return {
+    width: Math.min(Math.max(w, 1), CAPTURE_DIM_MAX),
+    height: Math.min(Math.max(h, 1), CAPTURE_DIM_MAX),
+  };
+}
+
 /**
  * Core capture: switch to light mode, wait, snapshot via html-to-image, restore.
  * html-to-image uses SVG foreignObject — the browser's own rendering engine paints
@@ -63,6 +79,8 @@ export async function captureElement(element) {
 
   await settle(element);
 
+  const { width, height } = getCaptureDimensions(element);
+
   let canvas;
   try {
     canvas = await toCanvas(element, {
@@ -71,6 +89,8 @@ export async function captureElement(element) {
       skipAutoScale: true,
       includeQueryParams: true,
       cacheBust: true,
+      width,
+      height,
       filter: (node) => {
         if (node.classList?.contains?.('print:hidden')) return false;
         if (node.tagName === 'NOSCRIPT') return false;

@@ -1673,7 +1673,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
       /* ── Table ─── */
       case 'table':
         return (
-          <div key={section.id} className="mb-2" style={{ overflow: 'hidden', maxWidth: '100%' }}>
+          <div key={section.id} className="mb-2 rb-paginated-table-wrap" style={{ overflow: 'hidden', maxWidth: '100%' }}>
             {section.label && (
               <div className="text-[13px] font-bold text-[#0f172a] mb-1">{section.label}</div>
             )}
