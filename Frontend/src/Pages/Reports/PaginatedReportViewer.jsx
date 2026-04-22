@@ -18,6 +18,7 @@ import TimePeriodTabs, { PAGINATED_TABS } from './TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
 import axios from '../../API/axios';
 import { exportAsPDF as exportAsPDFUtil } from '../../utils/exportReport';
+import { downloadReportTemplateExcel } from '../../utils/downloadReportTemplateExcel';
 
 /* ══════════════════════════════════════════════════════════════════
    MAIN COMPONENT
@@ -38,6 +39,7 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
   const [fetchError, setFetchError] = useState(null);
   const [liveError, setLiveError] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [excelExporting, setExcelExporting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const reportRef = useRef(null);
 
@@ -220,6 +222,25 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
     window.print();
   };
 
+  const handleDownloadExcel = async () => {
+    setExcelExporting(true);
+    try {
+      const from = timePeriod?.from?.toISOString?.() || '';
+      const to = timePeriod?.to?.toISOString?.() || '';
+      const safe = (template?.name || 'report').replace(/[^\w\-]/g, '_');
+      await downloadReportTemplateExcel(reportId, {
+        from,
+        to,
+        fallbackFilename: `${safe}.xlsx`,
+      });
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      window.alert(err?.message || 'Excel export failed');
+    } finally {
+      setExcelExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -295,14 +316,12 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
           <span className="text-[10px] font-bold uppercase tracking-wider">{exporting ? 'Exporting...' : 'PDF'}</span>
         </button>
         <button
-          onClick={() => {
-            const from = timePeriod?.from?.toISOString?.() || '';
-            const to = timePeriod?.to?.toISOString?.() || '';
-            window.open(`/api/report-builder/templates/${reportId}/export?format=xlsx&from=${from}&to=${to}`, '_blank');
-          }}
-          className="rb-btn-ghost flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider"
+          type="button"
+          onClick={() => { void handleDownloadExcel(); }}
+          disabled={excelExporting}
+          className="rb-btn-ghost flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider disabled:opacity-50"
         >
-          <Download size={12} /> Excel
+          <Download size={12} /> {excelExporting ? '…' : 'Excel'}
         </button>
         <button onClick={handlePrint} className="rb-btn-ghost flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
           <Printer size={12} /> Print

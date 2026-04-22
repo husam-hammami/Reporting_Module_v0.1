@@ -32,6 +32,7 @@ import AiInsightsPanel, { AiDrawer } from './AiInsightsPanel';
 import ActionsPanel from './ActionsPanel';
 import '../ReportBuilder/reportBuilderTheme.css';
 import axios from '../../API/axios';
+import { downloadReportTemplateExcel } from '../../utils/downloadReportTemplateExcel';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -563,6 +564,25 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     } finally { setExporting(false); }
   };
 
+  const handleExportExcel = async () => {
+    flushSync(() => setExporting(true));
+    try {
+      const from = timePeriod?.from?.toISOString?.() || '';
+      const to = timePeriod?.to?.toISOString?.() || '';
+      const safe = (template?.name || 'report').replace(/[^\w\-]/g, '_');
+      await downloadReportTemplateExcel(reportId, {
+        from,
+        to,
+        fallbackFilename: `${safe}.xlsx`,
+      });
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      window.alert(err?.message || 'Excel export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) { document.documentElement.requestFullscreen?.(); setFullscreen(true); }
     else { document.exitFullscreen?.(); setFullscreen(false); }
@@ -716,12 +736,10 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                 <FaImage className="text-[10px]" /> Export PNG
               </button>
               <button
-                onClick={() => {
-                  const from = timePeriod?.from?.toISOString?.() || '';
-                  const to = timePeriod?.to?.toISOString?.() || '';
-                  window.open(`/api/report-builder/templates/${reportId}/export?format=xlsx&from=${from}&to=${to}`, '_blank');
-                }}
-                className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg flex items-center gap-2"
+                type="button"
+                onClick={() => { void handleExportExcel(); }}
+                disabled={exporting}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg flex items-center gap-2 disabled:opacity-50"
               >
                 <FaFilePdf className="text-[10px]" /> Export Excel
               </button>

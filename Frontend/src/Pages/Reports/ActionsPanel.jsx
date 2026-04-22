@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Link2, FileDown, Printer, RefreshCw, Maximize, Image, FileSpreadsheet } from 'lucide-react';
+import { downloadReportTemplateExcel } from '../../utils/downloadReportTemplateExcel';
 
 function ActionButton({ icon: Icon, label, onClick, active }) {
   return (
@@ -38,8 +39,15 @@ export default function ActionsPanel({ reportId, onExportPDF, onExportPNG, onPri
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleExcel = () => {
-    window.open(`/api/report-builder/templates/${reportId}/export?format=xlsx`, '_blank');
+  const handleExcel = async () => {
+    try {
+      await downloadReportTemplateExcel(reportId, {
+        fallbackFilename: `report_${reportId}.xlsx`,
+      });
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      window.alert(err?.message || 'Excel export failed');
+    }
   };
 
   return (
@@ -64,7 +72,7 @@ export default function ActionsPanel({ reportId, onExportPDF, onExportPNG, onPri
 
       <ActionButton icon={FileDown} label="Download PDF" onClick={onExportPDF} />
       <ActionButton icon={Image} label="Download PNG" onClick={onExportPNG} />
-      <ActionButton icon={FileSpreadsheet} label="Download Excel" onClick={handleExcel} />
+      <ActionButton icon={FileSpreadsheet} label="Download Excel" onClick={() => { void handleExcel(); }} />
       <ActionButton icon={Printer} label="Print" onClick={() => (onPrint ? onPrint() : window.print())} />
 
       <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '6px 10px' }} />
