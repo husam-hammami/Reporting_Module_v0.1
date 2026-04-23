@@ -1063,80 +1063,12 @@ export function useReportCanvas(templateId) {
   };
 }
 
-/* ── useAvailableTags (API-first, fallback to demo) ───────────── */
-
-/* ── Grain Silos / Terminal tags (for Report Builder demo + Grain_Silos template) ── */
-const GRAIN_SILOS_TAGS = [
-  // Intake & Outloading
-  { id: 100, tag_name: 'Intake_Today', display_name: 'Intake Today', unit: 't', description: 'Grain intake today', decimal_places: 1 },
-  { id: 101, tag_name: 'Intake_Week', display_name: 'Intake This Week', unit: 't', description: 'Grain intake this week', decimal_places: 1 },
-  { id: 102, tag_name: 'Intake_Month', display_name: 'Intake This Month', unit: 't', description: 'Grain intake this month', decimal_places: 1 },
-  { id: 103, tag_name: 'Outload_Ship', display_name: 'Outload Ship', unit: 't', description: 'Outloading by ship', decimal_places: 1 },
-  { id: 104, tag_name: 'Outload_Truck', display_name: 'Outload Truck', unit: 't', description: 'Outloading by truck', decimal_places: 1 },
-  { id: 105, tag_name: 'Outload_Rail', display_name: 'Outload Rail', unit: 't', description: 'Outloading by rail', decimal_places: 1 },
-  { id: 106, tag_name: 'Balance_Tons', display_name: 'Storage Balance', unit: 't', description: 'Net storage balance', decimal_places: 1 },
-  { id: 107, tag_name: 'Queue_Status', display_name: 'Queue Status', unit: '', description: 'Intake queue status', decimal_places: 0 },
-  // Silo levels & capacity (Silo 1–8)
-  ...Array.from({ length: 8 }, (_, i) => i + 1).flatMap((n) => [
-    { id: 200 + n * 3 - 3, tag_name: `Silo${n}_Level`, display_name: `Silo ${n} Level`, unit: '%', description: `Silo ${n} fill level`, decimal_places: 1 },
-    { id: 200 + n * 3 - 2, tag_name: `Silo${n}_Capacity`, display_name: `Silo ${n} Capacity`, unit: 't', description: `Silo ${n} capacity`, decimal_places: 0 },
-    { id: 200 + n * 3 - 1, tag_name: `Silo${n}_Tons`, display_name: `Silo ${n} Tons`, unit: 't', description: `Silo ${n} current tons`, decimal_places: 1 },
-  ]),
-  // Grain quality
-  ...Array.from({ length: 8 }, (_, i) => ({ id: 300 + i + 1, tag_name: `Silo${i + 1}_Temp`, display_name: `Silo ${i + 1} Temp`, unit: '\u00b0C', description: `Silo ${i + 1} temperature`, decimal_places: 1 })),
-  { id: 309, tag_name: 'Moisture_Avg', display_name: 'Avg Moisture', unit: '%', description: 'Average grain moisture', decimal_places: 2 },
-  { id: 310, tag_name: 'Aeration_Status', display_name: 'Aeration Status', unit: '', description: 'Aeration active', decimal_places: 0 },
-  { id: 311, tag_name: 'Quality_Deviation', display_name: 'Quality Deviation', unit: '', description: 'Quality alert count', decimal_places: 0 },
-  // Equipment
-  { id: 400, tag_name: 'Conveyor1_Status', display_name: 'Conveyor 1 Status', unit: '', description: 'Running (1) / Stopped (0)', decimal_places: 0 },
-  { id: 401, tag_name: 'Conveyor1_Throughput', display_name: 'Conveyor 1 Throughput', unit: 't/h', description: 'Throughput', decimal_places: 1 },
-  { id: 402, tag_name: 'Elevator1_Running', display_name: 'Elevator 1 Running', unit: '', description: 'Running', decimal_places: 0 },
-  { id: 403, tag_name: 'Equipment_Downtime_Pct', display_name: 'Equipment Downtime %', unit: '%', description: 'Aggregate downtime', decimal_places: 1 },
-  { id: 404, tag_name: 'Equipment_Utilization_Pct', display_name: 'Equipment Utilization %', unit: '%', description: 'Utilization', decimal_places: 1 },
-  // Energy & utilities
-  { id: 500, tag_name: 'Power_Intake_Area', display_name: 'Power Intake Area', unit: 'kW', description: 'Intake area power', decimal_places: 1 },
-  { id: 501, tag_name: 'Power_Storage_Area', display_name: 'Power Storage Area', unit: 'kW', description: 'Storage area power', decimal_places: 1 },
-  { id: 502, tag_name: 'Energy_Per_Ton', display_name: 'Energy per Ton', unit: 'kWh/t', description: 'Energy per ton handled', decimal_places: 2 },
-  { id: 503, tag_name: 'Peak_Power_kW', display_name: 'Peak Power', unit: 'kW', description: 'Peak demand', decimal_places: 1 },
-  // Alarms & events
-  { id: 600, tag_name: 'Alarm_Active_Count', display_name: 'Active Alarms', unit: '', description: 'Number of active alarms', decimal_places: 0 },
-  { id: 601, tag_name: 'Alarm_Critical_Count', display_name: 'Critical Alarms', unit: '', description: 'Critical alarm count', decimal_places: 0 },
-  { id: 602, tag_name: 'Alarm_Response_Time_Avg', display_name: 'Avg Response Time', unit: 'min', description: 'Avg alarm response', decimal_places: 1 },
-  // Operations KPI
-  { id: 700, tag_name: 'Tons_Per_Day', display_name: 'Tons per Day', unit: 't', description: 'Daily throughput', decimal_places: 1 },
-  { id: 701, tag_name: 'Terminal_Availability_Pct', display_name: 'Terminal Availability', unit: '%', description: 'Availability %', decimal_places: 1 },
-  { id: 702, tag_name: 'Downtime_Pct', display_name: 'Downtime %', unit: '%', description: 'Downtime percentage', decimal_places: 1 },
-  { id: 703, tag_name: 'Losses_Pct', display_name: 'Losses %', unit: '%', description: 'Handling losses', decimal_places: 2 },
-  { id: 704, tag_name: 'OEE_Style', display_name: 'OEE Style', unit: '%', description: 'OEE-style KPI', decimal_places: 1 },
-  // Maintenance-ready
-  { id: 800, tag_name: 'Running_Hours_Main', display_name: 'Main Running Hours', unit: 'h', description: 'Running hours', decimal_places: 1 },
-  { id: 801, tag_name: 'StartStop_Cycles', display_name: 'Start/Stop Cycles', unit: '', description: 'Cycle count', decimal_places: 0 },
-  { id: 802, tag_name: 'Abnormal_Load_Count', display_name: 'Abnormal Load Events', unit: '', description: 'Abnormal load count', decimal_places: 0 },
-  { id: 803, tag_name: 'Early_Warning_Count', display_name: 'Early Warnings', unit: '', description: 'Maintenance early warnings', decimal_places: 0 },
-];
-
-const DEMO_TAGS = [
-  { id: 1, tag_name: 'Temperature_1', display_name: 'Temperature Sensor 1', unit: '\u00b0C', description: 'Main process temperature', decimal_places: 1 },
-  { id: 2, tag_name: 'Pressure_1', display_name: 'Pressure Sensor 1', unit: 'bar', description: 'System pressure', decimal_places: 2 },
-  { id: 3, tag_name: 'Flow_Rate_1', display_name: 'Flow Rate', unit: 'm\u00b3/h', description: 'Main flow rate', decimal_places: 1 },
-  { id: 4, tag_name: 'Motor_Speed_1', display_name: 'Motor Speed', unit: 'RPM', description: 'Main motor speed', decimal_places: 0 },
-  { id: 5, tag_name: 'Level_Tank_1', display_name: 'Tank Level', unit: '%', description: 'Storage tank level', decimal_places: 1 },
-  { id: 6, tag_name: 'Power_Consumption', display_name: 'Power Consumption', unit: 'kW', description: 'Total power draw', decimal_places: 2 },
-  { id: 7, tag_name: 'Vibration_1', display_name: 'Vibration Sensor', unit: 'mm/s', description: 'Motor vibration', decimal_places: 2 },
-  { id: 8, tag_name: 'Weight_Scale_1', display_name: 'Scale Weight', unit: 'kg', description: 'Product weight', decimal_places: 1 },
-  { id: 9, tag_name: 'Mill_Throughput', display_name: 'Mill Throughput', unit: 't/h', description: 'Production throughput', decimal_places: 2 },
-  { id: 10, tag_name: 'Flour_Extraction', display_name: 'Flour Extraction', unit: '%', description: 'Flour extraction rate', decimal_places: 2 },
-  { id: 11, tag_name: 'Bran_Extraction', display_name: 'Bran Extraction', unit: '%', description: 'Bran extraction rate', decimal_places: 2 },
-  { id: 12, tag_name: 'Water_Used', display_name: 'Total Water Used', unit: 'L', description: 'Water consumption', decimal_places: 1 },
-  { id: 13, tag_name: 'MillingLossFormula', display_name: 'Milling Loss', unit: '%', description: 'Calculated milling loss', decimal_places: 2 },
-  { id: 14, tag_name: 'FlowRate_Avg', display_name: 'Avg Flow Rate', unit: 'm\u00b3/h', description: 'Averaged flow rate', decimal_places: 1 },
-  ...GRAIN_SILOS_TAGS,
-];
+/* ── useAvailableTags (API; dev-only auto-seed when DB has zero active tags) ── */
 
 const TAGS_TIMEOUT_MS = 18000; // production / live backend can be slow
 
 export function useAvailableTags() {
-  const [tags, setTags] = useState(DEMO_TAGS); // instant fallback
+  const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const retryCountRef = useRef(0);
 
@@ -1147,20 +1079,20 @@ export function useAvailableTags() {
       try {
         const res = await axios.get('/api/tags?is_active=true', { timeout: TAGS_TIMEOUT_MS });
         const data = res?.data;
-        if (data?.status === 'success' && Array.isArray(data.tags) && data.tags.length > 0) {
-          setTags(data.tags);
+        if (data?.status === 'success' && Array.isArray(data.tags)) {
+          let list = data.tags;
+          if (list.length === 0 && import.meta.env.DEV) {
+            try {
+              await axios.post('/api/tags/seed', {}, { timeout: 10000 });
+              const retry = await axios.get('/api/tags?is_active=true', { timeout: TAGS_TIMEOUT_MS });
+              const retryData = retry?.data;
+              if (retryData?.status === 'success' && Array.isArray(retryData.tags)) {
+                list = retryData.tags;
+              }
+            } catch { /* keep empty */ }
+          }
+          setTags(list);
           return true;
-        }
-        if (data?.status === 'success' && data.tags?.length === 0) {
-          try {
-            await axios.post('/api/tags/seed', {}, { timeout: 10000 });
-            const retry = await axios.get('/api/tags?is_active=true', { timeout: TAGS_TIMEOUT_MS });
-            const retryData = retry?.data;
-            if (retryData?.status === 'success' && retryData.tags?.length > 0) {
-              setTags(retryData.tags);
-              return true;
-            }
-          } catch { /* keep DEMO_TAGS */ }
         }
       } catch {
         if (retryCountRef.current === 0) {

@@ -136,17 +136,21 @@ const TagGroupManager = () => {
       if (response.data.status === 'success') {
         let groups = response.data.tag_groups || [];
 
-        if (groups.length === 0) {
+        if (groups.length === 0 && import.meta.env.DEV) {
           try {
             await axios.post('/api/tags/seed', {}, { timeout: 5000 });
             const retry = await axios.get('/api/tag-groups', { params: { is_active: 'true' }, timeout: 3000 });
-            if (retry.data.status === 'success' && retry.data.tag_groups?.length > 0) groups = retry.data.tag_groups;
-          } catch { /* seed failed, keep fallback */ }
+            if (retry.data.status === 'success' && Array.isArray(retry.data.tag_groups)) {
+              groups = retry.data.tag_groups;
+            }
+          } catch { /* seed failed */ }
         }
 
+        setTagGroups(groups);
         if (groups.length > 0) {
-          setTagGroups(groups);
           localStorage.setItem('system_tag_groups', JSON.stringify({ tag_groups: groups }));
+        } else {
+          localStorage.removeItem('system_tag_groups');
         }
       } else {
         console.warn('[TagGroupManager] API returned error status, trying localStorage fallback');

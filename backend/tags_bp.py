@@ -195,42 +195,116 @@ def create_tag():
                 cursor = conn.cursor(cursor_factory=None)
                 logger.info("Database cursor created")
                 
-                # Check if tag_name already exists
+                # Check if tag_name already exists (active or soft-deleted)
                 logger.info(f"Checking if tag '{tag_name}' already exists...")
-                cursor.execute("SELECT id FROM tags WHERE tag_name = %s", (tag_name,))
+                cursor.execute(
+                    "SELECT id, is_active FROM tags WHERE tag_name = %s",
+                    (tag_name,),
+                )
                 existing = cursor.fetchone()
-                if existing:
-                    logger.warning(f"Tag '{tag_name}' already exists")
-                    return jsonify({'status': 'error', 'message': f'Tag name "{tag_name}" already exists'}), 400
-                logger.info(f"Tag '{tag_name}' is available")
-                
-                # Insert tag
+
                 # Prepare values with proper type handling
                 string_length_val = None
                 if data_type == 'STRING':
                     str_len = data.get('string_length', 40)
                     string_length_val = int(str_len) if str_len and str_len != '' else 40
-                
+
                 byte_swap_val = None
                 if data_type == 'REAL':
                     byte_swap_val = bool(data.get('byte_swap', False))  # Default to False (big-endian)
-                
+
                 is_active_val = bool(data.get('is_active', True))
-                
+
                 # Ensure bit_position is None for non-BOOL types
                 if data_type != 'BOOL':
                     bit_position = None
-                
-                # Log the values being inserted for debugging
-                logger.debug(f"Inserting tag with values: tag_name={tag_name}, db_number={db_number}, offset={offset}, data_type={data_type}, bit_position={bit_position}")
-                
+
+                is_bin_tag = bool(data.get('is_bin_tag', False))
+                activation_tag_name = data.get('activation_tag_name') or None
+                activation_condition = data.get('activation_condition') or None
+                activation_value = data.get('activation_value') or None
+                vf = data.get('value_formula') or None
+
+                if existing:
+                    existing_id, was_active = existing[0], bool(existing[1])
+                    if was_active:
+                        logger.warning(f"Tag '{tag_name}' already exists (active)")
+                        return jsonify({'status': 'error', 'message': f'Tag name "{tag_name}" already exists'}), 400
+                    # Soft-deleted row: reactivate and apply submitted configuration
+                    logger.info(f"Reactivating soft-deleted tag '{tag_name}' (id={existing_id})")
+                    cursor.execute(
+                        """
+                        UPDATE tags SET
+                            display_name = %s,
+                            source_type = %s,
+                            db_number = %s,
+                            "offset" = %s,
+                            data_type = %s,
+                            bit_position = %s,
+                            string_length = %s,
+                            byte_swap = %s,
+                            unit = %s,
+                            scaling = %s,
+                            decimal_places = %s,
+                            formula = %s,
+                            mapping_name = %s,
+                            description = %s,
+                            is_active = %s,
+                            is_bin_tag = %s,
+                            activation_tag_name = %s,
+                            activation_condition = %s,
+                            activation_value = %s,
+                            value_formula = %s
+                        WHERE id = %s
+                        """,
+                        (
+                            data.get('display_name', tag_name),
+                            source_type,
+                            db_number,
+                            offset,
+                            data_type,
+                            bit_position,
+                            string_length_val,
+                            byte_swap_val,
+                            data.get('unit', ''),
+                            float(data.get('scaling', 1.0)),
+                            int(data.get('decimal_places', 2)),
+                            data.get('formula') or None,
+                            data.get('mapping_name') or None,
+                            data.get('description', ''),
+                            is_active_val,
+                            is_bin_tag,
+                            activation_tag_name,
+                            activation_condition,
+                            activation_value,
+                            vf,
+                            existing_id,
+                        ),
+                    )
+                    conn.commit()
+                    logger.info(f"Reactivated tag: {tag_name} (ID: {existing_id})")
+                    try:
+                        from demo_mode import get_demo_mode
+                        if get_demo_mode():
+                            from plc_data_source import register_tag_in_emulator
+                            register_tag_in_emulator(
+                                tag_name, source_type, db_number, offset, data_type, data.get('unit', '')
+                            )
+                    except Exception as emu_err:
+                        logger.debug("Emulator auto-register on reactivate skipped: %s", emu_err)
+                    return jsonify({
+                        'status': 'success',
+                        'tag_id': existing_id,
+                        'message': f'Tag "{tag_name}" restored and updated successfully',
+                    }), 201
+
+                logger.info(f"Tag '{tag_name}' is available for insert")
+                logger.debug(
+                    "Inserting tag with values: tag_name=%s, db_number=%s, offset=%s, data_type=%s, bit_position=%s",
+                    tag_name, db_number, offset, data_type, bit_position,
+                )
+
                 try:
-                    # Get bin activation fields
-                    is_bin_tag = bool(data.get('is_bin_tag', False))
-                    activation_tag_name = data.get('activation_tag_name') or None
-                    activation_condition = data.get('activation_condition') or None
-                    activation_value = data.get('activation_value') or None
-                    
                     cursor.execute("""
                         INSERT INTO tags (
                             tag_name, display_name, source_type, db_number, "offset",
@@ -262,9 +336,9 @@ def create_tag():
                         activation_tag_name,
                         activation_condition,
                         activation_value,
-                        data.get('value_formula') or None
+                        vf,
                     ))
-                    
+
                     result = cursor.fetchone()
                     if not result:
                         raise Exception("INSERT did not return an ID")
@@ -275,7 +349,7 @@ def create_tag():
                         tag_id = result[0]
                     if tag_id is None:
                         raise Exception("INSERT did not return a valid ID")
-                    
+
                     conn.commit()
                     logger.info(f"Created tag: {tag_name} (ID: {tag_id})")
 

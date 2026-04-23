@@ -9,23 +9,6 @@ import { useEmulator } from '../../../Context/EmulatorContext';
 import { toast } from 'react-toastify';
 import ConfirmationModal from '../../../Components/Common/ConfirmationModal';
 
-const FALLBACK_TAGS = [
-  { id: 1, tag_name: 'Temperature_1', display_name: 'Temperature Sensor 1', source_type: 'PLC', plc_address: 'DB2099.0', data_type: 'REAL', unit: '°C', description: 'Main process temperature', decimal_places: 1, is_active: true },
-  { id: 2, tag_name: 'Pressure_1', display_name: 'Pressure Sensor 1', source_type: 'PLC', plc_address: 'DB2099.4', data_type: 'REAL', unit: 'bar', description: 'System pressure', decimal_places: 2, is_active: true },
-  { id: 3, tag_name: 'Flow_Rate_1', display_name: 'Flow Rate', source_type: 'PLC', plc_address: 'DB2099.8', data_type: 'REAL', unit: 'm³/h', description: 'Main flow rate', decimal_places: 1, is_active: true },
-  { id: 4, tag_name: 'Motor_Speed_1', display_name: 'Motor Speed', source_type: 'PLC', plc_address: 'DB2099.12', data_type: 'REAL', unit: 'RPM', description: 'Main motor speed', decimal_places: 0, is_active: true },
-  { id: 5, tag_name: 'Level_Tank_1', display_name: 'Tank Level', source_type: 'PLC', plc_address: 'DB2099.16', data_type: 'REAL', unit: '%', description: 'Storage tank level', decimal_places: 1, is_active: true },
-  { id: 6, tag_name: 'Power_Consumption', display_name: 'Power Consumption', source_type: 'PLC', plc_address: 'DB1603.392', data_type: 'REAL', unit: 'kW', description: 'Total power draw', decimal_places: 2, is_active: true },
-  { id: 7, tag_name: 'Vibration_1', display_name: 'Vibration Sensor', source_type: 'PLC', plc_address: 'DB2099.20', data_type: 'REAL', unit: 'mm/s', description: 'Motor vibration', decimal_places: 2, is_active: true },
-  { id: 8, tag_name: 'Weight_Scale_1', display_name: 'Scale Weight', source_type: 'PLC', plc_address: 'DB499.0', data_type: 'REAL', unit: 'kg', description: 'Product weight', decimal_places: 1, is_active: true },
-  { id: 9, tag_name: 'Mill_Throughput', display_name: 'Mill Throughput', source_type: 'PLC', plc_address: 'DB2099.24', data_type: 'REAL', unit: 't/h', description: 'Production throughput', decimal_places: 2, is_active: true },
-  { id: 10, tag_name: 'Flour_Extraction', display_name: 'Flour Extraction', source_type: 'PLC', plc_address: 'DB2099.28', data_type: 'REAL', unit: '%', description: 'Flour extraction rate', decimal_places: 2, is_active: true },
-  { id: 11, tag_name: 'Bran_Extraction', display_name: 'Bran Extraction', source_type: 'PLC', plc_address: 'DB2099.32', data_type: 'REAL', unit: '%', description: 'Bran extraction rate', decimal_places: 2, is_active: true },
-  { id: 12, tag_name: 'Water_Used', display_name: 'Total Water Used', source_type: 'PLC', plc_address: 'DB199.564', data_type: 'REAL', unit: 'L', description: 'Water consumption', decimal_places: 1, is_active: true },
-  { id: 13, tag_name: 'MillingLossFormula', display_name: 'Milling Loss', source_type: 'Formula', formula: '100 - {Flour_Extraction} - {Bran_Extraction}', data_type: 'REAL', unit: '%', description: 'Calculated milling loss', decimal_places: 2, is_active: true },
-  { id: 14, tag_name: 'FlowRate_Avg', display_name: 'Avg Flow Rate', source_type: 'Formula', formula: '{Flow_Rate_1}', data_type: 'REAL', unit: 'm³/h', description: 'Averaged flow rate', decimal_places: 1, is_active: true },
-];
-
 const TagManager = () => {
   useLenisScroll();
   const { t } = useLanguage();
@@ -58,20 +41,9 @@ const TagManager = () => {
     }
   }, [emulatorOn, emulatorValues]);
 
-  // Show data instantly from cache or fallback, then try API in background
+  // Load from API (production: empty DB stays empty; no hardcoded demo list)
   useEffect(() => {
-    // 1. Instant: show cached or fallback tags (zero wait)
-    try {
-      const saved = localStorage.getItem('system_tags');
-      if (saved) {
-        const cached = JSON.parse(saved).tags || [];
-        setTags(cached.length > 0 ? cached : FALLBACK_TAGS);
-      } else {
-        setTags(FALLBACK_TAGS);
-      }
-    } catch { setTags(FALLBACK_TAGS); }
-
-    // 2. Background: try API, upgrade data if successful
+    setTags([]);
     loadTagsFromAPI();
   }, []);
 
@@ -103,20 +75,36 @@ const TagManager = () => {
       const response = await axios.get('/api/tags', { timeout: 3000, params: { is_active: 'true' } });
       if (response.data.status === 'success') {
         let loadedTags = response.data.tags || [];
-        if (loadedTags.length === 0) {
-          // Try seed once
+        // Dev-only: auto-seed demo tags when DB has zero active tags (production exe stays empty)
+        if (loadedTags.length === 0 && import.meta.env.DEV) {
           try {
             await axios.post('/api/tags/seed', {}, { timeout: 5000 });
             const retry = await axios.get('/api/tags', { timeout: 3000, params: { is_active: 'true' } });
-            if (retry.data.status === 'success' && retry.data.tags?.length > 0) loadedTags = retry.data.tags;
-          } catch { /* seed failed, keep what we have */ }
+            if (retry.data.status === 'success' && Array.isArray(retry.data.tags)) {
+              loadedTags = retry.data.tags;
+            }
+          } catch { /* seed failed */ }
         }
+        setTags(loadedTags);
         if (loadedTags.length > 0) {
-          setTags(loadedTags);
           localStorage.setItem('system_tags', JSON.stringify({ tags: loadedTags }));
+        } else {
+          localStorage.removeItem('system_tags');
         }
       }
-    } catch { /* API unavailable, already showing fallback */ }
+    } catch {
+      try {
+        const saved = localStorage.getItem('system_tags');
+        if (saved) {
+          const cached = JSON.parse(saved).tags || [];
+          setTags(Array.isArray(cached) ? cached : []);
+        } else {
+          setTags([]);
+        }
+      } catch {
+        setTags([]);
+      }
+    }
   };
 
   // Alias for save/delete handlers that need to reload
