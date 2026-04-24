@@ -153,6 +153,14 @@ function mergeTagStartEnd(firstMap, lastMap) {
   return out;
 }
 
+/** Table rows: preserve API tag order when the template uses a Job Logs whitelist. */
+function orderedTagRows(detailData, detailTagOrder) {
+  if (detailTagOrder.length > 0) {
+    return detailTagOrder.map((tag) => [tag, detailData[tag] ?? {}]);
+  }
+  return Object.entries(detailData).sort(([a], [b]) => a.localeCompare(b));
+}
+
 function formatTagCell(v) {
   if (v === null || v === undefined || v === '') return '—';
   if (typeof v === 'number' && !Number.isNaN(v)) {
@@ -175,6 +183,7 @@ export default function JobLogsPage() {
   const [loading, setLoading] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
   const [detailData, setDetailData] = useState({});
+  const [detailTagOrder, setDetailTagOrder] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -213,16 +222,24 @@ export default function JobLogsPage() {
 
   // Load detail when a job is selected
   useEffect(() => {
-    if (!selectedJob) { setDetailData({}); return; }
+    if (!selectedJob) {
+      setDetailData({});
+      setDetailTagOrder([]);
+      return;
+    }
     const { start_time, end_time } = selectedJob;
     if (!start_time) return;
 
     setDetailLoading(true);
+    setDetailData({});
+    setDetailTagOrder([]);
 
     axios.get(`/api/orders/layout-tags/${selectedTemplateId}`)
       .then(res => res.data?.data || [])
       .then(tagNames => {
-        if (!Array.isArray(tagNames) || tagNames.length === 0) return;
+        const list = Array.isArray(tagNames) ? tagNames : [];
+        setDetailTagOrder([...list]);
+        if (list.length === 0) return;
 
         const wall = historianOrderWallParams(start_time, end_time);
         let fromParam = wall.fromParam;
@@ -238,7 +255,7 @@ export default function JobLogsPage() {
         }
 
         const baseParams = {
-          tag_names: tagNames.join(','),
+          tag_names: list.join(','),
           from: fromParam,
           to: toParam,
         };
@@ -270,6 +287,11 @@ export default function JobLogsPage() {
       j.status?.toLowerCase().includes(q),
     );
   }, [jobs, search]);
+
+  const detailTableRows = useMemo(
+    () => orderedTagRows(detailData, detailTagOrder),
+    [detailData, detailTagOrder],
+  );
 
   return (
     <div className="min-h-screen" style={{ background: theme.pageBg, color: theme.text }}>
@@ -454,9 +476,10 @@ export default function JobLogsPage() {
                   <Loader2 size={16} className="animate-spin" style={{ color: theme.accent }} />
                   <span className="text-sm" style={{ color: theme.textMuted }}>Loading data...</span>
                 </div>
-              ) : Object.keys(detailData).length === 0 ? (
+              ) : detailTableRows.length === 0 ? (
                 <p className="text-sm py-4" style={{ color: theme.textMuted }}>
-                  No tag data available for this order window.
+                  No tags are configured for this report&apos;s Job Logs view, and none were found in the layout.
+                  Add tags in the paginated report (Report Builder → Job logs tags), or ensure the report references tag cells.
                 </p>
               ) : (
                 <div className="rounded-lg overflow-x-auto" style={{ border: `1px solid ${theme.border}` }}>
@@ -470,9 +493,7 @@ export default function JobLogsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(detailData)
-                        .sort(([a], [b]) => a.localeCompare(b))
-                        .map(([tag, row]) => {
+                      {detailTableRows.map(([tag, row]) => {
                           const r = row && typeof row === 'object' ? row : {};
                           return (
                             <tr key={tag} style={{ borderBottom: `1px solid ${theme.border}` }}>

@@ -10,7 +10,7 @@ Endpoints:
   GET /orders/layouts           — report templates with order tracking configured
   GET /orders/jobs              — list orders for a template (paginated, time-filterable)
   GET /orders/jobs/<id>         — single order by primary key
-  GET /orders/layout-tags/<id>  — tag names used by a report template
+  GET /orders/layout-tags/<id>  — Job Logs tag list (optional layout_config.jobLogsDetailTags whitelist)
 """
 
 import datetime
@@ -67,16 +67,48 @@ def _get_db_connection():
     return get_db_connection
 
 
-def _extract_tag_names_from_layout_config(layout_config):
-    """Extract all tag names referenced in a report template's layout_config JSON."""
+def _parse_layout_config_dict(layout_config):
+    """Return layout_config as a dict, or {} if missing/invalid."""
     if not layout_config:
-        return []
-
+        return {}
     if isinstance(layout_config, str):
         try:
             layout_config = json.loads(layout_config)
         except (json.JSONDecodeError, TypeError):
-            return []
+            return {}
+    if not isinstance(layout_config, dict):
+        return {}
+    return layout_config
+
+
+def _job_logs_detail_tags_whitelist(layout_config):
+    """
+    Optional ordered whitelist stored at layout_config.jobLogsDetailTags (array of strings).
+    When non-empty, Job Logs / layout-tags returns only these names (deduped, order preserved).
+    When missing or empty, callers should fall back to full layout extraction.
+    """
+    lc = _parse_layout_config_dict(layout_config)
+    raw = lc.get('jobLogsDetailTags')
+    if not isinstance(raw, list) or len(raw) == 0:
+        return None
+    out = []
+    seen = set()
+    for x in raw:
+        if not isinstance(x, str):
+            continue
+        t = x.strip()
+        if not t or t in seen:
+            continue
+        seen.add(t)
+        out.append(t)
+    return out if out else None
+
+
+def _extract_tag_names_from_layout_config(layout_config):
+    """Extract all tag names referenced in a report template's layout_config JSON."""
+    layout_config = _parse_layout_config_dict(layout_config)
+    if not layout_config:
+        return []
 
     tag_names = set()
 
@@ -193,7 +225,12 @@ def get_order_jobs():
 @orders_report_bp.route("/orders/layout-tags/<int:template_id>", methods=["GET"])
 @login_required
 def get_layout_tag_names(template_id):
-    """Return all tag names referenced in a report template's layout_config."""
+    """
+    Return tag names used for Job Logs historian queries.
+
+    If layout_config.jobLogsDetailTags is a non-empty array, returns that list only
+    (order preserved). Otherwise returns every tag referenced in paginatedSections and widgets.
+    """
     try:
         get_db = _get_db_connection()
         with closing(get_db()) as conn:
@@ -205,7 +242,12 @@ def get_layout_tag_names(template_id):
             row = cur.fetchone()
         if not row:
             return jsonify({"error": "Template not found"}), 404
-        tag_names = _extract_tag_names_from_layout_config(row["layout_config"])
+        lc = row["layout_config"]
+        whitelist = _job_logs_detail_tags_whitelist(lc)
+        if whitelist is not None:
+            tag_names = whitelist
+        else:
+            tag_names = _extract_tag_names_from_layout_config(lc)
         return jsonify({"data": tag_names}), 200
     except Exception as e:
         logger.exception("orders/layout-tags/%s failed: %s", template_id, e)

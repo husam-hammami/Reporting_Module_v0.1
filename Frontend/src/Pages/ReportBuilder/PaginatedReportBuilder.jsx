@@ -12,7 +12,7 @@ import {
   ArrowLeft, Save, Eye, Plus, Trash2, ChevronDown, ChevronUp,
   Table2, Hash, Type, Minus, Copy, X, Check,
   AlignLeft, AlignCenter, AlignRight, LayoutTemplate, PenLine,
-  Monitor, FileText, Send, Undo2, RefreshCw, ClipboardList, GripVertical,
+  Monitor, FileText, Send, Undo2, RefreshCw, ClipboardList, GripVertical, List,
 } from 'lucide-react';
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1912,6 +1912,159 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
   );
 }
 
+function parseTemplateLayoutConfig(template) {
+  const raw = template?.layout_config;
+  if (!raw) return {};
+  try {
+    return typeof raw === 'string' ? JSON.parse(raw) : { ...raw };
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Optional whitelist: layout_config.jobLogsDetailTags — tags shown in Job Logs order detail panel.
+ * Empty / unset → backend uses all tags from the report layout.
+ */
+function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
+  const [expanded, setExpanded] = useState(false);
+  const [filter, setFilter] = useState('');
+  const [pickValue, setPickValue] = useState('');
+
+  const layout = useMemo(() => parseTemplateLayoutConfig(template), [template?.layout_config]);
+  const selectedList = Array.isArray(layout.jobLogsDetailTags) ? layout.jobLogsDetailTags : [];
+
+  const saveTags = useCallback((nextList) => {
+    const base = parseTemplateLayoutConfig(template);
+    if (!nextList || nextList.length === 0) {
+      const rest = { ...base };
+      delete rest.jobLogsDetailTags;
+      updateMeta({ layout_config: rest });
+      return;
+    }
+    updateMeta({ layout_config: { ...base, jobLogsDetailTags: nextList } });
+  }, [template, updateMeta]);
+
+  const tagOptions = useMemo(() => {
+    const names = (tags || []).map((t) => t.tag_name || t).filter(Boolean);
+    const q = filter.trim().toLowerCase();
+    const pool = q ? names.filter((n) => n.toLowerCase().includes(q)) : names;
+    const sel = new Set(selectedList);
+    return pool.filter((n) => !sel.has(n)).slice(0, 120);
+  }, [tags, filter, selectedList]);
+
+  const move = (idx, dir) => {
+    const j = idx + dir;
+    if (j < 0 || j >= selectedList.length) return;
+    const cp = [...selectedList];
+    [cp[idx], cp[j]] = [cp[j], cp[idx]];
+    saveTags(cp);
+  };
+
+  const removeAt = (idx) => {
+    saveTags(selectedList.filter((_, i) => i !== idx));
+  };
+
+  const addPicked = () => {
+    if (!pickValue || selectedList.includes(pickValue)) return;
+    saveTags([...selectedList, pickValue]);
+    setPickValue('');
+  };
+
+  const mergeFromReport = () => {
+    const fromReport = collectPaginatedTagNames(sections);
+    const seen = new Set(selectedList);
+    const merged = [...selectedList];
+    for (const n of fromReport) {
+      if (n && !seen.has(n)) {
+        seen.add(n);
+        merged.push(n);
+      }
+    }
+    saveTags(merged);
+  };
+
+  const modeLabel = selectedList.length > 0 ? `${selectedList.length} selected` : 'all report tags';
+
+  return (
+    <div className="rounded-lg overflow-hidden mb-1"
+      style={{ background: 'var(--rb-panel)', border: '1px solid var(--rb-border)' }}>
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="w-full px-3 py-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider"
+        style={{ color: selectedList.length ? '#38bdf8' : 'var(--rb-text-muted)', background: 'var(--rb-surface)' }}>
+        <span className="flex items-center gap-1.5">
+          <List size={11} />
+          Job logs tags ({modeLabel})
+        </span>
+        <ChevronDown size={11} style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 150ms' }} />
+      </button>
+      {expanded && (
+        <div className="px-3 py-2.5 space-y-2" style={{ borderTop: '1px solid var(--rb-border)' }}>
+          <p className="text-[9px] leading-snug" style={{ color: 'var(--rb-text-muted)' }}>
+            Restrict the Job Logs panel to these tags only. Leave unset (use all report tags) to include every tag from this layout.
+          </p>
+
+          {selectedList.length > 0 && (
+            <ul className="space-y-0.5 max-h-32 overflow-y-auto rounded border px-1 py-0.5"
+              style={{ borderColor: 'var(--rb-border)', background: 'var(--rb-surface)' }}>
+              {selectedList.map((name, idx) => (
+                <li key={`${name}-${idx}`} className="flex items-center gap-0.5 text-[10px]" style={{ color: 'var(--rb-text)' }}>
+                  <span className="flex-1 truncate font-mono" title={name}>{name}</span>
+                  <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => move(idx, -1)} title="Move up">
+                    <ChevronUp size={10} />
+                  </button>
+                  <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => move(idx, 1)} title="Move down">
+                    <ChevronDown size={10} />
+                  </button>
+                  <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: '#f87171' }} onClick={() => removeAt(idx)} title="Remove">
+                    <X size={10} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex gap-1 items-center">
+            <select
+              value={pickValue}
+              onChange={(e) => setPickValue(e.target.value)}
+              className="rb-input-base flex-1 text-[10px] py-1 px-1 min-w-0"
+            >
+              <option value="">Add tag…</option>
+              {tagOptions.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+            <button type="button" onClick={addPicked} disabled={!pickValue}
+              className="rb-input-base text-[9px] font-bold uppercase px-2 py-1 shrink-0 disabled:opacity-40">
+              Add
+            </button>
+          </div>
+          <input
+            type="search"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter tag list…"
+            className="rb-input-base w-full text-[10px] py-1 px-2"
+          />
+          <div className="flex flex-wrap gap-1">
+            <button type="button" onClick={mergeFromReport}
+              className="rb-input-base text-[9px] font-bold uppercase px-2 py-1">
+              Merge from report
+            </button>
+            <button type="button" onClick={() => saveTags([])} disabled={selectedList.length === 0}
+              className="rb-input-base text-[9px] font-bold uppercase px-2 py-1 disabled:opacity-40">
+              Use all report tags
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Order Tracking Config Card (for Job Logs) ──────────────────── */
 function OrderTrackingCard({ template, tags, updateMeta }) {
   const [expanded, setExpanded] = useState(false);
@@ -2281,6 +2434,7 @@ export default function PaginatedReportBuilder() {
 
           {/* ── Order Tracking config (collapsed by default) ── */}
           <OrderTrackingCard template={template} tags={tags} updateMeta={updateMeta} />
+          <JobLogsDetailTagsCard template={template} tags={tags} sections={sections} updateMeta={updateMeta} />
 
           <AnimatePresence mode="popLayout">
             {sections.map((section, idx) => (
