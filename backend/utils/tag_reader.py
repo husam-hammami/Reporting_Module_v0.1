@@ -67,6 +67,22 @@ def evaluate_value_formula(formula, raw_value):
         return raw_value  # Fallback to raw value on error
 
 
+def apply_scaling_to_value(value, scaling):
+    """
+    Apply DB scaling only to numeric PLC reads.
+
+    STRING tags return str; multiplying str * float raises TypeError. BOOL uses
+    int subclass semantics and is treated as numeric here (same as prior * scaling).
+    """
+    try:
+        factor = float(scaling) if scaling is not None else 1.0
+    except (TypeError, ValueError):
+        factor = 1.0
+    if isinstance(value, (int, float)):
+        return value * factor
+    return value
+
+
 def read_tag_value(plc, tag_config):
     """
     Read a single tag value from PLC based on tag configuration.
@@ -345,9 +361,7 @@ def read_all_tags(tag_names=None, db_connection_func=None):
                     # Use formula transformation
                     final_value = evaluate_value_formula(value_formula, value)
                 else:
-                    # Fallback to scaling for backward compatibility
-                    scaling = float(tag.get('scaling', 1.0))
-                    final_value = value * scaling
+                    final_value = apply_scaling_to_value(value, tag.get('scaling', 1.0))
                 
                 result[tag['tag_name']] = final_value
             else:
@@ -654,8 +668,7 @@ def read_all_tags_batched(tag_names=None, db_connection_func=None):
             if value_formula and value_formula.strip():
                 final_value = evaluate_value_formula(value_formula, value)
             else:
-                scaling = float(tag.get('scaling', 1.0))
-                final_value = value * scaling if isinstance(value, (int, float)) else value
+                final_value = apply_scaling_to_value(value, tag.get('scaling', 1.0))
             result[tag_name] = final_value
         else:
             result[tag_name] = None

@@ -1,0 +1,36 @@
+{
+  "tags": [
+    {
+      "activation_condition": "equals",
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": 0,
+      "byte_swap": null,
+      "created_at": "Thu, 23 Apr 2026 14:30:54 GMT",
+      "data_type": "BOOL",
+      "db_number": 35,
+      "decimal_places": 2,
+      "description": "",
+      "display_name": "G01_Report_Started",
+      "formula": null,
+      "id": 17,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 0,
+      "plc_address": "DB35.0.0",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": null,
+      "tag_name": "G01_Report_Started",
+      "unit": "",
+      "updated_at": "Thu, 23 Apr 2026 14:30:54 GMT",
+      "value_formula": null
+    }
+  ],
+  "export_version": "2.0",
+  "export_date": "2026-04-23T11:32:29.003Z",
+  "export_sections": [
+    "tags"
+  ]
+}

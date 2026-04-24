@@ -1,0 +1,20 @@
+{
+  "tags": [
+    {
+      "tag_name": "G01_Report_Started",
+      "display_name": "G01_Report_Started",
+      "source_type": "PLC",
+      "plc_address": "DB35.0.0",
+      "data_type": "BOOL",
+      "unit": "",
+      "decimal_places": 2,
+      "description": "",
+      "is_active": true
+    }
+  ],
+  "export_version": "2.0",
+  "export_date": "2026-04-23T11:36:30.365Z",
+  "export_sections": [
+    "tags"
+  ]
+}

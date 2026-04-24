@@ -15,7 +15,7 @@ from contextlib import closing
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from utils.plc_parser import parse_plc_address
-from utils.tag_reader import read_tag_value, read_all_tags
+from utils.tag_reader import read_tag_value, read_all_tags, apply_scaling_to_value
 from plc_utils import connect_to_plc_fast
 
 logger = logging.getLogger(__name__)
@@ -879,8 +879,7 @@ def test_tag(tag_name):
                     from utils.tag_reader import evaluate_value_formula
                     final_value = evaluate_value_formula(value_formula, value)
                 else:
-                    scaling = float(tag_dict.get('scaling', 1.0))
-                    final_value = value * scaling
+                    final_value = apply_scaling_to_value(value, tag_dict.get('scaling', 1.0))
                 
                 return jsonify({
                     'status': 'success',
