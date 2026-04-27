@@ -83,6 +83,10 @@ def apply_scaling_to_value(value, scaling):
     return value
 
 
+# Canonical PLC types used by batch + single read paths
+_STRING_LIKE_TYPES = frozenset({'STRING', 'WSTRING'})
+
+
 def _normalize_plc_data_type(tag_config) -> str:
     """Strip + uppercase tags.data_type so STRING/REAL checks match DB values."""
     if not tag_config:
@@ -91,7 +95,39 @@ def _normalize_plc_data_type(tag_config) -> str:
     if raw is None:
         return 'REAL'
     s = str(raw).strip().upper()
-    return s if s else 'REAL'
+    if not s:
+        return 'REAL'
+    # Common aliases / exports
+    if s in ('WSTR', 'WSTRING'):
+        return 'WSTRING'
+    if s in ('STR', 'S7STRING', 'S7_STRING'):
+        return 'STRING'
+    if s in ('BOOL', 'INT', 'DINT', 'REAL', 'STRING', 'WSTRING'):
+        return s
+    return s
+
+
+def _as_plc_int(x):
+    """Coerce DB/driver types (e.g. Decimal) to int for snap7 db_read offsets."""
+    if x is None:
+        return None
+    try:
+        return int(x)
+    except (TypeError, ValueError):
+        return None
+
+
+def _string_max_chars(tag_config, default=40):
+    """Max string characters from tag row (STRING / WSTRING)."""
+    raw = tag_config.get('string_length')
+    if raw is None or raw == '':
+        n = default
+    else:
+        try:
+            n = int(raw)
+        except (TypeError, ValueError):
+            n = default
+    return max(1, min(n, 16382))
 
 
 def _decode_s7_string_bytes(data: bytes, max_len: int) -> str:
@@ -106,6 +142,29 @@ def _decode_s7_string_bytes(data: bytes, max_len: int) -> str:
     return payload.decode('latin-1', errors='replace')
 
 
+def _decode_s7_wstring_bytes(data: bytes, max_chars: int) -> str:
+    """Decode Siemens WString: UInt16 max chars BE, UInt16 current BE, UTF-16BE payload."""
+    if len(data) < 4:
+        return ''
+    try:
+        struct.unpack('>H', data[0:2])[0]  # declared max in PLC (unused; we cap by max_chars)
+        cur = struct.unpack('>H', data[2:4])[0]
+    except struct.error:
+        return ''
+    if cur > max_chars:
+        cur = max_chars
+    if cur < 0:
+        cur = 0
+    need = 4 + cur * 2
+    if len(data) < need:
+        cur = max(0, (len(data) - 4) // 2)
+        need = 4 + cur * 2
+    payload = data[4:need]
+    if not payload:
+        return ''
+    return payload.decode('utf-16-be', errors='replace')
+
+
 def read_tag_value(plc, tag_config):
     """
     Read a single tag value from PLC based on tag configuration.
@@ -115,17 +174,25 @@ def read_tag_value(plc, tag_config):
         tag_config: dict with tag configuration fields:
             - db_number: int
             - offset: int
-            - data_type: str ('BOOL', 'INT', 'DINT', 'REAL', 'STRING')
+            - data_type: str ('BOOL', 'INT', 'DINT', 'REAL', 'STRING', 'WSTRING')
             - bit_position: int (for BOOL, 0-7)
-            - string_length: int (for STRING, default 40)
+            - string_length: int (for STRING / WSTRING, default 40)
             - byte_swap: bool (for REAL, default True)
     
     Returns:
         Tag value (int, float, bool, str) or None on error
     """
     try:
-        db_number = tag_config['db_number']
-        offset = tag_config['offset']
+        db_number = _as_plc_int(tag_config.get('db_number'))
+        offset = _as_plc_int(tag_config.get('offset'))
+        if db_number is None or offset is None:
+            logger.error(
+                "PLC tag '%s' missing or invalid db_number/offset: db=%r off=%r",
+                tag_config.get('tag_name', 'Unknown'),
+                tag_config.get('db_number'),
+                tag_config.get('offset'),
+            )
+            return None
         data_type = _normalize_plc_data_type(tag_config)
         tag_name = tag_config.get('tag_name', 'Unknown')
         
@@ -167,10 +234,18 @@ def read_tag_value(plc, tag_config):
             return value
         
         elif data_type == 'STRING':
-            max_len = tag_config.get('string_length') or 40
+            max_len = _string_max_chars(tag_config, 40)
             data = plc.db_read(db_number, offset, max_len + 2)
             value = _decode_s7_string_bytes(data, max_len)
             logger.debug(f"Read STRING tag '{tag_name}' from DB{db_number}.{offset} = '{value}'")
+            return value
+
+        elif data_type == 'WSTRING':
+            max_chars = _string_max_chars(tag_config, 40)
+            byte_len = 4 + max_chars * 2
+            data = plc.db_read(db_number, offset, byte_len)
+            value = _decode_s7_wstring_bytes(data, max_chars)
+            logger.debug(f"Read WSTRING tag '{tag_name}' from DB{db_number}.{offset} = '{value}'")
             return value
         
         else:
@@ -487,7 +562,9 @@ def _compute_tag_byte_size(tag_config):
     elif dtype in ('DINT', 'REAL'):
         return 4
     elif dtype == 'STRING':
-        return (tag_config.get('string_length') or 40) + 2
+        return _string_max_chars(tag_config, 40) + 2
+    elif dtype == 'WSTRING':
+        return 4 + _string_max_chars(tag_config, 40) * 2
     return 4  # default
 
 
@@ -503,7 +580,9 @@ def _extract_value_from_buffer(buf, base_offset, tag_config):
         Parsed value (int, float, bool, str) or None on error
     """
     try:
-        tag_offset = tag_config['offset']
+        tag_offset = _as_plc_int(tag_config.get('offset'))
+        if tag_offset is None:
+            return None
         local_offset = tag_offset - base_offset
         tag_name = tag_config.get('tag_name', 'Unknown')
         dtype = _normalize_plc_data_type(tag_config)
@@ -544,11 +623,19 @@ def _extract_value_from_buffer(buf, base_offset, tag_config):
             return round(value, decimal_places)
 
         elif dtype == 'STRING':
-            max_len = tag_config.get('string_length') or 40
+            max_len = _string_max_chars(tag_config, 40)
             data = buf[local_offset:local_offset + max_len + 2]
             if len(data) < 2:
                 return None
             return _decode_s7_string_bytes(data, max_len)
+
+        elif dtype == 'WSTRING':
+            max_chars = _string_max_chars(tag_config, 40)
+            need = 4 + max_chars * 2
+            data = buf[local_offset:local_offset + need]
+            if len(data) < 4:
+                return None
+            return _decode_s7_wstring_bytes(data, max_chars)
 
         else:
             logger.warning("[BatchRead] Unsupported data type '%s' for tag '%s'", dtype, tag_name)
@@ -578,21 +665,35 @@ def _read_tags_batched(plc, tags):
     # Group tags by db_number
     db_groups = {}
     for tag in tags:
-        db_num = tag.get('db_number')
+        db_num = _as_plc_int(tag.get('db_number'))
         if db_num is None:
             continue
         db_groups.setdefault(db_num, []).append(tag)
 
     for db_num, group_tags in db_groups.items():
+        db_num = _as_plc_int(db_num)
+        if db_num is None:
+            for tag in group_tags:
+                result[tag['tag_name']] = None
+            continue
         # Calculate the byte range to read for this DB
         min_offset = float('inf')
         max_end = 0
 
         for tag in group_tags:
-            offset = tag['offset']
+            offset = _as_plc_int(tag.get('offset'))
+            if offset is None:
+                result[tag['tag_name']] = None
+                continue
             size = _compute_tag_byte_size(tag)
             min_offset = min(min_offset, offset)
             max_end = max(max_end, offset + size)
+
+        if min_offset == float('inf'):
+            for tag in group_tags:
+                if tag['tag_name'] not in result:
+                    result[tag['tag_name']] = None
+            continue
 
         min_offset = int(min_offset)
         total_size = int(max_end - min_offset)
@@ -685,7 +786,8 @@ def read_all_tags_batched(tag_names=None, db_connection_func=None):
     for tag in tags:
         tag_name = tag['tag_name']
         value = raw_values.get(tag_name)
-        if value is None and _normalize_plc_data_type(tag) == 'STRING':
+        dtype = _normalize_plc_data_type(tag)
+        if value is None and dtype in _STRING_LIKE_TYPES:
             try:
                 try:
                     from eventlet import tpool as _tp
@@ -694,12 +796,14 @@ def read_all_tags_batched(tag_names=None, db_connection_func=None):
                     value = read_tag_value(plc, tag)
                 if value is not None:
                     logger.debug(
-                        "[BatchRead] STRING '%s' recovered via single-read (batched path was None)",
+                        "[BatchRead] %s '%s' recovered via single-read (batched path was None)",
+                        dtype,
                         tag_name,
                     )
             except Exception as ex:
-                logger.debug(
-                    "[BatchRead] STRING single-read fallback failed for '%s': %s",
+                logger.warning(
+                    "[BatchRead] %s single-read fallback failed for '%s': %s",
+                    dtype,
                     tag_name,
                     ex,
                 )

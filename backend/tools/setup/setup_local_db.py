@@ -82,6 +82,7 @@ MIGRATION_ORDER = [
     'add_license_machine_info.sql',
     # Phase 9: String-valued historian (value_text column)
     'add_value_text_to_tag_history.sql',
+    'allow_wstring_data_type.sql',
 ]
 
 DIVIDER = '=' * 60

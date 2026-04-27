@@ -184,7 +184,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
         }
       }
     }
-    if (formData.data_type === 'STRING' && formData.source_type === 'PLC') {
+    if ((formData.data_type === 'STRING' || formData.data_type === 'WSTRING') && formData.source_type === 'PLC') {
       if (!formData.string_length || formData.string_length < 1) {
         newErrors.string_length = tr('tags.stringLengthMin');
       }
@@ -382,7 +382,8 @@ const TagForm = ({ tag, onSave, onCancel }) => {
             <option value="INT">INT</option>
             <option value="DINT">DINT</option>
             <option value="REAL">REAL</option>
-            <option value="STRING">STRING</option>
+            <option value="STRING">STRING (S7 String)</option>
+            <option value="WSTRING">WSTRING (Unicode)</option>
           </select>
         </div>
         <div>
@@ -463,7 +464,7 @@ const TagForm = ({ tag, onSave, onCancel }) => {
         </TfSectionCard>
       )}
 
-      {formData.data_type === 'STRING' && formData.source_type === 'PLC' && (
+      {(formData.data_type === 'STRING' || formData.data_type === 'WSTRING') && formData.source_type === 'PLC' && (
         <TfSectionCard title={tr('tags.stringOptions')} icon={Database} {...sectionProps}>
           <div>
             <TfLabel required {...labelProps}>{tr('tags.stringLength')}</TfLabel>

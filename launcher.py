@@ -456,6 +456,7 @@ def run_setup():
         "create_hercules_ai_tables.sql",
         "add_ai_summary_to_distribution.sql",
         "add_value_text_to_tag_history.sql",
+        "allow_wstring_data_type.sql",
     ]
 
     for sql_file in migration_order:

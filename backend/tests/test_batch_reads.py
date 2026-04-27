@@ -90,6 +90,9 @@ class TestComputeTagByteSize:
     def test_string_default_length(self):
         assert _compute_tag_byte_size({'data_type': 'STRING'}) == 42  # 40 + 2
 
+    def test_wstring_includes_header_and_utf16(self):
+        assert _compute_tag_byte_size({'data_type': 'WSTRING', 'string_length': 5}) == 14  # 4 + 5*2
+
     def test_unknown_type_defaults_to_4(self):
         assert _compute_tag_byte_size({'data_type': 'UNKNOWN'}) == 4
 
@@ -153,6 +156,15 @@ class TestExtractValueFromBuffer:
         buf = bytearray([40, len(text)] + list(text) + [0] * 35)
         tag = _make_tag('S', 1, 0, 'STRING', string_length=40)
         assert _extract_value_from_buffer(buf, 0, tag) == 'HELLO'
+
+    def test_wstring_utf16be(self):
+        max_c = 10
+        s = 'AB'
+        payload = s.encode('utf-16-be')
+        buf = bytearray(struct.pack('>H', max_c) + struct.pack('>H', len(s)) + payload)
+        buf.extend(b'\x00' * (4 + max_c * 2 - len(buf)))
+        tag = _make_tag('W', 1, 0, 'WSTRING', string_length=max_c)
+        assert _extract_value_from_buffer(buf, 0, tag) == 'AB'
 
     def test_offset_within_buffer(self):
         """Tag at offset 10, buffer starts at offset 8."""

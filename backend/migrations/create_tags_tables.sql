@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS tags (
     -- PLC-specific fields (when source_type = 'PLC')
     db_number INTEGER,
     "offset" INTEGER,
-    data_type VARCHAR(20) NOT NULL DEFAULT 'REAL', -- 'BOOL', 'INT', 'DINT', 'REAL', 'STRING'
+    data_type VARCHAR(20) NOT NULL DEFAULT 'REAL', -- 'BOOL', 'INT', 'DINT', 'REAL', 'STRING', 'WSTRING'
     bit_position INTEGER, -- For BOOL type (0-7)
-    string_length INTEGER DEFAULT 40, -- For STRING type
+    string_length INTEGER DEFAULT 40, -- For STRING / WSTRING (max characters)
     byte_swap BOOLEAN DEFAULT false, -- For REAL type (endianness) - false = big-endian (standard for Siemens)
     
     -- Display fields
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS tags (
     
     -- Constraints
     CONSTRAINT chk_source_type CHECK (source_type IN ('PLC', 'Formula', 'Mapping', 'Manual')),
-    CONSTRAINT chk_data_type CHECK (data_type IN ('BOOL', 'INT', 'DINT', 'REAL', 'STRING')),
+    CONSTRAINT chk_data_type CHECK (data_type IN ('BOOL', 'INT', 'DINT', 'REAL', 'STRING', 'WSTRING')),
     CONSTRAINT chk_bit_position CHECK (bit_position IS NULL OR (bit_position >= 0 AND bit_position <= 7))
 );
 

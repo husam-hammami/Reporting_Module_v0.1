@@ -158,7 +158,7 @@ def create_tag():
         
         # Validate data type
         data_type = data.get('data_type', 'REAL')
-        if data_type not in ['BOOL', 'INT', 'DINT', 'REAL', 'STRING']:
+        if data_type not in ['BOOL', 'INT', 'DINT', 'REAL', 'STRING', 'WSTRING']:
             return jsonify({'status': 'error', 'message': f'Invalid data_type: {data_type}'}), 400
         
         # Validate bit_position for BOOL
@@ -205,7 +205,7 @@ def create_tag():
 
                 # Prepare values with proper type handling
                 string_length_val = None
-                if data_type == 'STRING':
+                if data_type in ('STRING', 'WSTRING'):
                     str_len = data.get('string_length', 40)
                     string_length_val = int(str_len) if str_len and str_len != '' else 40
 
@@ -284,6 +284,11 @@ def create_tag():
                     conn.commit()
                     logger.info(f"Reactivated tag: {tag_name} (ID: {existing_id})")
                     try:
+                        from utils.tag_reader import invalidate_tag_config_cache
+                        invalidate_tag_config_cache()
+                    except Exception:
+                        pass
+                    try:
                         from demo_mode import get_demo_mode
                         if get_demo_mode():
                             from plc_data_source import register_tag_in_emulator
@@ -352,6 +357,11 @@ def create_tag():
 
                     conn.commit()
                     logger.info(f"Created tag: {tag_name} (ID: {tag_id})")
+                    try:
+                        from utils.tag_reader import invalidate_tag_config_cache
+                        invalidate_tag_config_cache()
+                    except Exception:
+                        pass
 
                     # Auto-register in emulator if demo mode is active
                     try:
@@ -765,6 +775,11 @@ def update_tag(tag_name):
 
             rename_msg = f" (renamed from {tag_name})" if new_tag_name != tag_name else ""
             logger.info(f"Updated tag: {new_tag_name} (ID: {tag_id}){rename_msg}")
+            try:
+                from utils.tag_reader import invalidate_tag_config_cache
+                invalidate_tag_config_cache()
+            except Exception:
+                pass
 
             # Auto-register in emulator if demo mode is active
             try:
