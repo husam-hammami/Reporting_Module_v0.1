@@ -1480,12 +1480,34 @@
   overflow: visible !important;
 }
 
-/* Table Report (paginated): match print layout during html-to-image capture */
-#paginated-report-print:has(.rb-pdf-export.paginated-preview-root) {
+/* Table Report (paginated): html-to-image capture
+   A4 mode: keep the same 210mm width as on-screen preview so the raster scales to PDF
+   like the viewer (avoids viewport-wide bitmap + tiny text). Full-width mode: stretch. */
+#paginated-report-print:has(.rb-pdf-export-paginated-a4.paginated-preview-root) {
+  max-width: 210mm !important;
+  width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+.rb-pdf-export-paginated-a4.paginated-preview-root {
+  width: 210mm !important;
+  max-width: 210mm !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+/* Collapse artificial A4 page min-heights during capture so short reports do not embed a
+   full blank page of whitespace in the PNG (PDF still uses A4 from jsPDF). */
+.rb-pdf-export-paginated-a4.paginated-preview-root .paginated-page {
+  min-height: auto !important;
+  max-height: none !important;
+}
+
+#paginated-report-print:has(.rb-pdf-export.paginated-preview-root:not(.rb-pdf-export-paginated-a4)) {
   max-width: none !important;
   width: 100% !important;
 }
-.rb-pdf-export.paginated-preview-root {
+.rb-pdf-export.paginated-preview-root:not(.rb-pdf-export-paginated-a4) {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;

@@ -313,18 +313,19 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
   const handleExportPDF = async () => {
     if (!reportRef.current) return;
     setExporting(true);
+    const el = reportRef.current.querySelector('.paginated-preview-root') || reportRef.current.firstElementChild || reportRef.current;
+    const prevOverflow = el.style.overflow;
     try {
-      const el = reportRef.current.querySelector('.paginated-preview-root') || reportRef.current.firstElementChild || reportRef.current;
       el.classList.add('rb-pdf-export');
-      const prevOverflow = el.style.overflow;
+      if (pageMode === 'a4') el.classList.add('rb-pdf-export-paginated-a4');
       el.style.overflow = 'visible';
 
       await exportAsPDFUtil(el, template?.name || 'report', { orientation: 'portrait', pageMode: 'a4' });
-
-      el.style.overflow = prevOverflow;
-      el.classList.remove('rb-pdf-export');
     } catch (err) {
       console.error('PDF export failed:', err);
+    } finally {
+      el.style.overflow = prevOverflow;
+      el.classList.remove('rb-pdf-export-paginated-a4', 'rb-pdf-export');
     }
     setExporting(false);
   };
