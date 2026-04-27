@@ -85,8 +85,34 @@ function UnitSelector({ cell, onChange, className = '' }) {
 }
 
 /* ── Resolve cell display label for config mode (shows tag/formula names, not live values) ── */
-const AGG_LABELS = { last: 'Last', first: 'First', delta: 'Δ', avg: 'Avg', sum: 'Sum', min: 'Min', max: 'Max', count: 'Count', silo_segments: 'Silo IDs' };
-const AGG_COLORS = { delta: '#e67e22', first: '#8e44ad', last: '#2c3e50', avg: '#2980b9', sum: '#27ae60', min: '#16a085', max: '#c0392b', count: '#7f8c8d', silo_segments: '#0f3460' };
+const AGG_LABELS = {
+  last: 'Last',
+  first: 'First',
+  delta: 'Δ',
+  avg: 'Avg',
+  sum: 'Sum',
+  min: 'Min',
+  max: 'Max',
+  count: 'Count',
+  silo_segments: 'Silo IDs',
+  silo_first: 'Silo first',
+  silo_last: 'Silo last',
+  silo_delta: 'Silo Δ',
+};
+const AGG_COLORS = {
+  delta: '#e67e22',
+  first: '#8e44ad',
+  last: '#2c3e50',
+  avg: '#2980b9',
+  sum: '#27ae60',
+  min: '#16a085',
+  max: '#c0392b',
+  count: '#7f8c8d',
+  silo_segments: '#0f3460',
+  silo_first: '#5b21b6',
+  silo_last: '#155e75',
+  silo_delta: '#c2410c',
+};
 
 /* Plain-text label (used in row header summaries) */
 function resolveCellConfigLabel(cell) {
@@ -401,6 +427,9 @@ function resolveCellValue(cell, tagValues, rowContext = null, tagDecimalByName =
     if (raw == null && cell.tagName) {
       if (agg === 'silo_segments') {
         raw = tagValues?.[cell.tagName] ?? null;
+      } else if (agg === 'silo_first' || agg === 'silo_last' || agg === 'silo_delta') {
+        // Segment-only: never fall back to plain tag or full-range delta (avoids wrong weights)
+        raw = null;
       } else if (agg === 'delta') {
         raw = 0;
       } else if (agg === 'count') {
@@ -639,11 +668,15 @@ export function collectPaginatedTagAggregations(sections) {
               // silo_segments drives its own endpoint — exclude from by-tags groups.
               // The tag is still collected by collectPaginatedTagNames for live polling.
               if (cell.aggregation === 'silo_segments') return;
+              if (cell.aggregation === 'silo_first' || cell.aggregation === 'silo_last' || cell.aggregation === 'silo_delta') return;
               addTag(cell.tagName, cell.aggregation);
             }
             if (cell.sourceType === 'formula' && cell.formula) {
               parseFormulaTagReferences(cell.formula).forEach(({ base, explicitAgg }) => {
-                if (base) addTag(base, explicitAgg || cell.aggregation);
+                if (!base) return;
+                const a = explicitAgg || cell.aggregation;
+                if (a === 'silo_segments' || a === 'silo_first' || a === 'silo_last' || a === 'silo_delta') return;
+                addTag(base, a);
               });
             }
           });
@@ -957,8 +990,11 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
               <select value={cell.aggregation || 'last'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
                 className="rb-input-base text-[11px] py-0.5 px-2" style={{ minWidth: '140px' }}>
                 <option value="last">Last</option>
-                <option value="first">First (Start)</option>
-                <option value="delta">Delta (End−Start)</option>
+                <option value="first">First (Start) — full range</option>
+                <option value="delta">Delta (End−Start) — full range</option>
+                <option value="silo_first">First in silo segment</option>
+                <option value="silo_last">Last in silo segment</option>
+                <option value="silo_delta">Delta in silo segment</option>
                 <option value="avg">Average</option>
                 <option value="sum">Sum</option>
                 <option value="min">Min</option>

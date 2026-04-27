@@ -83,6 +83,29 @@ def apply_scaling_to_value(value, scaling):
     return value
 
 
+def _normalize_plc_data_type(tag_config) -> str:
+    """Strip + uppercase tags.data_type so STRING/REAL checks match DB values."""
+    if not tag_config:
+        return 'REAL'
+    raw = tag_config.get('data_type')
+    if raw is None:
+        return 'REAL'
+    s = str(raw).strip().upper()
+    return s if s else 'REAL'
+
+
+def _decode_s7_string_bytes(data: bytes, max_len: int) -> str:
+    """Decode Siemens STRING (max_len, cur_len, payload) from a (max_len+2)-byte slice."""
+    if len(data) < 2:
+        return ''
+    cur = data[1]
+    if cur > max_len:
+        cur = max_len
+    payload = data[2 : 2 + cur]
+    # Latin-1 maps bytes 1:1; ascii+ignore could drop non-English material names to ''.
+    return payload.decode('latin-1', errors='replace')
+
+
 def read_tag_value(plc, tag_config):
     """
     Read a single tag value from PLC based on tag configuration.
@@ -103,7 +126,7 @@ def read_tag_value(plc, tag_config):
     try:
         db_number = tag_config['db_number']
         offset = tag_config['offset']
-        data_type = tag_config['data_type']
+        data_type = _normalize_plc_data_type(tag_config)
         tag_name = tag_config.get('tag_name', 'Unknown')
         
         if data_type == 'BOOL':
@@ -144,12 +167,9 @@ def read_tag_value(plc, tag_config):
             return value
         
         elif data_type == 'STRING':
-            max_len = tag_config.get('string_length', 40)
+            max_len = tag_config.get('string_length') or 40
             data = plc.db_read(db_number, offset, max_len + 2)
-            actual_len = data[1]
-            if actual_len > max_len:
-                actual_len = max_len
-            value = data[2:2+actual_len].decode('ascii', errors='ignore')
+            value = _decode_s7_string_bytes(data, max_len)
             logger.debug(f"Read STRING tag '{tag_name}' from DB{db_number}.{offset} = '{value}'")
             return value
         
@@ -437,6 +457,9 @@ def _get_cached_tag_configs(db_connection_func, tag_names=None):
                 WHERE is_active = true AND source_type = 'PLC'
             """)
         tags = cursor.fetchall()
+        for row in tags:
+            if row.get('data_type') is not None:
+                row['data_type'] = _normalize_plc_data_type(row)
 
     if tag_names is None:
         _tag_config_cache = tags
@@ -456,7 +479,7 @@ def invalidate_tag_config_cache():
 
 def _compute_tag_byte_size(tag_config):
     """Return the number of bytes a tag occupies in the PLC DB block."""
-    dtype = tag_config.get('data_type', 'REAL').upper()
+    dtype = _normalize_plc_data_type(tag_config)
     if dtype == 'BOOL':
         return 1
     elif dtype == 'INT':
@@ -482,8 +505,8 @@ def _extract_value_from_buffer(buf, base_offset, tag_config):
     try:
         tag_offset = tag_config['offset']
         local_offset = tag_offset - base_offset
-        dtype = tag_config.get('data_type', 'REAL').upper()
         tag_name = tag_config.get('tag_name', 'Unknown')
+        dtype = _normalize_plc_data_type(tag_config)
 
         if local_offset < 0 or local_offset >= len(buf):
             logger.warning("[BatchRead] Offset out of range for tag '%s': local=%d, buf_len=%d",
@@ -525,8 +548,7 @@ def _extract_value_from_buffer(buf, base_offset, tag_config):
             data = buf[local_offset:local_offset + max_len + 2]
             if len(data) < 2:
                 return None
-            actual_len = min(data[1], max_len)
-            return data[2:2 + actual_len].decode('ascii', errors='ignore')
+            return _decode_s7_string_bytes(data, max_len)
 
         else:
             logger.warning("[BatchRead] Unsupported data type '%s' for tag '%s'", dtype, tag_name)
@@ -663,6 +685,25 @@ def read_all_tags_batched(tag_names=None, db_connection_func=None):
     for tag in tags:
         tag_name = tag['tag_name']
         value = raw_values.get(tag_name)
+        if value is None and _normalize_plc_data_type(tag) == 'STRING':
+            try:
+                try:
+                    from eventlet import tpool as _tp
+                    value = _tp.execute(read_tag_value, plc, tag)
+                except ImportError:
+                    value = read_tag_value(plc, tag)
+                if value is not None:
+                    logger.debug(
+                        "[BatchRead] STRING '%s' recovered via single-read (batched path was None)",
+                        tag_name,
+                    )
+            except Exception as ex:
+                logger.debug(
+                    "[BatchRead] STRING single-read fallback failed for '%s': %s",
+                    tag_name,
+                    ex,
+                )
+                value = None
         if value is not None:
             value_formula = tag.get('value_formula')
             if value_formula and value_formula.strip():

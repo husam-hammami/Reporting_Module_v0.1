@@ -19,6 +19,27 @@ logger = logging.getLogger(__name__)
 
 _cached_get_db_connection = None
 
+# UI companion aggregations that only apply inside silo_segments rows (same row as driver).
+# Stored in layout JSON as silo_*; normalized to first/last/delta for history queries.
+_SILO_COMPANION_UI_TO_FETCH = {
+    "silo_first": "first",
+    "silo_last": "last",
+    "silo_delta": "delta",
+}
+
+
+def companion_agg_for_fetch(agg: str) -> str:
+    """Map silo_* UI aggregations to historian segment fetch aggregations."""
+    if not agg:
+        return "last"
+    key = str(agg).strip().lower()
+    return _SILO_COMPANION_UI_TO_FETCH.get(key, str(agg).strip().lower() or "last")
+
+
+def companion_agg_base_kind(agg: str) -> str:
+    """Same as companion_agg_for_fetch — used for merge/identity logic (silo_delta → delta)."""
+    return companion_agg_for_fetch(agg)
+
 
 def _get_db_connection():
     """Lazy-load the get_db_connection factory from app module (avoids circular imports)."""
@@ -423,8 +444,9 @@ def compute_row_segments(
                         })
                         continue
                     try:
+                        fetch_agg = companion_agg_for_fetch(agg)
                         val, first_val, last_val = _fetch_companion_value(
-                            cur, companion_tag_id, agg, t_start, t_end
+                            cur, companion_tag_id, fetch_agg, t_start, t_end
                         )
                         values_list.append({
                             "tagName": tag_name, "agg": agg,
@@ -480,7 +502,8 @@ def _identity_key(segment):
     parts = []
     for entry in segment.get("values", []):
         agg = entry.get("agg")
-        if agg not in ("first", "last"):
+        na = companion_agg_base_kind(agg)
+        if na not in ("first", "last"):
             continue
         val = entry.get("value")
         if not _is_identity_value(val):
@@ -549,17 +572,18 @@ def merge_segments_by_identity(segments):
                 except (TypeError, ValueError):
                     pass
 
-            if agg in ("delta", "sum", "count"):
+            na = companion_agg_base_kind(agg)
+            if na in ("delta", "sum", "count"):
                 merged_val = sum(numeric_vals) if numeric_vals else None
-            elif agg == "min":
+            elif na == "min":
                 merged_val = min(numeric_vals) if numeric_vals else None
-            elif agg == "max":
+            elif na == "max":
                 merged_val = max(numeric_vals) if numeric_vals else None
-            elif agg == "avg":
+            elif na == "avg":
                 merged_val = (sum(numeric_vals) / len(numeric_vals)) if numeric_vals else None
-            elif agg == "first":
+            elif na == "first":
                 merged_val = entries[0].get("value") if entries else None
-            elif agg == "last":
+            elif na == "last":
                 merged_val = entries[-1].get("value") if entries else None
             else:
                 merged_val = entries[-1].get("value") if entries else None
@@ -632,20 +656,25 @@ def build_tag_overlay(segment, segment_tag_name):
 
         # Namespace the actual aggregation value as agg::tagName.
         # 'last' is the default — also populate plain key.
-        if agg == "last":
+        if agg == "last" or agg == "silo_last":
             overlay[tag_name] = val
             if last_val is not None:
                 overlay[f"last::{tag_name}"] = last_val
-            if first_val is not None:
+            # Do not set first:: for silo_last — avoids clashing with a full-range "first" cell.
+            if first_val is not None and agg != "silo_last":
                 overlay.setdefault(f"first::{tag_name}", first_val)
+            if agg == "silo_last":
+                overlay[f"silo_last::{tag_name}"] = val
         else:
             overlay[f"{agg}::{tag_name}"] = val
-            # Set first/last namespaces if not already
+            # Silo-scoped aggs use only silo_*:: keys — do not touch first::/last:: (avoids
+            # clashing with a sibling cell using full-range first/last on the same tag).
+            if str(agg).startswith("silo_"):
+                continue
             if first_val is not None:
                 overlay.setdefault(f"first::{tag_name}", first_val)
             if last_val is not None:
                 overlay.setdefault(f"last::{tag_name}", last_val)
-            # Provide a sensible plain-key fallback (last value preferred)
             if tag_name not in overlay:
                 overlay[tag_name] = last_val if last_val is not None else val
 

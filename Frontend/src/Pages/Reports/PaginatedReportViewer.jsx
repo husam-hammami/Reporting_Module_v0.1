@@ -238,15 +238,22 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
               const val = entry?.value;
               const fv = entry?.first;
               const lv = entry?.last;
-              if (agg === 'last') {
+              if (agg === 'last' || agg === 'silo_last') {
                 overlay[tagName] = val;
                 if (lv != null) overlay[`last::${tagName}`] = lv;
-                if (fv != null && overlay[`first::${tagName}`] == null) overlay[`first::${tagName}`] = fv;
+                if (fv != null && agg !== 'silo_last' && overlay[`first::${tagName}`] == null) {
+                  overlay[`first::${tagName}`] = fv;
+                }
+                if (agg === 'silo_last') {
+                  overlay[`silo_last::${tagName}`] = val;
+                }
               } else {
                 overlay[`${agg}::${tagName}`] = val;
-                if (fv != null && overlay[`first::${tagName}`] == null) overlay[`first::${tagName}`] = fv;
-                if (lv != null && overlay[`last::${tagName}`] == null) overlay[`last::${tagName}`] = lv;
-                if (overlay[tagName] == null) overlay[tagName] = lv != null ? lv : val;
+                if (!String(agg).startsWith('silo_')) {
+                  if (fv != null && overlay[`first::${tagName}`] == null) overlay[`first::${tagName}`] = fv;
+                  if (lv != null && overlay[`last::${tagName}`] == null) overlay[`last::${tagName}`] = lv;
+                  if (overlay[tagName] == null) overlay[tagName] = lv != null ? lv : val;
+                }
               }
             });
             return {

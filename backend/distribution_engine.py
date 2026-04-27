@@ -352,10 +352,11 @@ def _collect_aggregation_groups(layout_config):
                 for cell in (row.get('cells') or []):
                     src = cell.get('sourceType', 'static')
                     if src == 'tag' and cell.get('tagName'):
-                        # silo_segments uses its own endpoint; exclude from by-tags groups
-                        if cell.get('aggregation') == 'silo_segments':
+                        # silo_segments / silo_* use row-segments only; exclude from by-tags groups
+                        agg_cell = cell.get('aggregation')
+                        if agg_cell in ('silo_segments', 'silo_first', 'silo_last', 'silo_delta'):
                             continue
-                        add_tag(cell['tagName'], cell.get('aggregation'))
+                        add_tag(cell['tagName'], agg_cell)
                     elif src == 'formula' and cell.get('formula'):
                         for base, explicit in _parse_formula_tag_tokens(cell['formula']):
                             add_tag(base, explicit or cell.get('aggregation'))
@@ -3294,6 +3295,12 @@ def _extract_report_context(layout_configs):
                                 lines.append(f'    - "{col_name}": delta aggregation (= amount produced/consumed in the period)')
                             elif agg == 'first':
                                 lines.append(f'    - "{col_name}": first aggregation (= reading at start of period)')
+                            elif agg == 'silo_first':
+                                lines.append(f'    - "{col_name}": first reading within each silo segment (same row as Silo IDs driver)')
+                            elif agg == 'silo_last':
+                                lines.append(f'    - "{col_name}": last reading within each silo segment')
+                            elif agg == 'silo_delta':
+                                lines.append(f'    - "{col_name}": delta within each silo segment (end minus start for that segment)')
                             elif agg == 'silo_segments':
                                 lines.append(f'    - "{col_name}": silo ID (each table row = one destination silo segment; expands to multiple rows in historical mode)')
                             elif agg in ('avg', 'sum', 'min', 'max', 'count'):
