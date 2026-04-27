@@ -438,9 +438,13 @@ function resolveCellValue(cell, tagValues, rowContext = null, tagDecimalByName =
     if (raw == null && cell.tagName) {
       if (agg === 'silo_segments') {
         raw = tagValues?.[cell.tagName] ?? null;
-      } else if (agg === 'silo_first' || agg === 'silo_last' || agg === 'silo_delta') {
-        // Segment-only: never fall back to plain tag or full-range delta (avoids wrong weights)
-        raw = null;
+      } else if (agg === 'silo_first' || agg === 'silo_last') {
+        // Live (no row-segments): no silo_first:: / silo_last:: keys — show current tag snapshot.
+        // Historical segment rows set these keys in _segTagValues; when present, raw was already set above.
+        raw = tagValues?.[cell.tagName] ?? null;
+      } else if (agg === 'silo_delta') {
+        // No segment window in live: 0 is honest; historical rows use silo_delta:: from overlay.
+        raw = 0;
       } else if (agg === 'delta') {
         raw = 0;
       } else if (agg === 'count') {
