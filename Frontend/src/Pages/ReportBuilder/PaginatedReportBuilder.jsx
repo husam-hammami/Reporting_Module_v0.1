@@ -13,6 +13,7 @@ import {
   Table2, Hash, Type, Minus, Copy, X, Check,
   AlignLeft, AlignCenter, AlignRight, LayoutTemplate, PenLine,
   Monitor, FileText, Send, Undo2, RefreshCw, ClipboardList, GripVertical, List,
+  Layers,
 } from 'lucide-react';
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -705,6 +706,76 @@ export function collectPaginatedTagAggregations(sections) {
     result[agg] = [...tagSet];
   }
   return result;
+}
+
+/* ── Silo segment row resolution (shared with viewer + Job Logs) ──── */
+
+/**
+ * Find every table row that contains a `silo_segments` driver tag cell.
+ * Returns one descriptor per row with its driver cell and companion cells
+ * (other tag cells on the same row), matching the contract of
+ * `POST /api/historian/row-segments`.
+ *
+ * Output shape:
+ *   [{ sectionIndex, rowIndex, section, row, segCell, companionCells:[{tagName,aggregation}] }, ...]
+ *
+ * Notes:
+ *  - When multiple cells on a row use `silo_segments`, the FIRST is treated as the driver
+ *    (mirrors the viewer's existing `find` behavior).
+ *  - Only `sourceType === 'tag'` cells with a `tagName` are collected as companions
+ *    (formula / static / mapping / group cells are excluded — same as the viewer).
+ */
+export function findSiloSegmentTableRows(sections) {
+  const out = [];
+  if (!Array.isArray(sections)) return out;
+  sections.forEach((section, sectionIndex) => {
+    if (!section || section.type !== 'table' || !Array.isArray(section.rows)) return;
+    section.rows.forEach((row, rowIndex) => {
+      if (!row || !Array.isArray(row.cells)) return;
+      const segCell = row.cells.find(
+        (c) => c && c.sourceType === 'tag' && c.aggregation === 'silo_segments' && c.tagName,
+      );
+      if (!segCell) return;
+      const companionCells = row.cells
+        .filter((c) => c && c !== segCell && c.sourceType === 'tag' && c.tagName)
+        .map((c) => ({ tagName: c.tagName, aggregation: c.aggregation || 'last' }));
+      out.push({
+        sectionIndex,
+        rowIndex,
+        section,
+        row,
+        segCell,
+        companionCells,
+      });
+    });
+  });
+  return out;
+}
+
+/**
+ * Resolve the single silo-segment row that Job Logs should use.
+ *
+ * Selection rules:
+ *  1. Enumerate all rows containing a `silo_segments` driver via `findSiloSegmentTableRows`.
+ *  2. If `pointer.rowId` is set and matches a row that still has a driver, return that row.
+ *  3. Otherwise return the first matching row (auto-first).
+ *  4. Returns `null` when no rows have a `silo_segments` driver.
+ *
+ * @param {object} layoutConfig - Parsed `layout_config` JSON (must already be a plain object).
+ * @param {object|null} pointer - `layout_config.jobLogsSegmentPointer` or null/undefined.
+ * @returns {object|null} A descriptor from `findSiloSegmentTableRows`, or null.
+ */
+export function resolveJobLogsSegmentRow(layoutConfig, pointer) {
+  if (!layoutConfig || typeof layoutConfig !== 'object') return null;
+  const sections = Array.isArray(layoutConfig.paginatedSections) ? layoutConfig.paginatedSections : [];
+  const candidates = findSiloSegmentTableRows(sections);
+  if (candidates.length === 0) return null;
+  const rowId = pointer && typeof pointer === 'object' ? pointer.rowId : null;
+  if (rowId) {
+    const match = candidates.find((c) => c.row && c.row.id === rowId);
+    if (match) return match;
+  }
+  return candidates[0];
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2197,6 +2268,146 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
   );
 }
 
+/**
+ * Optional pointer: layout_config.jobLogsSegmentPointer = { rowId } selects which
+ * `silo_segments` row Job Logs should expand for an order. Auto = first matching row.
+ */
+function describeSegmentRowCandidate(candidate, allCandidates) {
+  const { section, sectionIndex, rowIndex, segCell, companionCells } = candidate;
+  const sectionLabel = section?.label?.trim() || `Section ${sectionIndex + 1}`;
+  const driverTag = segCell?.tagName || '?';
+  const driverPart = `Driver: ${driverTag}`;
+  const companionPart = companionCells.length > 0
+    ? ` · ${companionCells.length} tag${companionCells.length === 1 ? '' : 's'}`
+    : '';
+  // Disambiguate when the same section has multiple silo rows — useful for the dropdown.
+  const sameSection = allCandidates.filter((c) => c.sectionIndex === sectionIndex).length > 1;
+  const rowSuffix = sameSection ? ` · Row ${rowIndex + 1}` : '';
+  return `${sectionLabel}${rowSuffix} — ${driverPart}${companionPart}`;
+}
+
+function JobLogsSegmentRowCard({ template, sections, updateMeta }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const layout = useMemo(() => parseTemplateLayoutConfig(template), [template?.layout_config]);
+  const pointer = layout.jobLogsSegmentPointer && typeof layout.jobLogsSegmentPointer === 'object'
+    ? layout.jobLogsSegmentPointer
+    : null;
+  const pointerRowId = pointer?.rowId || '';
+
+  const candidates = useMemo(() => findSiloSegmentTableRows(sections), [sections]);
+
+  const resolvedRowId = useMemo(() => {
+    if (candidates.length === 0) return null;
+    if (pointerRowId && candidates.some((c) => c.row?.id === pointerRowId)) return pointerRowId;
+    return candidates[0].row?.id || null;
+  }, [candidates, pointerRowId]);
+
+  const pointerOrphan = !!pointerRowId && !candidates.some((c) => c.row?.id === pointerRowId);
+
+  const setPointer = useCallback((rowId) => {
+    const base = parseTemplateLayoutConfig(template);
+    if (!rowId) {
+      const rest = { ...base };
+      delete rest.jobLogsSegmentPointer;
+      updateMeta({ layout_config: rest });
+      return;
+    }
+    updateMeta({ layout_config: { ...base, jobLogsSegmentPointer: { rowId } } });
+  }, [template, updateMeta]);
+
+  let statusLabel;
+  let statusColor;
+  if (candidates.length === 0) {
+    statusLabel = 'no silo row';
+    statusColor = 'var(--rb-text-muted)';
+  } else if (pointerOrphan) {
+    statusLabel = 'pointer invalid → auto';
+    statusColor = '#f59e0b';
+  } else if (pointerRowId) {
+    statusLabel = 'manual';
+    statusColor = '#38bdf8';
+  } else if (candidates.length === 1) {
+    statusLabel = 'auto · 1 row';
+    statusColor = '#38bdf8';
+  } else {
+    statusLabel = `auto · first of ${candidates.length}`;
+    statusColor = '#38bdf8';
+  }
+
+  return (
+    <div className="rounded-lg overflow-hidden mb-1"
+      style={{ background: 'var(--rb-panel)', border: '1px solid var(--rb-border)' }}>
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="w-full px-3 py-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider"
+        style={{ color: statusColor, background: 'var(--rb-surface)' }}>
+        <span className="flex items-center gap-1.5">
+          <Layers size={11} />
+          Job logs silo row ({statusLabel})
+        </span>
+        <ChevronDown size={11} style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 150ms' }} />
+      </button>
+      {expanded && (
+        <div className="px-3 py-2.5 space-y-2" style={{ borderTop: '1px solid var(--rb-border)' }}>
+          <p className="text-[9px] leading-snug" style={{ color: 'var(--rb-text-muted)' }}>
+            Job Logs uses the same silo segment row defined in this template. Pick a specific row when
+            multiple are present; otherwise the first row with a Silo IDs (segments) cell is used.
+          </p>
+
+          {candidates.length === 0 && (
+            <p className="text-[10px] italic" style={{ color: 'var(--rb-text-muted)' }}>
+              No row in this template uses Silo IDs (segments). Add a table row with a cell whose
+              aggregation is &quot;Silo IDs (segments)&quot; to enable the silo block on Job Logs.
+            </p>
+          )}
+
+          {candidates.length === 1 && (
+            <p className="text-[10px]" style={{ color: 'var(--rb-text)' }}>
+              <span className="font-mono">{describeSegmentRowCandidate(candidates[0], candidates)}</span>
+            </p>
+          )}
+
+          {candidates.length >= 2 && (
+            <div className="space-y-1">
+              <select
+                value={pointerRowId && candidates.some((c) => c.row?.id === pointerRowId) ? pointerRowId : ''}
+                onChange={(e) => setPointer(e.target.value || null)}
+                className="rb-input-base w-full text-[10px] py-1 px-2"
+              >
+                <option value="">Auto — first silo row in template</option>
+                {candidates.map((c) => (
+                  <option key={c.row.id} value={c.row.id}>
+                    {describeSegmentRowCandidate(c, candidates)}
+                  </option>
+                ))}
+              </select>
+              {resolvedRowId && (
+                <p className="text-[9px]" style={{ color: 'var(--rb-text-muted)' }}>
+                  Currently resolves to: <span className="font-mono">
+                    {describeSegmentRowCandidate(
+                      candidates.find((c) => c.row?.id === resolvedRowId) || candidates[0],
+                      candidates,
+                    )}
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
+
+          {pointerOrphan && (
+            <p className="text-[9px]" style={{ color: '#f59e0b' }}>
+              Saved pointer references a row that no longer exists or no longer has Silo IDs (segments).
+              Job Logs will fall back to auto-first until you re-pick a row.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Order Tracking Config Card (for Job Logs) ──────────────────── */
 function OrderTrackingCard({ template, tags, updateMeta }) {
   const [expanded, setExpanded] = useState(false);
@@ -2567,6 +2778,7 @@ export default function PaginatedReportBuilder() {
           {/* ── Order Tracking config (collapsed by default) ── */}
           <OrderTrackingCard template={template} tags={tags} updateMeta={updateMeta} />
           <JobLogsDetailTagsCard template={template} tags={tags} sections={sections} updateMeta={updateMeta} />
+          <JobLogsSegmentRowCard template={template} sections={sections} updateMeta={updateMeta} />
 
           <AnimatePresence mode="popLayout">
             {sections.map((section, idx) => (

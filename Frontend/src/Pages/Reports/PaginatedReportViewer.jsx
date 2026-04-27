@@ -13,7 +13,7 @@ import {
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
 import { useReportCanvas, useAvailableTags } from '../../Hooks/useReportBuilder';
-import { PaginatedReportPreview, collectPaginatedTagNames, collectPaginatedTagAggregations, buildTagDecimalLookup } from '../ReportBuilder/PaginatedReportBuilder';
+import { PaginatedReportPreview, collectPaginatedTagNames, collectPaginatedTagAggregations, buildTagDecimalLookup, findSiloSegmentTableRows } from '../ReportBuilder/PaginatedReportBuilder';
 import TimePeriodTabs, { PAGINATED_TABS } from './TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
 import axios from '../../API/axios';
@@ -113,27 +113,13 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
 
   // ── Segment helpers ──────────────────────────────────────────────────────
   // Collect all rows that use silo_segments aggregation, with their companion cells.
+  // Uses the shared `findSiloSegmentTableRows` helper so Job Logs and the viewer cannot drift.
   const segmentRowDefs = useMemo(() => {
-    const defs = [];
-    if (!Array.isArray(sections)) return defs;
-    sections.forEach((section) => {
-      if (section.type !== 'table' || !Array.isArray(section.rows)) return;
-      section.rows.forEach((row) => {
-        if (!Array.isArray(row.cells)) return;
-        const segCell = row.cells.find((c) => c.sourceType === 'tag' && c.aggregation === 'silo_segments' && c.tagName);
-        if (!segCell) return;
-        // companion cells = all tag/formula cells in this row that are NOT the segment driver
-        const companions = row.cells
-          .filter((c) => c !== segCell && c.sourceType === 'tag' && c.tagName)
-          .map((c) => ({ tagName: c.tagName, aggregation: c.aggregation || 'last' }));
-        defs.push({
-          rowId: row.id,
-          segCell,
-          companionCells: companions,
-        });
-      });
-    });
-    return defs;
+    return findSiloSegmentTableRows(sections).map((d) => ({
+      rowId: d.row.id,
+      segCell: d.segCell,
+      companionCells: d.companionCells,
+    }));
   }, [sections]);
 
   // ── Historical mode: fetch tag values for the date range ──

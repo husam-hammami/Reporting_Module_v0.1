@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
-import { ClipboardList, ChevronDown, RefreshCw, Search, Calendar, Clock, CheckCircle2, Loader2 } from 'lucide-react';
+import { ClipboardList, ChevronDown, RefreshCw, Search, Calendar, Clock, CheckCircle2, Loader2, Layers } from 'lucide-react';
 import { DarkModeContext } from '../../Context/DarkModeProvider';
 import axios from '../../API/axios';
 import { toast } from 'react-toastify';
 import '../../Pages/ReportBuilder/reportBuilderTheme.css';
+import { resolveJobLogsSegmentRow } from '../ReportBuilder/PaginatedReportBuilder';
 
 function useTheme() {
   const { mode } = useContext(DarkModeContext);
@@ -173,6 +174,46 @@ function formatTagCell(v) {
   return String(v);
 }
 
+/**
+ * Normalize an aggregation label for the segment table header.
+ * Backend echoes the same agg the client sent (e.g. `silo_delta`); strip the silo_
+ * prefix so headers read naturally as "first / last / delta".
+ */
+function shortAggLabel(agg) {
+  const a = String(agg || 'last').toLowerCase();
+  if (a === 'silo_first') return 'first';
+  if (a === 'silo_last') return 'last';
+  if (a === 'silo_delta') return 'delta';
+  return a;
+}
+
+/** Format an ISO/naive timestamp from `/historian/row-segments` for display in the segment table. */
+function formatSegmentTimestamp(ts) {
+  if (!ts) return '—';
+  const stripped = stripMisleadingUtcLabel(String(ts));
+  const isoDate = /^\d{4}-\d{2}-\d{2}/.test(stripped);
+  const normalized = isoDate && !stripped.includes('T') ? stripped.replace(' ', 'T') : stripped;
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return String(ts);
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) +
+    ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+/**
+ * Index a segment's `values` array by `${tagName}::${agg}` so the segment table can render
+ * one column per `companionCells` entry in the order chosen in the Report Builder.
+ */
+function indexSegmentValues(values) {
+  const out = {};
+  if (!Array.isArray(values)) return out;
+  for (const entry of values) {
+    if (!entry || !entry.tagName) continue;
+    const agg = entry.agg || 'last';
+    out[`${entry.tagName}::${agg}`] = entry;
+  }
+  return out;
+}
+
 export default function JobLogsPage() {
   const theme = useTheme();
 
@@ -186,6 +227,11 @@ export default function JobLogsPage() {
   const [detailTagOrder, setDetailTagOrder] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState('');
+  // Silo segment row resolved from layout_config.paginatedSections (auto-first or jobLogsSegmentPointer).
+  const [segmentRowDef, setSegmentRowDef] = useState(null);
+  const [segmentData, setSegmentData] = useState([]);
+  const [segmentLoading, setSegmentLoading] = useState(false);
+  const [segmentError, setSegmentError] = useState(null);
 
   // Load report templates with order tracking
   useEffect(() => {
@@ -211,6 +257,8 @@ export default function JobLogsPage() {
       setTotal(res.data?.total || 0);
       setSelectedJob(null);
       setDetailData({});
+      setSegmentData([]);
+      setSegmentError(null);
     } catch {
       toast.error('Failed to load orders');
     } finally {
@@ -219,6 +267,40 @@ export default function JobLogsPage() {
   }, [selectedTemplateId]);
 
   useEffect(() => { loadJobs(); }, [loadJobs]);
+
+  // Resolve silo segment row from the template's layout_config (auto-first or pointer).
+  // Re-fetches only when the selected template changes, then drives segment fetches per order.
+  useEffect(() => {
+    if (!selectedTemplateId) {
+      setSegmentRowDef(null);
+      return;
+    }
+    let cancelled = false;
+    axios.get(`/api/report-builder/templates/${selectedTemplateId}`)
+      .then((res) => {
+        if (cancelled) return;
+        const raw = res.data?.data?.layout_config;
+        const layout = typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return {}; } })() : (raw || {});
+        const pointer = layout && typeof layout === 'object' ? layout.jobLogsSegmentPointer : null;
+        const resolved = resolveJobLogsSegmentRow(layout, pointer);
+        if (!resolved) {
+          setSegmentRowDef(null);
+          return;
+        }
+        setSegmentRowDef({
+          rowId: resolved.row?.id || `template-${selectedTemplateId}-segment`,
+          segCell: resolved.segCell,
+          companionCells: resolved.companionCells,
+          sectionLabel: resolved.section?.label || '',
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.warn('Failed to load layout_config for segment row:', err);
+        setSegmentRowDef(null);
+      });
+    return () => { cancelled = true; };
+  }, [selectedTemplateId]);
 
   // Load detail when a job is selected
   useEffect(() => {
@@ -273,6 +355,73 @@ export default function JobLogsPage() {
       })
       .finally(() => setDetailLoading(false));
   }, [selectedJob, selectedTemplateId]);
+
+  // Fetch silo segment data for the selected order using the row resolved from layout_config.
+  // Mirrors PaginatedReportViewer's POST to /api/historian/row-segments but reuses Job Logs'
+  // wall-time window so the segment table aligns with the flat Start/End/Total table.
+  useEffect(() => {
+    if (!selectedJob || !selectedTemplateId || !segmentRowDef) {
+      setSegmentData([]);
+      setSegmentError(null);
+      setSegmentLoading(false);
+      return undefined;
+    }
+    const { start_time, end_time } = selectedJob;
+    if (!start_time) return undefined;
+    const segCell = segmentRowDef.segCell || {};
+    if (!segCell.tagName) {
+      setSegmentData([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setSegmentLoading(true);
+    setSegmentError(null);
+    setSegmentData([]);
+
+    const wall = historianOrderWallParams(start_time, end_time);
+    let fromParam = wall.fromParam;
+    let toParam = wall.toParam;
+    const fromMs = parseOrderWallTime(start_time)?.getTime() ?? NaN;
+    const toMs =
+      end_time != null && end_time !== ''
+        ? (parseOrderWallTime(end_time)?.getTime() ?? NaN)
+        : Date.now();
+    if (!Number.isNaN(fromMs) && !Number.isNaN(toMs) && fromMs > toMs) {
+      toParam = new Date().toISOString();
+    }
+
+    const body = {
+      from: fromParam,
+      to: toParam,
+      rows: [{
+        row_id: segmentRowDef.rowId,
+        segment_tag: segCell.tagName,
+        min_segment_seconds: segCell.segmentMinSeconds ?? 60,
+        ignore_values: segCell.segmentIgnoreValues ?? [0],
+        companion_cells: segmentRowDef.companionCells || [],
+        merge_duplicates: segCell.segmentMergeDuplicates !== false,
+      }],
+    };
+
+    axios.post('/api/historian/row-segments', body, { timeout: 20000 })
+      .then((res) => {
+        if (cancelled) return;
+        const segments = res.data?.rows?.[segmentRowDef.rowId];
+        setSegmentData(Array.isArray(segments) ? segments : []);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.warn('Segment load error:', err);
+        setSegmentError(err.response?.data?.error || err.message || 'Failed to load silo segments');
+        setSegmentData([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSegmentLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [selectedJob, selectedTemplateId, segmentRowDef]);
 
   const selectedTemplate = useMemo(() =>
     templates.find(t => t.id === selectedTemplateId),
@@ -512,6 +661,84 @@ export default function JobLogsPage() {
                         })}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* Silo segment table — driven by layout_config.paginatedSections (auto-first or jobLogsSegmentPointer). */}
+              {segmentRowDef && (
+                <div className="mt-6">
+                  <h3 className="text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5"
+                    style={{ color: theme.textMuted }}>
+                    <Layers size={12} />
+                    Silo segments — driver: {segmentRowDef.segCell?.tagName || '?'}
+                    {segmentRowDef.sectionLabel ? <span className="font-normal normal-case ml-1" style={{ color: theme.textSecondary }}>({segmentRowDef.sectionLabel})</span> : null}
+                  </h3>
+
+                  {segmentLoading ? (
+                    <div className="flex items-center gap-2 py-8 justify-center">
+                      <Loader2 size={16} className="animate-spin" style={{ color: theme.accent }} />
+                      <span className="text-sm" style={{ color: theme.textMuted }}>Loading silo segments...</span>
+                    </div>
+                  ) : segmentError ? (
+                    <p className="text-sm py-4" style={{ color: '#f87171' }}>
+                      {segmentError}
+                    </p>
+                  ) : segmentData.length === 0 ? (
+                    <p className="text-sm py-4" style={{ color: theme.textMuted }}>
+                      No silo segments detected in this order&apos;s window.
+                    </p>
+                  ) : (
+                    <div className="rounded-lg overflow-x-auto" style={{ border: `1px solid ${theme.border}` }}>
+                      <table className="w-full text-xs min-w-[640px]">
+                        <thead>
+                          <tr style={{ background: theme.surfaceAlt }}>
+                            <th className="text-left px-2 py-2 font-semibold" style={{ color: theme.textSecondary }}>Start</th>
+                            <th className="text-left px-2 py-2 font-semibold" style={{ color: theme.textSecondary }}>End</th>
+                            <th className="text-right px-2 py-2 font-semibold" style={{ color: theme.textSecondary }}>Silo ID</th>
+                            {(segmentRowDef.companionCells || []).map((c, i) => (
+                              <th key={`${c.tagName}-${c.aggregation}-${i}`}
+                                className="text-right px-2 py-2 font-semibold whitespace-nowrap"
+                                style={{ color: theme.textSecondary }}
+                                title={`${c.tagName} (${c.aggregation || 'last'})`}>
+                                <span className="font-mono">{c.tagName}</span>
+                                <span className="ml-1 lowercase" style={{ color: theme.textMuted }}>
+                                  ({shortAggLabel(c.aggregation)})
+                                </span>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {segmentData.map((seg, idx) => {
+                            const valueIndex = indexSegmentValues(seg.values);
+                            return (
+                              <tr key={`${seg.t_start}-${idx}`} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                                <td className="px-2 py-2 font-mono whitespace-nowrap" style={{ color: theme.text }}>
+                                  {formatSegmentTimestamp(seg.t_start)}
+                                </td>
+                                <td className="px-2 py-2 font-mono whitespace-nowrap" style={{ color: theme.text }}>
+                                  {formatSegmentTimestamp(seg.t_end)}
+                                </td>
+                                <td className="px-2 py-2 text-right font-mono font-semibold" style={{ color: theme.accent }}>
+                                  {seg.silo_id ?? '—'}
+                                </td>
+                                {(segmentRowDef.companionCells || []).map((c, i) => {
+                                  const key = `${c.tagName}::${c.aggregation || 'last'}`;
+                                  const entry = valueIndex[key];
+                                  return (
+                                    <td key={`${key}-${i}`} className="px-2 py-2 text-right font-mono"
+                                      style={{ color: theme.textSecondary }}>
+                                      {entry ? formatTagCell(entry.value) : '—'}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
