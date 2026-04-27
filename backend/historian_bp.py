@@ -438,6 +438,128 @@ def get_by_tags():
         return jsonify({"error": str(e)}), 500
 
 
+@historian_bp.route("/historian/row-segments", methods=["POST"])
+@login_required
+def get_row_segments():
+    """
+    Compute silo-ID segmentation for one or more paginated table rows.
+
+    POST body (JSON):
+    {
+      "from": "2026-04-27T05:00:00.000Z",
+      "to":   "2026-04-28T05:00:00.000Z",
+      "rows": [
+        {
+          "row_id": "abc123",
+          "segment_tag": "G01_DEST",
+          "min_segment_seconds": 60,
+          "ignore_values": [0],
+          "companion_cells": [
+            {"tagName": "G01_REAL02",  "aggregation": "delta"},
+            {"tagName": "G01_MatName", "aggregation": "last"}
+          ]
+        }
+      ]
+    }
+
+    Returns:
+    {
+      "rows": {
+        "abc123": [
+          {
+            "t_start": "2026-04-27T06:00:00",
+            "t_end":   "2026-04-27T08:30:00",
+            "silo_id": 101,
+            "values": {
+              "G01_REAL02":  {"agg": "delta", "value": 12.3, "first": 1000.0, "last": 1012.3},
+              "G01_MatName": {"agg": "last",  "value": "Barley", "first": "Barley", "last": "Barley"}
+            }
+          }, ...
+        ]
+      }
+    }
+    """
+    from segment_engine import compute_row_segments
+
+    body = request.get_json(silent=True) or {}
+    from_raw = body.get("from")
+    to_raw = body.get("to")
+    rows_input = body.get("rows")
+
+    if not from_raw or not to_raw:
+        return jsonify({"error": "from and to are required"}), 400
+    if not isinstance(rows_input, list) or len(rows_input) == 0:
+        return jsonify({"error": "rows must be a non-empty list"}), 400
+
+    from_ts = _parse_iso_to_naive_local(from_raw)
+    to_ts = _parse_iso_to_naive_local(to_raw)
+
+    # Convert to datetime objects for segment_engine
+    try:
+        from datetime import datetime as _dt
+        from_dt = _dt.fromisoformat(from_ts) if isinstance(from_ts, str) else from_ts
+        to_dt = _dt.fromisoformat(to_ts) if isinstance(to_ts, str) else to_ts
+    except Exception:
+        return jsonify({"error": "Invalid from/to timestamps"}), 400
+
+    result = {}
+    for row_def in rows_input:
+        row_id = row_def.get("row_id")
+        segment_tag = row_def.get("segment_tag")
+        if not row_id or not segment_tag:
+            continue
+
+        min_sec = int(row_def.get("min_segment_seconds", 60))
+        ignore_values = row_def.get("ignore_values", [0])
+        companion_cells = row_def.get("companion_cells", [])
+
+        try:
+            segments = compute_row_segments(
+                segment_tag_name=segment_tag,
+                companion_cells=companion_cells,
+                from_dt=from_dt,
+                to_dt=to_dt,
+                min_segment_seconds=min_sec,
+                ignore_values=ignore_values,
+            )
+        except Exception as e:
+            logger.exception("row-segments: compute failed for row %s: %s", row_id, e)
+            segments = []
+
+        # Serialise datetimes to ISO strings
+        serialised = []
+        for seg in segments:
+            serialised.append({
+                "t_start": seg["t_start"].isoformat() if hasattr(seg["t_start"], "isoformat") else str(seg["t_start"]),
+                "t_end":   seg["t_end"].isoformat()   if hasattr(seg["t_end"],   "isoformat") else str(seg["t_end"]),
+                "silo_id": seg["silo_id"],
+                "values":  {
+                    tag_name: {
+                        "agg":   info.get("agg"),
+                        "value": _serialise_value(info.get("value")),
+                        "first": _serialise_value(info.get("first")),
+                        "last":  _serialise_value(info.get("last")),
+                    }
+                    for tag_name, info in seg.get("values", {}).items()
+                },
+            })
+        result[row_id] = serialised
+
+    return jsonify({"rows": result}), 200
+
+
+def _serialise_value(v):
+    """Convert a DB value to JSON-serialisable form."""
+    if v is None:
+        return None
+    try:
+        f = float(v)
+        # Return int if it's a whole number (silo IDs etc.)
+        return int(f) if f == int(f) else f
+    except (TypeError, ValueError):
+        return str(v)
+
+
 @historian_bp.route("/historian/time-series", methods=["GET"])
 @login_required
 def get_time_series():

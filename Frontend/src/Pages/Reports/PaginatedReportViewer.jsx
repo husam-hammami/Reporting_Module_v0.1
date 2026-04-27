@@ -38,6 +38,8 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
   const [fetchLoading, setFetchLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const [liveError, setLiveError] = useState(null);
+  // Segment rows: { [rowId]: segmentRow[] } — populated after historical fetch when silo_segments cells are present
+  const [expandedRows, setExpandedRows] = useState({});
   const [exporting, setExporting] = useState(false);
   const [excelExporting, setExcelExporting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -109,6 +111,31 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
     return () => socket.off('live_tag_data', handler);
   }, [isLive, socket]);
 
+  // ── Segment helpers ──────────────────────────────────────────────────────
+  // Collect all rows that use silo_segments aggregation, with their companion cells.
+  const segmentRowDefs = useMemo(() => {
+    const defs = [];
+    if (!Array.isArray(sections)) return defs;
+    sections.forEach((section) => {
+      if (section.type !== 'table' || !Array.isArray(section.rows)) return;
+      section.rows.forEach((row) => {
+        if (!Array.isArray(row.cells)) return;
+        const segCell = row.cells.find((c) => c.sourceType === 'tag' && c.aggregation === 'silo_segments' && c.tagName);
+        if (!segCell) return;
+        // companion cells = all tag/formula cells in this row that are NOT the segment driver
+        const companions = row.cells
+          .filter((c) => c !== segCell && c.sourceType === 'tag' && c.tagName)
+          .map((c) => ({ tagName: c.tagName, aggregation: c.aggregation || 'last' }));
+        defs.push({
+          rowId: row.id,
+          segCell,
+          companionCells: companions,
+        });
+      });
+    });
+    return defs;
+  }, [sections]);
+
   // ── Historical mode: fetch tag values for the date range ──
   // Supports per-cell aggregation: same tag can have 'first', 'last', 'delta' etc.
   // Non-default aggregations are namespaced as 'agg::tagName' in the merged result.
@@ -169,10 +196,77 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
         setFetchError('Could not load tag data');
       }
     }
-    setFetchLoading(false);
-  }, [isLive, tagNames, tagAggGroups, dateRange]);
 
-  useEffect(() => { if (!isLive) fetchData(); }, [fetchData, isLive]);
+    // ── Segment fetch: call /api/historian/row-segments for silo_segments rows ──
+    if (segmentRowDefs.length > 0 && dateRange) {
+      try {
+        const fromISO = dateRange.from.toISOString();
+        const toISO = dateRange.to.toISOString();
+        const segRes = await axios.post('/api/historian/row-segments', {
+          from: fromISO,
+          to: toISO,
+          rows: segmentRowDefs.map((def) => ({
+            row_id: def.rowId,
+            segment_tag: def.segCell.tagName,
+            min_segment_seconds: def.segCell.segmentMinSeconds ?? 60,
+            ignore_values: def.segCell.segmentIgnoreValues ?? [0],
+            companion_cells: def.companionCells,
+          })),
+        }, { timeout: 20000 });
+        const rawRows = segRes?.data?.rows || {};
+        // Build expanded rows map: { rowId: [{ id, cells, _segTagValues }] }
+        const expanded = {};
+        segmentRowDefs.forEach((def) => {
+          const segs = rawRows[def.rowId];
+          if (!Array.isArray(segs) || segs.length === 0) return;
+          // Find the template row to use as the cell structure template
+          const templateRow = sections
+            .filter((s) => s.type === 'table')
+            .flatMap((s) => s.rows || [])
+            .find((r) => r.id === def.rowId);
+          if (!templateRow) return;
+          expanded[def.rowId] = segs.map((seg, i) => {
+            // Build per-segment tagValues overlay
+            const overlay = {};
+            // Silo ID key for the segment driver cell
+            overlay[`silo_segments::${def.segCell.tagName}`] = seg.silo_id;
+            // Companion cell values
+            Object.entries(seg.values || {}).forEach(([tagName, info]) => {
+              const agg = info?.agg || 'last';
+              const val = info?.value;
+              overlay[tagName] = val; // plain fallback
+              if (info?.first != null) overlay[`first::${tagName}`] = info.first;
+              if (info?.last != null)  overlay[`last::${tagName}`]  = info.last;
+              if (agg !== 'last') overlay[`${agg}::${tagName}`] = val;
+            });
+            return {
+              ...templateRow,
+              id: `${def.rowId}__seg${i}`,
+              _segTagValues: overlay,
+              _segMeta: { t_start: seg.t_start, t_end: seg.t_end, silo_id: seg.silo_id },
+            };
+          });
+        });
+        setExpandedRows(expanded);
+      } catch (segErr) {
+        console.warn('Failed to fetch segment data:', segErr);
+        setExpandedRows({});
+      }
+    } else {
+      setExpandedRows({});
+    }
+
+    setFetchLoading(false);
+  }, [isLive, tagNames, tagAggGroups, dateRange, segmentRowDefs, sections]);
+
+  useEffect(() => {
+    if (!isLive) {
+      fetchData();
+    } else {
+      // Clear segment state when switching to live
+      setExpandedRows({});
+    }
+  }, [fetchData, isLive]);
 
   // Merge values: live or historical + emulator
   const mergedTagValues = useMemo(() => {
@@ -392,6 +486,7 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
             compact={pageMode === 'full'}
             isPreviewMode={true}
             tagDecimalByName={tagDecimalByName}
+            expandedRows={isLive ? {} : expandedRows}
           />
         </div>
       </div>

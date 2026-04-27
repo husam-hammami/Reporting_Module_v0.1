@@ -85,8 +85,8 @@ function UnitSelector({ cell, onChange, className = '' }) {
 }
 
 /* ── Resolve cell display label for config mode (shows tag/formula names, not live values) ── */
-const AGG_LABELS = { last: 'Last', first: 'First', delta: 'Δ', avg: 'Avg', sum: 'Sum', min: 'Min', max: 'Max', count: 'Count' };
-const AGG_COLORS = { delta: '#e67e22', first: '#8e44ad', last: '#2c3e50', avg: '#2980b9', sum: '#27ae60', min: '#16a085', max: '#c0392b', count: '#7f8c8d' };
+const AGG_LABELS = { last: 'Last', first: 'First', delta: 'Δ', avg: 'Avg', sum: 'Sum', min: 'Min', max: 'Max', count: 'Count', silo_segments: 'Silo IDs' };
+const AGG_COLORS = { delta: '#e67e22', first: '#8e44ad', last: '#2c3e50', avg: '#2980b9', sum: '#27ae60', min: '#16a085', max: '#c0392b', count: '#7f8c8d', silo_segments: '#0f3460' };
 
 /* Plain-text label (used in row header summaries) */
 function resolveCellConfigLabel(cell) {
@@ -96,6 +96,7 @@ function resolveCellConfigLabel(cell) {
   if (src === 'tag') {
     if (!cell.tagName) return '(no tag)';
     const agg = cell.aggregation || 'last';
+    if (agg === 'silo_segments') return `Silo IDs: ${cell.tagName}`;
     const aggLabel = agg !== 'last' ? `${AGG_LABELS[agg] || agg} ` : '';
     return `${aggLabel}${cell.tagName}`;
   }
@@ -117,6 +118,14 @@ function renderCellConfigBadge(cell) {
     if (!cell.tagName) return <i style={{ color: '#94a3b8' }}>(no tag)</i>;
     const agg = cell.aggregation || 'last';
     const color = AGG_COLORS[agg] || '#2c3e50';
+    if (agg === 'silo_segments') {
+      return (
+        <span title={`Silo IDs (segments): ${cell.tagName}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, maxWidth: '100%' }}>
+          <span style={{ background: color, color: '#fff', borderRadius: 3, padding: '0 4px', fontSize: '0.7em', fontWeight: 700, lineHeight: '1.5', whiteSpace: 'nowrap', flexShrink: 0 }}>Silo IDs</span>
+          <span style={{ color, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cell.tagName}</span>
+        </span>
+      );
+    }
     return (
       <span title={`${AGG_LABELS[agg] || agg}: ${cell.tagName}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, maxWidth: '100%' }}>
         {agg !== 'last' && <span style={{ background: color, color: '#fff', borderRadius: 3, padding: '0 4px', fontSize: '0.7em', fontWeight: 700, lineHeight: '1.5', whiteSpace: 'nowrap', flexShrink: 0 }}>{AGG_LABELS[agg]}</span>}
@@ -379,16 +388,20 @@ function resolveCellValue(cell, tagValues, rowContext = null, tagDecimalByName =
   if (!cell) return '—';
   if (cell.sourceType === 'static') return cell.value ?? '';
   if (cell.sourceType === 'tag') {
-    const key = resolveTagKey(cell.tagName, cell.aggregation);
     const agg = cell.aggregation || 'last';
+    // silo_segments uses its own namespaced key; live mode falls back to plain last value
+    const key = agg === 'silo_segments' ? `silo_segments::${cell.tagName}` : resolveTagKey(cell.tagName, agg);
     let raw = tagValues?.[key];
     // When namespaced key is missing (live mode), handle per aggregation:
+    // - silo_segments → fall back to plain tagName (current live ID)
     // - delta → 0 (no time range = no change)
     // - first/avg/min/max/sum → fall back to raw value (single-point = itself)
     // - count → 1
     // - last → fall back to raw value (default)
     if (raw == null && cell.tagName) {
-      if (agg === 'delta') {
+      if (agg === 'silo_segments') {
+        raw = tagValues?.[cell.tagName] ?? null;
+      } else if (agg === 'delta') {
         raw = 0;
       } else if (agg === 'count') {
         const base = tagValues?.[cell.tagName];
@@ -623,6 +636,9 @@ export function collectPaginatedTagAggregations(sections) {
         if (Array.isArray(row.cells)) {
           row.cells.forEach((cell) => {
             if (cell.sourceType === 'tag' && cell.tagName) {
+              // silo_segments drives its own endpoint — exclude from by-tags groups.
+              // The tag is still collected by collectPaginatedTagNames for live polling.
+              if (cell.aggregation === 'silo_segments') return;
               addTag(cell.tagName, cell.aggregation);
             }
             if (cell.sourceType === 'formula' && cell.formula) {
@@ -948,12 +964,36 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
                 <option value="min">Min</option>
                 <option value="max">Max</option>
                 <option value="count">Count</option>
+                {srcType === 'tag' && <option value="silo_segments">Silo IDs (segments)</option>}
               </select>
             </div>
           )}
           {cell.unit !== '__checkbox__' && (srcType === 'tag' || srcType === 'formula' || srcType === 'group') && (
             <DecimalsCellInput cell={cell} onChange={onChange} />
           )}
+        </div>
+      )}
+
+      {/* Silo segments config fields */}
+      {srcType === 'tag' && cell.aggregation === 'silo_segments' && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-0.5 pt-1" style={{ borderTop: '1px dashed var(--rb-border)' }}>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-semibold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Min seconds:</span>
+            <input type="number" min={0} placeholder="60"
+              value={cell.segmentMinSeconds ?? ''}
+              onChange={(e) => onChange({ ...cell, segmentMinSeconds: e.target.value === '' ? undefined : Number(e.target.value) })}
+              className="rb-input-base text-[11px] py-0.5 px-1" style={{ width: '60px' }} />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-semibold flex-shrink-0" style={{ color: 'var(--rb-text-muted)' }}>Ignore IDs:</span>
+            <input type="text" placeholder="0"
+              value={(cell.segmentIgnoreValues || [0]).join(',')}
+              onChange={(e) => {
+                const vals = e.target.value.split(',').map((s) => { const n = Number(s.trim()); return isNaN(n) ? null : n; }).filter((n) => n !== null);
+                onChange({ ...cell, segmentIgnoreValues: vals });
+              }}
+              className="rb-input-base text-[11px] py-0.5 px-1" style={{ width: '80px' }} />
+          </div>
         </div>
       )}
 
@@ -1578,7 +1618,7 @@ function ReportLogoHeader({ clientLogo }) {
   );
 }
 
-export function PaginatedReportPreview({ sections, tagValues, dateRange, compact = false, isPreviewMode = false, tagDecimalByName = null }) {
+export function PaginatedReportPreview({ sections, tagValues, dateRange, compact = false, isPreviewMode = false, tagDecimalByName = null, expandedRows = {} }) {
   const containerRef = useRef(null);
   const [pageBreaks, setPageBreaks] = useState([]);
   const { clientLogo } = useBranding();
@@ -1692,38 +1732,53 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                 </tr>
               </thead>
               <tbody>
-                {(section.rows || []).filter((row) => !isRowHidden(row, section, tagValues, tagDecimalByName)).map((row, ri) => {
-                  // Build row context from the reference column (same as hideReferenceCol)
-                  const refColIdx = row.hideReferenceCol ?? 0;
-                  const refCell = row.cells?.[refColIdx];
-                  const resolvedRef = refCell ? resolveCellValue(refCell, tagValues, null, tagDecimalByName) : null;
-                  let resolvedRefValue = null;
-                  if (resolvedRef != null && resolvedRef !== '—') {
-                    const num = Number(String(resolvedRef).replace(/[^0-9.\-]/g, ''));
-                    if (!isNaN(num)) resolvedRefValue = num;
-                  }
-                  const rowContext = { resolvedRefValue, refCell };
-
-                  return (
-                    <tr key={row.id} className={ri % 2 === 1 ? 'bg-[#f8fafc]' : ''}>
-                      {(row.cells || []).map((cell, ci) => {
-                        const col = section.columns[ci];
-                        const displayValue = isPreviewMode
-                          ? renderResolvedValue(resolveCellValue(cell, tagValues, rowContext, tagDecimalByName))
-                          : renderCellConfigBadge(cell);
-                        return (
-                          <td
-                            key={ci}
-                            className={`px-2 py-1 border border-[#e2e8f0] text-[11px]`}
-                            style={{ textAlign: col?.align || 'left', overflow: 'hidden', maxWidth: 0 }}
-                          >
-                            {displayValue}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
+                {(() => {
+                  // Build the flat list of render rows, expanding silo_segments rows into segments
+                  const renderRows = [];
+                  (section.rows || []).forEach((row) => {
+                    const isSegRow = isPreviewMode && Array.isArray(row.cells) &&
+                      row.cells.some((c) => c.sourceType === 'tag' && c.aggregation === 'silo_segments');
+                    const segList = expandedRows[row.id];
+                    if (isSegRow && Array.isArray(segList) && segList.length > 0) {
+                      // Replace with one render entry per segment
+                      segList.forEach((segRow) => renderRows.push({ row: segRow, _tv: { ...tagValues, ...segRow._segTagValues } }));
+                    } else {
+                      if (!isRowHidden(row, section, tagValues, tagDecimalByName)) {
+                        renderRows.push({ row, _tv: tagValues });
+                      }
+                    }
+                  });
+                  return renderRows.map(({ row, _tv }, ri) => {
+                    const refColIdx = row.hideReferenceCol ?? 0;
+                    const refCell = row.cells?.[refColIdx];
+                    const resolvedRef = refCell ? resolveCellValue(refCell, _tv, null, tagDecimalByName) : null;
+                    let resolvedRefValue = null;
+                    if (resolvedRef != null && resolvedRef !== '—') {
+                      const num = Number(String(resolvedRef).replace(/[^0-9.\-]/g, ''));
+                      if (!isNaN(num)) resolvedRefValue = num;
+                    }
+                    const rowContext = { resolvedRefValue, refCell };
+                    return (
+                      <tr key={row.id} className={ri % 2 === 1 ? 'bg-[#f8fafc]' : ''}>
+                        {(row.cells || []).map((cell, ci) => {
+                          const col = section.columns[ci];
+                          const displayValue = isPreviewMode
+                            ? renderResolvedValue(resolveCellValue(cell, _tv, rowContext, tagDecimalByName))
+                            : renderCellConfigBadge(cell);
+                          return (
+                            <td
+                              key={ci}
+                              className={`px-2 py-1 border border-[#e2e8f0] text-[11px]`}
+                              style={{ textAlign: col?.align || 'left', overflow: 'hidden', maxWidth: 0 }}
+                            >
+                              {displayValue}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  });
+                })()}
                 {/* Per-column summary row */}
                 {(() => { const hasLegacyFormula = !!section.summaryFormula; const hasPerCol = (section.columns || []).some((c) => c.summary?.type && c.summary.type !== 'none'); return hasLegacyFormula || hasPerCol; })() && (
                   <tr className="font-bold bg-[#f1f5f9]">
@@ -1765,11 +1820,25 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                           </td>
                         );
                       }
-                      // sum, avg, min, max, count — aggregate from row tag values for this column
-                      const colTagValues = section.rows.map((r) => {
+                      // sum, avg, min, max, count — aggregate from expanded render rows for this column
+                      const allRenderRows = (() => {
+                        const rr = [];
+                        (section.rows || []).forEach((row) => {
+                          const segList = expandedRows[row.id];
+                          const isSegRow = isPreviewMode && Array.isArray(row.cells) &&
+                            row.cells.some((c) => c.sourceType === 'tag' && c.aggregation === 'silo_segments');
+                          if (isSegRow && Array.isArray(segList) && segList.length > 0) {
+                            segList.forEach((segRow) => rr.push({ row: segRow, _tv: { ...tagValues, ...segRow._segTagValues } }));
+                          } else {
+                            rr.push({ row, _tv: tagValues });
+                          }
+                        });
+                        return rr;
+                      })();
+                      const colTagValues = allRenderRows.map(({ row: r, _tv }) => {
                         const cell = r.cells[ci];
                         if (!cell) return null;
-                        const rv = resolveCellValue(cell, tagValues, null, tagDecimalByName);
+                        const rv = resolveCellValue(cell, _tv, null, tagDecimalByName);
                         if (rv && typeof rv === 'object') return null;
                         const n = parseFloat(String(rv).replace(/[^0-9.\-]/g, ''));
                         return isNaN(n) ? null : n;
