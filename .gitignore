@@ -62,6 +62,9 @@ backend/static/
 # Vite prebundle cache
 Frontend/.vite/
 
+# Electron / electron-builder cache when ELECTRON_*_CACHE points under repo (e.g. CI mimic)
+.cache/
+
 # Desktop app (Electron + bundled binaries)
 desktop/node_modules/
 desktop/pgsql/
