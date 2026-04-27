@@ -795,6 +795,7 @@ def _run_startup_migrations():
         'add_ai_summary_to_distribution.sql',
         'add_order_tracking_to_report_templates.sql',
         'add_distribution_content_mode.sql',
+        'add_value_text_to_tag_history.sql',
     ]
 
     try:

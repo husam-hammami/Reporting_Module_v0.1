@@ -211,6 +211,7 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
             min_segment_seconds: def.segCell.segmentMinSeconds ?? 60,
             ignore_values: def.segCell.segmentIgnoreValues ?? [0],
             companion_cells: def.companionCells,
+            merge_duplicates: def.segCell.segmentMergeDuplicates !== false,
           })),
         }, { timeout: 20000 });
         const rawRows = segRes?.data?.rows || {};
@@ -226,18 +227,27 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
             .find((r) => r.id === def.rowId);
           if (!templateRow) return;
           expanded[def.rowId] = segs.map((seg, i) => {
-            // Build per-segment tagValues overlay
+            // Build per-segment tagValues overlay from the list-of-entries response
             const overlay = {};
-            // Silo ID key for the segment driver cell
             overlay[`silo_segments::${def.segCell.tagName}`] = seg.silo_id;
-            // Companion cell values
-            Object.entries(seg.values || {}).forEach(([tagName, info]) => {
-              const agg = info?.agg || 'last';
-              const val = info?.value;
-              overlay[tagName] = val; // plain fallback
-              if (info?.first != null) overlay[`first::${tagName}`] = info.first;
-              if (info?.last != null)  overlay[`last::${tagName}`]  = info.last;
-              if (agg !== 'last') overlay[`${agg}::${tagName}`] = val;
+            const entries = Array.isArray(seg.values) ? seg.values : [];
+            entries.forEach((entry) => {
+              const tagName = entry?.tagName;
+              if (!tagName) return;
+              const agg = entry?.agg || 'last';
+              const val = entry?.value;
+              const fv = entry?.first;
+              const lv = entry?.last;
+              if (agg === 'last') {
+                overlay[tagName] = val;
+                if (lv != null) overlay[`last::${tagName}`] = lv;
+                if (fv != null && overlay[`first::${tagName}`] == null) overlay[`first::${tagName}`] = fv;
+              } else {
+                overlay[`${agg}::${tagName}`] = val;
+                if (fv != null && overlay[`first::${tagName}`] == null) overlay[`first::${tagName}`] = fv;
+                if (lv != null && overlay[`last::${tagName}`] == null) overlay[`last::${tagName}`] = lv;
+                if (overlay[tagName] == null) overlay[tagName] = lv != null ? lv : val;
+              }
             });
             return {
               ...templateRow,

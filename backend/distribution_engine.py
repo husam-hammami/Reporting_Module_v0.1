@@ -423,7 +423,7 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
 
         if aggregation == 'last':
             cur.execute("""
-                SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
+                SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value, h.value_text
                 FROM tag_history h
                 WHERE h.tag_id = ANY(%s)
                   AND h."timestamp" >= %s::timestamp
@@ -433,10 +433,14 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
             for row in cur.fetchall():
                 name = id_to_name.get(row['tag_id'])
                 if name:
-                    result[name] = row['value']
+                    # String tag rows have value=NULL but value_text set (e.g. material name)
+                    if row['value'] is None and row.get('value_text') not in (None, ''):
+                        result[name] = row['value_text']
+                    else:
+                        result[name] = row['value']
         elif aggregation == 'first':
             cur.execute("""
-                SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
+                SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value, h.value_text
                 FROM tag_history h
                 WHERE h.tag_id = ANY(%s)
                   AND h."timestamp" >= %s::timestamp
@@ -446,7 +450,10 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
             for row in cur.fetchall():
                 name = id_to_name.get(row['tag_id'])
                 if name:
-                    result[name] = row['value']
+                    if row['value'] is None and row.get('value_text') not in (None, ''):
+                        result[name] = row['value_text']
+                    else:
+                        result[name] = row['value']
         elif aggregation == 'delta':
             cur.execute("""
                 SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
@@ -492,7 +499,7 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
         if missing_ids:
             if aggregation == 'last':
                 cur.execute("""
-                    SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                    SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value, a.value_text
                     FROM tag_history_archive a
                     WHERE a.tag_id = ANY(%s)
                       AND a.archive_hour >= %s::timestamp
@@ -501,11 +508,15 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
                 """, (missing_ids, from_dt, to_dt))
                 for row in cur.fetchall():
                     name = id_to_name.get(row['tag_id'])
-                    if name and row['value'] is not None:
+                    if not name:
+                        continue
+                    if row['value'] is None and row.get('value_text') not in (None, ''):
+                        result[name] = row['value_text']
+                    elif row['value'] is not None:
                         result[name] = row['value']
             elif aggregation == 'first':
                 cur.execute("""
-                    SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                    SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value, a.value_text
                     FROM tag_history_archive a
                     WHERE a.tag_id = ANY(%s)
                       AND a.archive_hour >= %s::timestamp
@@ -514,7 +525,11 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
                 """, (missing_ids, from_dt, to_dt))
                 for row in cur.fetchall():
                     name = id_to_name.get(row['tag_id'])
-                    if name and row['value'] is not None:
+                    if not name:
+                        continue
+                    if row['value'] is None and row.get('value_text') not in (None, ''):
+                        result[name] = row['value_text']
+                    elif row['value'] is not None:
                         result[name] = row['value']
             elif aggregation == 'delta':
                 cur.execute("""
@@ -1746,6 +1761,7 @@ def _expand_segment_rows(section_rows, tag_data, from_dt, to_dt):
         segment_tag = seg_cell['tagName']
         min_sec = int(seg_cell.get('segmentMinSeconds') or 60)
         ignore_values = seg_cell.get('segmentIgnoreValues') or [0]
+        merge_duplicates = seg_cell.get('segmentMergeDuplicates', True) is not False
 
         companion_cells = [
             {'tagName': c['tagName'], 'aggregation': c.get('aggregation', 'last')}
@@ -1761,6 +1777,7 @@ def _expand_segment_rows(section_rows, tag_data, from_dt, to_dt):
                 to_dt=to_dt,
                 min_segment_seconds=min_sec,
                 ignore_values=ignore_values,
+                merge_duplicates=merge_duplicates,
             )
         except Exception as e:
             logger.warning("_expand_segment_rows: segment computation failed for tag %s: %s", segment_tag, e)

@@ -80,6 +80,8 @@ MIGRATION_ORDER = [
     'add_tag_history_archive_unique_universal.sql',
     # Phase 8: Desktop app — license machine info
     'add_license_machine_info.sql',
+    # Phase 9: String-valued historian (value_text column)
+    'add_value_text_to_tag_history.sql',
 ]
 
 DIVIDER = '=' * 60

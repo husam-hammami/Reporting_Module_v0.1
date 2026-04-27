@@ -994,6 +994,12 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
               }}
               className="rb-input-base text-[11px] py-0.5 px-1" style={{ width: '80px' }} />
           </div>
+          <label className="flex items-center gap-1.5 cursor-pointer" title="When ON, segments with the same silo ID and same product (or other text identity values) are merged into one row. Numeric weights are summed.">
+            <input type="checkbox"
+              checked={cell.segmentMergeDuplicates !== false}
+              onChange={(e) => onChange({ ...cell, segmentMergeDuplicates: e.target.checked })} />
+            <span className="text-[10px] font-semibold" style={{ color: 'var(--rb-text-muted)' }}>Merge duplicates</span>
+          </label>
         </div>
       )}
 

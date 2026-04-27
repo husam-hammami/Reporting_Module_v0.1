@@ -77,7 +77,7 @@ def historian_worker():
             tag_meta = get_tag_metadata_map(get_db_connection)
             ts = datetime.datetime.now()
 
-            # Seed _last_tag_value from DB on first run
+            # Seed _last_tag_value from DB on first run (only numeric tags)
             if not _last_tag_value:
                 try:
                     with closing(get_db_connection()) as seed_conn:
@@ -85,10 +85,16 @@ def historian_worker():
                         seed_cur.execute("""
                             SELECT DISTINCT ON (tag_id) tag_id, value
                             FROM tag_history
+                            WHERE value IS NOT NULL
                             ORDER BY tag_id, "timestamp" DESC
                         """)
                         for row in seed_cur.fetchall():
-                            _last_tag_value[row["tag_id"]] = float(row["value"])
+                            if row.get("value") is None:
+                                continue
+                            try:
+                                _last_tag_value[row["tag_id"]] = float(row["value"])
+                            except (TypeError, ValueError):
+                                continue
                 except Exception as seed_err:
                     logger.debug("[Historian] Seed last values from DB: %s", seed_err)
 
@@ -101,6 +107,15 @@ def historian_worker():
                 is_counter = meta["is_counter"]
                 value_float = _tag_value_to_float(value)
                 if value_float is None:
+                    # Non-numeric tag (e.g. STRING — material/product name).
+                    # Persist as value_text so historical reports can read it back.
+                    if value is None:
+                        continue
+                    value_text = str(value).strip()
+                    if not value_text:
+                        continue
+                    # value, value_raw, value_delta are NULL for string rows
+                    hist_rows.append((None, tag_id, None, None, None, is_counter, 'GOOD', ts, None, value_text))
                     continue
                 value_raw = value_float
                 prev = _last_tag_value.get(tag_id)
@@ -112,7 +127,7 @@ def historian_worker():
                 else:
                     value_delta = 0.0
                 _last_tag_value[tag_id] = value_float
-                hist_rows.append((None, tag_id, value_float, value_raw, value_delta, is_counter, 'GOOD', ts, None))
+                hist_rows.append((None, tag_id, value_float, value_raw, value_delta, is_counter, 'GOOD', ts, None, None))
 
             if hist_rows:
                 with closing(get_db_connection()) as hist_conn:
@@ -126,7 +141,7 @@ def historian_worker():
                         execute_values(
                             hist_cur,
                             """INSERT INTO tag_history
-                               (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, "timestamp", order_name)
+                               (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, "timestamp", order_name, value_text)
                                VALUES %s""",
                             hist_rows,
                             page_size=100

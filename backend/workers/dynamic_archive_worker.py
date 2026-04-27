@@ -78,8 +78,9 @@ def dynamic_archive_worker():
                         if got_lock:
                             cursor.execute("""
                                 SELECT tag_id, BOOL_OR(is_counter) AS is_counter,
-                                       (array_agg(value ORDER BY "timestamp" DESC))[1]::double precision AS last_value,
-                                       CASE WHEN BOOL_OR(is_counter) THEN SUM(COALESCE(value_delta, 0))::double precision ELSE NULL END AS agg_delta
+                                       (array_agg(value ORDER BY "timestamp" DESC) FILTER (WHERE value IS NOT NULL))[1]::double precision AS last_value,
+                                       CASE WHEN BOOL_OR(is_counter) THEN SUM(COALESCE(value_delta, 0))::double precision ELSE NULL END AS agg_delta,
+                                       (array_agg(value_text ORDER BY "timestamp" DESC) FILTER (WHERE value_text IS NOT NULL))[1] AS last_text
                                 FROM tag_history
                                 WHERE layout_id IS NULL AND "timestamp" >= %s AND "timestamp" < %s
                                 GROUP BY tag_id
@@ -88,16 +89,21 @@ def dynamic_archive_worker():
                             logger.info(f"[Historian] Universal archive range {hour_start} – {archive_hour} → {len(agg_rows)} tag aggregates")
                             if agg_rows:
                                 insert_sql = """
-                                    INSERT INTO tag_history_archive (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, archive_hour, order_name)
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    INSERT INTO tag_history_archive (layout_id, tag_id, value, value_raw, value_delta, is_counter, quality_code, archive_hour, order_name, value_text)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                                     ON CONFLICT (tag_id, archive_hour) WHERE layout_id IS NULL DO NOTHING
                                 """
                                 for r in agg_rows:
                                     tag_id = r['tag_id']
                                     is_counter = bool(r.get('is_counter', False))
-                                    last_value = float(r['last_value']) if r.get('last_value') is not None else 0.0
+                                    last_value_raw = r.get('last_value')
+                                    last_value = float(last_value_raw) if last_value_raw is not None else None
                                     agg_delta = float(r['agg_delta']) if r.get('agg_delta') is not None else None
-                                    cursor.execute(insert_sql, (None, tag_id, last_value, None, agg_delta, is_counter, 'GOOD', archive_hour, None))
+                                    last_text = r.get('last_text')
+                                    # Skip rows that have neither numeric nor text data (defensive)
+                                    if last_value is None and not last_text:
+                                        continue
+                                    cursor.execute(insert_sql, (None, tag_id, last_value, None, agg_delta, is_counter, 'GOOD', archive_hour, None, last_text))
                                 conn.commit()
                                 logger.info(f"[Historian] Archived {len(agg_rows)} rows → tag_history_archive | {archive_hour}")
                             else:
@@ -135,11 +141,12 @@ def dynamic_archive_worker():
                     with closing(get_db_connection()) as conn:
                         cursor = conn.cursor()
 
-                        # Step 1: Roll up hourly → daily aggregates
+                        # Step 1: Roll up hourly → daily aggregates.
+                        # value_text rolls up as the latest non-null text seen during the day.
                         cursor.execute("""
                             INSERT INTO tag_history_archive
                                 (layout_id, tag_id, value, value_raw, value_delta,
-                                 is_counter, quality_code, archive_hour, granularity)
+                                 is_counter, quality_code, archive_hour, granularity, value_text)
                             SELECT
                                 layout_id, tag_id,
                                 AVG(value),
@@ -148,7 +155,8 @@ def dynamic_archive_worker():
                                 bool_or(is_counter),
                                 'GOOD',
                                 DATE_TRUNC('day', archive_hour),
-                                'daily'
+                                'daily',
+                                (array_agg(value_text ORDER BY archive_hour DESC) FILTER (WHERE value_text IS NOT NULL))[1]
                             FROM tag_history_archive
                             WHERE (granularity = 'hourly' OR granularity IS NULL)
                               AND archive_hour < NOW() - make_interval(days => %s)

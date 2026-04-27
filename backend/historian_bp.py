@@ -27,6 +27,27 @@ historian_bp = Blueprint("historian_bp", __name__)
 _cached_get_db_connection = None
 
 
+def _pick_value(row):
+    """
+    For tag_history / tag_history_archive rows, choose the right value column:
+      - String rows  (value IS NULL, value_text IS NOT NULL) → return value_text.
+      - Numeric rows                                          → return value (DOUBLE PRECISION).
+    """
+    if row is None:
+        return None
+    try:
+        v = row["value"]
+    except (KeyError, TypeError):
+        v = None
+    try:
+        vt = row["value_text"]
+    except (KeyError, TypeError):
+        vt = None
+    if v is None and vt is not None and vt != "":
+        return vt
+    return v
+
+
 def _parse_iso_to_naive_local(iso_str):
     """
     Parse an ISO timestamp string and return a naive datetime in the server's local time.
@@ -110,7 +131,7 @@ def get_history():
             cur = conn.cursor(cursor_factory=RealDictCursor)
             # tag_history JOIN tags for tag_name, unit
             sql = """
-                SELECT h.tag_id, t.tag_name, t.unit, h.value, h.timestamp, h.quality_code, h.order_name
+                SELECT h.tag_id, t.tag_name, t.unit, h.value, h.value_text, h.timestamp, h.quality_code, h.order_name
                 FROM tag_history h
                 JOIN tags t ON t.id = h.tag_id
                 WHERE h.layout_id = %s AND h.timestamp >= %s::timestamp AND h.timestamp <= %s::timestamp
@@ -164,7 +185,7 @@ def get_archive():
         with closing(get_db()) as conn:
             cur = conn.cursor(cursor_factory=RealDictCursor)
             sql = """
-                SELECT a.tag_id, t.tag_name, t.unit, a.value, a.archive_hour, a.order_name, a.quality_code
+                SELECT a.tag_id, t.tag_name, t.unit, a.value, a.value_text, a.archive_hour, a.order_name, a.quality_code
                 FROM tag_history_archive a
                 JOIN tags t ON t.id = a.tag_id
                 WHERE a.layout_id = %s AND a.archive_hour >= %s::timestamp AND a.archive_hour <= %s::timestamp
@@ -181,7 +202,7 @@ def get_archive():
             # Fallback: if no rows in range (e.g. client date/timezone mismatch), return latest archive data for this layout
             if not rows:
                 fallback_sql = """
-                    SELECT a.tag_id, t.tag_name, t.unit, a.value, a.archive_hour, a.order_name, a.quality_code
+                    SELECT a.tag_id, t.tag_name, t.unit, a.value, a.value_text, a.archive_hour, a.order_name, a.quality_code
                     FROM tag_history_archive a
                     JOIN tags t ON t.id = a.tag_id
                     WHERE a.layout_id = %s
@@ -255,10 +276,10 @@ def get_by_tags():
                 non_counter_ids = [tid for tid in tag_ids if tid not in counter_ids]
                 counter_id_list = [tid for tid in tag_ids if tid in counter_ids]
 
-                # Non-counters: last value from tag_history_archive
+                # Non-counters: last value from tag_history_archive (numeric or text)
                 if non_counter_ids:
                     cur.execute("""
-                        SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                        SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value, a.value_text
                         FROM tag_history_archive a
                         WHERE a.tag_id = ANY(%s)
                           AND a.archive_hour >= %s::timestamp
@@ -267,8 +288,9 @@ def get_by_tags():
                     """, (non_counter_ids, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
-                        if name and row["value"] is not None:
-                            result[name] = row["value"]
+                        picked = _pick_value(row)
+                        if name and picked is not None:
+                            result[name] = picked
 
                 # Counters: last − first from tag_history_archive value column.
                 # SUM(value_delta) is unreliable when value_delta is NULL after archiving.
@@ -298,7 +320,7 @@ def get_by_tags():
 
             elif aggregation == "last":
                 cur.execute("""
-                    SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
+                    SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value, h.value_text
                     FROM tag_history h
                     WHERE h.tag_id = ANY(%s)
                       AND h."timestamp" >= %s::timestamp
@@ -308,10 +330,10 @@ def get_by_tags():
                 for row in cur.fetchall():
                     name = id_to_name.get(row["tag_id"])
                     if name:
-                        result[name] = row["value"]
+                        result[name] = _pick_value(row)
             elif aggregation == "first":
                 cur.execute("""
-                    SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
+                    SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value, h.value_text
                     FROM tag_history h
                     WHERE h.tag_id = ANY(%s)
                       AND h."timestamp" >= %s::timestamp
@@ -321,7 +343,7 @@ def get_by_tags():
                 for row in cur.fetchall():
                     name = id_to_name.get(row["tag_id"])
                     if name:
-                        result[name] = row["value"]
+                        result[name] = _pick_value(row)
             elif aggregation == "delta":
                 cur.execute("""
                     SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
@@ -370,7 +392,7 @@ def get_by_tags():
                 missing_ids = [tid for tid, nm in id_to_name.items() if nm in missing_names]
                 if aggregation == "last":
                     cur.execute("""
-                        SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                        SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value, a.value_text
                         FROM tag_history_archive a
                         WHERE a.tag_id = ANY(%s)
                           AND a.archive_hour >= %s::timestamp
@@ -379,11 +401,12 @@ def get_by_tags():
                     """, (missing_ids, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
-                        if name and row["value"] is not None:
-                            result[name] = row["value"]
+                        picked = _pick_value(row)
+                        if name and picked is not None:
+                            result[name] = picked
                 elif aggregation == "first":
                     cur.execute("""
-                        SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+                        SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value, a.value_text
                         FROM tag_history_archive a
                         WHERE a.tag_id = ANY(%s)
                           AND a.archive_hour >= %s::timestamp
@@ -392,8 +415,9 @@ def get_by_tags():
                     """, (missing_ids, from_ts, to_ts))
                     for row in cur.fetchall():
                         name = id_to_name.get(row["tag_id"])
-                        if name and row["value"] is not None:
-                            result[name] = row["value"]
+                        picked = _pick_value(row)
+                        if name and picked is not None:
+                            result[name] = picked
                 elif aggregation == "delta":
                     cur.execute("""
                         SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
@@ -470,10 +494,12 @@ def get_row_segments():
             "t_start": "2026-04-27T06:00:00",
             "t_end":   "2026-04-27T08:30:00",
             "silo_id": 101,
-            "values": {
-              "G01_REAL02":  {"agg": "delta", "value": 12.3, "first": 1000.0, "last": 1012.3},
-              "G01_MatName": {"agg": "last",  "value": "Barley", "first": "Barley", "last": "Barley"}
-            }
+            "values": [
+              {"tagName": "G01_REAL02",  "agg": "delta", "value": 12.3,    "first": 1000.0, "last": 1012.3},
+              {"tagName": "G01_REAL02",  "agg": "first", "value": 1000.0,  "first": 1000.0, "last": 1012.3},
+              {"tagName": "G01_REAL02",  "agg": "last",  "value": 1012.3,  "first": 1000.0, "last": 1012.3},
+              {"tagName": "G01_MatName", "agg": "last",  "value": "Barley", "first": "Barley", "last": "Barley"}
+            ]
           }, ...
         ]
       }
@@ -512,6 +538,7 @@ def get_row_segments():
         min_sec = int(row_def.get("min_segment_seconds", 60))
         ignore_values = row_def.get("ignore_values", [0])
         companion_cells = row_def.get("companion_cells", [])
+        merge_duplicates = bool(row_def.get("merge_duplicates", True))
 
         try:
             segments = compute_row_segments(
@@ -521,27 +548,29 @@ def get_row_segments():
                 to_dt=to_dt,
                 min_segment_seconds=min_sec,
                 ignore_values=ignore_values,
+                merge_duplicates=merge_duplicates,
             )
         except Exception as e:
             logger.exception("row-segments: compute failed for row %s: %s", row_id, e)
             segments = []
 
-        # Serialise datetimes to ISO strings
+        # Serialise datetimes + values list to JSON-friendly form
         serialised = []
         for seg in segments:
+            values_out = []
+            for entry in seg.get("values", []):
+                values_out.append({
+                    "tagName": entry.get("tagName"),
+                    "agg":     entry.get("agg"),
+                    "value":   _serialise_value(entry.get("value")),
+                    "first":   _serialise_value(entry.get("first")),
+                    "last":    _serialise_value(entry.get("last")),
+                })
             serialised.append({
                 "t_start": seg["t_start"].isoformat() if hasattr(seg["t_start"], "isoformat") else str(seg["t_start"]),
                 "t_end":   seg["t_end"].isoformat()   if hasattr(seg["t_end"],   "isoformat") else str(seg["t_end"]),
                 "silo_id": seg["silo_id"],
-                "values":  {
-                    tag_name: {
-                        "agg":   info.get("agg"),
-                        "value": _serialise_value(info.get("value")),
-                        "first": _serialise_value(info.get("first")),
-                        "last":  _serialise_value(info.get("last")),
-                    }
-                    for tag_name, info in seg.get("values", {}).items()
-                },
+                "values":  values_out,
             })
         result[row_id] = serialised
 
@@ -549,12 +578,24 @@ def get_row_segments():
 
 
 def _serialise_value(v):
-    """Convert a DB value to JSON-serialisable form."""
+    """Convert a DB value to JSON-serialisable form.
+    Numbers (including Decimal) → int if whole, else float.
+    Strings remain as strings.
+    """
     if v is None:
         return None
+    # Already a string: keep as-is
+    if isinstance(v, str):
+        return v
+    # Already an int/float: normalise (Decimal → float)
+    if isinstance(v, (int, float)):
+        try:
+            return int(v) if float(v) == int(float(v)) else float(v)
+        except (TypeError, ValueError):
+            return v
+    # psycopg2 may return Decimal; try float
     try:
         f = float(v)
-        # Return int if it's a whole number (silo IDs etc.)
         return int(f) if f == int(f) else f
     except (TypeError, ValueError):
         return str(v)
@@ -608,7 +649,7 @@ def get_time_series():
 
             result = {}
 
-            # First try: raw tag_history (per-sample data)
+            # First try: raw tag_history (per-sample data) — numeric only (charts can't plot strings)
             # Count total rows to decide if downsampling is needed
             cur.execute("""
                 SELECT COUNT(*) AS cnt
@@ -616,6 +657,7 @@ def get_time_series():
                 WHERE h.tag_id = ANY(%s)
                   AND h."timestamp" >= %s::timestamp
                   AND h."timestamp" <= %s::timestamp
+                  AND h.value IS NOT NULL
             """, (tag_ids, from_ts, to_ts))
             total_count = cur.fetchone()["cnt"]
 
@@ -629,6 +671,7 @@ def get_time_series():
                         WHERE h.tag_id = ANY(%s)
                           AND h."timestamp" >= %s::timestamp
                           AND h."timestamp" <= %s::timestamp
+                          AND h.value IS NOT NULL
                         ORDER BY h."timestamp"
                     """, (tag_ids, from_ts, to_ts))
                 else:
@@ -645,6 +688,7 @@ def get_time_series():
                         WHERE h.tag_id = ANY(%s)
                           AND h."timestamp" >= %s::timestamp
                           AND h."timestamp" <= %s::timestamp
+                          AND h.value IS NOT NULL
                         GROUP BY h.tag_id,
                                  FLOOR(EXTRACT(EPOCH FROM h."timestamp") / GREATEST(1, bounds.range_secs / %s))
                         ORDER BY t_ms
@@ -657,7 +701,7 @@ def get_time_series():
                             result[name] = []
                         result[name].append({"t": round(row["t_ms"]), "v": float(row["value"])})
 
-            # Fallback: if no data from tag_history, try tag_history_archive (hourly)
+            # Fallback: if no data from tag_history, try tag_history_archive (hourly) — numeric only
             if not result:
                 cur.execute("""
                     SELECT a.tag_id, a.value,
@@ -666,6 +710,7 @@ def get_time_series():
                     WHERE a.tag_id = ANY(%s)
                       AND a.archive_hour >= %s::timestamp
                       AND a.archive_hour <= %s::timestamp
+                      AND a.value IS NOT NULL
                     ORDER BY a.archive_hour
                 """, (tag_ids, from_ts, to_ts))
                 for row in cur.fetchall():

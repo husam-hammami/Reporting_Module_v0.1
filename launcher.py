@@ -455,6 +455,7 @@ def run_setup():
         "add_must_change_password.sql",
         "create_hercules_ai_tables.sql",
         "add_ai_summary_to_distribution.sql",
+        "add_value_text_to_tag_history.sql",
     ]
 
     for sql_file in migration_order:

@@ -170,13 +170,35 @@ def _fetch_companion_value(cur, tag_id, aggregation, t_start, t_end):
     Fetch a single aggregated value for a companion tag within [t_start, t_end].
     Returns (value, first_value, last_value) — first/last always populated for delta calcs.
     Falls back to archive if no raw history found.
+
+    For first/last, prefers value_text when set (string tags like material name).
     """
     first_val = None
     last_val = None
 
+    def _pick(row):
+        """
+        Pick the right value column for this row:
+          - Numeric rows (value IS NOT NULL) → return numeric value (Weight etc.)
+          - String rows  (value IS NULL, value_text IS NOT NULL) → return text (Product etc.)
+        """
+        if row is None:
+            return None
+        try:
+            v = row["value"]
+        except (KeyError, TypeError):
+            v = None
+        try:
+            vt = row["value_text"]
+        except (KeyError, TypeError):
+            vt = None
+        if v is None and vt is not None and vt != "":
+            return vt
+        return v
+
     # Try tag_history first
     cur.execute("""
-        SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
+        SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value, h.value_text
         FROM tag_history h
         WHERE h.tag_id = %s
           AND h."timestamp" >= %s::timestamp
@@ -186,10 +208,10 @@ def _fetch_companion_value(cur, tag_id, aggregation, t_start, t_end):
     row = cur.fetchone()
     has_raw = row is not None
     if row:
-        first_val = row["value"]
+        first_val = _pick(row)
 
     cur.execute("""
-        SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value
+        SELECT DISTINCT ON (h.tag_id) h.tag_id, h.value, h.value_text
         FROM tag_history h
         WHERE h.tag_id = %s
           AND h."timestamp" >= %s::timestamp
@@ -198,12 +220,12 @@ def _fetch_companion_value(cur, tag_id, aggregation, t_start, t_end):
     """, (tag_id, t_start, t_end))
     row = cur.fetchone()
     if row:
-        last_val = row["value"]
+        last_val = _pick(row)
 
     if not has_raw:
         # Archive fallback
         cur.execute("""
-            SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+            SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value, a.value_text
             FROM tag_history_archive a
             WHERE a.tag_id = %s
               AND a.archive_hour >= %s::timestamp
@@ -212,10 +234,10 @@ def _fetch_companion_value(cur, tag_id, aggregation, t_start, t_end):
         """, (tag_id, t_start, t_end))
         row = cur.fetchone()
         if row:
-            first_val = row["value"]
+            first_val = _pick(row)
 
         cur.execute("""
-            SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value
+            SELECT DISTINCT ON (a.tag_id) a.tag_id, a.value, a.value_text
             FROM tag_history_archive a
             WHERE a.tag_id = %s
               AND a.archive_hour >= %s::timestamp
@@ -224,7 +246,7 @@ def _fetch_companion_value(cur, tag_id, aggregation, t_start, t_end):
         """, (tag_id, t_start, t_end))
         row = cur.fetchone()
         if row:
-            last_val = row["value"]
+            last_val = _pick(row)
 
     # Compute aggregation
     if aggregation in ("avg", "min", "max", "sum", "count"):
@@ -280,6 +302,7 @@ def compute_row_segments(
     to_dt,
     min_segment_seconds=60,
     ignore_values=None,
+    merge_duplicates=True,
     get_conn=None,
 ):
     """
@@ -289,10 +312,15 @@ def compute_row_segments(
         segment_tag_name (str): Tag name that drives segmentation (e.g. "G01_DEST").
         companion_cells (list[dict]): Each dict has {"tagName": str, "aggregation": str}.
             These are the other cells in the same row that need per-segment values.
+            The same tag MAY appear multiple times with different aggregations — each
+            aggregation is preserved separately in the output.
         from_dt: datetime (naive local) — start of time range.
         to_dt: datetime (naive local) — end of time range.
         min_segment_seconds (int): Segments shorter than this are merged into neighbor.
         ignore_values (list): Numeric IDs to ignore (default [0]).
+        merge_duplicates (bool): When True, segments sharing the same silo_id AND the same
+            non-numeric companion values (e.g. product name) are merged into a single row
+            with summed deltas/sums and combined time range.
         get_conn (callable): DB connection factory. Auto-resolved from app module if None.
 
     Returns:
@@ -302,10 +330,12 @@ def compute_row_segments(
             "t_start": datetime,
             "t_end": datetime,
             "silo_id": 101.0,
-            "values": {
-              "G01_REAL02": {"agg": "delta", "value": 12.3, "first": 1000.0, "last": 1012.3},
-              "G01_MatName": {"agg": "last", "value": "Barley", "first": ..., "last": ...}
-            }
+            "values": [
+              {"tagName": "G01_REAL02",  "agg": "delta", "value": 12.3,    "first": 1000.0, "last": 1012.3},
+              {"tagName": "G01_REAL02",  "agg": "first", "value": 1000.0,  "first": 1000.0, "last": 1012.3},
+              {"tagName": "G01_REAL02",  "agg": "last",  "value": 1012.3,  "first": 1000.0, "last": 1012.3},
+              {"tagName": "G01_MatName", "agg": "last",  "value": "Barley", "first": "Barley", "last": "Barley"}
+            ]
           }, ...
         ]
     """
@@ -357,49 +387,204 @@ def compute_row_segments(
                 return []
 
             # ── Step 5: Resolve companion cells per segment ──
-            # Pre-resolve companion tag IDs
+            # Pre-resolve companion tag IDs (one tag may appear in multiple cells)
             companion_tag_names = list({c["tagName"] for c in companion_cells if c.get("tagName")})
             if companion_tag_names:
                 tag_map, _ = _query_tag_ids(cur, companion_tag_names)
             else:
                 tag_map = {}
 
+            # Dedupe (tag, agg) pairs so we don't run identical sub-queries twice.
+            seen_pairs = set()
+            unique_companions = []
+            for cell in companion_cells:
+                tag_name = cell.get("tagName")
+                agg = cell.get("aggregation", "last") or "last"
+                if not tag_name:
+                    continue
+                key = (tag_name, agg)
+                if key in seen_pairs:
+                    continue
+                seen_pairs.add(key)
+                unique_companions.append((tag_name, agg))
+
             segments = []
             for run in runs:
                 t_start = run["t_start"]
                 t_end = run["t_end"]
 
-                values = {}
-                for cell in companion_cells:
-                    tag_name = cell.get("tagName")
-                    agg = cell.get("aggregation", "last")
-                    if not tag_name:
-                        continue
+                values_list = []
+                for tag_name, agg in unique_companions:
                     companion_tag_id = tag_map.get(tag_name)
                     if companion_tag_id is None:
-                        values[tag_name] = {"agg": agg, "value": None, "first": None, "last": None}
+                        values_list.append({
+                            "tagName": tag_name, "agg": agg,
+                            "value": None, "first": None, "last": None,
+                        })
                         continue
                     try:
                         val, first_val, last_val = _fetch_companion_value(
                             cur, companion_tag_id, agg, t_start, t_end
                         )
-                        values[tag_name] = {"agg": agg, "value": val, "first": first_val, "last": last_val}
+                        values_list.append({
+                            "tagName": tag_name, "agg": agg,
+                            "value": val, "first": first_val, "last": last_val,
+                        })
                     except Exception as e:
-                        logger.warning("segment_engine: companion query failed for %s: %s", tag_name, e)
-                        values[tag_name] = {"agg": agg, "value": None, "first": None, "last": None}
+                        logger.warning("segment_engine: companion query failed for %s/%s: %s", tag_name, agg, e)
+                        values_list.append({
+                            "tagName": tag_name, "agg": agg,
+                            "value": None, "first": None, "last": None,
+                        })
 
                 segments.append({
                     "t_start": t_start,
                     "t_end": t_end,
                     "silo_id": run["id"],
-                    "values": values,
+                    "values": values_list,
                 })
+
+            # ── Step 6: Merge duplicate (silo_id, identity) segments ──
+            if merge_duplicates and segments:
+                segments = merge_segments_by_identity(segments)
 
             return segments
 
     except Exception as e:
         logger.exception("segment_engine: compute_row_segments failed: %s", e)
         return []
+
+
+def _is_identity_value(v):
+    """
+    Heuristic: an identity value is one that should be the same across merged segments.
+    Strings (product names, status text) are identity. Numbers (counters, weights) are
+    window-dependent and not identity.
+    """
+    if v is None:
+        return False
+    if isinstance(v, (int, float)):
+        return False
+    try:
+        float(v)
+        return False  # parseable as number → window-dependent
+    except (ValueError, TypeError):
+        return True  # non-numeric string → identity-like
+
+
+def _identity_key(segment):
+    """
+    Build an identity key for a segment: (silo_id, tuple of (tagName, agg, value) for
+    companion cells whose value is non-numeric and aggregation is first/last).
+    """
+    parts = []
+    for entry in segment.get("values", []):
+        agg = entry.get("agg")
+        if agg not in ("first", "last"):
+            continue
+        val = entry.get("value")
+        if not _is_identity_value(val):
+            continue
+        parts.append((entry.get("tagName"), agg, str(val)))
+    parts.sort()
+    return (segment.get("silo_id"), tuple(parts))
+
+
+def merge_segments_by_identity(segments):
+    """
+    Group segments sharing the same (silo_id, identity-companion-values) key and combine them.
+
+    Combination rules per companion entry:
+      - delta / sum / count → sum across segments
+      - avg                  → simple mean of segment averages
+      - min                  → min across segments
+      - max                  → max across segments
+      - first                → from chronologically earliest segment in the group
+      - last                 → from chronologically latest segment in the group
+
+    Time range: t_start = min, t_end = max. Output sorted by t_start ASC.
+    """
+    groups = {}  # key → list of segments
+    order = []
+
+    for seg in segments:
+        key = _identity_key(seg)
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(seg)
+
+    merged = []
+    for key in order:
+        group = groups[key]
+        if len(group) == 1:
+            merged.append(group[0])
+            continue
+
+        # Sort group chronologically for first/last picking
+        group_sorted = sorted(group, key=lambda s: s["t_start"])
+        first_seg = group_sorted[0]
+        last_seg = group_sorted[-1]
+
+        merged_values = []
+        # Use the first segment's companion list as the template
+        for ref_entry in first_seg.get("values", []):
+            tag_name = ref_entry.get("tagName")
+            agg = ref_entry.get("agg")
+
+            # Collect this (tag,agg) entry across all segments in the group
+            entries = []
+            for s in group_sorted:
+                for e in s.get("values", []):
+                    if e.get("tagName") == tag_name and e.get("agg") == agg:
+                        entries.append(e)
+                        break
+
+            numeric_vals = []
+            for e in entries:
+                v = e.get("value")
+                try:
+                    if v is not None:
+                        numeric_vals.append(float(v))
+                except (TypeError, ValueError):
+                    pass
+
+            if agg in ("delta", "sum", "count"):
+                merged_val = sum(numeric_vals) if numeric_vals else None
+            elif agg == "min":
+                merged_val = min(numeric_vals) if numeric_vals else None
+            elif agg == "max":
+                merged_val = max(numeric_vals) if numeric_vals else None
+            elif agg == "avg":
+                merged_val = (sum(numeric_vals) / len(numeric_vals)) if numeric_vals else None
+            elif agg == "first":
+                merged_val = entries[0].get("value") if entries else None
+            elif agg == "last":
+                merged_val = entries[-1].get("value") if entries else None
+            else:
+                merged_val = entries[-1].get("value") if entries else None
+
+            # Combined first/last for this tag across the group's chronological range
+            combined_first = entries[0].get("first") if entries else None
+            combined_last = entries[-1].get("last") if entries else None
+
+            merged_values.append({
+                "tagName": tag_name,
+                "agg": agg,
+                "value": merged_val,
+                "first": combined_first,
+                "last": combined_last,
+            })
+
+        merged.append({
+            "t_start": first_seg["t_start"],
+            "t_end": last_seg["t_end"],
+            "silo_id": first_seg["silo_id"],
+            "values": merged_values,
+        })
+
+    merged.sort(key=lambda s: s["t_start"])
+    return merged
 
 
 def build_tag_overlay(segment, segment_tag_name):
@@ -410,33 +595,58 @@ def build_tag_overlay(segment, segment_tag_name):
     that resolveCellValue (both Python and JS) picks up the right per-segment values.
 
     Keys produced:
-      silo_segments::<segment_tag_name>   → silo_id   (for the ID cell)
-      <tagName>                           → value      (for default/last aggregation)
-      delta::<tagName>                    → value      (for delta cells)
-      first::<tagName>                    → first val  (for first cells)
-      avg::<tagName> / sum:: / etc.       → agg value
+      silo_segments::<segment_tag_name>   → silo_id    (for the ID cell)
+      <tagName>                           → primary value (last value if available)
+      delta::<tagName>                    → delta value (per cell)
+      first::<tagName>                    → first val   (per cell)
+      last::<tagName>                     → last val
+      sum::<tagName> / avg:: / etc.       → agg value
     """
     overlay = {}
     # Silo ID key
     overlay[f"silo_segments::{segment_tag_name}"] = segment["silo_id"]
 
-    for tag_name, info in segment.get("values", {}).items():
-        agg = info.get("agg", "last")
-        val = info.get("value")
-        first_val = info.get("first")
-        last_val = info.get("last")
+    values = segment.get("values", [])
 
-        # Always populate plain tagName with the primary resolved value
-        overlay[tag_name] = val
+    # Backwards-compat: support legacy dict-shaped values too.
+    if isinstance(values, dict):
+        legacy = []
+        for tag_name, info in values.items():
+            legacy.append({
+                "tagName": tag_name,
+                "agg": info.get("agg", "last"),
+                "value": info.get("value"),
+                "first": info.get("first"),
+                "last": info.get("last"),
+            })
+        values = legacy
 
-        # Always populate first:: and last:: so fallback lookups work
-        if first_val is not None:
-            overlay[f"first::{tag_name}"] = first_val
-        if last_val is not None:
-            overlay[f"last::{tag_name}"] = last_val
+    for entry in values:
+        tag_name = entry.get("tagName")
+        agg = entry.get("agg") or "last"
+        val = entry.get("value")
+        first_val = entry.get("first")
+        last_val = entry.get("last")
+        if not tag_name:
+            continue
 
-        # Namespace the actual aggregation value as agg::tagName
-        if agg and agg != "last":
+        # Namespace the actual aggregation value as agg::tagName.
+        # 'last' is the default — also populate plain key.
+        if agg == "last":
+            overlay[tag_name] = val
+            if last_val is not None:
+                overlay[f"last::{tag_name}"] = last_val
+            if first_val is not None:
+                overlay.setdefault(f"first::{tag_name}", first_val)
+        else:
             overlay[f"{agg}::{tag_name}"] = val
+            # Set first/last namespaces if not already
+            if first_val is not None:
+                overlay.setdefault(f"first::{tag_name}", first_val)
+            if last_val is not None:
+                overlay.setdefault(f"last::{tag_name}", last_val)
+            # Provide a sensible plain-key fallback (last value preferred)
+            if tag_name not in overlay:
+                overlay[tag_name] = last_val if last_val is not None else val
 
     return overlay
