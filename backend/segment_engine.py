@@ -572,9 +572,20 @@ def merge_segments_by_identity(segments):
                 except (TypeError, ValueError):
                     pass
 
+            # Combined first/last for this tag across the group's chronological range
+            combined_first = entries[0].get("first") if entries else None
+            combined_last = entries[-1].get("last") if entries else None
+
             na = companion_agg_base_kind(agg)
             if na in ("delta", "sum", "count"):
-                merged_val = sum(numeric_vals) if numeric_vals else None
+                # silo_delta: match displayed silo_first / silo_last (net change across merged window)
+                if agg == "silo_delta":
+                    try:
+                        merged_val = float(combined_last) - float(combined_first)
+                    except (TypeError, ValueError):
+                        merged_val = sum(numeric_vals) if numeric_vals else None
+                else:
+                    merged_val = sum(numeric_vals) if numeric_vals else None
             elif na == "min":
                 merged_val = min(numeric_vals) if numeric_vals else None
             elif na == "max":
@@ -587,10 +598,6 @@ def merge_segments_by_identity(segments):
                 merged_val = entries[-1].get("value") if entries else None
             else:
                 merged_val = entries[-1].get("value") if entries else None
-
-            # Combined first/last for this tag across the group's chronological range
-            combined_first = entries[0].get("first") if entries else None
-            combined_last = entries[-1].get("last") if entries else None
 
             merged_values.append({
                 "tagName": tag_name,
@@ -679,3 +686,17 @@ def build_tag_overlay(segment, segment_tag_name):
                 overlay[tag_name] = last_val if last_val is not None else val
 
     return overlay
+
+
+def merge_segment_overlay_into_tag_data(row: dict, tag_data: dict, overlay: dict) -> dict:
+    """
+    Merge global historian tag_data with a per-segment overlay for PDF/XLSX rendering.
+
+    Drops range-wide ``delta::<tag>`` when this row uses ``silo_delta`` for the same tag,
+    so a mis-tagged cell or stale key cannot override silo-scoped weight with full-period delta.
+    """
+    out = {**tag_data, **overlay}
+    for c in row.get("cells") or []:
+        if c.get("sourceType") == "tag" and c.get("aggregation") == "silo_delta" and c.get("tagName"):
+            out.pop(f"delta::{c['tagName']}", None)
+    return out

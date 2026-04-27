@@ -367,6 +367,17 @@ function resolveTagKey(tagName, aggregation) {
   return `${aggregation}::${tagName}`;
 }
 
+/** Merge historian + segment overlay; strip full-range `delta::tag` when row uses `silo_delta` for that tag. */
+function mergeTagValuesForSiloExpandedRow(segRow, tagValues, segOverlay) {
+  const merged = { ...tagValues, ...segOverlay };
+  (segRow.cells || []).forEach((c) => {
+    if (c.sourceType === 'tag' && c.aggregation === 'silo_delta' && c.tagName) {
+      delete merged[`delta::${c.tagName}`];
+    }
+  });
+  return merged;
+}
+
 function clampDecimals0to10(n) {
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.min(10, Math.round(n)));
@@ -1783,7 +1794,10 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                     const segList = expandedRows[row.id];
                     if (isSegRow && Array.isArray(segList) && segList.length > 0) {
                       // Replace with one render entry per segment
-                      segList.forEach((segRow) => renderRows.push({ row: segRow, _tv: { ...tagValues, ...segRow._segTagValues } }));
+                      segList.forEach((segRow) => renderRows.push({
+                        row: segRow,
+                        _tv: mergeTagValuesForSiloExpandedRow(segRow, tagValues, segRow._segTagValues),
+                      }));
                     } else {
                       if (!isRowHidden(row, section, tagValues, tagDecimalByName)) {
                         renderRows.push({ row, _tv: tagValues });
@@ -1870,7 +1884,10 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
                           const isSegRow = isPreviewMode && Array.isArray(row.cells) &&
                             row.cells.some((c) => c.sourceType === 'tag' && c.aggregation === 'silo_segments');
                           if (isSegRow && Array.isArray(segList) && segList.length > 0) {
-                            segList.forEach((segRow) => rr.push({ row: segRow, _tv: { ...tagValues, ...segRow._segTagValues } }));
+                            segList.forEach((segRow) => rr.push({
+                              row: segRow,
+                              _tv: mergeTagValuesForSiloExpandedRow(segRow, tagValues, segRow._segTagValues),
+                            }));
                           } else {
                             rr.push({ row, _tv: tagValues });
                           }

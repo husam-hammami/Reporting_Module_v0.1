@@ -1742,7 +1742,7 @@ def _expand_segment_rows(section_rows, tag_data, from_dt, to_dt):
     Returns a list of (row_dict, effective_tag_data) tuples.
     """
     try:
-        from segment_engine import compute_row_segments, build_tag_overlay
+        from segment_engine import compute_row_segments, build_tag_overlay, merge_segment_overlay_into_tag_data
     except ImportError:
         logger.warning("_expand_segment_rows: segment_engine not available; skipping expansion")
         return [(row, tag_data) for row in section_rows]
@@ -1790,7 +1790,7 @@ def _expand_segment_rows(section_rows, tag_data, from_dt, to_dt):
 
         for seg in segments:
             overlay = build_tag_overlay(seg, segment_tag)
-            effective_td = {**tag_data, **overlay}
+            effective_td = merge_segment_overlay_into_tag_data(row, tag_data, overlay)
             result.append((row, effective_td))
 
     return result
