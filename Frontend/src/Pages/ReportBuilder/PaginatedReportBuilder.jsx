@@ -2160,6 +2160,74 @@ function newJobLogsGroupId() {
   return `jg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+/**
+ * Build `jobLogsDetailGroups`: one card per paginated `table` section.
+ * Title = `section.label` or `Table {n}`; tags = same dependency scan as table rows in
+ * {@link collectPaginatedTagNames} (tag cells, formula refs, group tags, mapping input + lookup targets,
+ * section summary formulas). Sections with no discoverable tags are skipped.
+ */
+export function buildJobLogsDetailGroupsFromPaginatedSections(sections) {
+  if (!Array.isArray(sections)) return [];
+  const mappings = getCachedMappings();
+
+  const pushTag = (seen, order, t) => {
+    if (!t || typeof t !== 'string') return;
+    const x = t.trim();
+    if (!x || seen.has(x)) return;
+    seen.add(x);
+    order.push(x);
+  };
+
+  const addMappingTags = (seen, order, mappingName) => {
+    if (!mappingName) return;
+    const m = mappings?.find((mx) => (mx.name || mx.id) === mappingName);
+    if (m?.input_tag) pushTag(seen, order, m.input_tag);
+    if (m?.output_type === 'tag_value' && m?.lookup) {
+      Object.values(m.lookup).forEach((tagName) => pushTag(seen, order, tagName));
+    }
+  };
+
+  const tagsFromTableSection = (section) => {
+    const seen = new Set();
+    const order = [];
+    if (!section || section.type !== 'table' || !Array.isArray(section.rows)) return order;
+    section.rows.forEach((row) => {
+      if (!Array.isArray(row.cells)) return;
+      row.cells.forEach((cell) => {
+        if (!cell) return;
+        if (cell.tagName) pushTag(seen, order, cell.tagName);
+        if (cell.formula) extractTagRefs(cell.formula).forEach((t) => pushTag(seen, order, t));
+        if (cell.sourceType === 'group' && Array.isArray(cell.groupTags)) {
+          cell.groupTags.forEach((t) => pushTag(seen, order, t));
+        }
+        if (cell.sourceType === 'mapping' && cell.mappingName) {
+          addMappingTags(seen, order, cell.mappingName);
+        }
+      });
+    });
+    if (section.summaryFormula) {
+      extractTagRefs(section.summaryFormula).forEach((t) => pushTag(seen, order, t));
+    }
+    (section.columns || []).forEach((col) => {
+      if (col?.summary?.formula) extractTagRefs(col.summary.formula).forEach((t) => pushTag(seen, order, t));
+    });
+    return order;
+  };
+
+  let tableOrdinal = 0;
+  const out = [];
+  for (const section of sections) {
+    if (!section || section.type !== 'table') continue;
+    tableOrdinal += 1;
+    const tags = tagsFromTableSection(section);
+    if (tags.length === 0) continue;
+    const label = section.label && String(section.label).trim();
+    const title = label || `Table ${tableOrdinal}`;
+    out.push({ id: newJobLogsGroupId(), title, tags });
+  }
+  return out;
+}
+
 /** Cards for Job Logs detail: layout_config.jobLogsDetailGroups, or legacy flat jobLogsDetailTags. */
 function jobLogsGroupsFromLayout(layout) {
   const raw = layout?.jobLogsDetailGroups;
@@ -2292,6 +2360,23 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
     saveAllGroups(next);
   };
 
+  const tableCardsPreview = useMemo(
+    () => buildJobLogsDetailGroupsFromPaginatedSections(sections),
+    [sections],
+  );
+
+  const cardsFromReportTables = () => {
+    const next = buildJobLogsDetailGroupsFromPaginatedSections(sections);
+    if (next.length === 0) return;
+    if (groups.length > 0) {
+      const ok = window.confirm(
+        'Replace current Job logs cards with one card per paginated table section? Titles use each table section label (e.g. Job Products, Receiver ID).',
+      );
+      if (!ok) return;
+    }
+    saveAllGroups(next);
+  };
+
   const clearToAllReportTags = () => saveAllGroups(null);
 
   const modeLabel = hasCustomCards
@@ -2317,8 +2402,8 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
       {expanded && (
         <div className="px-3 py-2.5 space-y-2" style={{ borderTop: '1px solid var(--rb-border)' }}>
           <p className="text-[9px] leading-snug" style={{ color: 'var(--rb-text-muted)' }}>
-            Named cards appear as separate panels on the Job Logs page. Each card lists its tags with Start / End / Total.
-            Leave empty to use every tag from this report layout.
+            Named cards appear on the Job Logs page (order start/end). Each card lists tags with Start / End / Δ.
+            Leave empty to use every tag from this report layout. Use Cards from report tables to match paginated table sections.
           </p>
 
           {groups.length > 0 && (
@@ -2398,11 +2483,25 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
               className="rb-input-base text-[9px] font-bold uppercase px-2 py-1">
               Merge from report
             </button>
+            <button
+              type="button"
+              onClick={cardsFromReportTables}
+              disabled={tableCardsPreview.length === 0}
+              title={tableCardsPreview.length === 0 ? 'Add at least one table section with tag cells' : `${tableCardsPreview.length} table section(s)`}
+              className="rb-input-base text-[9px] font-bold uppercase px-2 py-1 flex items-center gap-0.5 disabled:opacity-40">
+              <Table2 size={10} />
+              Cards from tables
+            </button>
             <button type="button" onClick={clearToAllReportTags} disabled={!hasCustomCards && !hasLegacyOnly}
               className="rb-input-base text-[9px] font-bold uppercase px-2 py-1 disabled:opacity-40">
               Use all report tags
             </button>
           </div>
+          <p className="text-[9px] leading-snug" style={{ color: 'var(--rb-text-muted)' }}>
+            <strong>Cards from tables</strong> replaces Job logs cards with one card per <span className="font-mono">table</span> section
+            {tableCardsPreview.length > 0 ? ` (${tableCardsPreview.length} detected).` : ' (none — add table sections with tags).'}
+            {' '}Tag order follows row/cell order. Silo blocks use Job logs silo row settings.
+          </p>
         </div>
       )}
     </div>
