@@ -669,12 +669,21 @@ export default function JobLogsPage() {
                       No tags configured. Use Report Builder → Job logs cards.
                     </p>
                   ) : (
-                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 auto-rows-min">
+                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 min-w-0 w-full">
+                      {/*
+                        auto-fit + minmax: N cards share the row equally (2→50% each, 3→33%, …).
+                        Extra column tracks collapse so no dead space on the right.
+                      */}
+                      <div
+                        className="grid gap-2 auto-rows-min w-full"
+                        style={{
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
+                        }}
+                      >
                         {detailGroups.filter((g) => Array.isArray(g.tags) && g.tags.length > 0).map((group) => (
                           <div
                             key={group.id}
-                            className="rounded-md flex flex-col min-h-0 border overflow-hidden"
+                            className="rounded-md flex flex-col min-h-0 min-w-0 border overflow-hidden"
                             style={{ background: theme.surface, borderColor: theme.border }}
                           >
                             <div
