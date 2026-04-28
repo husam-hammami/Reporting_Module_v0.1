@@ -10,7 +10,8 @@ Endpoints:
   GET /orders/layouts           — report templates with order tracking configured
   GET /orders/jobs              — list orders for a template (paginated, time-filterable)
   GET /orders/jobs/<id>         — single order by primary key
-  GET /orders/layout-tags/<id>  — Job Logs tag list (optional layout_config.jobLogsDetailTags whitelist)
+  GET /orders/layout-tags/<id>  — Job Logs tags + optional grouped cards
+      (layout_config.jobLogsDetailGroups or legacy jobLogsDetailTags / layout extract)
 """
 
 import datetime
@@ -102,6 +103,78 @@ def _job_logs_detail_tags_whitelist(layout_config):
         seen.add(t)
         out.append(t)
     return out if out else None
+
+
+def _normalize_job_logs_group(obj, index):
+    """Return {id, title, tags} or None if obj is unusable."""
+    if not isinstance(obj, dict):
+        return None
+    title = (obj.get("title") or obj.get("label") or f"Group {index + 1}").strip() or f"Group {index + 1}"
+    gid = str(obj.get("id") or "").strip() or f"jg-{index}"
+    raw_tags = obj.get("tags")
+    tags_out = []
+    seen = set()
+    if isinstance(raw_tags, list):
+        for x in raw_tags:
+            if not isinstance(x, str):
+                continue
+            t = x.strip()
+            if not t or t in seen:
+                continue
+            seen.add(t)
+            tags_out.append(t)
+    return {"id": gid, "title": title, "tags": tags_out}
+
+
+def _job_logs_detail_groups_list(layout_config):
+    """Normalized groups from jobLogsDetailGroups, or None if absent/invalid."""
+    lc = _parse_layout_config_dict(layout_config)
+    raw = lc.get("jobLogsDetailGroups")
+    if not isinstance(raw, list) or len(raw) == 0:
+        return None
+    out = []
+    for i, g in enumerate(raw):
+        ng = _normalize_job_logs_group(g, i)
+        if ng is not None:
+            out.append(ng)
+    return out if out else None
+
+
+def _flatten_group_tags_in_order(groups):
+    """Union of tag names, first-seen order preserved (for historian query)."""
+    flat = []
+    seen = set()
+    for g in groups:
+        for t in g.get("tags") or []:
+            if t and t not in seen:
+                seen.add(t)
+                flat.append(t)
+    return flat
+
+
+def layout_tags_payload_for_template(layout_config):
+    """
+    Build (flat_names, groups) for GET /orders/layout-tags.
+
+    - jobLogsDetailGroups (non-empty): flat = union in group order; groups as stored (normalized).
+    - else jobLogsDetailTags whitelist: flat = whitelist; one synthetic group for UI.
+    - else: flat = all layout tags (sorted); one synthetic group titled for Job Logs panel.
+    """
+    groups = _job_logs_detail_groups_list(layout_config)
+    if groups is not None:
+        flat = _flatten_group_tags_in_order(groups)
+        return flat, groups
+
+    whitelist = _job_logs_detail_tags_whitelist(layout_config)
+    if whitelist is not None:
+        synthetic = [{"id": "legacy", "title": "Tag values", "tags": whitelist}]
+        return whitelist, synthetic
+
+    extracted = _extract_tag_names_from_layout_config(layout_config)
+    if not extracted:
+        return [], []
+    synthetic = [{"id": "default", "title": "Tag values at order start / end", "tags": extracted}]
+    return extracted, synthetic
 
 
 def _extract_tag_names_from_layout_config(layout_config):
@@ -226,10 +299,14 @@ def get_order_jobs():
 @login_required
 def get_layout_tag_names(template_id):
     """
-    Return tag names used for Job Logs historian queries.
+    Return tag names for Job Logs historian queries plus optional grouped cards.
 
-    If layout_config.jobLogsDetailTags is a non-empty array, returns that list only
-    (order preserved). Otherwise returns every tag referenced in paginatedSections and widgets.
+    Response: { "data": string[] , "groups": [{ "id", "title", "tags": string[] }, ...] }
+
+    - data: deduped flat list (union order) for /historian/by-tags.
+    - groups: card titles + per-card tag order; legacy templates get one synthetic group.
+
+    Older clients may read only `data` (unchanged type).
     """
     try:
         get_db = _get_db_connection()
@@ -243,12 +320,8 @@ def get_layout_tag_names(template_id):
         if not row:
             return jsonify({"error": "Template not found"}), 404
         lc = row["layout_config"]
-        whitelist = _job_logs_detail_tags_whitelist(lc)
-        if whitelist is not None:
-            tag_names = whitelist
-        else:
-            tag_names = _extract_tag_names_from_layout_config(lc)
-        return jsonify({"data": tag_names}), 200
+        tag_names, groups = layout_tags_payload_for_template(lc)
+        return jsonify({"data": tag_names, "groups": groups}), 200
     except Exception as e:
         logger.exception("orders/layout-tags/%s failed: %s", template_id, e)
         return jsonify({"error": str(e)}), 500

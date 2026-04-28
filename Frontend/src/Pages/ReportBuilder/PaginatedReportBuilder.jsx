@@ -2148,69 +2148,149 @@ function parseTemplateLayoutConfig(template) {
   }
 }
 
+function newJobLogsGroupId() {
+  return `jg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+/** Cards for Job Logs detail: layout_config.jobLogsDetailGroups, or legacy flat jobLogsDetailTags. */
+function jobLogsGroupsFromLayout(layout) {
+  const raw = layout?.jobLogsDetailGroups;
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw.map((row, i) => {
+      const id = String(row?.id || '').trim() || `jg-${i}`;
+      const title = (row?.title && String(row.title).trim()) || (row?.label && String(row.label).trim()) || `Card ${i + 1}`;
+      const tagList = Array.isArray(row?.tags)
+        ? row.tags.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim())
+        : [];
+      return { id, title, tags: tagList };
+    });
+  }
+  const legacy = Array.isArray(layout?.jobLogsDetailTags) ? layout.jobLogsDetailTags : [];
+  const tagList = legacy.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim());
+  if (tagList.length === 0) return [];
+  return [{ id: 'legacy', title: 'Tag values', tags: tagList }];
+}
+
 /**
- * Optional whitelist: layout_config.jobLogsDetailTags — tags shown in Job Logs order detail panel.
- * Empty / unset → backend uses all tags from the report layout.
+ * layout_config.jobLogsDetailGroups — named cards with tag lists for Job Logs.
+ * Empty / unset (and no legacy jobLogsDetailTags) → all tags from report layout.
  */
 function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
   const [expanded, setExpanded] = useState(false);
   const [filter, setFilter] = useState('');
-  const [pickValue, setPickValue] = useState('');
+  const [pendingPick, setPendingPick] = useState({});
 
   const layout = useMemo(() => parseTemplateLayoutConfig(template), [template?.layout_config]);
-  const selectedList = Array.isArray(layout.jobLogsDetailTags) ? layout.jobLogsDetailTags : [];
+  const groups = useMemo(() => jobLogsGroupsFromLayout(layout), [layout]);
 
-  const saveTags = useCallback((nextList) => {
+  const hasCustomCards = Array.isArray(layout.jobLogsDetailGroups) && layout.jobLogsDetailGroups.length > 0;
+  const hasLegacyOnly = !hasCustomCards && Array.isArray(layout.jobLogsDetailTags) && layout.jobLogsDetailTags.length > 0;
+
+  const saveAllGroups = useCallback((next) => {
     const base = parseTemplateLayoutConfig(template);
-    if (!nextList || nextList.length === 0) {
-      const rest = { ...base };
-      delete rest.jobLogsDetailTags;
+    const rest = { ...base };
+    delete rest.jobLogsDetailTags;
+    delete rest.jobLogsDetailGroups;
+    if (!next || next.length === 0) {
       updateMeta({ layout_config: rest });
       return;
     }
-    updateMeta({ layout_config: { ...base, jobLogsDetailTags: nextList } });
+    const normalized = next.map((g, i) => ({
+      id: String(g.id || newJobLogsGroupId()),
+      title: (g.title && String(g.title).trim()) || `Card ${i + 1}`,
+      tags: Array.isArray(g.tags) ? g.tags.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim()) : [],
+    }));
+    updateMeta({ layout_config: { ...rest, jobLogsDetailGroups: normalized } });
   }, [template, updateMeta]);
 
-  const tagOptions = useMemo(() => {
+  const tagOptionsForGroup = useCallback((groupId) => {
     const names = (tags || []).map((t) => t.tag_name || t).filter(Boolean);
     const q = filter.trim().toLowerCase();
     const pool = q ? names.filter((n) => n.toLowerCase().includes(q)) : names;
-    const sel = new Set(selectedList);
-    return pool.filter((n) => !sel.has(n)).slice(0, 120);
-  }, [tags, filter, selectedList]);
+    const g = groups.find((x) => x.id === groupId);
+    const inThis = new Set(g?.tags || []);
+    return pool.filter((n) => !inThis.has(n)).slice(0, 120);
+  }, [tags, filter, groups]);
 
-  const move = (idx, dir) => {
+  const setPickFor = (gid, val) => {
+    setPendingPick((prev) => ({ ...prev, [gid]: val }));
+  };
+
+  const addPickedToGroup = (gid) => {
+    const pick = pendingPick[gid];
+    if (!pick) return;
+    const next = groups.map((g) => {
+      if (g.id !== gid) return g;
+      if (g.tags.includes(pick)) return g;
+      return { ...g, tags: [...g.tags, pick] };
+    });
+    saveAllGroups(next);
+    setPickFor(gid, '');
+  };
+
+  const removeTagFromGroup = (gid, tagIdx) => {
+    const next = groups.map((g) => {
+      if (g.id !== gid) return g;
+      return { ...g, tags: g.tags.filter((_, i) => i !== tagIdx) };
+    });
+    saveAllGroups(next);
+  };
+
+  const moveTagInGroup = (gid, idx, dir) => {
+    const g = groups.find((x) => x.id === gid);
+    if (!g) return;
     const j = idx + dir;
-    if (j < 0 || j >= selectedList.length) return;
-    const cp = [...selectedList];
+    if (j < 0 || j >= g.tags.length) return;
+    const cp = [...g.tags];
     [cp[idx], cp[j]] = [cp[j], cp[idx]];
-    saveTags(cp);
+    const next = groups.map((x) => (x.id === gid ? { ...x, tags: cp } : x));
+    saveAllGroups(next);
   };
 
-  const removeAt = (idx) => {
-    saveTags(selectedList.filter((_, i) => i !== idx));
+  const updateGroupTitle = (gid, title) => {
+    const next = groups.map((g) => (g.id === gid ? { ...g, title } : g));
+    saveAllGroups(next);
   };
 
-  const addPicked = () => {
-    if (!pickValue || selectedList.includes(pickValue)) return;
-    saveTags([...selectedList, pickValue]);
-    setPickValue('');
+  const moveCard = (idx, dir) => {
+    const j = idx + dir;
+    if (j < 0 || j >= groups.length) return;
+    const cp = [...groups];
+    [cp[idx], cp[j]] = [cp[j], cp[idx]];
+    saveAllGroups(cp);
+  };
+
+  const removeCard = (idx) => {
+    saveAllGroups(groups.filter((_, i) => i !== idx));
+  };
+
+  const addEmptyCard = () => {
+    saveAllGroups([...groups, { id: newJobLogsGroupId(), title: 'New card', tags: [] }]);
   };
 
   const mergeFromReport = () => {
     const fromReport = collectPaginatedTagNames(sections);
-    const seen = new Set(selectedList);
-    const merged = [...selectedList];
+    if (fromReport.length === 0) return;
+    let next = groups.length
+      ? groups.map((g) => ({ ...g, tags: [...g.tags] }))
+      : [{ id: newJobLogsGroupId(), title: 'Tag values', tags: [] }];
+    const seen = new Set(next[0].tags);
     for (const n of fromReport) {
       if (n && !seen.has(n)) {
         seen.add(n);
-        merged.push(n);
+        next[0].tags.push(n);
       }
     }
-    saveTags(merged);
+    saveAllGroups(next);
   };
 
-  const modeLabel = selectedList.length > 0 ? `${selectedList.length} selected` : 'all report tags';
+  const clearToAllReportTags = () => saveAllGroups(null);
+
+  const modeLabel = hasCustomCards
+    ? `${groups.length} card${groups.length === 1 ? '' : 's'}`
+    : hasLegacyOnly
+      ? `${groups.reduce((n, g) => n + g.tags.length, 0)} tags (legacy)`
+      : 'all report tags';
 
   return (
     <div className="rounded-lg overflow-hidden mb-1"
@@ -2219,55 +2299,81 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
         type="button"
         onClick={() => setExpanded((e) => !e)}
         className="w-full px-3 py-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider"
-        style={{ color: selectedList.length ? '#38bdf8' : 'var(--rb-text-muted)', background: 'var(--rb-surface)' }}>
+        style={{ color: (hasCustomCards || hasLegacyOnly) ? '#38bdf8' : 'var(--rb-text-muted)', background: 'var(--rb-surface)' }}>
         <span className="flex items-center gap-1.5">
           <List size={11} />
-          Job logs tags ({modeLabel})
+          Job logs cards ({modeLabel})
         </span>
         <ChevronDown size={11} style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 150ms' }} />
       </button>
       {expanded && (
         <div className="px-3 py-2.5 space-y-2" style={{ borderTop: '1px solid var(--rb-border)' }}>
           <p className="text-[9px] leading-snug" style={{ color: 'var(--rb-text-muted)' }}>
-            Restrict the Job Logs panel to these tags only. Leave unset (use all report tags) to include every tag from this layout.
+            Named cards appear as separate panels on the Job Logs page. Each card lists its tags with Start / End / Total.
+            Leave empty to use every tag from this report layout.
           </p>
 
-          {selectedList.length > 0 && (
-            <ul className="space-y-0.5 max-h-32 overflow-y-auto rounded border px-1 py-0.5"
-              style={{ borderColor: 'var(--rb-border)', background: 'var(--rb-surface)' }}>
-              {selectedList.map((name, idx) => (
-                <li key={`${name}-${idx}`} className="flex items-center gap-0.5 text-[10px]" style={{ color: 'var(--rb-text)' }}>
-                  <span className="flex-1 truncate font-mono" title={name}>{name}</span>
-                  <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => move(idx, -1)} title="Move up">
-                    <ChevronUp size={10} />
-                  </button>
-                  <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => move(idx, 1)} title="Move down">
-                    <ChevronDown size={10} />
-                  </button>
-                  <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: '#f87171' }} onClick={() => removeAt(idx)} title="Remove">
-                    <X size={10} />
-                  </button>
-                </li>
+          {groups.length > 0 && (
+            <div className="space-y-2 max-h-[min(360px,50vh)] overflow-y-auto pr-0.5">
+              {groups.map((card, cardIdx) => (
+                <div key={card.id} className="rounded border p-2 space-y-1.5" style={{ borderColor: 'var(--rb-border)', background: 'var(--rb-surface)' }}>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={card.title}
+                      onChange={(e) => updateGroupTitle(card.id, e.target.value)}
+                      className="rb-input-base flex-1 text-[10px] py-0.5 px-1.5 font-semibold min-w-0"
+                      placeholder="Card title"
+                    />
+                    <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveCard(cardIdx, -1)} title="Move card up">
+                      <ChevronUp size={10} />
+                    </button>
+                    <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveCard(cardIdx, 1)} title="Move card down">
+                      <ChevronDown size={10} />
+                    </button>
+                    <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: '#f87171' }} onClick={() => removeCard(cardIdx)} title="Remove card">
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
+                  {card.tags.length > 0 && (
+                    <ul className="space-y-0.5 max-h-24 overflow-y-auto rounded border px-1 py-0.5" style={{ borderColor: 'var(--rb-border)', background: 'var(--rb-panel)' }}>
+                      {card.tags.map((name, idx) => (
+                        <li key={`${name}-${idx}`} className="flex items-center gap-0.5 text-[10px]" style={{ color: 'var(--rb-text)' }}>
+                          <span className="flex-1 truncate font-mono" title={name}>{name}</span>
+                          <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveTagInGroup(card.id, idx, -1)} title="Move up">
+                            <ChevronUp size={10} />
+                          </button>
+                          <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveTagInGroup(card.id, idx, 1)} title="Move down">
+                            <ChevronDown size={10} />
+                          </button>
+                          <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: '#f87171' }} onClick={() => removeTagFromGroup(card.id, idx)} title="Remove">
+                            <X size={10} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex gap-1 items-center">
+                    <select
+                      value={pendingPick[card.id] || ''}
+                      onChange={(e) => setPickFor(card.id, e.target.value)}
+                      className="rb-input-base flex-1 text-[10px] py-1 px-1 min-w-0"
+                    >
+                      <option value="">Add tag…</option>
+                      {tagOptionsForGroup(card.id).map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => addPickedToGroup(card.id)} disabled={!pendingPick[card.id]}
+                      className="rb-input-base text-[9px] font-bold uppercase px-2 py-1 shrink-0 disabled:opacity-40">
+                      Add
+                    </button>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
 
-          <div className="flex gap-1 items-center">
-            <select
-              value={pickValue}
-              onChange={(e) => setPickValue(e.target.value)}
-              className="rb-input-base flex-1 text-[10px] py-1 px-1 min-w-0"
-            >
-              <option value="">Add tag…</option>
-              {tagOptions.map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-            <button type="button" onClick={addPicked} disabled={!pickValue}
-              className="rb-input-base text-[9px] font-bold uppercase px-2 py-1 shrink-0 disabled:opacity-40">
-              Add
-            </button>
-          </div>
           <input
             type="search"
             value={filter}
@@ -2276,11 +2382,15 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
             className="rb-input-base w-full text-[10px] py-1 px-2"
           />
           <div className="flex flex-wrap gap-1">
+            <button type="button" onClick={addEmptyCard}
+              className="rb-input-base text-[9px] font-bold uppercase px-2 py-1 flex items-center gap-0.5">
+              <Plus size={10} /> Add card
+            </button>
             <button type="button" onClick={mergeFromReport}
               className="rb-input-base text-[9px] font-bold uppercase px-2 py-1">
               Merge from report
             </button>
-            <button type="button" onClick={() => saveTags([])} disabled={selectedList.length === 0}
+            <button type="button" onClick={clearToAllReportTags} disabled={!hasCustomCards && !hasLegacyOnly}
               className="rb-input-base text-[9px] font-bold uppercase px-2 py-1 disabled:opacity-40">
               Use all report tags
             </button>

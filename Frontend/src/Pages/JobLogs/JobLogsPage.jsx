@@ -154,14 +154,6 @@ function mergeTagStartEnd(firstMap, lastMap) {
   return out;
 }
 
-/** Table rows: preserve API tag order when the template uses a Job Logs whitelist. */
-function orderedTagRows(detailData, detailTagOrder) {
-  if (detailTagOrder.length > 0) {
-    return detailTagOrder.map((tag) => [tag, detailData[tag] ?? {}]);
-  }
-  return Object.entries(detailData).sort(([a], [b]) => a.localeCompare(b));
-}
-
 function formatTagCell(v) {
   if (v === null || v === undefined || v === '') return '—';
   if (typeof v === 'number' && !Number.isNaN(v)) {
@@ -224,7 +216,8 @@ export default function JobLogsPage() {
   const [loading, setLoading] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
   const [detailData, setDetailData] = useState({});
-  const [detailTagOrder, setDetailTagOrder] = useState([]);
+  /** Grouped cards: { id, title, tags[] } — order from layout-tags API */
+  const [detailGroups, setDetailGroups] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState('');
   // Silo segment row resolved from layout_config.paginatedSections (auto-first or jobLogsSegmentPointer).
@@ -257,6 +250,7 @@ export default function JobLogsPage() {
       setTotal(res.data?.total || 0);
       setSelectedJob(null);
       setDetailData({});
+      setDetailGroups([]);
       setSegmentData([]);
       setSegmentError(null);
     } catch {
@@ -306,7 +300,7 @@ export default function JobLogsPage() {
   useEffect(() => {
     if (!selectedJob) {
       setDetailData({});
-      setDetailTagOrder([]);
+      setDetailGroups([]);
       return;
     }
     const { start_time, end_time } = selectedJob;
@@ -314,13 +308,27 @@ export default function JobLogsPage() {
 
     setDetailLoading(true);
     setDetailData({});
-    setDetailTagOrder([]);
+    setDetailGroups([]);
 
     axios.get(`/api/orders/layout-tags/${selectedTemplateId}`)
-      .then(res => res.data?.data || [])
-      .then(tagNames => {
-        const list = Array.isArray(tagNames) ? tagNames : [];
-        setDetailTagOrder([...list]);
+      .then((res) => {
+        const body = res.data || {};
+        const flatTags = Array.isArray(body.data) ? body.data : [];
+        const rawGroups = body.groups;
+        const groups =
+          Array.isArray(rawGroups) && rawGroups.length > 0
+            ? rawGroups.map((g, i) => ({
+              id: String(g?.id || `jg-${i}`),
+              title: (g?.title && String(g.title).trim()) || `Group ${i + 1}`,
+              tags: Array.isArray(g?.tags) ? g.tags.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim()) : [],
+            }))
+            : (flatTags.length > 0
+              ? [{ id: 'default', title: 'Tag values at order start / end', tags: flatTags }]
+              : []);
+        return { list: flatTags, groups };
+      })
+      .then(({ list, groups }) => {
+        setDetailGroups(groups);
         if (list.length === 0) return;
 
         const wall = historianOrderWallParams(start_time, end_time);
@@ -437,10 +445,6 @@ export default function JobLogsPage() {
     );
   }, [jobs, search]);
 
-  const detailTableRows = useMemo(
-    () => orderedTagRows(detailData, detailTagOrder),
-    [detailData, detailTagOrder],
-  );
 
   const cardShadow = theme.dark ? 'none' : '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)';
 
@@ -658,41 +662,52 @@ export default function JobLogsPage() {
                       <Loader2 size={16} className="animate-spin" style={{ color: theme.accent }} />
                       <span className="text-sm" style={{ color: theme.textMuted }}>Loading data...</span>
                     </div>
-                  ) : detailTableRows.length === 0 ? (
+                  ) : !detailGroups.some((g) => Array.isArray(g.tags) && g.tags.length > 0) ? (
                     <p className="text-sm py-2" style={{ color: theme.textMuted }}>
                       No tags are configured for this report&apos;s Job Logs view, and none were found in the layout.
-                      Add tags in the paginated report (Report Builder → Job logs tags), or ensure the report references tag cells.
+                      Add cards and tags in the paginated report (Report Builder → Job logs cards), or ensure the report references tag cells.
                     </p>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[min(520px,50vh)] overflow-y-auto pr-1">
-                      {detailTableRows.map(([tag, row]) => {
-                        const r = row && typeof row === 'object' ? row : {};
-                        return (
-                          <div
-                            key={tag}
-                            className="rounded-lg p-3"
-                            style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                          >
-                            <div className="text-xs font-semibold truncate mb-2" title={tag} style={{ color: theme.text }}>{tag}</div>
-                            <div className="grid grid-cols-3 gap-2 text-[11px]">
-                              <div>
-                                <div style={{ color: theme.textMuted }}>Start</div>
-                                <div className="font-mono mt-0.5 break-all" style={{ color: theme.textSecondary }}>{formatTagCell(r.start)}</div>
-                              </div>
-                              <div>
-                                <div style={{ color: theme.textMuted }}>End</div>
-                                <div className="font-mono mt-0.5 break-all" style={{ color: theme.textSecondary }}>{formatTagCell(r.end)}</div>
-                              </div>
-                              <div>
-                                <div style={{ color: theme.textMuted }}>Total</div>
-                                <div className="font-mono mt-0.5 break-all font-semibold" style={{ color: theme.accent }}>
-                                  {r.total !== null && r.total !== undefined ? formatTagCell(r.total) : '—'}
-                                </div>
-                              </div>
-                            </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[min(520px,50vh)] overflow-y-auto pr-1">
+                      {detailGroups.filter((g) => Array.isArray(g.tags) && g.tags.length > 0).map((group) => (
+                        <div
+                          key={group.id}
+                          className="rounded-lg p-3 flex flex-col min-h-0"
+                          style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+                        >
+                          <div className="text-[11px] font-bold uppercase tracking-wide mb-2 pb-2 truncate"
+                            style={{ color: theme.text, borderBottom: `1px solid ${theme.border}` }}
+                            title={group.title}>
+                            {group.title}
                           </div>
-                        );
-                      })}
+                          <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-0.5">
+                            {group.tags.map((tag) => {
+                              const r = detailData[tag] && typeof detailData[tag] === 'object' ? detailData[tag] : {};
+                              return (
+                                <div key={`${group.id}-${tag}`} className="rounded-md p-2" style={{ background: theme.surfaceAlt }}>
+                                  <div className="text-[10px] font-semibold truncate mb-1.5 font-mono" title={tag} style={{ color: theme.text }}>{tag}</div>
+                                  <div className="grid grid-cols-3 gap-1.5 text-[10px]">
+                                    <div>
+                                      <div style={{ color: theme.textMuted }}>Start</div>
+                                      <div className="font-mono mt-0.5 break-all" style={{ color: theme.textSecondary }}>{formatTagCell(r.start)}</div>
+                                    </div>
+                                    <div>
+                                      <div style={{ color: theme.textMuted }}>End</div>
+                                      <div className="font-mono mt-0.5 break-all" style={{ color: theme.textSecondary }}>{formatTagCell(r.end)}</div>
+                                    </div>
+                                    <div>
+                                      <div style={{ color: theme.textMuted }}>Total</div>
+                                      <div className="font-mono mt-0.5 break-all font-semibold" style={{ color: theme.accent }}>
+                                        {r.total !== null && r.total !== undefined ? formatTagCell(r.total) : '—'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
