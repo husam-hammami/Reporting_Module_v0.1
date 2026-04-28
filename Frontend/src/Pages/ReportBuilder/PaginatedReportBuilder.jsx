@@ -800,6 +800,14 @@ export function resolveJobLogsSegmentRow(layoutConfig, pointer) {
   return candidates[0];
 }
 
+/** `layout_config.jobLogsSegmentsPlacement` — Job Logs detail UI for silo row-segments. */
+export function normalizeJobLogsSegmentsPlacement(raw) {
+  const s = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
+  if (s === 'inline') return 'inline';
+  if (s === 'hidden') return 'hidden';
+  return 'side';
+}
+
 /* ══════════════════════════════════════════════════════════════════
    ADD SECTION PALETTE
    ══════════════════════════════════════════════════════════════════ */
@@ -2430,6 +2438,23 @@ function JobLogsSegmentRowCard({ template, sections, updateMeta }) {
 
   const candidates = useMemo(() => findSiloSegmentTableRows(sections), [sections]);
 
+  const segmentsPlacement = useMemo(
+    () => normalizeJobLogsSegmentsPlacement(layout.jobLogsSegmentsPlacement),
+    [layout.jobLogsSegmentsPlacement],
+  );
+
+  const setSegmentsPlacement = useCallback((rawValue) => {
+    const base = parseTemplateLayoutConfig(template);
+    const next = normalizeJobLogsSegmentsPlacement(rawValue);
+    if (next === 'side') {
+      const rest = { ...base };
+      delete rest.jobLogsSegmentsPlacement;
+      updateMeta({ layout_config: rest });
+      return;
+    }
+    updateMeta({ layout_config: { ...base, jobLogsSegmentsPlacement: next } });
+  }, [template, updateMeta]);
+
   const resolvedRowId = useMemo(() => {
     if (candidates.length === 0) return null;
     if (pointerRowId && candidates.some((c) => c.row?.id === pointerRowId)) return pointerRowId;
@@ -2468,6 +2493,10 @@ function JobLogsSegmentRowCard({ template, sections, updateMeta }) {
     statusColor = '#38bdf8';
   }
 
+  const placementSuffix = candidates.length > 0 && segmentsPlacement !== 'side'
+    ? ` · ${segmentsPlacement}`
+    : '';
+
   return (
     <div className="rounded-lg overflow-hidden mb-1"
       style={{ background: 'var(--rb-panel)', border: '1px solid var(--rb-border)' }}>
@@ -2478,7 +2507,7 @@ function JobLogsSegmentRowCard({ template, sections, updateMeta }) {
         style={{ color: statusColor, background: 'var(--rb-surface)' }}>
         <span className="flex items-center gap-1.5">
           <Layers size={11} />
-          Job logs silo row ({statusLabel})
+          Job logs silo row ({statusLabel}{placementSuffix})
         </span>
         <ChevronDown size={11} style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 150ms' }} />
       </button>
@@ -2488,6 +2517,26 @@ function JobLogsSegmentRowCard({ template, sections, updateMeta }) {
             Job Logs uses the same silo segment row defined in this template. Pick a specific row when
             multiple are present; otherwise the first row with a Silo IDs (segments) cell is used.
           </p>
+
+          {candidates.length > 0 && (
+            <div>
+              <label className="text-[9px] font-semibold uppercase tracking-wider block mb-1" style={{ color: 'var(--rb-text-muted)' }}>
+                Silo block on Job Logs page
+              </label>
+              <select
+                value={segmentsPlacement}
+                onChange={(e) => setSegmentsPlacement(e.target.value)}
+                className="rb-input-base w-full text-[10px] py-1 px-2"
+              >
+                <option value="side">Side panel (right on large screens)</option>
+                <option value="inline">Same grid as Job logs tag cards</option>
+                <option value="hidden">Hidden (no silo block on Job Logs)</option>
+              </select>
+              <p className="text-[9px] mt-1 leading-snug" style={{ color: 'var(--rb-text-muted)' }}>
+                Inline keeps silo segments in one card row with your Job logs cards. Side is the previous default.
+              </p>
+            </div>
+          )}
 
           {candidates.length === 0 && (
             <p className="text-[10px] italic" style={{ color: 'var(--rb-text-muted)' }}>
