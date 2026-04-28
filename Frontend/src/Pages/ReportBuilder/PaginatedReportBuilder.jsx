@@ -95,6 +95,7 @@ const AGG_LABELS = {
   min: 'Min',
   max: 'Max',
   count: 'Count',
+  unique_in_range: 'Unique',
   silo_segments: 'Silo IDs',
   silo_first: 'Silo first',
   silo_last: 'Silo last',
@@ -109,6 +110,7 @@ const AGG_COLORS = {
   min: '#16a085',
   max: '#c0392b',
   count: '#7f8c8d',
+  unique_in_range: '#6b21a8',
   silo_segments: '#0f3460',
   silo_first: '#5b21b6',
   silo_last: '#155e75',
@@ -1078,6 +1080,7 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
                 <option value="last">Last</option>
                 <option value="first">First (Start) — full range</option>
                 <option value="delta">Delta (End−Start) — full range</option>
+                <option value="unique_in_range">Unique in range (all stored values)</option>
                 <option value="silo_first">First in silo segment</option>
                 <option value="silo_last">Last in silo segment</option>
                 <option value="silo_delta">Delta in silo segment</option>

@@ -34,7 +34,7 @@ const TAG_REGEX = /\{([^}]+)\}/g;
 const COL_REGEX = /\{col:([^}]+)\}/g;
 
 /** Historian / paginated merge aggregations allowed as {agg::tagName} in formulas */
-const FORMULA_AGG_PREFIX = /^(first|last|delta|avg|min|max|sum|count|silo_first|silo_last|silo_delta)::(.+)$/i;
+const FORMULA_AGG_PREFIX = /^(first|last|delta|avg|min|max|sum|count|unique_in_range|silo_first|silo_last|silo_delta)::(.+)$/i;
 
 /**
  * Parse each {…} token (excluding {col:…}) into base tag name and optional explicit aggregation.

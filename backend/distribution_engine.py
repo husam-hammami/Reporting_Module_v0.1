@@ -92,7 +92,9 @@ def _get_db_connection():
 
 # ── Tag extraction from layout_config ────────────────────────────────────────
 
-_FORMULA_AGG_PREFIX_RE = re.compile(r'^(first|last|delta|avg|min|max|sum|count)::(.+)$', re.I)
+_FORMULA_AGG_PREFIX_RE = re.compile(
+    r'^(first|last|delta|avg|min|max|sum|count|unique_in_range)::(.+)$', re.I
+)
 
 
 def _parse_formula_tag_tokens(formula):
@@ -479,9 +481,38 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
                 first = first_vals.get(row['tag_id'])
                 if name and first is not None and row['value'] is not None:
                     result[name] = float(row['value']) - float(first)
-        else:
+        elif aggregation == 'unique_in_range':
+            cur.execute("""
+                SELECT d.tag_id,
+                       string_agg(d.display_val, ', ' ORDER BY d.first_ts) AS joined
+                FROM (
+                    SELECT c.tag_id, c.display_val, MIN(c."timestamp") AS first_ts
+                    FROM (
+                        SELECT h.tag_id,
+                          CASE
+                            WHEN h.value_text IS NOT NULL AND btrim(h.value_text) <> '' THEN btrim(h.value_text)
+                            WHEN h.value IS NOT NULL THEN trim(h.value::text)
+                            ELSE NULL
+                          END AS display_val,
+                          h."timestamp"
+                        FROM tag_history h
+                        WHERE h.tag_id = ANY(%s)
+                          AND h."timestamp" >= %s::timestamp
+                          AND h."timestamp" <= %s::timestamp
+                    ) c
+                    WHERE c.display_val IS NOT NULL
+                    GROUP BY c.tag_id, c.display_val
+                ) d
+                GROUP BY d.tag_id
+            """, (tag_ids, from_dt, to_dt))
+            for row in cur.fetchall():
+                name = id_to_name.get(row['tag_id'])
+                joined = row.get('joined')
+                if name and joined is not None and joined != '':
+                    result[name] = joined
+        elif aggregation in ('avg', 'min', 'max', 'sum', 'count'):
             agg_fn = {'avg': 'AVG', 'min': 'MIN', 'max': 'MAX', 'sum': 'SUM', 'count': 'COUNT'}
-            fn = agg_fn.get(aggregation, 'AVG')
+            fn = agg_fn[aggregation]
             cur.execute(f"""
                 SELECT h.tag_id, {fn}(h.value) AS agg_value
                 FROM tag_history h
@@ -555,9 +586,38 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
                     first = arch_first.get(row['tag_id'])
                     if name and first is not None and row['value'] is not None:
                         result[name] = float(row['value']) - float(first)
-            else:
+            elif aggregation == 'unique_in_range':
+                cur.execute("""
+                    SELECT d.tag_id,
+                           string_agg(d.display_val, ', ' ORDER BY d.first_ts) AS joined
+                    FROM (
+                        SELECT c.tag_id, c.display_val, MIN(c.archive_hour) AS first_ts
+                        FROM (
+                            SELECT a.tag_id,
+                              CASE
+                                WHEN a.value_text IS NOT NULL AND btrim(a.value_text) <> '' THEN btrim(a.value_text)
+                                WHEN a.value IS NOT NULL THEN trim(a.value::text)
+                                ELSE NULL
+                              END AS display_val,
+                              a.archive_hour
+                            FROM tag_history_archive a
+                            WHERE a.tag_id = ANY(%s)
+                              AND a.archive_hour >= %s::timestamp
+                              AND a.archive_hour <= %s::timestamp
+                        ) c
+                        WHERE c.display_val IS NOT NULL
+                        GROUP BY c.tag_id, c.display_val
+                    ) d
+                    GROUP BY d.tag_id
+                """, (missing_ids, from_dt, to_dt))
+                for row in cur.fetchall():
+                    name = id_to_name.get(row['tag_id'])
+                    joined = row.get('joined')
+                    if name and joined is not None and joined != '':
+                        result[name] = joined
+            elif aggregation in ('avg', 'min', 'max', 'sum', 'count'):
                 agg_fn_map = {'avg': 'AVG', 'min': 'MIN', 'max': 'MAX', 'sum': 'SUM', 'count': 'COUNT'}
-                fn = agg_fn_map.get(aggregation, 'AVG')
+                fn = agg_fn_map[aggregation]
                 cur.execute(f"""
                     SELECT a.tag_id, {fn}(a.value) AS agg_value
                     FROM tag_history_archive a
