@@ -669,13 +669,30 @@ export function collectPaginatedTagAggregations(sections) {
     aggGroups[a].add(tagName);
   };
   if (!Array.isArray(sections)) return {};
+  const mappings = getCachedMappings();
+  /** Mapping cells resolve from input_tag (+ tag_value lookup targets); historical fetch must request them (same as collectPaginatedTagNames). */
+  const addMappingDependencyTags = (mappingName) => {
+    if (!mappingName) return;
+    const m = mappings?.find((mx) => (mx.name || mx.id) === mappingName);
+    if (!m) return;
+    if (m.input_tag) addTag(m.input_tag, 'last');
+    if (m.output_type === 'tag_value' && m.lookup) {
+      Object.values(m.lookup).forEach((tagName) => {
+        if (tagName && typeof tagName === 'string') addTag(tagName, 'last');
+      });
+    }
+  };
   sections.forEach((s) => {
     if (s.type === 'header') {
       if (s.statusTagName) addTag(s.statusTagName, 'last');
+      if (s.statusSourceType === 'mapping' && s.statusMappingName) {
+        addMappingDependencyTags(s.statusMappingName);
+      }
     }
     if (s.type === 'kpi-row' && Array.isArray(s.kpis)) {
       s.kpis.forEach((k) => {
         if (k.tagName) addTag(k.tagName, k.aggregation);
+        if (k.sourceType === 'mapping' && k.mappingName) addMappingDependencyTags(k.mappingName);
       });
     }
     if (s.type === 'table' && Array.isArray(s.rows)) {
@@ -696,6 +713,9 @@ export function collectPaginatedTagAggregations(sections) {
                 if (a === 'silo_segments' || a === 'silo_first' || a === 'silo_last' || a === 'silo_delta') return;
                 addTag(base, a);
               });
+            }
+            if (cell.sourceType === 'mapping' && cell.mappingName) {
+              addMappingDependencyTags(cell.mappingName);
             }
           });
         }
