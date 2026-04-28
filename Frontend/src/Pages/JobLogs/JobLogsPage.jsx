@@ -449,9 +449,9 @@ export default function JobLogsPage() {
   const cardShadow = theme.dark ? 'none' : '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)';
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: theme.pageBg, color: theme.text }}>
+    <div className="h-[100dvh] min-h-0 flex flex-col overflow-hidden" style={{ background: theme.pageBg, color: theme.text }}>
       {/* Header */}
-      <div className="px-6 py-4 flex items-center justify-between flex-shrink-0"
+      <div className="px-4 py-3 md:px-6 flex items-center justify-between flex-shrink-0"
         style={{ background: theme.surface, borderBottom: `1px solid ${theme.border}` }}>
         <div className="flex items-center gap-3">
           <ClipboardList size={20} style={{ color: theme.accent }} />
@@ -488,66 +488,66 @@ export default function JobLogsPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col gap-4 p-4 md:p-6 pb-8 min-h-0 overflow-y-auto">
-        {/* Jobs card (top) */}
+      <div className="flex-1 flex flex-col min-h-0 gap-2 px-3 py-2 md:px-4 md:py-3 overflow-hidden">
+        {/* Jobs card (top) — fixed share of viewport; table scrolls inside */}
         <div
-          className="rounded-xl overflow-hidden flex flex-col flex-shrink-0"
+          className="rounded-lg overflow-hidden flex flex-col shrink-0 h-[min(32vh,280px)] sm:h-[min(34vh,300px)] md:h-[min(36vh,320px)]"
           style={{
             background: theme.surface,
             border: `1px solid ${theme.border}`,
             boxShadow: cardShadow,
           }}
         >
-          <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"
+          <div className="px-3 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 flex-shrink-0"
             style={{ borderBottom: `1px solid ${theme.border}` }}>
             <div>
-              <h2 className="text-sm font-bold" style={{ color: theme.text }}>Jobs (last 100 orders)</h2>
+              <h2 className="text-xs md:text-sm font-bold" style={{ color: theme.text }}>Jobs (last 100 orders)</h2>
               {selectedTemplate?.name ? (
-                <p className="text-xs mt-0.5" style={{ color: theme.textMuted }}>Layout: {selectedTemplate.name}</p>
+                <p className="text-[10px] md:text-xs mt-0.5 truncate max-w-[70vw]" style={{ color: theme.textMuted }}>Layout: {selectedTemplate.name}</p>
               ) : null}
             </div>
           </div>
 
-          <div className="px-4 py-3 flex items-center gap-3 flex-wrap"
+          <div className="px-3 py-2 flex items-center gap-2 flex-wrap flex-shrink-0"
             style={{ borderBottom: `1px solid ${theme.border}`, background: theme.surfaceAlt }}>
-            <div className="relative flex-1 min-w-[200px] max-w-md">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2"
+            <div className="relative flex-1 min-w-[160px] max-w-md">
+              <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2"
                 style={{ color: theme.textMuted }} />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search orders..."
-                className="w-full pl-8 pr-3 py-1.5 rounded-lg text-sm"
+                className="w-full pl-7 pr-2 py-1 rounded-md text-xs md:text-sm"
                 style={{ background: theme.inputBg, border: `1px solid ${theme.border}`, color: theme.text }}
               />
             </div>
-            <span className="text-xs font-medium" style={{ color: theme.textMuted }}>
+            <span className="text-[10px] md:text-xs font-medium whitespace-nowrap" style={{ color: theme.textMuted }}>
               {total} order{total !== 1 ? 's' : ''}
             </span>
           </div>
 
-          <div className="overflow-y-auto max-h-[min(420px,45vh)]">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
             {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 size={20} className="animate-spin" style={{ color: theme.accent }} />
-                <span className="ml-2 text-sm" style={{ color: theme.textMuted }}>Loading orders...</span>
+              <div className="flex items-center justify-center py-10">
+                <Loader2 size={18} className="animate-spin" style={{ color: theme.accent }} />
+                <span className="ml-2 text-xs" style={{ color: theme.textMuted }}>Loading orders…</span>
               </div>
             ) : filteredJobs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-2">
+              <div className="flex flex-col items-center justify-center py-10 gap-2">
                 <ClipboardList size={32} style={{ color: theme.textMuted }} />
                 <p className="text-sm" style={{ color: theme.textMuted }}>
                   {jobs.length === 0 ? 'No orders found for this layout' : 'No matching orders'}
                 </p>
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-[1]">
-                  <tr style={{ background: theme.surfaceAlt, borderBottom: `2px solid ${theme.border}` }}>
-                    <th className="text-left px-4 py-2.5 font-semibold" style={{ color: theme.textSecondary }}>Ident</th>
-                    <th className="text-left px-4 py-2.5 font-semibold" style={{ color: theme.textSecondary }}>Start Date</th>
-                    <th className="text-left px-4 py-2.5 font-semibold" style={{ color: theme.textSecondary }}>End Date</th>
-                    <th className="text-left px-4 py-2.5 font-semibold" style={{ color: theme.textSecondary }}>Duration</th>
-                    <th className="text-left px-4 py-2.5 font-semibold" style={{ color: theme.textSecondary }}>Status</th>
+              <table className="w-full text-[11px] md:text-xs">
+                <thead className="sticky top-0 z-[1] shadow-sm">
+                  <tr style={{ background: theme.surfaceAlt, borderBottom: `1px solid ${theme.border}` }}>
+                    <th className="text-left px-2 py-1.5 md:px-3 font-semibold whitespace-nowrap" style={{ color: theme.textSecondary }}>Ident</th>
+                    <th className="text-left px-2 py-1.5 md:px-3 font-semibold whitespace-nowrap" style={{ color: theme.textSecondary }}>Start</th>
+                    <th className="text-left px-2 py-1.5 md:px-3 font-semibold whitespace-nowrap hidden sm:table-cell" style={{ color: theme.textSecondary }}>End</th>
+                    <th className="text-left px-2 py-1.5 md:px-3 font-semibold whitespace-nowrap" style={{ color: theme.textSecondary }}>Dur.</th>
+                    <th className="text-left px-2 py-1.5 md:px-3 font-semibold whitespace-nowrap" style={{ color: theme.textSecondary }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -568,20 +568,20 @@ export default function JobLogsPage() {
                           if (!isSelected) e.currentTarget.style.background = stripeBg;
                         }}
                       >
-                        <td className="px-4 py-2.5 font-semibold" style={{ color: theme.accent }}>
+                        <td className="px-2 py-1.5 md:px-3 font-semibold" style={{ color: theme.accent }}>
                           {job.order_name}
                         </td>
-                        <td className="px-4 py-2.5" style={{ color: theme.text }}>
+                        <td className="px-2 py-1.5 md:px-3 whitespace-nowrap" style={{ color: theme.text }}>
                           {formatDateTime(job.start_time)}
                         </td>
-                        <td className="px-4 py-2.5" style={{ color: theme.text }}>
+                        <td className="px-2 py-1.5 md:px-3 whitespace-nowrap hidden sm:table-cell" style={{ color: theme.text }}>
                           {formatDateTime(job.end_time)}
                         </td>
-                        <td className="px-4 py-2.5" style={{ color: theme.textSecondary }}>
+                        <td className="px-2 py-1.5 md:px-3 whitespace-nowrap" style={{ color: theme.textSecondary }}>
                           {formatDuration(job.duration_seconds)}
                         </td>
-                        <td className="px-4 py-2.5">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                        <td className="px-2 py-1.5 md:px-3">
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] md:text-xs font-medium"
                             style={{
                               background: job.status === 'running' ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)',
                               color: job.status === 'running' ? theme.statusRunning : theme.statusCompleted,
@@ -599,9 +599,9 @@ export default function JobLogsPage() {
           </div>
         </div>
 
-        {/* Detail: below orders, card-based */}
+        {/* Detail: fills remaining height; inner panels scroll */}
         <div
-          className="rounded-xl flex flex-col min-h-[200px] flex-1 min-h-0 overflow-hidden"
+          className="rounded-lg flex flex-col flex-1 min-h-0 overflow-hidden"
           style={{
             background: theme.surface,
             border: `1px solid ${theme.border}`,
@@ -609,20 +609,20 @@ export default function JobLogsPage() {
           }}
         >
           {!selectedJob ? (
-            <div className="flex flex-col items-center justify-center flex-1 py-16 gap-2 px-4">
-              <ClipboardList size={32} style={{ color: theme.textMuted }} />
-              <p className="text-sm text-center" style={{ color: theme.textMuted }}>Select an order to view details</p>
+            <div className="flex flex-col items-center justify-center flex-1 min-h-[120px] py-8 gap-2 px-4">
+              <ClipboardList size={28} style={{ color: theme.textMuted }} />
+              <p className="text-xs md:text-sm text-center" style={{ color: theme.textMuted }}>Select an order to view details</p>
             </div>
           ) : (
-            <div className="p-4 md:p-5 flex flex-col gap-5">
-              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4"
+            <div className="flex flex-col flex-1 min-h-0 gap-2 p-2 md:p-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 flex-shrink-0 pb-2"
                 style={{ borderBottom: `1px solid ${theme.border}` }}
               >
-                <div>
-                  <h2 className="text-xl md:text-2xl font-bold" style={{ color: theme.text }}>
+                <div className="min-w-0">
+                  <h2 className="text-base md:text-lg font-bold truncate" style={{ color: theme.text }}>
                     {selectedJob.order_name}
                   </h2>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-xs" style={{ color: theme.textSecondary }}>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[10px] md:text-xs" style={{ color: theme.textSecondary }}>
                     <span className="flex items-center gap-1">
                       <Calendar size={12} />
                       {formatDateTime(selectedJob.start_time)}
@@ -633,7 +633,7 @@ export default function JobLogsPage() {
                         {formatDuration(selectedJob.duration_seconds)}
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium"
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium"
                       style={{
                         background: selectedJob.status === 'running' ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)',
                         color: selectedJob.status === 'running' ? theme.statusRunning : theme.statusCompleted,
@@ -644,70 +644,78 @@ export default function JobLogsPage() {
                 </div>
               </div>
 
-              <div className={`grid gap-4 ${segmentRowDef ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
-                {/* Tag values card */}
+              <div className={`grid gap-2 flex-1 min-h-0 grid-rows-1 ${segmentRowDef ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+                {/* Tag values — compact group cards with dense tables */}
                 <div
-                  className="rounded-lg p-4 flex flex-col min-h-0"
+                  className="rounded-md px-2 py-2 md:px-3 flex flex-col min-h-0 h-full min-w-0 overflow-hidden"
                   style={{ background: theme.surfaceAlt, border: `1px solid ${theme.border}` }}
                 >
-                  <h3 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: theme.textMuted }}>
-                    Tag values at order start / end
-                  </h3>
-                  <p className="text-[11px] mb-3 -mt-1" style={{ color: theme.textMuted }}>
-                    Historian first + last in window
-                  </p>
+                  <div className="flex-shrink-0 mb-1.5">
+                    <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>
+                      Tag values at order start / end
+                    </h3>
+                    <p className="text-[9px] md:text-[10px] leading-tight" style={{ color: theme.textMuted }}>
+                      Historian first + last
+                    </p>
+                  </div>
 
                   {detailLoading ? (
-                    <div className="flex items-center gap-2 py-10 justify-center flex-1">
-                      <Loader2 size={16} className="animate-spin" style={{ color: theme.accent }} />
-                      <span className="text-sm" style={{ color: theme.textMuted }}>Loading data...</span>
+                    <div className="flex items-center gap-2 py-6 justify-center flex-1">
+                      <Loader2 size={14} className="animate-spin" style={{ color: theme.accent }} />
+                      <span className="text-xs" style={{ color: theme.textMuted }}>Loading…</span>
                     </div>
                   ) : !detailGroups.some((g) => Array.isArray(g.tags) && g.tags.length > 0) ? (
-                    <p className="text-sm py-2" style={{ color: theme.textMuted }}>
-                      No tags are configured for this report&apos;s Job Logs view, and none were found in the layout.
-                      Add cards and tags in the paginated report (Report Builder → Job logs cards), or ensure the report references tag cells.
+                    <p className="text-xs py-1" style={{ color: theme.textMuted }}>
+                      No tags configured. Use Report Builder → Job logs cards.
                     </p>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[min(520px,50vh)] overflow-y-auto pr-1">
-                      {detailGroups.filter((g) => Array.isArray(g.tags) && g.tags.length > 0).map((group) => (
-                        <div
-                          key={group.id}
-                          className="rounded-lg p-3 flex flex-col min-h-0"
-                          style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                        >
-                          <div className="text-[11px] font-bold uppercase tracking-wide mb-2 pb-2 truncate"
-                            style={{ color: theme.text, borderBottom: `1px solid ${theme.border}` }}
-                            title={group.title}>
-                            {group.title}
+                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 auto-rows-min">
+                        {detailGroups.filter((g) => Array.isArray(g.tags) && g.tags.length > 0).map((group) => (
+                          <div
+                            key={group.id}
+                            className="rounded-md flex flex-col min-h-0 border overflow-hidden"
+                            style={{ background: theme.surface, borderColor: theme.border }}
+                          >
+                            <div
+                              className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 truncate flex-shrink-0"
+                              style={{ color: theme.text, background: theme.surfaceAlt, borderBottom: `1px solid ${theme.border}` }}
+                              title={group.title}
+                            >
+                              {group.title}
+                            </div>
+                            <div className="overflow-x-auto min-h-0">
+                              <table className="w-full text-[9px] md:text-[10px]">
+                                <thead>
+                                  <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                                    <th className="text-left px-1.5 py-0.5 font-semibold align-bottom" style={{ color: theme.textMuted }}>Tag</th>
+                                    <th className="text-right px-1 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.textMuted }}>Start</th>
+                                    <th className="text-right px-1 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.textMuted }}>End</th>
+                                    <th className="text-right px-1.5 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.accent }}>Δ</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {group.tags.map((tag) => {
+                                    const r = detailData[tag] && typeof detailData[tag] === 'object' ? detailData[tag] : {};
+                                    return (
+                                      <tr key={`${group.id}-${tag}`} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                                        <td className="px-1.5 py-0.5 font-mono align-top max-w-[100px] md:max-w-[140px]">
+                                          <span className="block truncate" title={tag} style={{ color: theme.text }}>{tag}</span>
+                                        </td>
+                                        <td className="px-1 py-0.5 text-right font-mono align-top whitespace-nowrap" style={{ color: theme.textSecondary }}>{formatTagCell(r.start)}</td>
+                                        <td className="px-1 py-0.5 text-right font-mono align-top whitespace-nowrap" style={{ color: theme.textSecondary }}>{formatTagCell(r.end)}</td>
+                                        <td className="px-1.5 py-0.5 text-right font-mono font-semibold align-top whitespace-nowrap" style={{ color: theme.accent }}>
+                                          {r.total !== null && r.total !== undefined ? formatTagCell(r.total) : '—'}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                          <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-0.5">
-                            {group.tags.map((tag) => {
-                              const r = detailData[tag] && typeof detailData[tag] === 'object' ? detailData[tag] : {};
-                              return (
-                                <div key={`${group.id}-${tag}`} className="rounded-md p-2" style={{ background: theme.surfaceAlt }}>
-                                  <div className="text-[10px] font-semibold truncate mb-1.5 font-mono" title={tag} style={{ color: theme.text }}>{tag}</div>
-                                  <div className="grid grid-cols-3 gap-1.5 text-[10px]">
-                                    <div>
-                                      <div style={{ color: theme.textMuted }}>Start</div>
-                                      <div className="font-mono mt-0.5 break-all" style={{ color: theme.textSecondary }}>{formatTagCell(r.start)}</div>
-                                    </div>
-                                    <div>
-                                      <div style={{ color: theme.textMuted }}>End</div>
-                                      <div className="font-mono mt-0.5 break-all" style={{ color: theme.textSecondary }}>{formatTagCell(r.end)}</div>
-                                    </div>
-                                    <div>
-                                      <div style={{ color: theme.textMuted }}>Total</div>
-                                      <div className="font-mono mt-0.5 break-all font-semibold" style={{ color: theme.accent }}>
-                                        {r.total !== null && r.total !== undefined ? formatTagCell(r.total) : '—'}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -715,15 +723,15 @@ export default function JobLogsPage() {
                 {/* Silo segments card */}
                 {segmentRowDef && (
                   <div
-                    className="rounded-lg p-4 flex flex-col min-h-0"
+                    className="rounded-md px-2 py-2 md:px-3 flex flex-col min-h-0 h-full min-w-0 overflow-hidden"
                     style={{ background: theme.surfaceAlt, border: `1px solid ${theme.border}` }}
                   >
-                    <h3 className="text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5 flex-wrap"
+                    <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1 flex-wrap"
                       style={{ color: theme.textMuted }}>
-                      <Layers size={12} />
+                      <Layers size={11} />
                       Silo segments
                     </h3>
-                    <p className="text-[11px] mb-3" style={{ color: theme.textSecondary }}>
+                    <p className="text-[9px] md:text-[10px] mb-1.5 leading-tight" style={{ color: theme.textSecondary }}>
                       Driver: <span className="font-mono">{segmentRowDef.segCell?.tagName || '?'}</span>
                       {segmentRowDef.sectionLabel ? (
                         <span className="ml-1" style={{ color: theme.textMuted }}>({segmentRowDef.sectionLabel})</span>
@@ -731,56 +739,56 @@ export default function JobLogsPage() {
                     </p>
 
                     {segmentLoading ? (
-                      <div className="flex items-center gap-2 py-10 justify-center flex-1">
-                        <Loader2 size={16} className="animate-spin" style={{ color: theme.accent }} />
-                        <span className="text-sm" style={{ color: theme.textMuted }}>Loading silo segments...</span>
+                      <div className="flex items-center gap-2 py-6 justify-center flex-1">
+                        <Loader2 size={14} className="animate-spin" style={{ color: theme.accent }} />
+                        <span className="text-xs" style={{ color: theme.textMuted }}>Loading…</span>
                       </div>
                     ) : segmentError ? (
-                      <p className="text-sm py-2" style={{ color: '#f87171' }}>{segmentError}</p>
+                      <p className="text-xs py-1" style={{ color: '#f87171' }}>{segmentError}</p>
                     ) : segmentData.length === 0 ? (
-                      <p className="text-sm py-2" style={{ color: theme.textMuted }}>
-                        No silo segments detected in this order&apos;s window.
+                      <p className="text-xs py-1" style={{ color: theme.textMuted }}>
+                        No silo segments in this window.
                       </p>
                     ) : (
-                      <div className="flex flex-col gap-3 max-h-[min(520px,50vh)] overflow-y-auto pr-1">
+                      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col gap-2 pr-0.5">
                         {segmentData.map((seg, idx) => {
                           const valueIndex = indexSegmentValues(seg.values);
                           return (
                             <div
                               key={`${seg.t_start}-${idx}`}
-                              className="rounded-lg p-3"
+                              className="rounded-md p-2 text-[10px]"
                               style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
                             >
-                              <div className="flex flex-wrap gap-3 mb-3 pb-3" style={{ borderBottom: `1px solid ${theme.border}` }}>
+                              <div className="flex flex-wrap gap-2 mb-1.5 pb-1.5" style={{ borderBottom: `1px solid ${theme.border}` }}>
                                 <div>
-                                  <div className="text-[10px] uppercase font-semibold" style={{ color: theme.textMuted }}>Start</div>
-                                  <div className="font-mono text-xs mt-0.5 whitespace-nowrap" style={{ color: theme.text }}>
+                                  <div className="text-[9px] uppercase font-semibold" style={{ color: theme.textMuted }}>Start</div>
+                                  <div className="font-mono text-[10px] mt-0.5 whitespace-nowrap" style={{ color: theme.text }}>
                                     {formatSegmentTimestamp(seg.t_start)}
                                   </div>
                                 </div>
                                 <div>
-                                  <div className="text-[10px] uppercase font-semibold" style={{ color: theme.textMuted }}>End</div>
-                                  <div className="font-mono text-xs mt-0.5 whitespace-nowrap" style={{ color: theme.text }}>
+                                  <div className="text-[9px] uppercase font-semibold" style={{ color: theme.textMuted }}>End</div>
+                                  <div className="font-mono text-[10px] mt-0.5 whitespace-nowrap" style={{ color: theme.text }}>
                                     {formatSegmentTimestamp(seg.t_end)}
                                   </div>
                                 </div>
-                                <div className="ml-auto sm:ml-0">
-                                  <div className="text-[10px] uppercase font-semibold" style={{ color: theme.textMuted }}>Silo ID</div>
-                                  <div className="font-mono text-sm font-bold mt-0.5 text-right sm:text-left" style={{ color: theme.accent }}>
+                                <div className="ml-auto">
+                                  <div className="text-[9px] uppercase font-semibold" style={{ color: theme.textMuted }}>Silo</div>
+                                  <div className="font-mono text-xs font-bold mt-0.5 text-right" style={{ color: theme.accent }}>
                                     {seg.silo_id ?? '—'}
                                   </div>
                                 </div>
                               </div>
-                              <dl className="grid gap-2">
+                              <dl className="grid gap-0.5">
                                 {(segmentRowDef.companionCells || []).map((c, i) => {
                                   const key = `${c.tagName}::${c.aggregation || 'last'}`;
                                   const entry = valueIndex[key];
                                   const label = `${c.tagName} (${shortAggLabel(c.aggregation)})`;
                                   return (
-                                    <div key={`${key}-${i}`} className="flex justify-between gap-3 text-xs">
-                                      <dt className="font-mono truncate flex-shrink min-w-0" title={label} style={{ color: theme.textSecondary }}>
+                                    <div key={`${key}-${i}`} className="flex justify-between gap-2 text-[10px]">
+                                      <dt className="font-mono truncate min-w-0" title={label} style={{ color: theme.textSecondary }}>
                                         {c.tagName}
-                                        <span className="lowercase ml-1" style={{ color: theme.textMuted }}>({shortAggLabel(c.aggregation)})</span>
+                                        <span className="lowercase ml-0.5" style={{ color: theme.textMuted }}>({shortAggLabel(c.aggregation)})</span>
                                       </dt>
                                       <dd className="font-mono flex-shrink-0 text-right" style={{ color: theme.text }}>
                                         {entry ? formatTagCell(entry.value) : '—'}
