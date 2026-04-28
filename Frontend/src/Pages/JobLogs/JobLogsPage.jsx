@@ -1,10 +1,20 @@
-import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
-import { ClipboardList, ChevronDown, RefreshCw, Search, Calendar, Clock, CheckCircle2, Loader2, Layers } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
+import { ClipboardList, ChevronDown, RefreshCw, Search, Calendar, Clock, CheckCircle2, Loader2, Layers, Download, Printer } from 'lucide-react';
 import { DarkModeContext } from '../../Context/DarkModeProvider';
 import axios from '../../API/axios';
 import { toast } from 'react-toastify';
 import '../../Pages/ReportBuilder/reportBuilderTheme.css';
-import { resolveJobLogsSegmentRow, normalizeJobLogsSegmentsPlacement } from '../ReportBuilder/PaginatedReportBuilder';
+import {
+  resolveJobLogsSegmentRow,
+  normalizeJobLogsSegmentsPlacement,
+  PaginatedReportPreview,
+  collectPaginatedTagNames,
+  collectPaginatedTagAggregations,
+  buildTagDecimalLookup,
+} from '../ReportBuilder/PaginatedReportBuilder';
+import { useAvailableTags } from '../../Hooks/useReportBuilder';
+import { fetchPaginatedHistoricalData } from '../../utils/paginatedHistoricalFetch';
+import { exportAsPDF as exportAsPDFUtil } from '../../utils/exportReport';
 
 function useTheme() {
   const { mode } = useContext(DarkModeContext);
@@ -289,6 +299,7 @@ function SiloSegmentBlocks({
 
 export default function JobLogsPage() {
   const theme = useTheme();
+  const { tags: availableTags } = useAvailableTags();
 
   const [templates, setTemplates] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
@@ -308,6 +319,19 @@ export default function JobLogsPage() {
   const [segmentData, setSegmentData] = useState([]);
   const [segmentLoading, setSegmentLoading] = useState(false);
   const [segmentError, setSegmentError] = useState(null);
+
+  /** Paginated template (same layout as PDF report viewer). */
+  const [paginatedSections, setPaginatedSections] = useState([]);
+  const [paginatedPageMode, setPaginatedPageMode] = useState('a4');
+  const printReportRef = useRef(null);
+  const [printTagValues, setPrintTagValues] = useState({});
+  const [printExpandedRows, setPrintExpandedRows] = useState({});
+  const [printDateRange, setPrintDateRange] = useState(null);
+  const [printFetchLoading, setPrintFetchLoading] = useState(false);
+  const [printFetchError, setPrintFetchError] = useState(null);
+  const [pdfExporting, setPdfExporting] = useState(false);
+
+  const tagDecimalByName = useMemo(() => buildTagDecimalLookup(availableTags), [availableTags]);
 
   // Load report templates with order tracking
   useEffect(() => {
@@ -351,6 +375,8 @@ export default function JobLogsPage() {
     if (!selectedTemplateId) {
       setSegmentRowDef(null);
       setSegmentsPlacement('side');
+      setPaginatedSections([]);
+      setPaginatedPageMode('a4');
       return;
     }
     let cancelled = false;
@@ -359,6 +385,8 @@ export default function JobLogsPage() {
         if (cancelled) return;
         const raw = res.data?.data?.layout_config;
         const layout = typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return {}; } })() : (raw || {});
+        setPaginatedSections(Array.isArray(layout.paginatedSections) ? layout.paginatedSections : []);
+        setPaginatedPageMode(layout.grid?.pageMode === 'full' ? 'full' : 'a4');
         setSegmentsPlacement(normalizeJobLogsSegmentsPlacement(layout?.jobLogsSegmentsPlacement));
         const pointer = layout && typeof layout === 'object' ? layout.jobLogsSegmentPointer : null;
         const resolved = resolveJobLogsSegmentRow(layout, pointer);
@@ -378,6 +406,8 @@ export default function JobLogsPage() {
         console.warn('Failed to load layout_config for segment row:', err);
         setSegmentRowDef(null);
         setSegmentsPlacement('side');
+        setPaginatedSections([]);
+        setPaginatedPageMode('a4');
       });
     return () => { cancelled = true; };
   }, [selectedTemplateId]);
@@ -517,10 +547,105 @@ export default function JobLogsPage() {
     return () => { cancelled = true; };
   }, [selectedJob, selectedTemplateId, segmentRowDef, segmentsPlacement]);
 
+  // Paginated report snapshot for PDF/print (same layout as Paginated Report viewer).
+  useEffect(() => {
+    if (!selectedJob?.start_time || !Array.isArray(paginatedSections) || paginatedSections.length === 0) {
+      setPrintTagValues({});
+      setPrintExpandedRows({});
+      setPrintDateRange(null);
+      setPrintFetchLoading(false);
+      setPrintFetchError(null);
+      return undefined;
+    }
+    const fromD = parseOrderWallTime(selectedJob.start_time);
+    const toD = selectedJob.end_time ? parseOrderWallTime(selectedJob.end_time) : new Date();
+    if (!fromD || !toD || Number.isNaN(fromD.getTime()) || Number.isNaN(toD.getTime())) {
+      setPrintDateRange(null);
+      setPrintTagValues({});
+      setPrintExpandedRows({});
+      setPrintFetchError('Invalid order times');
+      setPrintFetchLoading(false);
+      return undefined;
+    }
+    setPrintDateRange({ from: fromD, to: toD });
+
+    const tagNames = collectPaginatedTagNames(paginatedSections);
+    const tagAggGroups = collectPaginatedTagAggregations(paginatedSections);
+    if (tagNames.length === 0) {
+      setPrintTagValues({});
+      setPrintExpandedRows({});
+      setPrintFetchError(null);
+      setPrintFetchLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setPrintFetchLoading(true);
+    setPrintFetchError(null);
+    const fromISO = fromD.toISOString();
+    const toISO = toD.toISOString();
+
+    fetchPaginatedHistoricalData({
+      sections: paginatedSections,
+      tagNames,
+      tagAggGroups,
+      fromISO,
+      toISO,
+    })
+      .then(({ tagValues, expandedRows }) => {
+        if (cancelled) return;
+        setPrintTagValues(tagValues || {});
+        setPrintExpandedRows(expandedRows || {});
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.warn('Job Logs paginated print fetch:', err);
+        setPrintFetchError(err?.response?.data?.error || err?.message || 'Failed to load print data');
+        setPrintTagValues({});
+        setPrintExpandedRows({});
+      })
+      .finally(() => {
+        if (!cancelled) setPrintFetchLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [selectedJob, paginatedSections]);
+
   const selectedTemplate = useMemo(() =>
     templates.find(t => t.id === selectedTemplateId),
     [templates, selectedTemplateId],
   );
+
+  const handleOrderPdf = useCallback(async () => {
+    if (!printReportRef.current || !selectedJob) return;
+    setPdfExporting(true);
+    const el = printReportRef.current.querySelector('.paginated-preview-root')
+      || printReportRef.current.firstElementChild
+      || printReportRef.current;
+    const prevOverflow = el.style.overflow;
+    try {
+      el.classList.add('rb-pdf-export');
+      if (paginatedPageMode === 'a4') el.classList.add('rb-pdf-export-paginated-a4');
+      el.style.overflow = 'visible';
+      const safeName = `${selectedJob.order_name || 'order'}_${selectedTemplate?.name || 'report'}`.replace(/[^\w\-]+/g, '_');
+      await exportAsPDFUtil(el, safeName, { orientation: 'portrait', pageMode: 'a4' });
+    } catch (err) {
+      console.error('Job Logs PDF export failed:', err);
+      toast.error('PDF export failed');
+    } finally {
+      el.style.overflow = prevOverflow;
+      el.classList.remove('rb-pdf-export-paginated-a4', 'rb-pdf-export');
+      setPdfExporting(false);
+    }
+  }, [selectedJob, selectedTemplate, paginatedPageMode]);
+
+  const handleOrderPrint = useCallback(() => {
+    if (!printDateRange) {
+      toast.error('Report data not ready for print');
+      return;
+    }
+    window.print();
+  }, [printDateRange]);
 
   const filteredJobs = useMemo(() => {
     if (!search.trim()) return jobs;
@@ -535,7 +660,8 @@ export default function JobLogsPage() {
   const cardShadow = theme.dark ? 'none' : '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)';
 
   return (
-    <div className="h-[100dvh] min-h-0 flex flex-col overflow-hidden" style={{ background: theme.pageBg, color: theme.text }}>
+    <>
+    <div className="jl-job-logs-screen h-[100dvh] min-h-0 flex flex-col overflow-hidden" style={{ background: theme.pageBg, color: theme.text }}>
       {/* Header */}
       <div className="px-4 py-3 md:px-6 flex items-center justify-between flex-shrink-0"
         style={{ background: theme.surface, borderBottom: `1px solid ${theme.border}` }}>
@@ -701,7 +827,7 @@ export default function JobLogsPage() {
             </div>
           ) : (
             <div className="flex flex-col flex-1 min-h-0 gap-2 p-2 md:p-3">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 flex-shrink-0 pb-2"
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 flex-shrink-0 pb-2"
                 style={{ borderBottom: `1px solid ${theme.border}` }}
               >
                 <div className="min-w-0">
@@ -728,6 +854,45 @@ export default function JobLogsPage() {
                     </span>
                   </div>
                 </div>
+                {paginatedSections.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                    {printFetchError && (
+                      <span className="text-[10px] max-w-[200px] truncate" style={{ color: '#f87171' }} title={printFetchError}>
+                        {printFetchError}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { void handleOrderPdf(); }}
+                      disabled={printFetchLoading || pdfExporting || !printDateRange}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wide disabled:opacity-45"
+                      style={{
+                        background: theme.accent,
+                        color: '#fff',
+                        border: 'none',
+                      }}
+                      title="Export this order as paginated report PDF"
+                    >
+                      <Download size={14} />
+                      {pdfExporting ? 'PDF…' : 'PDF'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOrderPrint}
+                      disabled={printFetchLoading || !printDateRange}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wide disabled:opacity-45"
+                      style={{
+                        background: theme.surfaceAlt,
+                        color: theme.text,
+                        border: `1px solid ${theme.border}`,
+                      }}
+                      title="Print paginated report layout for this order"
+                    >
+                      <Printer size={14} />
+                      Print
+                    </button>
+                  </div>
+                )}
               </div>
 
               {(() => {
@@ -885,5 +1050,33 @@ export default function JobLogsPage() {
         </div>
       </div>
     </div>
+
+    {selectedJob && paginatedSections.length > 0 && printDateRange && (
+      <div
+        className="jl-job-logs-print-target"
+        style={{
+          position: 'fixed',
+          left: '-12000px',
+          top: 0,
+          width: paginatedPageMode === 'a4' ? '794px' : '100%',
+          maxWidth: '100%',
+          zIndex: -1,
+          pointerEvents: 'none',
+        }}
+      >
+        <div ref={printReportRef}>
+          <PaginatedReportPreview
+            sections={paginatedSections}
+            tagValues={printTagValues}
+            dateRange={printDateRange}
+            compact={paginatedPageMode === 'full'}
+            isPreviewMode
+            tagDecimalByName={tagDecimalByName}
+            expandedRows={printExpandedRows}
+          />
+        </div>
+      </div>
+    )}
+    </>
   );
 }

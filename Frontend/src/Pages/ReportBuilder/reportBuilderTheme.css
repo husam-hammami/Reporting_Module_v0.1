@@ -1834,3 +1834,21 @@
 .rb-drilldown-rgl-wrap .react-grid-item.resizing {
   z-index: 20;
 }
+
+/* Job Logs — print paginated order report (hide in-app UI, show off-screen preview) */
+@media print {
+  .jl-job-logs-screen {
+    display: none !important;
+  }
+  .jl-job-logs-print-target {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    z-index: auto !important;
+    pointer-events: auto !important;
+  }
+}
