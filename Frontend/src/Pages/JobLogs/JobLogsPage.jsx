@@ -1073,6 +1073,8 @@ export default function JobLogsPage() {
             isPreviewMode
             tagDecimalByName={tagDecimalByName}
             expandedRows={printExpandedRows}
+            jobLogOrderTitle={selectedJob.order_name}
+            hideHeaderStatus
           />
         </div>
       </div>

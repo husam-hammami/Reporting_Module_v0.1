@@ -1777,7 +1777,19 @@ function ReportLogoHeader({ clientLogo }) {
   );
 }
 
-export function PaginatedReportPreview({ sections, tagValues, dateRange, compact = false, isPreviewMode = false, tagDecimalByName = null, expandedRows = {} }) {
+export function PaginatedReportPreview({
+  sections,
+  tagValues,
+  dateRange,
+  compact = false,
+  isPreviewMode = false,
+  tagDecimalByName = null,
+  expandedRows = {},
+  /** Job Logs PDF/print: show order ident as main title; template `section.title` as subtitle when different. */
+  jobLogOrderTitle = null,
+  /** Job Logs PDF/print: omit header status line (Running / Completed). */
+  hideHeaderStatus = false,
+}) {
   const containerRef = useRef(null);
   const [pageBreaks, setPageBreaks] = useState([]);
   const { clientLogo } = useBranding();
@@ -1809,7 +1821,7 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
     // Only update if changed to avoid infinite loops
     const key = breaks.join(',');
     setPageBreaks((prev) => prev.join(',') === key ? prev : breaks);
-  }, [compact, sections, tagValues, tagDecimalByName]);
+  }, [compact, sections, tagValues, tagDecimalByName, jobLogOrderTitle, hideHeaderStatus]);
 
   const totalRows = (sections || []).filter((s) => s.type === 'table').reduce((sum, s) => sum + (s.rows?.length || 0), 0);
 
@@ -1824,12 +1836,19 @@ export function PaginatedReportPreview({ sections, tagValues, dateRange, compact
           ? (statusCell ? renderResolvedValue(resolveCellValue(statusCell, tagValues, null, tagDecimalByName)) : '')
           : (statusCell ? resolveCellConfigLabel(statusCell) : '');
         const hasStatusConfig = section.statusSourceType === 'static' ? (section.statusValue != null && section.statusValue !== '') : (section.statusSourceType === 'tag' && section.statusTagName) || (section.statusSourceType === 'mapping' && section.statusMappingName) || (section.statusSourceType === 'formula' && section.statusFormula) || (section.statusSourceType === 'group' && Array.isArray(section.statusGroupTags) && section.statusGroupTags.some((t) => t));
-        const showStatus = hasStatusConfig && resolvedStatus !== '' && resolvedStatus !== '—';
+        const showStatus = !hideHeaderStatus && hasStatusConfig && resolvedStatus !== '' && resolvedStatus !== '—';
+        const orderTitle = jobLogOrderTitle != null && String(jobLogOrderTitle).trim() ? String(jobLogOrderTitle).trim() : '';
+        const templateTitle = section.title && String(section.title).trim();
+        const primaryH1 = orderTitle || templateTitle || 'Untitled Report';
+        const showTemplateSubtitle = Boolean(orderTitle && templateTitle && templateTitle !== orderTitle);
         return (
           <div key={section.id} className="mb-1" style={{ textAlign: section.align || 'center' }}>
             <h1 className="text-[20px] font-bold tracking-tight text-[#0f172a] mb-0.5" style={{ marginTop: '2px' }}>
-              {section.title || 'Untitled Report'}
+              {primaryH1}
             </h1>
+            {showTemplateSubtitle && (
+              <p className="text-[13px] text-[#64748b] mb-0.5 font-medium">{templateTitle}</p>
+            )}
             {section.subtitle && (
               <p className="text-[13px] text-[#64748b] mb-0.5">{section.subtitle}</p>
             )}
