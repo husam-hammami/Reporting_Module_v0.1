@@ -11,7 +11,8 @@ Endpoints:
   GET /orders/jobs              — list orders for a template (paginated, time-filterable)
   GET /orders/jobs/<id>         — single order by primary key
   GET /orders/layout-tags/<id>  — Job Logs tags + optional grouped cards
-      (layout_config.jobLogsDetailGroups or legacy jobLogsDetailTags / layout extract)
+      (layout_config.jobLogsDetailGroups: per-tag start_end|unique_in_range, segment_row cards;
+       legacy jobLogsDetailTags / layout extract)
 """
 
 import datetime
@@ -105,25 +106,65 @@ def _job_logs_detail_tags_whitelist(layout_config):
     return out if out else None
 
 
+_JOB_LOGS_VALUE_START_END = "start_end"
+_JOB_LOGS_VALUE_UNIQUE = "unique_in_range"
+_JOB_LOGS_CARD_TAGS = "tags"
+_JOB_LOGS_CARD_SEGMENT_ROW = "segment_row"
+
+
+def _normalize_job_logs_tag_entry(x):
+    """Return {tagName, jobLogsValueMode} or None."""
+    if isinstance(x, str):
+        t = x.strip()
+        if not t:
+            return None
+        return {"tagName": t, "jobLogsValueMode": _JOB_LOGS_VALUE_START_END}
+    if isinstance(x, dict):
+        tag_name = str(x.get("tagName") or "").strip()
+        if not tag_name:
+            return None
+        mode = x.get("jobLogsValueMode")
+        if mode == _JOB_LOGS_VALUE_UNIQUE:
+            m = _JOB_LOGS_VALUE_UNIQUE
+        else:
+            m = _JOB_LOGS_VALUE_START_END
+        return {"tagName": tag_name, "jobLogsValueMode": m}
+    return None
+
+
 def _normalize_job_logs_group(obj, index):
-    """Return {id, title, tags} or None if obj is unusable."""
+    """Return normalized group dict or None if obj is unusable."""
     if not isinstance(obj, dict):
         return None
     title = (obj.get("title") or obj.get("label") or f"Group {index + 1}").strip() or f"Group {index + 1}"
     gid = str(obj.get("id") or "").strip() or f"jg-{index}"
+    segment_row_id = str(obj.get("segmentRowId") or "").strip()
+    card_mode = obj.get("jobLogsCardMode")
+    wants_segment = card_mode == _JOB_LOGS_CARD_SEGMENT_ROW and segment_row_id
+
     raw_tags = obj.get("tags")
     tags_out = []
     seen = set()
     if isinstance(raw_tags, list):
         for x in raw_tags:
-            if not isinstance(x, str):
+            e = _normalize_job_logs_tag_entry(x)
+            if not e:
                 continue
-            t = x.strip()
-            if not t or t in seen:
+            t = e["tagName"]
+            if t in seen:
                 continue
             seen.add(t)
-            tags_out.append(t)
-    return {"id": gid, "title": title, "tags": tags_out}
+            tags_out.append(e)
+
+    if wants_segment:
+        return {
+            "id": gid,
+            "title": title,
+            "jobLogsCardMode": _JOB_LOGS_CARD_SEGMENT_ROW,
+            "segmentRowId": segment_row_id,
+            "tags": [],
+        }
+    return {"id": gid, "title": title, "jobLogsCardMode": _JOB_LOGS_CARD_TAGS, "tags": tags_out}
 
 
 def _job_logs_detail_groups_list(layout_config):
@@ -141,11 +182,19 @@ def _job_logs_detail_groups_list(layout_config):
 
 
 def _flatten_group_tags_in_order(groups):
-    """Union of tag names, first-seen order preserved (for historian query)."""
+    """Union of tag names, first-seen order preserved (for historian query). Skips segment_row cards."""
     flat = []
     seen = set()
     for g in groups:
-        for t in g.get("tags") or []:
+        if g.get("jobLogsCardMode") == _JOB_LOGS_CARD_SEGMENT_ROW:
+            continue
+        for e in g.get("tags") or []:
+            if isinstance(e, str):
+                t = e.strip()
+            elif isinstance(e, dict):
+                t = str(e.get("tagName") or "").strip()
+            else:
+                continue
             if t and t not in seen:
                 seen.add(t)
                 flat.append(t)
@@ -301,12 +350,13 @@ def get_layout_tag_names(template_id):
     """
     Return tag names for Job Logs historian queries plus optional grouped cards.
 
-    Response: { "data": string[] , "groups": [{ "id", "title", "tags": string[] }, ...] }
+    Response: { "data": string[], "groups": [...] }
 
-    - data: deduped flat list (union order) for /historian/by-tags.
-    - groups: card titles + per-card tag order; legacy templates get one synthetic group.
+    - data: deduped flat tag names for /historian/by-tags (segment_row cards omitted).
+    - groups: each card has id, title, optional jobLogsCardMode + segmentRowId, and tags as
+      either string[] (legacy) or [{ "tagName", "jobLogsValueMode": "start_end"|"unique_in_range" }].
 
-    Older clients may read only `data` (unchanged type).
+    Older clients may read only `data` (unchanged type: string[]).
     """
     try:
         get_db = _get_db_connection()

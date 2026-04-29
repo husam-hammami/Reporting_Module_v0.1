@@ -24,6 +24,13 @@ import { useBranding } from '../../Context/BrandingContext';
 import HerculesLogoPng from '../../Assets/Hercules_New.png';
 import AsmLogoPng from '../../Assets/Asm_Logo.png';
 import axios from '../../API/axios';
+import {
+  JOB_LOGS_CARD_SEGMENT_ROW,
+  JOB_LOGS_VALUE_START_END,
+  JOB_LOGS_VALUE_UNIQUE,
+  jobLogsGroupsFromLayoutConfig,
+  serializeJobLogsGroupsForLayout,
+} from '../../utils/jobLogsDetailGroups';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -798,6 +805,13 @@ export function resolveJobLogsSegmentRow(layoutConfig, pointer) {
     if (match) return match;
   }
   return candidates[0];
+}
+
+/** Resolve a silo_segments row by `row.id` (for Job Logs segment cards). */
+export function resolveJobLogsSegmentDescriptorByRowId(sections, rowId) {
+  if (!rowId || !Array.isArray(sections)) return null;
+  const candidates = findSiloSegmentTableRows(sections);
+  return candidates.find((c) => c.row?.id === rowId) || null;
 }
 
 /** `layout_config.jobLogsSegmentsPlacement` — Job Logs detail UI for silo row-segments. */
@@ -2239,37 +2253,70 @@ export function buildJobLogsDetailGroupsFromPaginatedSections(sections) {
     if (!section || section.type !== 'table') continue;
     tableOrdinal += 1;
     const tags = tagsFromTableSection(section);
-    if (tags.length === 0) continue;
     const label = section.label && String(section.label).trim();
     const title = label || `Table ${tableOrdinal}`;
-    out.push({ id: newJobLogsGroupId(), title, tags });
+    let siloRow = null;
+    for (const row of section.rows || []) {
+      if (!row || !Array.isArray(row.cells)) continue;
+      const driver = row.cells.find(
+        (c) => c && c.sourceType === 'tag' && c.aggregation === 'silo_segments' && c.tagName,
+      );
+      if (driver) {
+        siloRow = row;
+        break;
+      }
+    }
+    if (siloRow && siloRow.id) {
+      out.push({
+        id: newJobLogsGroupId(),
+        title,
+        jobLogsCardMode: JOB_LOGS_CARD_SEGMENT_ROW,
+        segmentRowId: siloRow.id,
+        tags: [],
+      });
+    } else if (tags.length > 0) {
+      out.push({
+        id: newJobLogsGroupId(),
+        title,
+        tags: tags.map((t) => ({ tagName: t, jobLogsValueMode: JOB_LOGS_VALUE_START_END })),
+      });
+    }
   }
   return out;
 }
 
 /** Cards for Job Logs detail: layout_config.jobLogsDetailGroups, or legacy flat jobLogsDetailTags. */
 function jobLogsGroupsFromLayout(layout) {
-  const raw = layout?.jobLogsDetailGroups;
-  if (Array.isArray(raw) && raw.length > 0) {
-    return raw.map((row, i) => {
-      const id = String(row?.id || '').trim() || `jg-${i}`;
-      const title = (row?.title && String(row.title).trim()) || (row?.label && String(row.label).trim()) || `Card ${i + 1}`;
-      const tagList = Array.isArray(row?.tags)
-        ? row.tags.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim())
-        : [];
-      return { id, title, tags: tagList };
-    });
-  }
-  const legacy = Array.isArray(layout?.jobLogsDetailTags) ? layout.jobLogsDetailTags : [];
-  const tagList = legacy.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim());
-  if (tagList.length === 0) return [];
-  return [{ id: 'legacy', title: 'Tag values', tags: tagList }];
+  return jobLogsGroupsFromLayoutConfig(layout);
 }
 
 /**
  * layout_config.jobLogsDetailGroups — named cards with tag lists for Job Logs.
  * Empty / unset (and no legacy jobLogsDetailTags) → all tags from report layout.
  */
+function jobLogsTagNamesInCard(card) {
+  const s = new Set();
+  (card?.tags || []).forEach((e) => {
+    const n = typeof e === 'string' ? e.trim() : e?.tagName?.trim();
+    if (n) s.add(n);
+  });
+  return s;
+}
+
+/** Label for a silo_segments row in Job Logs builder dropdowns. */
+function describeSegmentRowCandidate(candidate, allCandidates) {
+  const { section, sectionIndex, rowIndex, segCell, companionCells } = candidate;
+  const sectionLabel = section?.label?.trim() || `Section ${sectionIndex + 1}`;
+  const driverTag = segCell?.tagName || '?';
+  const driverPart = `Driver: ${driverTag}`;
+  const companionPart = companionCells.length > 0
+    ? ` · ${companionCells.length} tag${companionCells.length === 1 ? '' : 's'}`
+    : '';
+  const sameSection = allCandidates.filter((c) => c.sectionIndex === sectionIndex).length > 1;
+  const rowSuffix = sameSection ? ` · Row ${rowIndex + 1}` : '';
+  return `${sectionLabel}${rowSuffix} — ${driverPart}${companionPart}`;
+}
+
 function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
   const [expanded, setExpanded] = useState(false);
   const [filter, setFilter] = useState('');
@@ -2277,6 +2324,8 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
 
   const layout = useMemo(() => parseTemplateLayoutConfig(template), [template?.layout_config]);
   const groups = useMemo(() => jobLogsGroupsFromLayout(layout), [layout]);
+
+  const segmentRowCandidates = useMemo(() => findSiloSegmentTableRows(sections), [sections]);
 
   const hasCustomCards = Array.isArray(layout.jobLogsDetailGroups) && layout.jobLogsDetailGroups.length > 0;
   const hasLegacyOnly = !hasCustomCards && Array.isArray(layout.jobLogsDetailTags) && layout.jobLogsDetailTags.length > 0;
@@ -2290,12 +2339,7 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
       updateMeta({ layout_config: rest });
       return;
     }
-    const normalized = next.map((g, i) => ({
-      id: String(g.id || newJobLogsGroupId()),
-      title: (g.title && String(g.title).trim()) || `Card ${i + 1}`,
-      tags: Array.isArray(g.tags) ? g.tags.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim()) : [],
-    }));
-    updateMeta({ layout_config: { ...rest, jobLogsDetailGroups: normalized } });
+    updateMeta({ layout_config: { ...rest, jobLogsDetailGroups: serializeJobLogsGroupsForLayout(next) } });
   }, [template, updateMeta]);
 
   const tagOptionsForGroup = useCallback((groupId) => {
@@ -2303,7 +2347,8 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
     const q = filter.trim().toLowerCase();
     const pool = q ? names.filter((n) => n.toLowerCase().includes(q)) : names;
     const g = groups.find((x) => x.id === groupId);
-    const inThis = new Set(g?.tags || []);
+    if (!g || g.jobLogsCardMode === JOB_LOGS_CARD_SEGMENT_ROW) return [];
+    const inThis = jobLogsTagNamesInCard(g);
     return pool.filter((n) => !inThis.has(n)).slice(0, 120);
   }, [tags, filter, groups]);
 
@@ -2316,17 +2361,64 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
     if (!pick) return;
     const next = groups.map((g) => {
       if (g.id !== gid) return g;
-      if (g.tags.includes(pick)) return g;
-      return { ...g, tags: [...g.tags, pick] };
+      if (g.jobLogsCardMode === JOB_LOGS_CARD_SEGMENT_ROW) return g;
+      if (jobLogsTagNamesInCard(g).has(pick)) return g;
+      return { ...g, tags: [...(g.tags || []), { tagName: pick, jobLogsValueMode: JOB_LOGS_VALUE_START_END }] };
     });
     saveAllGroups(next);
     setPickFor(gid, '');
   };
 
+  const setTagValueMode = (gid, tagIdx, mode) => {
+    const next = groups.map((g) => {
+      if (g.id !== gid) return g;
+      const cp = [...(g.tags || [])];
+      const cur = cp[tagIdx];
+      const tagName = typeof cur === 'string' ? cur : cur?.tagName;
+      if (!tagName) return g;
+      cp[tagIdx] = {
+        tagName,
+        jobLogsValueMode: mode === JOB_LOGS_VALUE_UNIQUE ? JOB_LOGS_VALUE_UNIQUE : JOB_LOGS_VALUE_START_END,
+      };
+      return { ...g, tags: cp };
+    });
+    saveAllGroups(next);
+  };
+
+  const setCardDisplayMode = (gid, displayMode) => {
+    const next = groups.map((g) => {
+      if (g.id !== gid) return g;
+      if (displayMode === JOB_LOGS_CARD_SEGMENT_ROW) {
+        const firstId = segmentRowCandidates[0]?.row?.id;
+        if (!firstId) {
+          return { ...g, jobLogsCardMode: undefined, segmentRowId: undefined, tags: g.tags || [] };
+        }
+        return {
+          ...g,
+          jobLogsCardMode: JOB_LOGS_CARD_SEGMENT_ROW,
+          segmentRowId: firstId,
+          tags: [],
+        };
+      }
+      return {
+        ...g,
+        jobLogsCardMode: undefined,
+        segmentRowId: undefined,
+        tags: Array.isArray(g.tags) ? g.tags : [],
+      };
+    });
+    saveAllGroups(next);
+  };
+
+  const setCardSegmentRowId = (gid, rowId) => {
+    const next = groups.map((g) => (g.id === gid ? { ...g, segmentRowId: rowId } : g));
+    saveAllGroups(next);
+  };
+
   const removeTagFromGroup = (gid, tagIdx) => {
     const next = groups.map((g) => {
       if (g.id !== gid) return g;
-      return { ...g, tags: g.tags.filter((_, i) => i !== tagIdx) };
+      return { ...g, tags: (g.tags || []).filter((_, i) => i !== tagIdx) };
     });
     saveAllGroups(next);
   };
@@ -2335,8 +2427,8 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
     const g = groups.find((x) => x.id === gid);
     if (!g) return;
     const j = idx + dir;
-    if (j < 0 || j >= g.tags.length) return;
-    const cp = [...g.tags];
+    if (j < 0 || j >= (g.tags || []).length) return;
+    const cp = [...(g.tags || [])];
     [cp[idx], cp[j]] = [cp[j], cp[idx]];
     const next = groups.map((x) => (x.id === gid ? { ...x, tags: cp } : x));
     saveAllGroups(next);
@@ -2367,13 +2459,15 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
     const fromReport = collectPaginatedTagNames(sections);
     if (fromReport.length === 0) return;
     let next = groups.length
-      ? groups.map((g) => ({ ...g, tags: [...g.tags] }))
+      ? groups.map((g) => ({ ...g, tags: [...(g.tags || [])] }))
       : [{ id: newJobLogsGroupId(), title: 'Tag values', tags: [] }];
-    const seen = new Set(next[0].tags);
+    const first = next[0];
+    if (first.jobLogsCardMode === JOB_LOGS_CARD_SEGMENT_ROW) return;
+    const seen = jobLogsTagNamesInCard(first);
     for (const n of fromReport) {
       if (n && !seen.has(n)) {
         seen.add(n);
-        next[0].tags.push(n);
+        first.tags.push({ tagName: n, jobLogsValueMode: JOB_LOGS_VALUE_START_END });
       }
     }
     saveAllGroups(next);
@@ -2401,7 +2495,7 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
   const modeLabel = hasCustomCards
     ? `${groups.length} card${groups.length === 1 ? '' : 's'}`
     : hasLegacyOnly
-      ? `${groups.reduce((n, g) => n + g.tags.length, 0)} tags (legacy)`
+      ? `${groups.reduce((n, g) => n + (g.jobLogsCardMode === JOB_LOGS_CARD_SEGMENT_ROW ? 1 : (g.tags || []).length), 0)} tags (legacy)`
       : 'all report tags';
 
   return (
@@ -2421,68 +2515,116 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
       {expanded && (
         <div className="px-3 py-2.5 space-y-2" style={{ borderTop: '1px solid var(--rb-border)' }}>
           <p className="text-[9px] leading-snug" style={{ color: 'var(--rb-text-muted)' }}>
-            Named cards appear on the Job Logs page (order start/end). Each card lists tags with Start / End / Δ.
-            Leave empty to use every tag from this report layout. Use Cards from report tables to match paginated table sections.
+            Named cards on Job Logs: tag cards use Start / End / Δ, or Unique values in the order window, or a Silo segment table (same row as paginated Receiver ID).
+            Leave empty to use every tag from this report. Cards from tables picks segment cards when a table has a Silo IDs row.
           </p>
 
           {groups.length > 0 && (
             <div className="space-y-2 max-h-[min(360px,50vh)] overflow-y-auto pr-0.5">
-              {groups.map((card, cardIdx) => (
-                <div key={card.id} className="rounded border p-2 space-y-1.5" style={{ borderColor: 'var(--rb-border)', background: 'var(--rb-surface)' }}>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      value={card.title}
-                      onChange={(e) => updateGroupTitle(card.id, e.target.value)}
-                      className="rb-input-base flex-1 text-[10px] py-0.5 px-1.5 font-semibold min-w-0"
-                      placeholder="Card title"
-                    />
-                    <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveCard(cardIdx, -1)} title="Move card up">
-                      <ChevronUp size={10} />
-                    </button>
-                    <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveCard(cardIdx, 1)} title="Move card down">
-                      <ChevronDown size={10} />
-                    </button>
-                    <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: '#f87171' }} onClick={() => removeCard(cardIdx)} title="Remove card">
-                      <Trash2 size={10} />
-                    </button>
+              {groups.map((card, cardIdx) => {
+                const isSegment = card.jobLogsCardMode === JOB_LOGS_CARD_SEGMENT_ROW;
+                return (
+                  <div key={card.id} className="rounded border p-2 space-y-1.5" style={{ borderColor: 'var(--rb-border)', background: 'var(--rb-surface)' }}>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={card.title}
+                        onChange={(e) => updateGroupTitle(card.id, e.target.value)}
+                        className="rb-input-base flex-1 text-[10px] py-0.5 px-1.5 font-semibold min-w-0"
+                        placeholder="Card title"
+                      />
+                      <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveCard(cardIdx, -1)} title="Move card up">
+                        <ChevronUp size={10} />
+                      </button>
+                      <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveCard(cardIdx, 1)} title="Move card down">
+                        <ChevronDown size={10} />
+                      </button>
+                      <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: '#f87171' }} onClick={() => removeCard(cardIdx)} title="Remove card">
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className="text-[9px] font-semibold uppercase" style={{ color: 'var(--rb-text-muted)' }}>Card type</span>
+                      <select
+                        value={isSegment ? JOB_LOGS_CARD_SEGMENT_ROW : 'tags'}
+                        onChange={(e) => setCardDisplayMode(card.id, e.target.value)}
+                        className="rb-input-base text-[9px] py-0.5 px-1 min-w-0 flex-1"
+                      >
+                        <option value="tags">Tag list (start / end or unique)</option>
+                        <option value={JOB_LOGS_CARD_SEGMENT_ROW} disabled={segmentRowCandidates.length === 0}>
+                          Silo segment table (paginated row)
+                        </option>
+                      </select>
+                    </div>
+                    {isSegment && segmentRowCandidates.length > 0 && (
+                      <select
+                        value={card.segmentRowId || segmentRowCandidates[0]?.row?.id || ''}
+                        onChange={(e) => setCardSegmentRowId(card.id, e.target.value)}
+                        className="rb-input-base w-full text-[9px] py-0.5 px-1"
+                      >
+                        {segmentRowCandidates.map((c) => (
+                          <option key={c.row?.id || `${c.sectionIndex}-${c.rowIndex}`} value={c.row?.id || ''}>
+                            {describeSegmentRowCandidate(c, segmentRowCandidates)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {isSegment && segmentRowCandidates.length === 0 && (
+                      <p className="text-[9px]" style={{ color: '#f59e0b' }}>Add a table row with Silo IDs (segments) in the paginated layout to use this card type.</p>
+                    )}
+                    {!isSegment && (card.tags || []).length > 0 && (
+                      <ul className="space-y-0.5 max-h-28 overflow-y-auto rounded border px-1 py-0.5" style={{ borderColor: 'var(--rb-border)', background: 'var(--rb-panel)' }}>
+                        {(card.tags || []).map((entry, idx) => {
+                          const name = typeof entry === 'string' ? entry : entry?.tagName;
+                          const vm = typeof entry === 'object' && entry?.jobLogsValueMode === JOB_LOGS_VALUE_UNIQUE
+                            ? JOB_LOGS_VALUE_UNIQUE
+                            : JOB_LOGS_VALUE_START_END;
+                          return (
+                            <li key={`${name}-${idx}`} className="flex flex-wrap items-center gap-0.5 text-[10px]" style={{ color: 'var(--rb-text)' }}>
+                              <span className="flex-1 min-w-[80px] truncate font-mono" title={name}>{name}</span>
+                              <select
+                                value={vm}
+                                onChange={(e) => setTagValueMode(card.id, idx, e.target.value)}
+                                className="rb-input-base text-[9px] py-0 px-0.5 max-w-[140px]"
+                              >
+                                <option value={JOB_LOGS_VALUE_START_END}>Start and end</option>
+                                <option value={JOB_LOGS_VALUE_UNIQUE}>Unique in order</option>
+                              </select>
+                              <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveTagInGroup(card.id, idx, -1)} title="Move up">
+                                <ChevronUp size={10} />
+                              </button>
+                              <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveTagInGroup(card.id, idx, 1)} title="Move down">
+                                <ChevronDown size={10} />
+                              </button>
+                              <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: '#f87171' }} onClick={() => removeTagFromGroup(card.id, idx)} title="Remove">
+                                <X size={10} />
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {!isSegment && (
+                      <div className="flex gap-1 items-center">
+                        <select
+                          value={pendingPick[card.id] || ''}
+                          onChange={(e) => setPickFor(card.id, e.target.value)}
+                          className="rb-input-base flex-1 text-[10px] py-1 px-1 min-w-0"
+                        >
+                          <option value="">Add tag…</option>
+                          {tagOptionsForGroup(card.id).map((n) => (
+                            <option key={n} value={n}>{n}</option>
+                          ))}
+                        </select>
+                        <button type="button" onClick={() => addPickedToGroup(card.id)} disabled={!pendingPick[card.id]}
+                          className="rb-input-base text-[9px] font-bold uppercase px-2 py-1 shrink-0 disabled:opacity-40">
+                          Add
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {card.tags.length > 0 && (
-                    <ul className="space-y-0.5 max-h-24 overflow-y-auto rounded border px-1 py-0.5" style={{ borderColor: 'var(--rb-border)', background: 'var(--rb-panel)' }}>
-                      {card.tags.map((name, idx) => (
-                        <li key={`${name}-${idx}`} className="flex items-center gap-0.5 text-[10px]" style={{ color: 'var(--rb-text)' }}>
-                          <span className="flex-1 truncate font-mono" title={name}>{name}</span>
-                          <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveTagInGroup(card.id, idx, -1)} title="Move up">
-                            <ChevronUp size={10} />
-                          </button>
-                          <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: 'var(--rb-text-muted)' }} onClick={() => moveTagInGroup(card.id, idx, 1)} title="Move down">
-                            <ChevronDown size={10} />
-                          </button>
-                          <button type="button" className="p-0.5 rounded hover:opacity-80" style={{ color: '#f87171' }} onClick={() => removeTagFromGroup(card.id, idx)} title="Remove">
-                            <X size={10} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <div className="flex gap-1 items-center">
-                    <select
-                      value={pendingPick[card.id] || ''}
-                      onChange={(e) => setPickFor(card.id, e.target.value)}
-                      className="rb-input-base flex-1 text-[10px] py-1 px-1 min-w-0"
-                    >
-                      <option value="">Add tag…</option>
-                      {tagOptionsForGroup(card.id).map((n) => (
-                        <option key={n} value={n}>{n}</option>
-                      ))}
-                    </select>
-                    <button type="button" onClick={() => addPickedToGroup(card.id)} disabled={!pendingPick[card.id]}
-                      className="rb-input-base text-[9px] font-bold uppercase px-2 py-1 shrink-0 disabled:opacity-40">
-                      Add
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -2531,20 +2673,6 @@ function JobLogsDetailTagsCard({ template, tags, sections, updateMeta }) {
  * Optional pointer: layout_config.jobLogsSegmentPointer = { rowId } selects which
  * `silo_segments` row Job Logs should expand for an order. Auto = first matching row.
  */
-function describeSegmentRowCandidate(candidate, allCandidates) {
-  const { section, sectionIndex, rowIndex, segCell, companionCells } = candidate;
-  const sectionLabel = section?.label?.trim() || `Section ${sectionIndex + 1}`;
-  const driverTag = segCell?.tagName || '?';
-  const driverPart = `Driver: ${driverTag}`;
-  const companionPart = companionCells.length > 0
-    ? ` · ${companionCells.length} tag${companionCells.length === 1 ? '' : 's'}`
-    : '';
-  // Disambiguate when the same section has multiple silo rows — useful for the dropdown.
-  const sameSection = allCandidates.filter((c) => c.sectionIndex === sectionIndex).length > 1;
-  const rowSuffix = sameSection ? ` · Row ${rowIndex + 1}` : '';
-  return `${sectionLabel}${rowSuffix} — ${driverPart}${companionPart}`;
-}
-
 function JobLogsSegmentRowCard({ template, sections, updateMeta }) {
   const [expanded, setExpanded] = useState(false);
 

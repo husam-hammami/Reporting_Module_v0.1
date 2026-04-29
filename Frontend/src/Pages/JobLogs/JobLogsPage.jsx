@@ -6,12 +6,21 @@ import { toast } from 'react-toastify';
 import '../../Pages/ReportBuilder/reportBuilderTheme.css';
 import {
   resolveJobLogsSegmentRow,
+  resolveJobLogsSegmentDescriptorByRowId,
   normalizeJobLogsSegmentsPlacement,
   PaginatedReportPreview,
   collectPaginatedTagNames,
   collectPaginatedTagAggregations,
   buildTagDecimalLookup,
 } from '../ReportBuilder/PaginatedReportBuilder';
+import {
+  JOB_LOGS_CARD_SEGMENT_ROW,
+  JOB_LOGS_VALUE_START_END,
+  JOB_LOGS_VALUE_UNIQUE,
+  jobLogsGroupHasRenderableContent,
+  normalizeJobLogsGroup,
+  partitionJobLogsTagsByMode,
+} from '../../utils/jobLogsDetailGroups';
 import { useAvailableTags } from '../../Hooks/useReportBuilder';
 import { fetchPaginatedHistoricalData } from '../../utils/paginatedHistoricalFetch';
 import { exportAsPDF as exportAsPDFUtil } from '../../utils/exportReport';
@@ -216,6 +225,84 @@ function indexSegmentValues(values) {
   return out;
 }
 
+function jobLogsSegmentRowDefFromDescriptor(desc) {
+  if (!desc?.row?.id) return null;
+  return {
+    rowId: desc.row.id,
+    segCell: desc.segCell || {},
+    companionCells: desc.companionCells || [],
+    sectionLabel: desc.section?.label || '',
+  };
+}
+
+/** Compact segment table for a Job Logs card (same data as paginated silo row). */
+function JobLogsSegmentCardTable({
+  theme,
+  rowDef,
+  segments,
+  loading,
+  error,
+}) {
+  if (!rowDef) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 py-4 justify-center">
+        <Loader2 size={14} className="animate-spin" style={{ color: theme.accent }} />
+        <span className="text-xs" style={{ color: theme.textMuted }}>Loading…</span>
+      </div>
+    );
+  }
+  if (error) {
+    return <p className="text-xs py-1" style={{ color: '#f87171' }}>{error}</p>;
+  }
+  if (!Array.isArray(segments) || segments.length === 0) {
+    return (
+      <p className="text-xs py-1" style={{ color: theme.textMuted }}>
+        No silo segments in this order window.
+      </p>
+    );
+  }
+  const driverLabel = rowDef.segCell?.tagName || 'ID';
+  return (
+    <div className="overflow-x-auto min-w-0">
+      <table className="w-full text-[9px] md:text-[10px]">
+        <thead>
+          <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+            <th className="text-left px-1 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.textMuted }}>{driverLabel}</th>
+            {(rowDef.companionCells || []).map((c, i) => (
+              <th key={`h-${c.tagName}-${i}`} className="text-right px-1 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.textMuted }}>
+                <span className="font-mono">{c.tagName}</span>
+                <span className="lowercase ml-0.5" style={{ color: theme.textMuted }}>({shortAggLabel(c.aggregation)})</span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {segments.map((seg, idx) => {
+            const valueIndex = indexSegmentValues(seg.values);
+            return (
+              <tr key={`${seg.t_start}-${idx}`} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                <td className="px-1 py-0.5 font-mono font-semibold" style={{ color: theme.accent }}>
+                  {formatTagCell(seg.silo_id)}
+                </td>
+                {(rowDef.companionCells || []).map((c, i) => {
+                  const key = `${c.tagName}::${c.aggregation || 'last'}`;
+                  const entry = valueIndex[key];
+                  return (
+                    <td key={`c-${key}-${i}`} className="px-1 py-0.5 text-right font-mono whitespace-nowrap" style={{ color: theme.textSecondary }}>
+                      {entry ? formatTagCell(entry.value) : '—'}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /** Shared silo segment list (loading / error / blocks) for side panel or inline card. */
 function SiloSegmentBlocks({
   theme,
@@ -308,7 +395,7 @@ export default function JobLogsPage() {
   const [loading, setLoading] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
   const [detailData, setDetailData] = useState({});
-  /** Grouped cards: { id, title, tags[] } — order from layout-tags API */
+  /** Grouped cards — normalized from layout-tags API (see jobLogsDetailGroups util). */
   const [detailGroups, setDetailGroups] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -319,6 +406,8 @@ export default function JobLogsPage() {
   const [segmentData, setSegmentData] = useState([]);
   const [segmentLoading, setSegmentLoading] = useState(false);
   const [segmentError, setSegmentError] = useState(null);
+  /** Per Job Logs card with jobLogsCardMode segment_row: { loading, error, segments, rowDef }. */
+  const [segmentCardsByGroupId, setSegmentCardsByGroupId] = useState({});
 
   /** Paginated template (same layout as PDF report viewer). */
   const [paginatedSections, setPaginatedSections] = useState([]);
@@ -360,6 +449,7 @@ export default function JobLogsPage() {
       setDetailGroups([]);
       setSegmentData([]);
       setSegmentError(null);
+      setSegmentCardsByGroupId({});
     } catch {
       toast.error('Failed to load orders');
     } finally {
@@ -412,11 +502,12 @@ export default function JobLogsPage() {
     return () => { cancelled = true; };
   }, [selectedTemplateId]);
 
-  // Load detail when a job is selected
+  // Load detail when a job is selected (per-tag start/end vs unique_in_range; segment cards load separately).
   useEffect(() => {
     if (!selectedJob) {
       setDetailData({});
       setDetailGroups([]);
+      setSegmentCardsByGroupId({});
       return;
     }
     const { start_time, end_time } = selectedJob;
@@ -431,21 +522,21 @@ export default function JobLogsPage() {
         const body = res.data || {};
         const flatTags = Array.isArray(body.data) ? body.data : [];
         const rawGroups = body.groups;
-        const groups =
-          Array.isArray(rawGroups) && rawGroups.length > 0
-            ? rawGroups.map((g, i) => ({
-              id: String(g?.id || `jg-${i}`),
-              title: (g?.title && String(g.title).trim()) || `Group ${i + 1}`,
-              tags: Array.isArray(g?.tags) ? g.tags.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim()) : [],
-            }))
-            : (flatTags.length > 0
-              ? [{ id: 'default', title: 'Tag values at order start / end', tags: flatTags }]
-              : []);
-        return { list: flatTags, groups };
-      })
-      .then(({ list, groups }) => {
-        setDetailGroups(groups);
-        if (list.length === 0) return;
+        let groupsNormalized;
+        if (Array.isArray(rawGroups) && rawGroups.length > 0) {
+          groupsNormalized = rawGroups.map((g, i) => normalizeJobLogsGroup(g, i));
+        } else if (flatTags.length > 0) {
+          groupsNormalized = [{
+            id: 'default',
+            title: 'Tag values at order start / end',
+            tags: flatTags.map((t) => ({ tagName: t, jobLogsValueMode: JOB_LOGS_VALUE_START_END })),
+          }];
+        } else {
+          groupsNormalized = [];
+        }
+
+        const { startEndTags, uniqueTags } = partitionJobLogsTagsByMode(groupsNormalized);
+        setDetailGroups(groupsNormalized);
 
         const wall = historianOrderWallParams(start_time, end_time);
         let fromParam = wall.fromParam;
@@ -460,18 +551,60 @@ export default function JobLogsPage() {
           toParam = new Date().toISOString();
         }
 
-        const baseParams = {
-          tag_names: list.join(','),
-          from: fromParam,
-          to: toParam,
-        };
-        return Promise.all([
-          axios.get('/api/historian/by-tags', { params: { ...baseParams, aggregation: 'first' } }),
-          axios.get('/api/historian/by-tags', { params: { ...baseParams, aggregation: 'last' } }),
-        ]).then(([resFirst, resLast]) => {
-          const firstVals = resFirst.data?.data || resFirst.data?.tag_values || {};
-          const lastVals = resLast.data?.data || resLast.data?.tag_values || {};
-          setDetailData(mergeTagStartEnd(firstVals, lastVals));
+        if (startEndTags.length === 0 && uniqueTags.length === 0) {
+          setDetailData({});
+          return;
+        }
+
+        const requests = [];
+        if (startEndTags.length > 0) {
+          const baseParams = {
+            tag_names: startEndTags.join(','),
+            from: fromParam,
+            to: toParam,
+          };
+          requests.push(
+            axios.get('/api/historian/by-tags', { params: { ...baseParams, aggregation: 'first' } }),
+            axios.get('/api/historian/by-tags', { params: { ...baseParams, aggregation: 'last' } }),
+          );
+        }
+        if (uniqueTags.length > 0) {
+          requests.push(
+            axios.get('/api/historian/by-tags', {
+              params: {
+                tag_names: uniqueTags.join(','),
+                from: fromParam,
+                to: toParam,
+                aggregation: 'unique_in_range',
+              },
+            }),
+          );
+        }
+
+        return Promise.all(requests).then((results) => {
+          let i = 0;
+          let firstVals = {};
+          let lastVals = {};
+          let uniqueVals = {};
+          if (startEndTags.length > 0) {
+            firstVals = results[i].data?.data || results[i].data?.tag_values || {};
+            i += 1;
+            lastVals = results[i].data?.data || results[i].data?.tag_values || {};
+            i += 1;
+          }
+          if (uniqueTags.length > 0) {
+            uniqueVals = results[i].data?.data || results[i].data?.tag_values || {};
+          }
+          const seMerged = mergeTagStartEnd(firstVals, lastVals);
+          const merged = {};
+          for (const t of startEndTags) {
+            const r = seMerged[t] || {};
+            merged[t] = { mode: 'start_end', start: r.start, end: r.end, total: r.total };
+          }
+          for (const t of uniqueTags) {
+            merged[t] = { mode: 'unique_in_range', unique: uniqueVals[t] };
+          }
+          setDetailData(merged);
         });
       })
       .catch(err => {
@@ -479,6 +612,129 @@ export default function JobLogsPage() {
       })
       .finally(() => setDetailLoading(false));
   }, [selectedJob, selectedTemplateId]);
+
+  // Row-segments for Job Logs cards configured as segment_row (may differ from side-panel pointer row).
+  useEffect(() => {
+    if (!selectedJob?.start_time || !selectedTemplateId) {
+      setSegmentCardsByGroupId({});
+      return undefined;
+    }
+    const { start_time, end_time } = selectedJob;
+    const segmentGroups = detailGroups.filter(
+      (g) => g.jobLogsCardMode === JOB_LOGS_CARD_SEGMENT_ROW && g.segmentRowId,
+    );
+    if (segmentGroups.length === 0) {
+      setSegmentCardsByGroupId({});
+      return undefined;
+    }
+    if (!Array.isArray(paginatedSections) || paginatedSections.length === 0) {
+      const empty = {};
+      segmentGroups.forEach((g) => {
+        empty[g.id] = { loading: false, error: 'Layout not loaded', segments: [], rowDef: null };
+      });
+      setSegmentCardsByGroupId(empty);
+      return undefined;
+    }
+
+    const metaByGroupId = {};
+    const rowsPayload = [];
+    for (const g of segmentGroups) {
+      const desc = resolveJobLogsSegmentDescriptorByRowId(paginatedSections, g.segmentRowId);
+      const rowDef = desc ? jobLogsSegmentRowDefFromDescriptor(desc) : null;
+      const segCell = rowDef?.segCell || {};
+      if (!rowDef || !segCell.tagName) {
+        metaByGroupId[g.id] = { rowDef: null, rowId: null };
+        continue;
+      }
+      metaByGroupId[g.id] = { rowDef, rowId: rowDef.rowId };
+      rowsPayload.push({
+        row_id: rowDef.rowId,
+        segment_tag: segCell.tagName,
+        min_segment_seconds: segCell.segmentMinSeconds ?? 60,
+        ignore_values: segCell.segmentIgnoreValues ?? [0],
+        companion_cells: rowDef.companionCells || [],
+        merge_duplicates: segCell.segmentMergeDuplicates !== false,
+      });
+    }
+
+    let cancelled = false;
+    setSegmentCardsByGroupId((prev) => {
+      const m = { ...prev };
+      for (const g of segmentGroups) {
+        const meta = metaByGroupId[g.id];
+        m[g.id] = {
+          loading: true,
+          error: meta?.rowDef ? null : 'Silo row not found',
+          segments: [],
+          rowDef: meta?.rowDef || null,
+        };
+      }
+      return m;
+    });
+
+    if (rowsPayload.length === 0) {
+      return () => { cancelled = true; };
+    }
+
+    const wall = historianOrderWallParams(start_time, end_time);
+    let fromParam = wall.fromParam;
+    let toParam = wall.toParam;
+    const fromMs = parseOrderWallTime(start_time)?.getTime() ?? NaN;
+    const toMs =
+      end_time != null && end_time !== ''
+        ? (parseOrderWallTime(end_time)?.getTime() ?? NaN)
+        : Date.now();
+    if (!Number.isNaN(fromMs) && !Number.isNaN(toMs) && fromMs > toMs) {
+      toParam = new Date().toISOString();
+    }
+
+    axios.post('/api/historian/row-segments', { from: fromParam, to: toParam, rows: rowsPayload }, { timeout: 20000 })
+      .then((res) => {
+        if (cancelled) return;
+        const rows = res.data?.rows || {};
+        setSegmentCardsByGroupId((prev) => {
+          const m = { ...prev };
+          for (const g of segmentGroups) {
+            const meta = metaByGroupId[g.id];
+            if (!meta?.rowId) {
+              m[g.id] = {
+                loading: false,
+                error: 'Silo row not found',
+                segments: [],
+                rowDef: null,
+              };
+              continue;
+            }
+            const segs = rows[meta.rowId];
+            m[g.id] = {
+              loading: false,
+              error: null,
+              rowDef: meta.rowDef,
+              segments: Array.isArray(segs) ? segs : [],
+            };
+          }
+          return m;
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const msg = err.response?.data?.error || err.message || 'Failed to load silo segments';
+        setSegmentCardsByGroupId((prev) => {
+          const m = { ...prev };
+          for (const g of segmentGroups) {
+            m[g.id] = {
+              loading: false,
+              error: msg,
+              segments: [],
+              rowDef: metaByGroupId[g.id]?.rowDef || null,
+            };
+          }
+          return m;
+        });
+      });
+
+    return () => { cancelled = true; };
+  }, [selectedJob, selectedTemplateId, detailGroups, paginatedSections]);
 
   // Fetch silo segment data for the selected order using the row resolved from layout_config.
   // Mirrors PaginatedReportViewer's POST to /api/historian/row-segments but reuses Job Logs'
@@ -898,7 +1154,7 @@ export default function JobLogsPage() {
               {(() => {
                 const showSideSegments = Boolean(segmentRowDef && segmentsPlacement === 'side');
                 const showInlineSegments = Boolean(segmentRowDef && segmentsPlacement === 'inline');
-                const hasTagCards = detailGroups.some((g) => Array.isArray(g.tags) && g.tags.length > 0);
+                const hasTagCards = detailGroups.some((g) => jobLogsGroupHasRenderableContent(g));
                 const showCardsGrid = detailLoading || hasTagCards || showInlineSegments;
                 return (
                   <div className={`grid gap-2 flex-1 min-h-0 grid-rows-1 ${showSideSegments ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
@@ -908,10 +1164,10 @@ export default function JobLogsPage() {
                     >
                       <div className="flex-shrink-0 mb-1.5">
                         <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>
-                          Tag values at order start / end
+                          Order detail
                         </h3>
                         <p className="text-[9px] md:text-[10px] leading-tight" style={{ color: theme.textMuted }}>
-                          Historian first + last
+                          Start / end, unique values in the order, or silo segment tables — set per card in Report Builder.
                         </p>
                       </div>
 
@@ -935,50 +1191,99 @@ export default function JobLogsPage() {
                               gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
                             }}
                           >
-                            {detailGroups.filter((g) => Array.isArray(g.tags) && g.tags.length > 0).map((group) => (
-                              <div
-                                key={group.id}
-                                className="rounded-md flex flex-col min-h-0 min-w-0 border overflow-hidden"
-                                style={{ background: theme.surface, borderColor: theme.border }}
-                              >
+                            {detailGroups.filter((g) => jobLogsGroupHasRenderableContent(g)).map((group) => {
+                              if (group.jobLogsCardMode === JOB_LOGS_CARD_SEGMENT_ROW) {
+                                const st = segmentCardsByGroupId[group.id] || {
+                                  loading: true,
+                                  error: null,
+                                  segments: [],
+                                  rowDef: null,
+                                };
+                                return (
+                                  <div
+                                    key={group.id}
+                                    className="rounded-md flex flex-col min-h-0 min-w-0 border overflow-hidden"
+                                    style={{ background: theme.surface, borderColor: theme.border }}
+                                  >
+                                    <div
+                                      className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 truncate flex-shrink-0 flex items-center gap-1"
+                                      style={{ color: theme.text, background: theme.surfaceAlt, borderBottom: `1px solid ${theme.border}` }}
+                                      title={group.title}
+                                    >
+                                      <Layers size={11} style={{ color: theme.textMuted }} />
+                                      {group.title}
+                                    </div>
+                                    <div className="px-1.5 py-1 flex-1 min-h-0 min-w-0 overflow-auto">
+                                      <JobLogsSegmentCardTable
+                                        theme={theme}
+                                        rowDef={st.rowDef}
+                                        segments={st.segments}
+                                        loading={st.loading}
+                                        error={st.error}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return (
                                 <div
-                                  className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 truncate flex-shrink-0"
-                                  style={{ color: theme.text, background: theme.surfaceAlt, borderBottom: `1px solid ${theme.border}` }}
-                                  title={group.title}
+                                  key={group.id}
+                                  className="rounded-md flex flex-col min-h-0 min-w-0 border overflow-hidden"
+                                  style={{ background: theme.surface, borderColor: theme.border }}
                                 >
-                                  {group.title}
+                                  <div
+                                    className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 truncate flex-shrink-0"
+                                    style={{ color: theme.text, background: theme.surfaceAlt, borderBottom: `1px solid ${theme.border}` }}
+                                    title={group.title}
+                                  >
+                                    {group.title}
+                                  </div>
+                                  <div className="overflow-x-auto min-h-0">
+                                    <table className="w-full text-[9px] md:text-[10px]">
+                                      <thead>
+                                        <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                                          <th className="text-left px-1.5 py-0.5 font-semibold align-bottom" style={{ color: theme.textMuted }}>Tag</th>
+                                          <th className="text-right px-1 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.textMuted }}>Start</th>
+                                          <th className="text-right px-1 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.textMuted }}>End</th>
+                                          <th className="text-right px-1.5 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.accent }}>Δ</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {(group.tags || []).map((entry, idx) => {
+                                          const tagName = typeof entry === 'string' ? entry : entry?.tagName;
+                                          const isUnique = typeof entry === 'object' && entry?.jobLogsValueMode === JOB_LOGS_VALUE_UNIQUE;
+                                          const r = detailData[tagName] && typeof detailData[tagName] === 'object' ? detailData[tagName] : {};
+                                          const startCell = isUnique || r.mode === 'unique_in_range'
+                                            ? formatTagCell(r.unique)
+                                            : formatTagCell(r.start);
+                                          const endCell = isUnique || r.mode === 'unique_in_range' ? '—' : formatTagCell(r.end);
+                                          const deltaCell = isUnique || r.mode === 'unique_in_range'
+                                            ? '—'
+                                            : (r.total !== null && r.total !== undefined ? formatTagCell(r.total) : '—');
+                                          return (
+                                            <tr key={`${group.id}-${tagName}-${idx}`} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                                              <td className="px-1.5 py-0.5 font-mono align-top max-w-[100px] md:max-w-[160px]">
+                                                <span className="block truncate" title={tagName} style={{ color: theme.text }}>
+                                                  {tagName}
+                                                  {(isUnique || r.mode === 'unique_in_range') && (
+                                                    <span className="block text-[8px] font-sans normal-case opacity-75" style={{ color: theme.textMuted }}>Unique in order</span>
+                                                  )}
+                                                </span>
+                                              </td>
+                                              <td className="px-1 py-0.5 text-right font-mono align-top break-words whitespace-pre-wrap max-w-[140px]" style={{ color: theme.textSecondary }}>{startCell}</td>
+                                              <td className="px-1 py-0.5 text-right font-mono align-top whitespace-nowrap" style={{ color: theme.textSecondary }}>{endCell}</td>
+                                              <td className="px-1.5 py-0.5 text-right font-mono font-semibold align-top whitespace-nowrap" style={{ color: theme.accent }}>
+                                                {deltaCell}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </div>
                                 </div>
-                                <div className="overflow-x-auto min-h-0">
-                                  <table className="w-full text-[9px] md:text-[10px]">
-                                    <thead>
-                                      <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                                        <th className="text-left px-1.5 py-0.5 font-semibold align-bottom" style={{ color: theme.textMuted }}>Tag</th>
-                                        <th className="text-right px-1 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.textMuted }}>Start</th>
-                                        <th className="text-right px-1 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.textMuted }}>End</th>
-                                        <th className="text-right px-1.5 py-0.5 font-semibold whitespace-nowrap" style={{ color: theme.accent }}>Δ</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {group.tags.map((tag) => {
-                                        const r = detailData[tag] && typeof detailData[tag] === 'object' ? detailData[tag] : {};
-                                        return (
-                                          <tr key={`${group.id}-${tag}`} style={{ borderBottom: `1px solid ${theme.border}` }}>
-                                            <td className="px-1.5 py-0.5 font-mono align-top max-w-[100px] md:max-w-[140px]">
-                                              <span className="block truncate" title={tag} style={{ color: theme.text }}>{tag}</span>
-                                            </td>
-                                            <td className="px-1 py-0.5 text-right font-mono align-top whitespace-nowrap" style={{ color: theme.textSecondary }}>{formatTagCell(r.start)}</td>
-                                            <td className="px-1 py-0.5 text-right font-mono align-top whitespace-nowrap" style={{ color: theme.textSecondary }}>{formatTagCell(r.end)}</td>
-                                            <td className="px-1.5 py-0.5 text-right font-mono font-semibold align-top whitespace-nowrap" style={{ color: theme.accent }}>
-                                              {r.total !== null && r.total !== undefined ? formatTagCell(r.total) : '—'}
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
 
                             {showInlineSegments && segmentRowDef && (
                               <div
