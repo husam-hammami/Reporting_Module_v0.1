@@ -19,6 +19,19 @@ import AttentionStage from './stages/AttentionStage';
 import MachinesStage from './stages/MachinesStage';
 import AuditStage from './stages/AuditStage';
 import OnboardingModal from './components/OnboardingModal';
+// Plan 14 — single-page dashboard (feature-flagged; default off until commit 11)
+import HerculesAIDashboard from './dashboard/HerculesAIDashboard';
+
+// Read the feature flag once on module load. Toggle in DevTools console:
+//   localStorage.setItem('hercules.dashboard.v2', '1');  // enable
+//   localStorage.removeItem('hercules.dashboard.v2');    // disable
+function _readDashboardV2Flag() {
+  try {
+    return typeof window !== 'undefined' && localStorage.getItem('hercules.dashboard.v2') === '1';
+  } catch {
+    return false;
+  }
+}
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -185,7 +198,15 @@ export default function HerculesAISetup() {
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState({});
   const [status, setStatus] = useState(null);
-  const [step, setStep] = useState(0);
+  // Dev affordance: ?step=3 jumps straight to the post-setup hub for QA / preview.
+  const _initialStep = (() => {
+    try {
+      const p = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('step');
+      const n = p != null ? parseInt(p, 10) : NaN;
+      return Number.isFinite(n) && n >= 0 && n <= 3 ? n : 0;
+    } catch { return 0; }
+  })();
+  const [step, setStep] = useState(_initialStep);
   const [direction, setDirection] = useState(1);
 
   // Step 0
@@ -420,6 +441,12 @@ export default function HerculesAISetup() {
         </button>
       </div>
 
+      {/* ── Plan 14 single-page dashboard (feature-flagged) ── */}
+      {_readDashboardV2Flag() && <HerculesAIDashboard />}
+
+      {/* ── Plan 6 legacy layout — only when v2 flag is OFF ── */}
+      {!_readDashboardV2Flag() && (
+      <>
       {/* ── Plan 6 Boardroom Mode — single sticky verdict card + segmented stage ── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 24px 0' }}>
         <BoardroomCard
@@ -634,6 +661,8 @@ export default function HerculesAISetup() {
           </div>
         )}
       </div>
+      </>
+      )}
       </>
       )}
     </div>
