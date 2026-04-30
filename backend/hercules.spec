@@ -93,6 +93,7 @@ a = Analysis(
         'ai_money.savings_ledger',
         'ai_money.levers',
         'ai_money.payload_builder',
+        'ai_money.yield_drift',
         'ai_forecast',
         'ai_forecast.filters',
         'ai_forecast.shift_pace',

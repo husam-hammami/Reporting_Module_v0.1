@@ -207,6 +207,17 @@ def dynamic_archive_worker():
             except Exception as sec_err:
                 logger.warning(f"[ROI/SEC] Refresh failed (non-blocking): {sec_err}")
 
+            # Plan 5 §4.5 — Yield drift: was spec'd alongside SEC but the writer
+            # module was never created, so asset_yield_hourly stayed empty and
+            # the L2 yield-drift lever has been a silent no-op. Now writes
+            # alongside SEC every hour boundary. Same hour_start key.
+            try:
+                from ai_money import yield_drift as ai_yield
+                ai_yield.refresh_hour(hour_start, write=True)
+                logger.info(f"[ROI/Yield] Refreshed asset_yield_hourly for {hour_start}")
+            except Exception as yld_err:
+                logger.warning(f"[ROI/Yield] Refresh failed (non-blocking): {yld_err}")
+
             # ── Plan 5 Phase B — Crystal Ball hourly batch:
             # Anomaly detectors + SEC drift check + accuracy_closer.
             # All non-blocking; errors logged but never crash the worker.
