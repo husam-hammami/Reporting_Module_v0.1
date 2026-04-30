@@ -102,9 +102,13 @@ def _detect_loaded_model(base_url):
 
 
 def _generate_local(prompt, config, timeout, max_tokens=None):
-    """Call LM Studio (OpenAI-compatible API)."""
+    """Call LM Studio (OpenAI-compatible API).
+
+    Always queries /v1/models at call time and uses whatever is currently
+    loaded — users can swap models in LM Studio with no Hercules-side action.
+    """
     base_url = config.get('local_server_url', 'http://localhost:1234/v1')
-    model = config.get('local_model', '') or _detect_loaded_model(base_url) or "local-model"
+    model = _detect_loaded_model(base_url) or "local-model"
 
     # Try openai package first (cleaner)
     openai = _get_openai()
