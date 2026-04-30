@@ -422,6 +422,25 @@ export default function JobLogsPage() {
 
   const tagDecimalByName = useMemo(() => buildTagDecimalLookup(availableTags), [availableTags]);
 
+  /** Print/PDF: same historian window + unique strings as Job Logs cards where cards use "unique in order". */
+  const printTagValuesForPreview = useMemo(() => {
+    const next = { ...printTagValues };
+    for (const g of detailGroups) {
+      if (!g || g.jobLogsCardMode === JOB_LOGS_CARD_SEGMENT_ROW) continue;
+      for (const e of g.tags || []) {
+        const tagName = typeof e === 'string' ? String(e).trim() : String(e?.tagName || '').trim();
+        if (!tagName) continue;
+        const isUnique = typeof e === 'object' && e.jobLogsValueMode === JOB_LOGS_VALUE_UNIQUE;
+        if (!isUnique) continue;
+        const r = detailData[tagName];
+        const uniqueVal = r && typeof r === 'object' && r.unique != null && r.unique !== '' ? r.unique : null;
+        if (uniqueVal == null || uniqueVal === '') continue;
+        next[`unique_in_range::${tagName}`] = uniqueVal;
+      }
+    }
+    return next;
+  }, [printTagValues, detailData, detailGroups]);
+
   // Load report templates with order tracking
   useEffect(() => {
     axios.get('/api/orders/layouts')
@@ -838,8 +857,17 @@ export default function JobLogsPage() {
     let cancelled = false;
     setPrintFetchLoading(true);
     setPrintFetchError(null);
-    const fromISO = fromD.toISOString();
-    const toISO = toD.toISOString();
+    const wall = historianOrderWallParams(selectedJob.start_time, selectedJob.end_time);
+    let fromISO = wall.fromParam;
+    let toISO = wall.toParam;
+    const fromMs = parseOrderWallTime(selectedJob.start_time)?.getTime() ?? NaN;
+    const toMs =
+      selectedJob.end_time != null && selectedJob.end_time !== ''
+        ? (parseOrderWallTime(selectedJob.end_time)?.getTime() ?? NaN)
+        : Date.now();
+    if (!Number.isNaN(fromMs) && !Number.isNaN(toMs) && fromMs > toMs) {
+      toISO = new Date().toISOString();
+    }
 
     fetchPaginatedHistoricalData({
       sections: paginatedSections,
@@ -1372,7 +1400,7 @@ export default function JobLogsPage() {
         <div ref={printReportRef}>
           <PaginatedReportPreview
             sections={paginatedSections}
-            tagValues={printTagValues}
+            tagValues={printTagValuesForPreview}
             dateRange={printDateRange}
             compact={paginatedPageMode === 'full'}
             isPreviewMode

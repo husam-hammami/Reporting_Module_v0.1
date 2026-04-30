@@ -388,13 +388,22 @@ function mergeTagValuesForSiloExpandedRow(segRow, tagValues, segOverlay) {
   return merged;
 }
 
+/** Drop spacer / noise tokens from unique lists (PLC often writes 0 between loads). */
+function isNoiseUniqueRangeToken(token) {
+  if (token == null) return true;
+  const t = String(token).trim();
+  if (t === '') return true;
+  if (t === '0' || t === '0.0' || t === '0.00' || t === '0.000') return true;
+  return false;
+}
+
 /** Matches historian `unique_in_range` string_agg(..., ', '). */
 function splitUniqueInRangeList(raw) {
   if (raw == null || raw === '') return [];
   const s = String(raw).trim();
   if (!s) return [];
-  if (!s.includes(', ')) return [s];
-  return s.split(', ').map((x) => x.trim()).filter((x) => x.length > 0);
+  if (!s.includes(', ')) return isNoiseUniqueRangeToken(s) ? [] : [s];
+  return s.split(', ').map((x) => x.trim()).filter((x) => !isNoiseUniqueRangeToken(x));
 }
 
 function getRawUniqueInRangeForTag(tagValues, tagName) {
@@ -422,7 +431,7 @@ function uniqueInRangeExpansionCount(row, tagValues) {
   let maxLen = 1;
   for (const t of tags) {
     const parts = splitUniqueInRangeList(getRawUniqueInRangeForTag(tagValues, t));
-    maxLen = Math.max(maxLen, parts.length);
+    maxLen = Math.max(maxLen, Math.max(1, parts.length));
   }
   return maxLen;
 }
@@ -517,6 +526,10 @@ function resolveCellValue(cell, tagValues, rowContext = null, tagDecimalByName =
       }
     }
     if (raw == null) return '—';
+    if (agg === 'unique_in_range') {
+      const z = String(raw).trim();
+      if (z === '0' || z === '0.0' || z === '0.00' || z === '0.000' || raw === 0) return '—';
+    }
     const n = Number(raw);
     if (isNaN(n)) return raw;
     if (cell.unit === '__checkbox__') return { type: 'boolean', checked: n === 1 || n === '1' };

@@ -51,7 +51,7 @@ async function settle(element) {
 }
 
 /** Max dimension for html-to-image (pixelRatio multiplies; stay under ~16k canvas limits). */
-const CAPTURE_DIM_MAX = 8192;
+const CAPTURE_DIM_MAX = 16384;
 
 /**
  * Size for SVG foreignObject: html-to-image defaults to clientWidth/Height, which
