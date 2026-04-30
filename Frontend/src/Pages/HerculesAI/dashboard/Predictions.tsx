@@ -15,6 +15,8 @@ import type { RoiPayload } from '../hooks/useRoiPayload';
 
 interface Props {
   payload: RoiPayload | null;
+  onYieldClick?: (card: { asset?: string | null; trend?: any }) => void;
+  onHeaderClick?: () => void;
 }
 
 const tile: CSSProperties = {
@@ -45,6 +47,8 @@ interface PredictionCard {
   sub?: string;
   omr?: number;
   unit?: string;
+  // Drilldown payload — when user clicks the card, what does the drawer show?
+  drilldown?: { kind: 'yield'; asset?: string | null; trend?: any } | null;
 }
 
 function arrowFor(direction: 'up' | 'down' | 'time'): { glyph: string; color: string } {
@@ -61,6 +65,8 @@ function buildCards(payload: RoiPayload | null): PredictionCard[] {
   for (const t of trends.slice(0, 2)) {
     const dir = (t.delta_pct ?? t.drift_pct ?? 0) > 0 ? 'up' : 'down';
     const a = arrowFor(dir);
+    const isYield = (t.metric || '').toLowerCase().includes('yield') ||
+      (t.headline || '').toLowerCase().includes('yield');
     out.push({
       arrow: a.glyph,
       arrowColor: a.color,
@@ -70,6 +76,7 @@ function buildCards(payload: RoiPayload | null): PredictionCard[] {
         : (t.evidence ? String(t.evidence).split('.')[0] : undefined),
       omr: t.estimated_omr_per_month_at_risk ?? t.omr_at_risk ?? undefined,
       unit: 'OMR/mo',
+      drilldown: isYield ? { kind: 'yield', asset: t.asset, trend: t } : null,
     });
   }
 
@@ -105,12 +112,26 @@ function buildCards(payload: RoiPayload | null): PredictionCard[] {
   return out;
 }
 
-export default function Predictions({ payload }: Props) {
+export default function Predictions({ payload, onYieldClick, onHeaderClick }: Props) {
   const cards = buildCards(payload);
 
   return (
     <div style={tile} className="hai-num">
-      <div style={labelStyle}>Predictions</div>
+      <div
+        role={onHeaderClick ? 'button' : undefined}
+        tabIndex={onHeaderClick ? 0 : undefined}
+        onClick={onHeaderClick}
+        onKeyDown={(e) => {
+          if (onHeaderClick && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onHeaderClick();
+          }
+        }}
+        style={{ ...labelStyle, cursor: onHeaderClick ? 'pointer' : 'default', outline: 'none' }}
+        aria-label={onHeaderClick ? 'Open full watch list' : undefined}
+      >
+        Predictions
+      </div>
 
       {cards.length === 0 && (
         <div
@@ -133,6 +154,20 @@ export default function Predictions({ payload }: Props) {
       {cards.map((c, i) => (
         <div
           key={i}
+          role={c.drilldown ? 'button' : undefined}
+          tabIndex={c.drilldown ? 0 : undefined}
+          aria-label={c.drilldown ? `Open detail: ${c.headline}` : undefined}
+          onClick={() => {
+            if (c.drilldown?.kind === 'yield' && onYieldClick) {
+              onYieldClick({ asset: c.drilldown.asset, trend: c.drilldown.trend });
+            }
+          }}
+          onKeyDown={(e) => {
+            if (c.drilldown?.kind === 'yield' && onYieldClick && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              onYieldClick({ asset: c.drilldown.asset, trend: c.drilldown.trend });
+            }
+          }}
           style={{
             display: 'grid',
             gridTemplateColumns: '20px 1fr auto',
@@ -140,6 +175,8 @@ export default function Predictions({ payload }: Props) {
             gap: 12,
             padding: '10px 0',
             borderBottom: i === cards.length - 1 ? 'none' : '1px solid var(--hai-glass-border)',
+            cursor: c.drilldown ? 'pointer' : 'default',
+            outline: 'none',
           }}
         >
           <span style={{ fontSize: 16, color: c.arrowColor, lineHeight: 1 }} aria-hidden="true">

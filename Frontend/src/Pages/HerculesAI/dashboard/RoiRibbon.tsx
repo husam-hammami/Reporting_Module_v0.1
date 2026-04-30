@@ -21,6 +21,8 @@ interface Props {
   payload: RoiPayload | null;
   loading: boolean;
   error: string | null;
+  onSavingsClick?: () => void;
+  onTrustClick?: () => void;
 }
 
 const tile: CSSProperties = {
@@ -80,7 +82,7 @@ function confidenceLabel(payload: RoiPayload | null): string {
   return 'Confidence: Building';
 }
 
-export default function RoiRibbon({ payload, loading, error }: Props) {
+export default function RoiRibbon({ payload, loading, error, onSavingsClick, onTrustClick }: Props) {
   const saved = payload?.money?.savings_this_month_omr ?? null;
   const calibrating = !!payload?.savings?.calibrating;
   const cost = payload?.money?.cost_omr_today ?? null;
@@ -106,8 +108,27 @@ export default function RoiRibbon({ payload, loading, error }: Props) {
           flexWrap: 'wrap',
         }}
       >
-        {/* Hero block */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 240 }}>
+        {/* Hero block — click opens SavingsLedgerDrawer */}
+        <div
+          role={onSavingsClick ? 'button' : undefined}
+          tabIndex={onSavingsClick ? 0 : undefined}
+          aria-label={onSavingsClick ? 'Open savings ledger' : undefined}
+          onClick={onSavingsClick}
+          onKeyDown={(e) => {
+            if (onSavingsClick && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              onSavingsClick();
+            }
+          }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+            minWidth: 240,
+            cursor: onSavingsClick ? 'pointer' : 'default',
+            outline: 'none',
+          }}
+        >
           <div style={heroStyle}>
             {loading || saved == null ? '—' : `${animatedSaved.toLocaleString()} OMR`}
           </div>
@@ -147,7 +168,7 @@ export default function RoiRibbon({ payload, loading, error }: Props) {
           </div>
         </div>
 
-        {/* Right rail — Confidence + Trust pills */}
+        {/* Right rail — Confidence + Trust pills (Trust opens TrustDrawer) */}
         <div
           style={{
             display: 'flex',
@@ -157,7 +178,19 @@ export default function RoiRibbon({ payload, loading, error }: Props) {
           }}
         >
           <div style={pillStyle}>{confidenceLabel(payload)}</div>
-          <div style={pillStyle}>
+          <div
+            role={onTrustClick ? 'button' : undefined}
+            tabIndex={onTrustClick ? 0 : undefined}
+            aria-label={onTrustClick ? 'Open trust score breakdown' : undefined}
+            onClick={onTrustClick}
+            onKeyDown={(e) => {
+              if (onTrustClick && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                onTrustClick();
+              }
+            }}
+            style={{ ...pillStyle, cursor: onTrustClick ? 'pointer' : 'default' }}
+          >
             {trust == null ? 'Trust — calibrating' : `Trust ${trust}/100`}
           </div>
         </div>

@@ -19,6 +19,7 @@ import type { RoiPayload } from '../hooks/useRoiPayload';
 
 interface Props {
   payload: RoiPayload | null;
+  onClick?: () => void;
 }
 
 const tile: CSSProperties = {
@@ -166,7 +167,7 @@ function ProjectionChart({ soFar, projected, p10, p90 }: ChartProps) {
   );
 }
 
-export default function TodaysBill({ payload }: Props) {
+export default function TodaysBill({ payload, onClick }: Props) {
   const bill = payload?.forecasts?.daily_bill ?? null;
   const projected = bill?.projected_omr ?? null;
   const p10 = bill?.p10_omr ?? null;
@@ -179,7 +180,20 @@ export default function TodaysBill({ payload }: Props) {
   const hasFullForecast = projected != null && p10 != null && p90 != null && cost != null && accuracyLabel !== 'learning';
 
   return (
-    <div style={tile} className="hai-num">
+    <div
+      style={{ ...tile, cursor: onClick ? 'pointer' : 'default' }}
+      className="hai-num"
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? "Open today's bill detail" : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
       <div style={labelStyle}>Today's bill, by close</div>
 
       {/* Hero projection number */}

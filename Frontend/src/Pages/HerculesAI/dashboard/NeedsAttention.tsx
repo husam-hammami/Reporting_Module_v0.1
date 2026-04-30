@@ -14,6 +14,8 @@ import type { RoiPayload } from '../hooks/useRoiPayload';
 
 interface Props {
   payload: RoiPayload | null;
+  onItemClick?: (anomaly: any) => void;
+  onHeaderClick?: () => void;
 }
 
 const tile: CSSProperties = {
@@ -70,7 +72,7 @@ const assetChipStyle: CSSProperties = {
   letterSpacing: '0.02em',
 };
 
-export default function NeedsAttention({ payload }: Props) {
+export default function NeedsAttention({ payload, onItemClick, onHeaderClick }: Props) {
   const anomalies = (payload?.anomalies ?? [])
     .filter((a: any) => !a.suppressed && (a.severity === 'crit' || a.severity === 'warn'))
     // crit first, then warn, then most-recent
@@ -84,7 +86,19 @@ export default function NeedsAttention({ payload }: Props) {
 
   return (
     <div style={tile} className="hai-num">
-      <div style={labelStyle}>
+      <div
+        role={onHeaderClick ? 'button' : undefined}
+        tabIndex={onHeaderClick ? 0 : undefined}
+        onClick={onHeaderClick}
+        onKeyDown={(e) => {
+          if (onHeaderClick && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onHeaderClick();
+          }
+        }}
+        style={{ ...labelStyle, cursor: onHeaderClick ? 'pointer' : 'default', outline: 'none' }}
+        aria-label={onHeaderClick ? 'Open full watch list' : undefined}
+      >
         Needs attention
         {anomalies.length > 0 && (
           <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--hai-text-tertiary)', textTransform: 'none', letterSpacing: 0 }}>
@@ -115,7 +129,15 @@ export default function NeedsAttention({ payload }: Props) {
         <article
           key={a.id || i}
           tabIndex={0}
+          role="button"
           aria-label={`${a.severity === 'crit' ? 'Critical' : 'Warning'}: ${a.headline || 'anomaly'} on ${a.asset || 'plant-wide'}`}
+          onClick={() => onItemClick?.(a)}
+          onKeyDown={(e) => {
+            if (onItemClick && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              onItemClick(a);
+            }
+          }}
           style={{
             display: 'grid',
             gridTemplateColumns: '12px 1fr auto',

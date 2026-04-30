@@ -19,6 +19,7 @@ import type { RoiPayload } from '../hooks/useRoiPayload';
 
 interface Props {
   payload: RoiPayload | null;
+  onLeverClick?: (lever: any) => void;
 }
 
 const tile: CSSProperties = {
@@ -48,9 +49,10 @@ interface LeverRowProps {
   lever: any;
   index: number;
   isLast: boolean;
+  onClick?: (lever: any) => void;
 }
 
-function LeverRow({ lever, index, isLast }: LeverRowProps) {
+function LeverRow({ lever, index, isLast, onClick }: LeverRowProps) {
   const omrYear = lever.omr_per_year ?? null;
   const omrMonth = lever.omr_per_month ?? null;
   const omr = omrYear ?? (omrMonth != null ? omrMonth * 12 : null);
@@ -63,7 +65,15 @@ function LeverRow({ lever, index, isLast }: LeverRowProps) {
       className="hai-roi-lever"
       data-rank={String(index + 1)}
       tabIndex={0}
+      role="button"
       aria-label={`Action ${index + 1}: ${headline}`}
+      onClick={() => onClick?.(lever)}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick(lever);
+        }
+      }}
       style={{
         display: 'grid',
         gridTemplateColumns: '24px 1fr auto',
@@ -109,7 +119,7 @@ function LeverRow({ lever, index, isLast }: LeverRowProps) {
   );
 }
 
-export default function TopActions({ payload }: Props) {
+export default function TopActions({ payload, onLeverClick }: Props) {
   const levers = (payload?.levers ?? []).slice(0, 3);
 
   return (
@@ -140,6 +150,7 @@ export default function TopActions({ payload }: Props) {
           lever={lever}
           index={i}
           isLast={i === levers.length - 1}
+          onClick={onLeverClick}
         />
       ))}
     </div>

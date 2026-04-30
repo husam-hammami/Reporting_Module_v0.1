@@ -19,6 +19,7 @@ import { useRealAssets, type RealAsset } from './hooks/useRealAssets';
 
 interface Props {
   payload: RoiPayload | null;
+  onAssetClick?: (asset: string) => void;
 }
 
 const tile: CSSProperties = {
@@ -125,7 +126,7 @@ function paceCell(a: RealAsset, payload: RoiPayload | null): React.ReactNode {
   return <span>{pace.status}</span>;
 }
 
-export default function MachinesStrip({ payload }: Props) {
+export default function MachinesStrip({ payload, onAssetClick }: Props) {
   const assets = useRealAssets(payload);
 
   return (
@@ -171,7 +172,15 @@ export default function MachinesStrip({ payload }: Props) {
                 <tr
                   key={a.asset || i}
                   tabIndex={0}
+                  role="button"
                   aria-label={`${a.asset} — open drilldown`}
+                  onClick={() => a.asset && onAssetClick?.(a.asset)}
+                  onKeyDown={(e) => {
+                    if (a.asset && onAssetClick && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      onAssetClick(a.asset);
+                    }
+                  }}
                   style={{ cursor: 'pointer' }}
                 >
                   <td style={{ ...cellStyle, fontWeight: 500 }}>{a.asset}</td>
