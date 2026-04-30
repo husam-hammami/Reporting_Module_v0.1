@@ -1309,13 +1309,13 @@ try:
 except Exception as e:
     logger.error("Could not start report order worker: %s", e, exc_info=True)
 
-# 6. Plan 5 — ROI Genius: SEC backfill (off-startup, runs in background after PG settles)
+# 6. Plan 5 — ROI Genius: SEC + Yield backfill (off-startup, runs in background after PG settles)
 try:
     from workers.sec_backfill import spawn as _spawn_sec_backfill
     _spawn_sec_backfill(delay_seconds=60)
-    logger.info("Scheduled ROI/SEC backfill (60 s delay).")
+    logger.info("Scheduled ROI/SEC + Yield backfill (60 s delay).")
 except Exception as e:
-    logger.warning("Could not schedule SEC backfill (non-fatal): %s", e)
+    logger.warning("Could not schedule ROI backfill (non-fatal): %s", e)
 
 # Auto-seed emulator with all DB tags when in demo mode (runs regardless of entry point)
 try:
