@@ -807,6 +807,8 @@ def _run_startup_migrations():
         'create_assets_view.sql',
         # Plan 5 — Phase B (Crystal Ball)
         'create_ml_anomaly_events.sql',
+        # Plan 6 hotfix — assets_view self-healing
+        'recreate_assets_view_self_healing.sql',
     ]
 
     try:

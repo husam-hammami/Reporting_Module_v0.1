@@ -55,8 +55,8 @@ export function pickHero(payload: RoiPayload | null, now: Date = new Date()): He
     };
   }
 
-  // 2. Today's OMR alone (>50 OMR threshold so a 1-OMR mid-night jolt doesn't promote)
-  if (bill?.so_far_omr != null && bill.so_far_omr > 50) {
+  // 2. Today's OMR alone — promote whenever > 0 (Plan 6 hotfix: dropped >50 threshold)
+  if (bill?.so_far_omr != null && bill.so_far_omr > 0) {
     return {
       kind: 'omr',
       primary: bill.so_far_omr,
@@ -77,7 +77,17 @@ export function pickHero(payload: RoiPayload | null, now: Date = new Date()): He
     };
   }
 
-  // 4. Confirmed savings (cold start with no Phase 1 data)
+  // 4. Today's running cost from money block (Plan 6 hotfix — even when bill projection is null)
+  if (payload?.money?.cost_omr_today != null && payload.money.cost_omr_today > 0) {
+    return {
+      kind: 'omr',
+      primary: payload.money.cost_omr_today,
+      verdict,
+      goldPrimary: true,
+    };
+  }
+
+  // 5. Confirmed savings (cold start with no Phase 1 data)
   if (sav && !sav.calibrating && sav.total_omr > 0) {
     return {
       kind: 'savings',
@@ -87,7 +97,7 @@ export function pickHero(payload: RoiPayload | null, now: Date = new Date()): He
     };
   }
 
-  // 5. Final fallback — date + "Standing by"
+  // 6. Final fallback — date + "Standing by"
   const dayName = now.toLocaleDateString(undefined, { weekday: 'long' });
   return { kind: 'standby', primary: dayName, verdict: 'Standing by' };
 }

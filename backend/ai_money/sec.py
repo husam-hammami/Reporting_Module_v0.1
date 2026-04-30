@@ -18,7 +18,7 @@ Public API:
 import logging
 from datetime import datetime, timedelta
 
-from .db import cursor, get_config_value
+from .db import cursor, get_config_value, derive_asset, is_energy_meter_name, is_production_counter_name
 
 logger = logging.getLogger(__name__)
 
@@ -27,22 +27,39 @@ _PRODUCTION_FLOOR_PCT = 0.05
 
 
 def _list_assets_with_pairs(cur):
-    """Return [(asset_name, [energy_tag_ids], [production_tag_ids])]."""
+    """Return [(asset_name, [energy_tag_ids], [production_tag_ids])].
+
+    Plan 6 hotfix: self-healing.
+    - asset_name: parent_asset → tag_name pattern → line_name (via derive_asset)
+    - energy/production flags: explicit columns OR tag_name pattern fallback
+    Matches the assets_view SQL so the boardroom card and SEC math agree.
+    """
     cur.execute("""
-        SELECT p.parent_asset, p.tag_name, p.is_energy_meter, p.is_production_counter, t.id AS tag_id
+        SELECT p.parent_asset, p.line_name, p.tag_name, p.tag_type,
+               p.is_energy_meter, p.is_production_counter, t.id AS tag_id
           FROM hercules_ai_tag_profiles p
      LEFT JOIN tags t ON t.tag_name = p.tag_name
-         WHERE p.parent_asset IS NOT NULL AND p.parent_asset <> ''
-           AND p.is_tracked = TRUE
-           AND (p.is_energy_meter = TRUE OR p.is_production_counter = TRUE)
+         WHERE p.is_tracked = TRUE
+           AND t.id IS NOT NULL
     """)
     grouped = {}
     for row in cur.fetchall():
-        asset = row[0] if not isinstance(row, dict) else row.get('parent_asset')
-        is_e = row[2] if not isinstance(row, dict) else row.get('is_energy_meter')
-        is_p = row[3] if not isinstance(row, dict) else row.get('is_production_counter')
-        tag_id = row[4] if not isinstance(row, dict) else row.get('tag_id')
-        if not tag_id:
+        if isinstance(row, dict):
+            parent_asset = row.get('parent_asset')
+            line_name = row.get('line_name')
+            tag_name = row.get('tag_name')
+            tag_type = row.get('tag_type')
+            is_e_col = row.get('is_energy_meter')
+            is_p_col = row.get('is_production_counter')
+            tag_id = row.get('tag_id')
+        else:
+            parent_asset, line_name, tag_name, tag_type, is_e_col, is_p_col, tag_id = row[0:7]
+        asset = derive_asset(tag_name, parent_asset, line_name)
+        if not asset or not tag_id:
+            continue
+        is_e = bool(is_e_col) or is_energy_meter_name(tag_name)
+        is_p = bool(is_p_col) or is_production_counter_name(tag_name, tag_type)
+        if not (is_e or is_p):
             continue
         if asset not in grouped:
             grouped[asset] = {'energy': [], 'production': []}

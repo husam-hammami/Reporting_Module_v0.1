@@ -52,8 +52,19 @@ export default function AttentionStage({ payload }: Props) {
           color: 'var(--hai-text-secondary)',
           fontSize: 14,
           textAlign: 'center',
+          lineHeight: 1.6,
         }}>
-          Nothing demanding your attention right now. Hercules is watching {machinesCount} machine{machinesCount === 1 ? '' : 's'} and will surface anything unusual.
+          {machinesCount === 0 ? (
+            <>
+              Hercules hasn't classified any machines yet. Open <strong>Machines</strong> to confirm
+              your equipment, or run a tag scan from Settings to refresh classification.
+            </>
+          ) : (
+            <>
+              Nothing demanding your attention right now. Hercules is watching {machinesCount} machine
+              {machinesCount === 1 ? '' : 's'} and will surface anything unusual.
+            </>
+          )}
         </div>
       </section>
     );

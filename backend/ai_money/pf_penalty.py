@@ -18,25 +18,34 @@ Tag conventions assumed (matches Salalah export):
 import math
 from datetime import datetime, timedelta
 
-from .db import cursor, get_config_value
+from .db import cursor, get_config_value, derive_asset
 
 
 def _list_pf_tags(cur, asset):
-    """Return tag IDs for the asset's PF, kWh, kvarh, kW tags."""
+    """Return tag IDs for the asset's PF, kWh, kvarh, kW tags.
+
+    Plan 6 hotfix: matches a tag to the asset via derive_asset (which
+    falls through to tag_name pattern and line_name when parent_asset
+    isn't populated).
+    """
+    asset_lower = (asset or '').strip().lower()
     cur.execute("""
-        SELECT t.id, t.tag_name
+        SELECT t.id, t.tag_name, p.parent_asset, p.line_name
           FROM hercules_ai_tag_profiles p
           JOIN tags t ON t.tag_name = p.tag_name
-         WHERE p.parent_asset = %s AND p.is_tracked = TRUE
-    """, (asset,))
+         WHERE p.is_tracked = TRUE
+    """)
     rows = cur.fetchall()
     out = {'pf': [], 'kwh_total': [], 'kvarh_total': [], 'kw_now': []}
     for r in rows:
         if isinstance(r, dict):
-            tid, name = r['id'], r['tag_name']
+            tid, name, pa, ln = r['id'], r['tag_name'], r.get('parent_asset'), r.get('line_name')
         else:
-            tid, name = r[0], r[1]
-        n = name.lower()
+            tid, name, pa, ln = r[0], r[1], r[2], r[3]
+        derived = derive_asset(name, pa, ln)
+        if not derived or derived.lower() != asset_lower:
+            continue
+        n = (name or '').lower()
         if 'cos_phi' in n or n.endswith('_pf'):
             out['pf'].append(tid)
         elif 'total_active_energy' in n:

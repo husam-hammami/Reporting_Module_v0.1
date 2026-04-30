@@ -83,8 +83,11 @@ export default function AuditStage({ payload }: Props) {
         color: 'var(--hai-text-secondary)',
         fontSize: 14,
         textAlign: 'center',
+        lineHeight: 1.6,
       }}>
-        Hercules is calibrating. Confirmed savings will appear here once Hercules has 30 days of data.
+        No savings recorded yet — Hercules adds entries here when its detection rules
+        fire (power-factor correction acted on, yield drift caught, off-peak load
+        shifted). Each entry is auditable and can be confirmed or disputed.
       </div>
     );
   }

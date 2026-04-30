@@ -140,59 +140,104 @@ def build():
 def _compute_plant_score():
     """Compute Phase 1's KPI composite score over the last 24 h for the boardroom hero.
 
+    Strategy (Plan 6 hotfix — multi-fallback so the hero always has a number):
+        Path A: Phase 1 _collect_tag_data_for_period + ai_kpi_scorer  (preferred)
+        Path B: simple direct query against tag_history_archive       (always works)
+
     Returns: {value: int 0-100, breakdown: {...}, previous_omr: float|None} or None.
-    Cached implicitly by the 30 s frontend poll cadence — no LRU here.
     """
     import logging as _logging
     _log = _logging.getLogger(__name__)
+    now = datetime.now()
+
+    # ── Path A: Phase 1 _collect_tag_data_for_period ──────────────────────
     try:
         import sys as _sys
-        # Use the same data-collection helper that /insights uses
         bp_mod = _sys.modules.get('hercules_ai_bp')
         if bp_mod is None:
-            return None
-        collect_fn = getattr(bp_mod, '_collect_tag_data_for_period', None)
-        if collect_fn is None:
-            return None
-        now = datetime.now()
-        from_dt = now - timedelta(hours=24)
-        collected = collect_fn(None, from_dt, now)
-        if isinstance(collected, tuple):
-            return None  # error tuple
-        import ai_kpi_scorer as _scorer
-        ai_cfg = collected.get('ai_config', {}) or {}
-        try:
-            tariff = float(ai_cfg.get('electricity_tariff_omr_per_kwh', 0.025))
-        except (ValueError, TypeError):
-            tariff = 0.025
-        kpi = _scorer.compute_kpi_score(
-            tag_data=collected.get('all_tag_data') or {},
-            prev_tag_data=collected.get('prev_tag_data') or {},
-            profiles=collected.get('profile_map') or {},
-            tariff_omr_per_kwh=tariff,
-        )
-        # Previous-day plant OMR for the "Yesterday: X" sub-line on the boardroom card
-        previous_omr = None
-        try:
-            with cursor(dict_cursor=False) as (cur, _):
-                yesterday_start = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-                yesterday_end = yesterday_start + timedelta(days=1)
-                cur.execute("""
-                    SELECT COALESCE(SUM(cost_omr), 0)
-                      FROM asset_sec_hourly
-                     WHERE hour_start >= %s AND hour_start < %s
-                """, (yesterday_start, yesterday_end))
-                row = cur.fetchone()
-                if row and row[0]:
-                    previous_omr = float(row[0])
-        except Exception as e:
-            _log.debug("plant_score previous_omr lookup failed: %s", e)
+            _log.info("plant_score Path A: hercules_ai_bp not in sys.modules — using fallback")
+        else:
+            collect_fn = getattr(bp_mod, '_collect_tag_data_for_period', None)
+            if collect_fn is None:
+                _log.info("plant_score Path A: _collect_tag_data_for_period missing — fallback")
+            else:
+                from_dt = now - timedelta(hours=24)
+                collected = collect_fn(None, from_dt, now)
+                if isinstance(collected, tuple):
+                    _log.info("plant_score Path A: collect returned error tuple %s — fallback", collected)
+                else:
+                    import ai_kpi_scorer as _scorer
+                    ai_cfg = collected.get('ai_config', {}) or {}
+                    try:
+                        tariff = float(ai_cfg.get('electricity_tariff_omr_per_kwh', 0.025))
+                    except (ValueError, TypeError):
+                        tariff = 0.025
+                    kpi = _scorer.compute_kpi_score(
+                        tag_data=collected.get('all_tag_data') or {},
+                        prev_tag_data=collected.get('prev_tag_data') or {},
+                        profiles=collected.get('profile_map') or {},
+                        tariff_omr_per_kwh=tariff,
+                    )
+                    if kpi and kpi.get('score') is not None:
+                        previous_omr = _previous_day_omr(now)
+                        return {
+                            'value': kpi.get('score'),
+                            'breakdown': kpi.get('breakdown') or {},
+                            'efficiency': kpi.get('efficiency'),
+                            'previous_omr': previous_omr,
+                        }
+                    _log.info("plant_score Path A: kpi returned no score — fallback")
+    except Exception as e:
+        _log.warning("plant_score Path A raised: %s — fallback", e)
+
+    # ── Path B: simple direct query ───────────────────────────────────────
+    # Always works as long as tag_history_archive has any rows in the last 24 h.
+    try:
+        with cursor(dict_cursor=False) as (cur, _):
+            cur.execute("""
+                SELECT COUNT(*) AS total,
+                       COUNT(*) FILTER (WHERE quality_code = 'GOOD') AS good,
+                       COALESCE(SUM(value_delta) FILTER (WHERE is_counter), 0) AS production
+                  FROM tag_history_archive
+                 WHERE archive_hour > NOW() - INTERVAL '24 hours'
+                   AND (granularity = 'hourly' OR granularity IS NULL)
+            """)
+            row = cur.fetchone()
+            if not row or not row[0]:
+                _log.info("plant_score Path B: tag_history_archive empty for last 24h")
+                return None
+            total = int(row[0])
+            good = int(row[1] or 0)
+            production = float(row[2] or 0)
+            quality_pct = (good / total * 100.0) if total else 50.0
+            production_pct = 100.0 if production > 0 else 0.0
+            score = round(0.70 * quality_pct + 0.30 * production_pct)
+            score = max(0, min(100, int(score)))
         return {
-            'value': kpi.get('score'),
-            'breakdown': kpi.get('breakdown') or {},
-            'efficiency': kpi.get('efficiency'),
-            'previous_omr': previous_omr,
+            'value': score,
+            'breakdown': {},
+            'efficiency': None,
+            'previous_omr': _previous_day_omr(now),
         }
     except Exception as e:
-        _log.debug("plant_score compute failed: %s", e)
+        _log.warning("plant_score Path B raised: %s", e)
         return None
+
+
+def _previous_day_omr(now):
+    """Sum cost_omr for yesterday from asset_sec_hourly. Returns float or None."""
+    try:
+        with cursor(dict_cursor=False) as (cur, _):
+            yesterday_start = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            yesterday_end = yesterday_start + timedelta(days=1)
+            cur.execute("""
+                SELECT COALESCE(SUM(cost_omr), 0)
+                  FROM asset_sec_hourly
+                 WHERE hour_start >= %s AND hour_start < %s
+            """, (yesterday_start, yesterday_end))
+            row = cur.fetchone()
+            if row and row[0]:
+                return float(row[0])
+    except Exception:
+        pass
+    return None
