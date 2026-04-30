@@ -145,27 +145,38 @@ def _compute_plant_score():
         Path B: simple direct query against tag_history_archive       (always works)
 
     Returns: {value: int 0-100, breakdown: {...}, previous_omr: float|None} or None.
+
+    Diagnostic logs are at WARNING so they actually surface in the System Logs
+    page (root logger is WARNING level by default in app.py).
     """
     import logging as _logging
     _log = _logging.getLogger(__name__)
     now = datetime.now()
+    _log.warning("[plant_score] BEGIN computation at %s", now.isoformat(timespec='seconds'))
 
     # ── Path A: Phase 1 _collect_tag_data_for_period ──────────────────────
     try:
         import sys as _sys
         bp_mod = _sys.modules.get('hercules_ai_bp')
         if bp_mod is None:
-            _log.info("plant_score Path A: hercules_ai_bp not in sys.modules — using fallback")
+            _log.warning("[plant_score] Path A SKIP: hercules_ai_bp not in sys.modules")
         else:
             collect_fn = getattr(bp_mod, '_collect_tag_data_for_period', None)
             if collect_fn is None:
-                _log.info("plant_score Path A: _collect_tag_data_for_period missing — fallback")
+                _log.warning("[plant_score] Path A SKIP: _collect_tag_data_for_period attr missing")
             else:
                 from_dt = now - timedelta(hours=24)
+                _log.warning("[plant_score] Path A: calling _collect_tag_data_for_period(None, %s, %s)",
+                             from_dt.isoformat(timespec='seconds'), now.isoformat(timespec='seconds'))
                 collected = collect_fn(None, from_dt, now)
                 if isinstance(collected, tuple):
-                    _log.info("plant_score Path A: collect returned error tuple %s — fallback", collected)
+                    _log.warning("[plant_score] Path A FAILED: returned ERROR tuple = %s", collected)
                 else:
+                    n_templates = len(collected.get('templates') or [])
+                    n_tag_data = len(collected.get('all_tag_data') or {})
+                    n_profiles = len(collected.get('profile_map') or {})
+                    _log.warning("[plant_score] Path A got dict: templates=%d tag_data=%d profiles=%d",
+                                 n_templates, n_tag_data, n_profiles)
                     import ai_kpi_scorer as _scorer
                     ai_cfg = collected.get('ai_config', {}) or {}
                     try:
@@ -179,6 +190,7 @@ def _compute_plant_score():
                         tariff_omr_per_kwh=tariff,
                     )
                     if kpi and kpi.get('score') is not None:
+                        _log.warning("[plant_score] Path A SUCCESS: score=%s", kpi.get('score'))
                         previous_omr = _previous_day_omr(now)
                         return {
                             'value': kpi.get('score'),
@@ -186,12 +198,11 @@ def _compute_plant_score():
                             'efficiency': kpi.get('efficiency'),
                             'previous_omr': previous_omr,
                         }
-                    _log.info("plant_score Path A: kpi returned no score — fallback")
+                    _log.warning("[plant_score] Path A FAILED: kpi=%s no score", kpi)
     except Exception as e:
-        _log.warning("plant_score Path A raised: %s — fallback", e)
+        _log.warning("[plant_score] Path A RAISED: %s", e, exc_info=True)
 
     # ── Path B: simple direct query ───────────────────────────────────────
-    # Always works as long as tag_history_archive has any rows in the last 24 h.
     try:
         with cursor(dict_cursor=False) as (cur, _):
             cur.execute("""
@@ -204,7 +215,13 @@ def _compute_plant_score():
             """)
             row = cur.fetchone()
             if not row or not row[0]:
-                _log.info("plant_score Path B: tag_history_archive empty for last 24h")
+                _log.warning("[plant_score] Path B FAILED: tag_history_archive 0 rows in last 24h")
+                # Path C: try without the granularity filter (some installs may have NULL or 'daily')
+                cur.execute("SELECT COUNT(*), MAX(archive_hour) FROM tag_history_archive")
+                tot_row = cur.fetchone()
+                _log.warning("[plant_score] Path C diagnostic: total_rows=%s max_archive_hour=%s",
+                             tot_row[0] if tot_row else None,
+                             tot_row[1] if tot_row else None)
                 return None
             total = int(row[0])
             good = int(row[1] or 0)
@@ -213,6 +230,8 @@ def _compute_plant_score():
             production_pct = 100.0 if production > 0 else 0.0
             score = round(0.70 * quality_pct + 0.30 * production_pct)
             score = max(0, min(100, int(score)))
+            _log.warning("[plant_score] Path B SUCCESS: total=%d good=%d prod=%.1f score=%d",
+                         total, good, production, score)
         return {
             'value': score,
             'breakdown': {},
@@ -220,7 +239,7 @@ def _compute_plant_score():
             'previous_omr': _previous_day_omr(now),
         }
     except Exception as e:
-        _log.warning("plant_score Path B raised: %s", e)
+        _log.warning("[plant_score] Path B RAISED: %s", e, exc_info=True)
         return None
 
 
