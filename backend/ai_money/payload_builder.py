@@ -12,6 +12,16 @@ from . import sec, pf_penalty, savings_ledger, levers
 from .db import cursor
 
 
+# ── Plant-score cache (Plan 6 hotfix #4 — Salalah's _collect_tag_data takes ~67 s) ──
+# /roi-payload polls every 30s on the frontend. Without caching, the first compute
+# (~67s) is still in flight when the second poll fires, snowballing into a flood
+# of slow concurrent computes. Cache the result for 5 minutes per process; first
+# call is slow, subsequent polls are instant. The data this score reflects is
+# 24-hour aggregates anyway — sub-minute freshness is not a product requirement.
+_PLANT_SCORE_TTL_SECONDS = 300
+_plant_score_cache = {'value': None, 'computed_at': None}
+
+
 def build():
     """Compose the full RoiPayload. Cheap; called by /api/hercules-ai/roi-payload."""
     period_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -146,12 +156,24 @@ def _compute_plant_score():
 
     Returns: {value: int 0-100, breakdown: {...}, previous_omr: float|None} or None.
 
-    Diagnostic logs are at WARNING so they actually surface in the System Logs
-    page (root logger is WARNING level by default in app.py).
+    Cached in memory for _PLANT_SCORE_TTL_SECONDS (5 min) — Path A on Salalah
+    takes ~67s and the boardroom polls /roi-payload every 30s, so without caching
+    every poll snowballs into a concurrent compute storm.
     """
     import logging as _logging
     _log = _logging.getLogger(__name__)
     now = datetime.now()
+
+    # ── Cache check ───────────────────────────────────────────────────────
+    cached_value = _plant_score_cache.get('value')
+    cached_at = _plant_score_cache.get('computed_at')
+    if cached_value is not None and cached_at is not None:
+        age = (now - cached_at).total_seconds()
+        if age < _PLANT_SCORE_TTL_SECONDS:
+            _log.warning("[plant_score] CACHE HIT (age %.1fs < %ds) — returning score=%s",
+                         age, _PLANT_SCORE_TTL_SECONDS, cached_value.get('value'))
+            return cached_value
+
     _log.warning("[plant_score] BEGIN computation at %s", now.isoformat(timespec='seconds'))
 
     # ── Path A: Phase 1 _collect_tag_data_for_period ──────────────────────
@@ -192,12 +214,15 @@ def _compute_plant_score():
                     if kpi and kpi.get('score') is not None:
                         _log.warning("[plant_score] Path A SUCCESS: score=%s", kpi.get('score'))
                         previous_omr = _previous_day_omr(now)
-                        return {
+                        result = {
                             'value': kpi.get('score'),
                             'breakdown': kpi.get('breakdown') or {},
                             'efficiency': kpi.get('efficiency'),
                             'previous_omr': previous_omr,
                         }
+                        _plant_score_cache['value'] = result
+                        _plant_score_cache['computed_at'] = now
+                        return result
                     _log.warning("[plant_score] Path A FAILED: kpi=%s no score", kpi)
     except Exception as e:
         _log.warning("[plant_score] Path A RAISED: %s", e, exc_info=True)
@@ -232,12 +257,15 @@ def _compute_plant_score():
             score = max(0, min(100, int(score)))
             _log.warning("[plant_score] Path B SUCCESS: total=%d good=%d prod=%.1f score=%d",
                          total, good, production, score)
-        return {
+        result = {
             'value': score,
             'breakdown': {},
             'efficiency': None,
             'previous_omr': _previous_day_omr(now),
         }
+        _plant_score_cache['value'] = result
+        _plant_score_cache['computed_at'] = now
+        return result
     except Exception as e:
         _log.warning("[plant_score] Path B RAISED: %s", e, exc_info=True)
         return None
