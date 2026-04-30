@@ -388,6 +388,58 @@ function mergeTagValuesForSiloExpandedRow(segRow, tagValues, segOverlay) {
   return merged;
 }
 
+/** Matches historian `unique_in_range` string_agg(..., ', '). */
+function splitUniqueInRangeList(raw) {
+  if (raw == null || raw === '') return [];
+  const s = String(raw).trim();
+  if (!s) return [];
+  if (!s.includes(', ')) return [s];
+  return s.split(', ').map((x) => x.trim()).filter((x) => x.length > 0);
+}
+
+function getRawUniqueInRangeForTag(tagValues, tagName) {
+  if (!tagName || !tagValues || typeof tagValues !== 'object') return null;
+  const k = `unique_in_range::${tagName}`;
+  if (tagValues[k] != null && tagValues[k] !== '') return tagValues[k];
+  if (tagValues[tagName] != null && tagValues[tagName] !== '') return tagValues[tagName];
+  return null;
+}
+
+function listUniqueInRangeTagNamesInRow(row) {
+  const names = [];
+  if (!row?.cells) return names;
+  for (const c of row.cells) {
+    if (c?.sourceType === 'tag' && c.aggregation === 'unique_in_range' && c.tagName) {
+      if (!names.includes(c.tagName)) names.push(c.tagName);
+    }
+  }
+  return names;
+}
+
+function uniqueInRangeExpansionCount(row, tagValues) {
+  const tags = listUniqueInRangeTagNamesInRow(row);
+  if (tags.length === 0) return 1;
+  let maxLen = 1;
+  for (const t of tags) {
+    const parts = splitUniqueInRangeList(getRawUniqueInRangeForTag(tagValues, t));
+    maxLen = Math.max(maxLen, parts.length);
+  }
+  return maxLen;
+}
+
+function buildTagValuesForUniqueSlice(row, baseTagValues, sliceIndex) {
+  const merged = { ...baseTagValues };
+  for (const t of listUniqueInRangeTagNamesInRow(row)) {
+    const parts = splitUniqueInRangeList(getRawUniqueInRangeForTag(baseTagValues, t));
+    const val = parts[sliceIndex] != null && String(parts[sliceIndex]).trim() !== ''
+      ? parts[sliceIndex]
+      : '—';
+    merged[`unique_in_range::${t}`] = val;
+    merged[t] = val;
+  }
+  return merged;
+}
+
 function clampDecimals0to10(n) {
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.min(10, Math.round(n)));
@@ -584,6 +636,47 @@ function isRowHidden(row, section, tagValues, tagDecimalByName = null) {
   if (resolved === '—' || resolved === '') return true;
   const num = Number(String(resolved).replace(/[^0-9.\-]/g, ''));
   return !isNaN(num) && num === 0;
+}
+
+/**
+ * Flatten paginated table rows: silo_segments uses expandedRows; unique_in_range splits on ', ' into one row per value.
+ * @returns {{ row: object, _tv: object, renderKey: string }[]}
+ */
+function buildPaginatedTableRenderRows(section, tagValues, expandedRows, isPreviewMode, tagDecimalByName) {
+  const out = [];
+  (section.rows || []).forEach((row) => {
+    const isSegRow = isPreviewMode && Array.isArray(row.cells) &&
+      row.cells.some((c) => c.sourceType === 'tag' && c.aggregation === 'silo_segments');
+    const segList = expandedRows[row.id];
+    if (isSegRow && Array.isArray(segList) && segList.length > 0) {
+      segList.forEach((segRow, segIdx) => {
+        out.push({
+          row: segRow,
+          _tv: mergeTagValuesForSiloExpandedRow(segRow, tagValues, segRow._segTagValues),
+          renderKey: String(segRow.id || row.id || segIdx),
+        });
+      });
+      return;
+    }
+    if (isRowHidden(row, section, tagValues, tagDecimalByName)) return;
+    if (!isPreviewMode) {
+      out.push({ row, _tv: tagValues, renderKey: String(row.id) });
+      return;
+    }
+    const uCount = uniqueInRangeExpansionCount(row, tagValues);
+    if (uCount > 1) {
+      for (let i = 0; i < uCount; i++) {
+        out.push({
+          row,
+          _tv: buildTagValuesForUniqueSlice(row, tagValues, i),
+          renderKey: `${row.id}__uq${i}`,
+        });
+      }
+    } else {
+      out.push({ row, _tv: tagValues, renderKey: String(row.id) });
+    }
+  });
+  return out;
 }
 
 /** tag_name → decimal_places for paginated numeric formatting when a cell has no explicit decimals. */
@@ -1925,25 +2018,14 @@ export function PaginatedReportPreview({
               </thead>
               <tbody>
                 {(() => {
-                  // Build the flat list of render rows, expanding silo_segments rows into segments
-                  const renderRows = [];
-                  (section.rows || []).forEach((row) => {
-                    const isSegRow = isPreviewMode && Array.isArray(row.cells) &&
-                      row.cells.some((c) => c.sourceType === 'tag' && c.aggregation === 'silo_segments');
-                    const segList = expandedRows[row.id];
-                    if (isSegRow && Array.isArray(segList) && segList.length > 0) {
-                      // Replace with one render entry per segment
-                      segList.forEach((segRow) => renderRows.push({
-                        row: segRow,
-                        _tv: mergeTagValuesForSiloExpandedRow(segRow, tagValues, segRow._segTagValues),
-                      }));
-                    } else {
-                      if (!isRowHidden(row, section, tagValues, tagDecimalByName)) {
-                        renderRows.push({ row, _tv: tagValues });
-                      }
-                    }
-                  });
-                  return renderRows.map(({ row, _tv }, ri) => {
+                  const renderRows = buildPaginatedTableRenderRows(
+                    section,
+                    tagValues,
+                    expandedRows,
+                    isPreviewMode,
+                    tagDecimalByName,
+                  );
+                  return renderRows.map(({ row, _tv, renderKey }, ri) => {
                     const refColIdx = row.hideReferenceCol ?? 0;
                     const refCell = row.cells?.[refColIdx];
                     const resolvedRef = refCell ? resolveCellValue(refCell, _tv, null, tagDecimalByName) : null;
@@ -1954,7 +2036,7 @@ export function PaginatedReportPreview({
                     }
                     const rowContext = { resolvedRefValue, refCell };
                     return (
-                      <tr key={row.id} className={ri % 2 === 1 ? 'bg-[#f8fafc]' : ''}>
+                      <tr key={renderKey} className={ri % 2 === 1 ? 'bg-[#f8fafc]' : ''}>
                         {(row.cells || []).map((cell, ci) => {
                           const col = section.columns[ci];
                           const displayValue = isPreviewMode
@@ -2016,23 +2098,13 @@ export function PaginatedReportPreview({
                         );
                       }
                       // sum, avg, min, max, count — aggregate from expanded render rows for this column
-                      const allRenderRows = (() => {
-                        const rr = [];
-                        (section.rows || []).forEach((row) => {
-                          const segList = expandedRows[row.id];
-                          const isSegRow = isPreviewMode && Array.isArray(row.cells) &&
-                            row.cells.some((c) => c.sourceType === 'tag' && c.aggregation === 'silo_segments');
-                          if (isSegRow && Array.isArray(segList) && segList.length > 0) {
-                            segList.forEach((segRow) => rr.push({
-                              row: segRow,
-                              _tv: mergeTagValuesForSiloExpandedRow(segRow, tagValues, segRow._segTagValues),
-                            }));
-                          } else {
-                            rr.push({ row, _tv: tagValues });
-                          }
-                        });
-                        return rr;
-                      })();
+                      const allRenderRows = buildPaginatedTableRenderRows(
+                        section,
+                        tagValues,
+                        expandedRows,
+                        isPreviewMode,
+                        tagDecimalByName,
+                      );
                       const colTagValues = allRenderRows.map(({ row: r, _tv }) => {
                         const cell = r.cells[ci];
                         if (!cell) return null;
