@@ -27,4 +27,12 @@ export const herculesAIApi = {
   getLevers:       (limit = 3)         => axios.get(`${BASE}/levers`, { params: { limit } }),
   attributeSavings: (id)               => axios.post(`${BASE}/savings/${id}/attribute`),
   disputeSavings:  (id, note = '')     => axios.post(`${BASE}/savings/${id}/dispute`, { note }),
+
+  // Plan 5 — Phase B (Crystal Ball)
+  getForecasts:    ()                  => axios.get(`${BASE}/forecasts`),
+  getAnomalies:    (limit = 10)        => axios.get(`${BASE}/anomalies`, { params: { limit } }),
+  anomalyFeedback: (id, label, note='')=> axios.post(`${BASE}/anomalies/${id}/feedback`, { label, note }),
+  suppressAnomaly: (id)                => axios.post(`${BASE}/anomalies/${id}/suppress`),
+  getTrustScore:   ()                  => axios.get(`${BASE}/trust-score`),
+  getModelHealth:  ()                  => axios.get(`${BASE}/model-health`),
 };

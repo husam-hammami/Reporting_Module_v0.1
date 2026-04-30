@@ -51,6 +51,21 @@ def build():
     except Exception:
         top_levers = []
 
+    # 3b. Phase B — Forecasts + anomalies + trust score (Crystal Ball)
+    forecasts_block = {'shift_pace': [], 'daily_bill': None, 'trends': []}
+    anomalies_block = []
+    trust_block = None
+    try:
+        from ai_forecast import shift_pace, daily_bill, trend_slope, anomaly, trust_score
+        forecasts_block['shift_pace'] = shift_pace.project_all_assets()
+        forecasts_block['daily_bill'] = daily_bill.project()
+        forecasts_block['trends'] = trend_slope.all_trends()
+        anomalies_block = anomaly.list_open_events(limit=5)
+        trust_block = trust_score.compute()
+    except Exception as e:
+        import logging as _logging
+        _logging.getLogger(__name__).debug("Phase B payload section failed: %s", e)
+
     # 4. Money block aggregates
     pf_penalty_omr_month = sum(
         (p['pf'] or {}).get('penalty_omr', 0) for p in per_asset if p['pf']
@@ -92,6 +107,7 @@ def build():
         'savings': savings,
         'per_asset': per_asset,
         'levers': top_levers,
-        'forecasts': [],   # Phase B
-        'anomalies': [],   # Phase B
+        'forecasts': forecasts_block,
+        'anomalies': anomalies_block,
+        'trust': trust_block,
     }

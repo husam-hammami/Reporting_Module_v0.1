@@ -59,6 +59,8 @@ MIGRATION_ORDER = [
     'create_model_accuracy_log.sql',
     'create_ml_anomaly_feedback.sql',
     'create_assets_view.sql',
+    # Plan 5 — Phase B (Crystal Ball)
+    'create_ml_anomaly_events.sql',
 ]
 
 

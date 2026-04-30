@@ -2125,3 +2125,118 @@ def get_levers():
     except Exception as e:
         logger.exception("levers failed: %s", e)
         return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Plan 5 — Phase B (Crystal Ball) endpoints
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@hercules_ai_bp.route('/hercules-ai/forecasts', methods=['GET'])
+@login_required
+def get_forecasts():
+    """All Phase B forecasts in one shot (used by drilldowns)."""
+    try:
+        from ai_forecast import shift_pace, daily_bill, trend_slope
+        return jsonify({
+            'shift_pace': shift_pace.project_all_assets(),
+            'daily_bill': daily_bill.project(),
+            'trends':     trend_slope.all_trends(),
+        })
+    except Exception as e:
+        logger.exception("forecasts failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/anomalies', methods=['GET'])
+@login_required
+def get_anomalies():
+    """Open anomaly events for the Watch band."""
+    try:
+        from ai_forecast import anomaly
+        try:
+            limit = int(request.args.get('limit', 10))
+        except ValueError:
+            limit = 10
+        return jsonify({'anomalies': anomaly.list_open_events(limit=limit)})
+    except Exception as e:
+        logger.exception("anomalies failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/anomalies/<int:anomaly_id>/feedback', methods=['POST'])
+@login_required
+def anomaly_feedback(anomaly_id):
+    """User flags an anomaly as 'useful' or 'noise' — drives auto-tightening."""
+    try:
+        data = request.get_json() or {}
+        label = data.get('label', '').strip().lower()
+        if label not in ('useful', 'noise'):
+            return jsonify({'error': "label must be 'useful' or 'noise'"}), 400
+        note = (data.get('note') or '')[:500]
+        from flask_login import current_user
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor()
+            cur.execute("""
+                INSERT INTO ml_anomaly_feedback (anomaly_id, user_id, label, note)
+                VALUES (%s, %s, %s, %s)
+            """, (anomaly_id, getattr(current_user, 'id', None), label, note))
+            actual.commit()
+        return jsonify({'status': 'recorded'})
+    except Exception as e:
+        logger.exception("anomaly feedback failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/anomalies/<int:anomaly_id>/suppress', methods=['POST'])
+@login_required
+def suppress_anomaly(anomaly_id):
+    """Hide an anomaly from the Watch band (user dismissed it)."""
+    try:
+        from ai_forecast import anomaly
+        ok = anomaly.suppress_event(anomaly_id)
+        if not ok:
+            return jsonify({'error': 'Event not found'}), 404
+        return jsonify({'status': 'suppressed'})
+    except Exception as e:
+        logger.exception("suppress anomaly failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/trust-score', methods=['GET'])
+@login_required
+def get_trust_score():
+    """Composite Trust Score (0..100) — drives the footer chip + smoke-detector."""
+    try:
+        from ai_forecast import trust_score
+        return jsonify(trust_score.compute())
+    except Exception as e:
+        logger.exception("trust score failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/model-health', methods=['GET'])
+@login_required
+def get_model_health():
+    """Per-feature accuracy stats — admin-only Model Health page."""
+    try:
+        from ai_forecast import accuracy_closer, trust_score
+        features = ['shift_pace', 'daily_bill', 'pf_trend', 'voltage_imbalance_trend']
+        out = []
+        for feat in features:
+            mape = accuracy_closer.mape_for(feat, days=30)
+            band = accuracy_closer.band_hit_rate(feat, days=30)
+            out.append({
+                'feature': feat,
+                'mape': mape,
+                'band_hit': band,
+            })
+        return jsonify({
+            'trust': trust_score.compute(),
+            'features': out,
+        })
+    except Exception as e:
+        logger.exception("model-health failed: %s", e)
+        return jsonify({'error': str(e)}), 500

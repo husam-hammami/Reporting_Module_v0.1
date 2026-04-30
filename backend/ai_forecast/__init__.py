@@ -14,5 +14,17 @@ Modules (Phase B will populate):
     accuracy_closer — nightly worker that fills actuals into model_accuracy_log
 """
 
-# Phase A: stubs only. Phase B replaces with real implementations.
-__all__ = []
+# Phase B — Crystal Ball layer. Imported lazily by callers.
+from . import filters
+from . import shift_pace
+from . import daily_bill
+from . import trend_slope
+from . import sec_drift
+from . import anomaly
+from . import accuracy_closer
+from . import trust_score
+
+__all__ = [
+    'filters', 'shift_pace', 'daily_bill', 'trend_slope',
+    'sec_drift', 'anomaly', 'accuracy_closer', 'trust_score',
+]

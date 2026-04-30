@@ -207,6 +207,31 @@ def dynamic_archive_worker():
             except Exception as sec_err:
                 logger.warning(f"[ROI/SEC] Refresh failed (non-blocking): {sec_err}")
 
+            # ── Plan 5 Phase B — Crystal Ball hourly batch:
+            # Anomaly detectors + SEC drift check + accuracy_closer.
+            # All non-blocking; errors logged but never crash the worker.
+            try:
+                from ai_forecast import anomaly as ai_anom
+                counts = ai_anom.run_all()
+                if any(v for v in counts.values() if isinstance(v, int) and v > 0):
+                    logger.info(f"[ROI/Anomaly] Fired: {counts}")
+            except Exception as ae:
+                logger.warning(f"[ROI/Anomaly] Detector run failed: {ae}")
+
+            try:
+                from ai_forecast import sec_drift as ai_drift
+                drifts = ai_drift.check_all()
+                if drifts:
+                    logger.info(f"[ROI/Drift] {len(drifts)} drift events")
+            except Exception as de:
+                logger.warning(f"[ROI/Drift] Check failed: {de}")
+
+            try:
+                from ai_forecast import accuracy_closer as ai_close
+                ai_close.run_once()
+            except Exception as ce:
+                logger.warning(f"[ROI/Accuracy] Closer failed: {ce}")
+
             # Per-layout archiving (Live Monitor tables) — failures here do not block universal archive
             try:
                 from utils.dynamic_tables import get_active_monitors

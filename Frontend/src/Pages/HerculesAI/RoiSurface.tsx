@@ -1,11 +1,15 @@
 /**
- * RoiSurface — composes the SavingsRibbon + asset bento for the AI tab.
+ * RoiSurface — composes the AI tab's bento.
  *
  * Plan 5 §14.4 page composition:
  *   Band 1 — SavingsRibbon (the only verdict)
- *   Band 2 — Asset bento (3-up grid of glass cards: SecCard + PfPenaltyCard per asset)
+ *   Band 2 — Asset bento (PacingRing + SecCard + PfPenaltyCard per asset)
+ *   Band 3 — Top-3 Levers (Phase C)
+ *   Band 4 — Plant-wide Bill projection
+ *   Band 5 — Watch (forecasts + anomalies)
  *
- * Phase A scope. Bands 3 (Top-3 Levers), 4 (Plant-wide Bill), 5 (Watch) ship later.
+ * Phase A: SavingsRibbon + SecCard + PfPenaltyCard.
+ * Phase B (this commit): + PacingRing + BillProjection + WatchBand.
  *
  * Data load: single `/api/hercules-ai/roi-payload` call, refreshed every 30 s.
  */
@@ -16,6 +20,9 @@ import { herculesAIApi } from '../../API/herculesAIApi';
 import SavingsRibbon from './components/SavingsRibbon';
 import SecCard from './components/SecCard';
 import PfPenaltyCard from './components/PfPenaltyCard';
+import PacingRing from './components/PacingRing';
+import BillProjectionCard from './components/BillProjectionCard';
+import WatchBand from './components/WatchBand';
 
 import './tokens.css';
 
@@ -26,6 +33,12 @@ interface PerAsset {
   sec_available: boolean;
   sec: any;       // SecSummary | null
   pf:  any;       // PfStatus | null
+}
+
+interface ForecastsBlock {
+  shift_pace: any[];
+  daily_bill: any | null;
+  trends: any[];
 }
 
 interface RoiPayload {
@@ -39,11 +52,12 @@ interface RoiPayload {
     sec_excess_omr_today: number;
     cost_omr_today: number;
   };
-  savings: any;   // SavingsResp
+  savings: any;
   per_asset: PerAsset[];
   levers: any[];
-  forecasts: any[];
+  forecasts: ForecastsBlock;
   anomalies: any[];
+  trust: { score: number | null; calibrating: boolean } | null;
 }
 
 const REFRESH_MS = 30_000;
@@ -115,15 +129,22 @@ export default function RoiSurface() {
     subline.push(`${trackedAssets.length} machine${trackedAssets.length === 1 ? '' : 's'} watched`);
   }
 
+  // Index shift_pace forecasts by asset for AssetCard lookup
+  const paceByAsset: Record<string, any> = {};
+  for (const p of payload?.forecasts?.shift_pace ?? []) {
+    if (p?.asset) paceByAsset[p.asset] = p;
+  }
+
   return (
     <section className="hai-num" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--hai-space-5)' }}>
       <SavingsRibbon
         savings={payload?.savings ?? null}
         plantStatus={payload ? { level: payload.plant_status_level, verdict: payload.plant_status_verdict } : undefined}
         subline={subline}
+        trustScore={payload?.trust?.score ?? null}
       />
 
-      {/* Band 2 — Asset bento (3 cards per row on desktop, scroll on mobile) */}
+      {/* Band 2 — Asset bento */}
       {(payload?.per_asset?.length ?? 0) > 0 && (
         <div
           className="hai-roi-bento"
@@ -134,7 +155,7 @@ export default function RoiSurface() {
           }}
         >
           {(payload?.per_asset ?? []).map((a) => (
-            <AssetCard key={a.asset} asset={a} />
+            <AssetCard key={a.asset} asset={a} pace={paceByAsset[a.asset] ?? null} />
           ))}
         </div>
       )}
@@ -153,12 +174,21 @@ export default function RoiSurface() {
           No machines being watched yet. Hercules will pick them up automatically as it learns your equipment.
         </div>
       )}
+
+      {/* Band 4 — Plant-wide bill projection */}
+      <BillProjectionCard projection={payload?.forecasts?.daily_bill ?? null} />
+
+      {/* Band 5 — Watch (trends + anomalies) */}
+      <WatchBand
+        trends={payload?.forecasts?.trends ?? []}
+        anomalies={payload?.anomalies ?? []}
+      />
     </section>
   );
 }
 
-/* ── Asset card: title + SEC + PF stacked ──────────────────────────────── */
-function AssetCard({ asset }: { asset: PerAsset }) {
+/* ── Asset card: title + PacingRing + SEC + PF stacked ────────────────── */
+function AssetCard({ asset, pace }: { asset: PerAsset; pace: any | null }) {
   return (
     <article
       className="hai-roi-card"
@@ -186,6 +216,7 @@ function AssetCard({ asset }: { asset: PerAsset }) {
         )}
       </header>
 
+      {pace && <PacingRing pace={pace} size={180} />}
       <SecCard summary={asset.sec} />
       <PfPenaltyCard status={asset.pf} />
     </article>

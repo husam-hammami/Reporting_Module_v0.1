@@ -93,10 +93,15 @@ a = Analysis(
         'ai_money.levers',
         'ai_money.payload_builder',
         'ai_forecast',
+        'ai_forecast.filters',
         'ai_forecast.shift_pace',
         'ai_forecast.daily_bill',
         'ai_forecast.trend_slope',
+        'ai_forecast.sec_drift',
+        'ai_forecast.anomaly',
         'ai_forecast.accuracy_closer',
+        'ai_forecast.trust_score',
+        'numpy',
 
         # Utils
         'utils.tag_value_cache',
