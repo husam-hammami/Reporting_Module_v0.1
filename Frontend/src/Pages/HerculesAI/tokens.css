@@ -250,3 +250,122 @@
 [data-hai-density='wallboard'] .hai-text-body {
   font-size: 1.3125rem; /* 21px */
 }
+
+/* =========================================================================
+   ROI GENIUS LAYER — additive tokens (Plan 5)
+   These extend Phase 1 tokens; do not replace any existing variable.
+   ========================================================================= */
+[data-theme='dark'],
+.dark {
+  /* Money — the only gold on the page; reserved exclusively for OMR figures */
+  --hai-money:        #f0b54f;
+  --hai-money-glow:   rgba(240, 181, 79, 0.22);
+
+  /* Glass surfaces (two layers — never more) */
+  --hai-glass-1:      rgba(255, 255, 255, 0.04);
+  --hai-glass-2:      rgba(255, 255, 255, 0.07);
+  --hai-glass-border: rgba(255, 255, 255, 0.10);
+  --hai-glass-highlight: rgba(255, 255, 255, 0.18);
+
+  /* ROI shadows — soft depth, never harsh */
+  --hai-shadow-rest:  0 8px 16px -8px rgba(0, 0, 0, 0.40);
+  --hai-shadow-deep:  0 24px 48px -12px rgba(0, 0, 0, 0.55);
+
+  /* Forecast / sub-action accent (also used for evidence chips) */
+  --hai-future:       #8b9ff7;
+
+  /* Focus ring for ROI cards — white, not gold (gold becomes invisible on cards with OMR) */
+  --hai-focus-roi:    rgba(255, 255, 255, 0.6);
+}
+
+[data-theme='light'],
+.light,
+:root {
+  --hai-money:        #b97900;       /* darkened gold for AA contrast on light bg */
+  --hai-money-glow:   rgba(185, 121, 0, 0.18);
+  --hai-glass-1:      rgba(15, 23, 42, 0.04);
+  --hai-glass-2:      rgba(15, 23, 42, 0.07);
+  --hai-glass-border: rgba(15, 23, 42, 0.10);
+  --hai-glass-highlight: rgba(15, 23, 42, 0.05);
+  --hai-shadow-rest:  0 8px 16px -8px rgba(15, 23, 42, 0.12);
+  --hai-shadow-deep:  0 24px 48px -12px rgba(15, 23, 42, 0.20);
+  --hai-future:       #6b73c5;
+  --hai-focus-roi:    rgba(15, 23, 42, 0.5);
+}
+
+:root {
+  /* ROI display scale — larger than Phase 1's --hai-text-display-* utilities */
+  --hai-roi-display:    clamp(56px, 6vw, 80px);
+  --hai-roi-display-sm: clamp(40px, 4vw, 56px);
+
+  /* ROI motion — extends Phase 1's curves */
+  --hai-roi-dur-tween:  1200ms;       /* Savings count-up only */
+  --hai-roi-dur-ring:   820ms;        /* Pacing ring fill */
+  --hai-roi-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --hai-roi-dur-tween: 280ms;
+    --hai-roi-dur-ring:  0ms;
+  }
+}
+
+/* ── ROI Glass Card primitive ─────────────────────────────────────────────── */
+.hai-roi-card {
+  background: var(--hai-glass-1);
+  border: 1px solid var(--hai-glass-border);
+  border-radius: 18px;
+  box-shadow: var(--hai-shadow-rest), inset 0 1px 0 var(--hai-glass-highlight);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  transition:
+    transform var(--hai-motion-medium) var(--hai-ease-out-quart),
+    box-shadow var(--hai-motion-medium) var(--hai-ease-out-quart),
+    background var(--hai-motion-short) var(--hai-ease-out-quart);
+}
+.hai-roi-card:hover {
+  background: var(--hai-glass-2);
+  box-shadow: var(--hai-shadow-deep), inset 0 1px 0 var(--hai-glass-highlight);
+  transform: translateY(-2px);
+}
+.hai-roi-card:focus-visible {
+  outline: 2px solid var(--hai-focus-roi);
+  outline-offset: 4px;
+}
+
+/* ── ROI hero money figure ────────────────────────────────────────────────── */
+.hai-money-figure {
+  font-family: var(--hai-font-sans);
+  font-weight: 300;
+  font-size: var(--hai-roi-display);
+  line-height: 1;
+  color: var(--hai-money);
+  letter-spacing: -0.02em;
+  font-feature-settings: var(--hai-font-numeric);
+  font-variant-numeric: tabular-nums lining-nums;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4em;
+}
+.hai-money-figure .hai-money-unit {
+  font-size: 0.45em;
+  font-weight: 500;
+  color: var(--hai-text-secondary);
+  letter-spacing: 0;
+}
+.hai-money-figure--sm {
+  font-size: var(--hai-roi-display-sm);
+}
+
+/* ── ROI lever pulse (rank-1 only) ────────────────────────────────────────── */
+@keyframes hai-roi-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--hai-money-glow); }
+  50%      { box-shadow: 0 0 0 12px transparent; }
+}
+.hai-roi-lever[data-rank='1']:not(:hover) .hai-money-figure {
+  animation: hai-roi-pulse 1.4s var(--hai-ease-out-quart) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hai-roi-lever .hai-money-figure { animation: none; }
+}

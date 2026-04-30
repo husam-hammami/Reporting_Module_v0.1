@@ -51,6 +51,14 @@ MIGRATION_ORDER = [
     'add_distribution_content_mode.sql',
     'add_value_text_to_tag_history.sql',
     'allow_wstring_data_type.sql',
+    # Plan 5 — ROI Genius Layer (Phase A migrations)
+    'add_asset_columns_to_profiles.sql',
+    'create_asset_sec_hourly.sql',
+    'create_asset_yield_hourly.sql',
+    'create_ai_savings_ledger.sql',
+    'create_model_accuracy_log.sql',
+    'create_ml_anomaly_feedback.sql',
+    'create_assets_view.sql',
 ]
 
 

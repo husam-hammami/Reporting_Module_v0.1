@@ -357,6 +357,17 @@ function runInitDb() {
       'add_ai_summary_to_distribution.sql',
       'add_order_tracking_to_report_templates.sql',
       'add_distribution_content_mode.sql',
+      // Drift fix: these were missing from desktop main.js but present in init_db.py / app.py
+      'add_value_text_to_tag_history.sql',
+      'allow_wstring_data_type.sql',
+      // Plan 5 — ROI Genius Layer (Phase A migrations)
+      'add_asset_columns_to_profiles.sql',
+      'create_asset_sec_hourly.sql',
+      'create_asset_yield_hourly.sql',
+      'create_ai_savings_ledger.sql',
+      'create_model_accuracy_log.sql',
+      'create_ml_anomaly_feedback.sql',
+      'create_assets_view.sql',
     ];
 
     for (const file of migrationOrder) {
@@ -557,39 +568,82 @@ function httpsGetJSON(url) {
 
 function downloadFile(url, dest, onProgress) {
   const https = require('https');
+  const IDLE_TIMEOUT_MS = 30000; // abort if no bytes received for 30s
+
   return new Promise((resolve, reject) => {
     let redirects = 0;
+    let settled = false;
+    const settle = (err) => {
+      if (settled) return;
+      settled = true;
+      if (err) reject(err); else resolve();
+    };
+
     const follow = (u) => {
-      https.get(u, { headers: { 'User-Agent': 'HerculesDesktop/1.0' }, timeout: 120000 }, (res) => {
+      const req = https.get(u, {
+        headers: { 'User-Agent': 'HerculesDesktop/1.0' },
+        timeout: 120000,
+      }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          if (++redirects > 5) { reject(new Error('Too many redirects')); return; }
+          if (++redirects > 5) { settle(new Error('Too many redirects')); return; }
+          res.resume();
           follow(res.headers.location);
           return;
         }
         if (res.statusCode !== 200) {
-          reject(new Error(`Download failed: HTTP ${res.statusCode}`));
+          settle(new Error(`Download failed: HTTP ${res.statusCode}`));
           return;
         }
+
         const total = parseInt(res.headers['content-length'] || '0', 10);
         let downloaded = 0;
         const file = fs.createWriteStream(dest);
+
+        let idleTimer;
+        const resetIdle = () => {
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(() => {
+            res.destroy(new Error(`Stalled: no data for ${IDLE_TIMEOUT_MS / 1000}s (got ${downloaded}/${total || '?'} bytes)`));
+          }, IDLE_TIMEOUT_MS);
+        };
+
+        const finalize = (err) => {
+          clearTimeout(idleTimer);
+          file.end(() => {
+            if (err) {
+              try { fs.unlinkSync(dest); } catch { /* may not exist */ }
+              return settle(err);
+            }
+            if (total > 0 && downloaded < total) {
+              try { fs.unlinkSync(dest); } catch {}
+              return settle(new Error(`Incomplete download: ${downloaded}/${total} bytes`));
+            }
+            settle();
+          });
+        };
+
         res.on('data', (chunk) => {
           downloaded += chunk.length;
           file.write(chunk);
           if (total > 0 && onProgress) onProgress((downloaded / total) * 100);
+          resetIdle();
         });
-        res.on('end', () => {
-          file.end(() => {
-            if (total > 0 && downloaded < total) {
-              reject(new Error(`Incomplete download: ${downloaded}/${total} bytes`));
-            } else {
-              resolve();
-            }
-          });
-        });
-        res.on('error', (e) => { file.end(); reject(e); });
-      }).on('error', reject).on('timeout', function() { this.destroy(); reject(new Error('Download timeout')); });
+        res.on('end', () => finalize());
+        res.on('aborted', () => finalize(new Error('Connection aborted')));
+        res.on('error', (e) => finalize(e));
+        res.on('close', () => { if (!settled) finalize(new Error('Connection closed unexpectedly')); });
+        file.on('error', (e) => finalize(e));
+
+        resetIdle();
+      });
+
+      req.on('error', (e) => settle(e));
+      req.on('timeout', function() {
+        this.destroy();
+        settle(new Error('Initial connection timeout (120s to first byte)'));
+      });
     };
+
     follow(url);
   });
 }

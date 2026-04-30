@@ -191,6 +191,22 @@ def dynamic_archive_worker():
             except Exception as ret_err:
                 logger.warning(f"[Retention] Archive rollup/purge failed: {ret_err}")
 
+            # ── Plan 5 — ROI Money Layer: refresh asset_sec_hourly for the just-archived hour
+            # Runs after the universal archive completes so the SEC math operates on
+            # already-aggregated data. Failures here MUST NOT block the worker.
+            try:
+                from ai_money import sec as ai_sec
+                # archive_hour = top of current hour = end-of-bucket label for the prev-hour data.
+                # So the SEC row we just have data for is keyed at archive_hour (= end label).
+                # _sum_delta uses (t_from, t_to] semantics, so refresh_hour(archive_hour) reads
+                # rows where archive_hour > hour_start AND archive_hour <= hour_start+1h.
+                # Adjust: pass hour_start (the beginning of the just-archived bucket) and store
+                # the SEC row keyed there for natural "this is the SEC for the 13:00 hour" reads.
+                ai_sec.refresh_hour(hour_start, write=True)
+                logger.info(f"[ROI/SEC] Refreshed asset_sec_hourly for {hour_start}")
+            except Exception as sec_err:
+                logger.warning(f"[ROI/SEC] Refresh failed (non-blocking): {sec_err}")
+
             # Per-layout archiving (Live Monitor tables) — failures here do not block universal archive
             try:
                 from utils.dynamic_tables import get_active_monitors

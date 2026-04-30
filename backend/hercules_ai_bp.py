@@ -119,6 +119,24 @@ _CONFIG_DEFAULTS = {
     'local_server_url': {'value': 'http://localhost:1234/v1'},
     'local_model': {'value': ''},
     'electricity_tariff_omr_per_kwh': {'value': 0.025},
+    # Plan 5 — ROI Genius settings (Phase A surfaces; Settings page in Phase C)
+    'pf_target': {'value': 0.90},
+    'pf_penalty_rate_bz_per_kvarh': {'value': 4.0},
+    'pf_correction_target': {'value': 0.95},
+    'capacitor_cost_omr_per_kvar': {'value': 12},
+    'value_per_ton_flour': {'value': None},
+    'value_per_ton_bran': {'value': None},
+    'value_per_ton_pasta': {'value': None},
+    'shift_target_kg': {'value': {}},
+    'savings_ledger_confidence_default_pct': {'value': 50},
+    'savings_ledger_show_confidence_breakdown': {'value': True},
+    'cfo_digest_enabled': {'value': False},
+    'cfo_digest_recipients': {'value': []},
+    'forecast_band_visible': {'value': True},
+    'forecast_min_history_days': {'value': 7},
+    'equipment_on_voltage_threshold_v': {'value': 0},
+    'peak_hours': {'value': {'summer': [7, 22], 'winter': [7, 22]}},
+    'roi_phase': {'value': 'A'},
 }
 
 
@@ -1934,3 +1952,176 @@ def test_ai_connection():
     import ai_provider
     result = ai_provider.test_connection(ai_config)
     return jsonify(result)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Plan 5 — ROI Genius Layer endpoints (Phase A)
+# ═══════════════════════════════════════════════════════════════════════════
+# Public composed endpoint: /roi-payload (drives the entire AI tab in one call)
+# Drilldown endpoints (used by tooltips, drawers, Model Health):
+#     /asset-health, /sec, /pf-status, /savings, /levers, /savings/<id>/attribute,
+#     /savings/<id>/dispute
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@hercules_ai_bp.route('/hercules-ai/roi-payload', methods=['GET'])
+@login_required
+def get_roi_payload():
+    """Composed ROI payload — single endpoint for the SavingsRibbon + asset bento.
+
+    UI hits this once and caches 30 s. Per-feature endpoints below are for
+    drilldowns and the Model Health page only.
+    """
+    try:
+        from ai_money import payload_builder
+        payload = payload_builder.build()
+        return jsonify(payload)
+    except Exception as e:
+        logger.exception("roi-payload failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/asset-health', methods=['GET'])
+@login_required
+def get_asset_health():
+    """Returns per-asset SEC pair status — drives the "needs linking" empty states."""
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor(cursor_factory=RealDictCursor)
+            cur.execute("""
+                SELECT asset_name, total_tags, tracked_tags, energy_meters,
+                       production_counters, has_energy_meter, has_production_counter,
+                       sec_available, first_seen_at, last_updated_at
+                  FROM assets_view
+              ORDER BY asset_name
+            """)
+            rows = cur.fetchall()
+            actual.commit()
+        out = []
+        for r in rows:
+            missing = []
+            if not r['has_energy_meter']:
+                missing.append('energy_meter')
+            if not r['has_production_counter']:
+                missing.append('production_counter')
+            out.append({
+                'asset': r['asset_name'],
+                'total_tags': int(r['total_tags']),
+                'tracked_tags': int(r['tracked_tags']),
+                'energy_meters': int(r['energy_meters']),
+                'production_counters': int(r['production_counters']),
+                'sec_available': bool(r['sec_available']),
+                'missing_pairs': missing,
+                'first_seen_at': r['first_seen_at'].isoformat() if r['first_seen_at'] else None,
+                'last_updated_at': r['last_updated_at'].isoformat() if r['last_updated_at'] else None,
+            })
+        return jsonify({'assets': out})
+    except Exception as e:
+        logger.exception("asset-health failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/sec', methods=['GET'])
+@login_required
+def get_sec():
+    """SEC drilldown — per-asset hourly history + summary."""
+    try:
+        from ai_money import sec
+        asset = request.args.get('asset', '').strip()
+        if not asset:
+            return jsonify({'error': 'asset query param required'}), 400
+        try:
+            hours = int(request.args.get('hours', 24))
+        except ValueError:
+            hours = 24
+        return jsonify({
+            'asset': asset,
+            'summary': sec.summary_for_asset(asset, period_hours=hours),
+            'recent': sec.get_recent(asset, hours_back=hours),
+        })
+    except Exception as e:
+        logger.exception("sec endpoint failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/pf-status', methods=['GET'])
+@login_required
+def get_pf_status():
+    """PF penalty + capacitor sizing for an asset (current month by default)."""
+    try:
+        from ai_money import pf_penalty
+        asset = request.args.get('asset', '').strip()
+        if not asset:
+            return jsonify({'error': 'asset query param required'}), 400
+        return jsonify(pf_penalty.compute_penalty(asset))
+    except Exception as e:
+        logger.exception("pf-status failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/savings', methods=['GET'])
+@login_required
+def get_savings():
+    """Money-saved-this-month summary + (optional) entry list for audit drawer."""
+    try:
+        from ai_money import savings_ledger
+        include_entries = request.args.get('include_entries', '').lower() in ('1', 'true', 'yes')
+        result = savings_ledger.summary()
+        if include_entries:
+            result['entries'] = savings_ledger.list_entries(limit=100)
+        return jsonify(result)
+    except Exception as e:
+        logger.exception("savings failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/savings/<int:entry_id>/attribute', methods=['POST'])
+@login_required
+def attribute_savings(entry_id):
+    """User confirms a ledger entry — confidence rises to 100%."""
+    try:
+        from ai_money import savings_ledger
+        from flask_login import current_user
+        ok = savings_ledger.attribute(entry_id, getattr(current_user, 'id', None))
+        if not ok:
+            return jsonify({'error': 'Entry not found'}), 404
+        return jsonify({'status': 'attributed'})
+    except Exception as e:
+        logger.exception("attribute_savings failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/savings/<int:entry_id>/dispute', methods=['POST'])
+@login_required
+def dispute_savings(entry_id):
+    """User disputes a ledger entry — confidence drops to 0%."""
+    try:
+        from ai_money import savings_ledger
+        from flask_login import current_user
+        data = request.get_json() or {}
+        note = data.get('note', '')[:500]
+        ok = savings_ledger.dispute(entry_id, getattr(current_user, 'id', None), note)
+        if not ok:
+            return jsonify({'error': 'Entry not found'}), 404
+        return jsonify({'status': 'disputed'})
+    except Exception as e:
+        logger.exception("dispute_savings failed: %s", e)
+        return jsonify({'error': str(e)}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/levers', methods=['GET'])
+@login_required
+def get_levers():
+    """Top-3 ROI levers ranked by OMR/month."""
+    try:
+        from ai_money import levers
+        try:
+            limit = int(request.args.get('limit', 3))
+        except ValueError:
+            limit = 3
+        return jsonify({'levers': levers.top_levers(limit=limit)})
+    except Exception as e:
+        logger.exception("levers failed: %s", e)
+        return jsonify({'error': str(e)}), 500

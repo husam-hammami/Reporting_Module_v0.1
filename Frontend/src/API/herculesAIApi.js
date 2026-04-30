@@ -16,4 +16,15 @@ export const herculesAIApi = {
   insights:        (data)      => axios.post(`${BASE}/insights`, data, { timeout: 120000 }),
   previewCharts:   (data)      => axios.post(`${BASE}/preview-charts`, data),
   chartData:       (data)      => axios.post(`${BASE}/chart-data`, data),
+
+  // Plan 5 — ROI Genius Layer endpoints
+  getRoiPayload:   ()                  => axios.get(`${BASE}/roi-payload`),
+  getAssetHealth:  ()                  => axios.get(`${BASE}/asset-health`),
+  getSec:          (asset, hours = 24) => axios.get(`${BASE}/sec`, { params: { asset, hours } }),
+  getPfStatus:     (asset)             => axios.get(`${BASE}/pf-status`, { params: { asset } }),
+  getSavings:      (includeEntries = false) => axios.get(`${BASE}/savings`,
+      { params: includeEntries ? { include_entries: 'true' } : {} }),
+  getLevers:       (limit = 3)         => axios.get(`${BASE}/levers`, { params: { limit } }),
+  attributeSavings: (id)               => axios.post(`${BASE}/savings/${id}/attribute`),
+  disputeSavings:  (id, note = '')     => axios.post(`${BASE}/savings/${id}/dispute`, { note }),
 };

@@ -797,6 +797,14 @@ def _run_startup_migrations():
         'add_distribution_content_mode.sql',
         'add_value_text_to_tag_history.sql',
         'allow_wstring_data_type.sql',
+        # Plan 5 — ROI Genius Layer (Phase A migrations)
+        'add_asset_columns_to_profiles.sql',
+        'create_asset_sec_hourly.sql',
+        'create_asset_yield_hourly.sql',
+        'create_ai_savings_ledger.sql',
+        'create_model_accuracy_log.sql',
+        'create_ml_anomaly_feedback.sql',
+        'create_assets_view.sql',
     ]
 
     try:
@@ -1296,6 +1304,14 @@ try:
     logger.info("Started report order tracking worker")
 except Exception as e:
     logger.error("Could not start report order worker: %s", e, exc_info=True)
+
+# 6. Plan 5 — ROI Genius: SEC backfill (off-startup, runs in background after PG settles)
+try:
+    from workers.sec_backfill import spawn as _spawn_sec_backfill
+    _spawn_sec_backfill(delay_seconds=60)
+    logger.info("Scheduled ROI/SEC backfill (60 s delay).")
+except Exception as e:
+    logger.warning("Could not schedule SEC backfill (non-fatal): %s", e)
 
 # Auto-seed emulator with all DB tags when in demo mode (runs regardless of entry point)
 try:

@@ -11,6 +11,7 @@ import useTimePeriod from '../../Hooks/useTimePeriod';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
 import { BriefingView } from './BriefingView';
+import RoiSurface from './RoiSurface';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -437,6 +438,11 @@ export default function HerculesAISetup() {
         selectedShift={timePeriod.selectedShift}
         onShiftChange={tpActions.setShift}
       />
+
+      {/* ── Plan 5 ROI Surface (Phase A) — Savings ribbon + asset bento ── */}
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 24px 0' }}>
+        <RoiSurface />
+      </div>
 
       {/* ── Analyze bar + Filter ── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 24px' }}>

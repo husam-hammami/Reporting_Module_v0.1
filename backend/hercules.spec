@@ -79,6 +79,24 @@ a = Analysis(
         'workers.historian_worker',
         'workers.dynamic_monitor_worker',
         'workers.dynamic_archive_worker',
+        'workers.report_order_worker',
+        'workers.sec_backfill',
+
+        # Plan 5 — ROI Genius Money + Forecast layers
+        'ai_money',
+        'ai_money.db',
+        'ai_money.sec',
+        'ai_money.pf_penalty',
+        'ai_money.cost',
+        'ai_money.revenue',
+        'ai_money.savings_ledger',
+        'ai_money.levers',
+        'ai_money.payload_builder',
+        'ai_forecast',
+        'ai_forecast.shift_pace',
+        'ai_forecast.daily_bill',
+        'ai_forecast.trend_slope',
+        'ai_forecast.accuracy_closer',
 
         # Utils
         'utils.tag_value_cache',
