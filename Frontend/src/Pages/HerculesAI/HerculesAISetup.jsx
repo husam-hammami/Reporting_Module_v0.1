@@ -11,7 +11,13 @@ import useTimePeriod from '../../Hooks/useTimePeriod';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
 import { BriefingView } from './BriefingView';
-import RoiSurface from './RoiSurface';
+// Plan 6 — Boardroom Mode redesign (replaces RoiSurface)
+import { useRoiPayload } from './hooks/useRoiPayload';
+import BoardroomCard from './BoardroomCard';
+import SegmentedStage, { defaultChip } from './SegmentedStage';
+import AttentionStage from './stages/AttentionStage';
+import MachinesStage from './stages/MachinesStage';
+import AuditStage from './stages/AuditStage';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -214,6 +220,22 @@ export default function HerculesAISetup() {
   const [charts, setCharts] = useState(null);
   const [loadingCharts, setLoadingCharts] = useState(false);
   const [chartError, setChartError] = useState(null);
+
+  // Plan 6 — Boardroom Mode: shared roi-payload + active chip
+  const { payload: roiPayload } = useRoiPayload();
+  const [activeChip, setActiveChip] = useState('attention');
+  const [chipUserSelected, setChipUserSelected] = useState(false);
+  // Default chip auto-pick once payload arrives — only if user hasn't manually selected
+  useEffect(() => {
+    if (roiPayload && !chipUserSelected) {
+      setActiveChip(defaultChip(roiPayload));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roiPayload?.generated_at]);
+  const handleChipChange = (chip) => {
+    setActiveChip(chip);
+    setChipUserSelected(true);
+  };
 
   useEffect(() => {
     (async () => {
@@ -425,6 +447,44 @@ export default function HerculesAISetup() {
         )}
       </AnimatePresence>
 
+      {/* ── Plan 6 Boardroom Mode — single sticky verdict card + segmented stage ── */}
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 24px 0' }}>
+        <BoardroomCard
+          payload={roiPayload}
+          isAdmin={true}
+          onChipChange={handleChipChange}
+        />
+        <SegmentedStage
+          active={activeChip}
+          onChange={handleChipChange}
+          payload={roiPayload}
+        />
+      </div>
+
+      {/* Stage: Attention */}
+      {activeChip === 'attention' && (
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px 16px' }}>
+          <AttentionStage payload={roiPayload} />
+        </div>
+      )}
+
+      {/* Stage: Machines */}
+      {activeChip === 'machines' && (
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px 16px' }}>
+          <MachinesStage payload={roiPayload} />
+        </div>
+      )}
+
+      {/* Stage: Audit */}
+      {activeChip === 'audit' && (
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px 16px' }}>
+          <AuditStage payload={roiPayload} />
+        </div>
+      )}
+
+      {/* Stage: Time — Phase 1 surface (untouched, gated by chip) */}
+      {activeChip === 'time' && (
+      <>
       {/* ── Time period tabs ── */}
       <TimePeriodTabs
         tabs={INSIGHTS_TABS}
@@ -438,11 +498,6 @@ export default function HerculesAISetup() {
         selectedShift={timePeriod.selectedShift}
         onShiftChange={tpActions.setShift}
       />
-
-      {/* ── Plan 5 ROI Surface (Phase A) — Savings ribbon + asset bento ── */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 24px 0' }}>
-        <RoiSurface />
-      </div>
 
       {/* ── Analyze bar + Filter ── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 24px' }}>
@@ -606,6 +661,8 @@ export default function HerculesAISetup() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 

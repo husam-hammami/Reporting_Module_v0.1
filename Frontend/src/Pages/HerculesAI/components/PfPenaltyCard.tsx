@@ -97,12 +97,19 @@ export default function PfPenaltyCard({ status, onLeverClick, className }: PfPen
         </span>
       </div>
 
-      {status.penalty_omr > 0 ? (
-        <div style={{ fontSize: 12, color: 'var(--hai-text-secondary)' }}>
-          Utility penalty this month:{' '}
-          <span style={{ color: 'var(--hai-money)', fontWeight: 600 }}>
-            {Math.round(status.penalty_omr).toLocaleString()} OMR
-          </span>
+      {/* Below-target rule is ground-truth: red whenever PF avg < target,
+          regardless of whether penalty math could be computed (kvarh tag may be missing). */}
+      {belowTarget ? (
+        <div style={{ fontSize: 12, color: 'var(--hai-status-crit-600)', fontWeight: 500 }}>
+          Below target — utility may add a penalty
+          {status.penalty_omr > 0 && (
+            <>
+              :{' '}
+              <span style={{ color: 'var(--hai-money)', fontWeight: 600 }}>
+                {Math.round(status.penalty_omr).toLocaleString()} OMR this month
+              </span>
+            </>
+          )}
           {status.payback_months !== null && status.payback_months > 0 && (
             <>
               {' · '}

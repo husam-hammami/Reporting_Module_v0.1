@@ -53,12 +53,14 @@ const goldStyle: CSSProperties = {
 };
 
 export default function BillProjectionCard({ projection, className }: BillProjectionCardProps) {
+  // null projection = backend explicitly returned null (no data yet) — show learning state.
+  // Plan 6 §10 T16: never scream "Couldn't load" when backend simply has no forecast yet.
   if (!projection) {
     return (
-      <article className={`hai-num ${className ?? ''}`} style={cardStyle} aria-label="Today's bill — calibrating">
+      <article className={`hai-num ${className ?? ''}`} style={cardStyle} aria-label="Today's bill — learning">
         <div style={labelStyle}>Today's energy bill</div>
         <div style={{ fontSize: 13, color: 'var(--hai-text-tertiary)' }}>
-          Couldn't load — try again
+          Hercules is learning your usage patterns. The day's projection will appear once enough hourly data is recorded.
         </div>
       </article>
     );
