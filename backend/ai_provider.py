@@ -82,10 +82,29 @@ def _generate_cloud(prompt, config, timeout, max_tokens=None, system=None):
         return None
 
 
+def _detect_loaded_model(base_url):
+    """Query LM Studio's /v1/models and return the first non-embedding model id.
+
+    Used when local_model is not pinned in config — lets users swap models in
+    LM Studio without having to update Hercules config or click Test Connection.
+    Returns None if no chat model is loaded or the server is unreachable.
+    """
+    try:
+        resp = requests.get(f"{base_url}/models", timeout=5)
+        resp.raise_for_status()
+        for m in resp.json().get("data", []):
+            mid = m.get("id", "")
+            if mid and not mid.startswith("text-embedding"):
+                return mid
+    except Exception as e:
+        logger.warning("Could not auto-detect loaded model: %s", e)
+    return None
+
+
 def _generate_local(prompt, config, timeout, max_tokens=None):
     """Call LM Studio (OpenAI-compatible API)."""
     base_url = config.get('local_server_url', 'http://localhost:1234/v1')
-    model = config.get('local_model', '')
+    model = config.get('local_model', '') or _detect_loaded_model(base_url) or "local-model"
 
     # Try openai package first (cleaner)
     openai = _get_openai()
@@ -93,7 +112,7 @@ def _generate_local(prompt, config, timeout, max_tokens=None):
         try:
             client = openai.OpenAI(base_url=base_url, api_key="not-needed", timeout=timeout)
             response = client.chat.completions.create(
-                model=model or "local-model",
+                model=model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=max_tokens or 700
             )
@@ -107,7 +126,7 @@ def _generate_local(prompt, config, timeout, max_tokens=None):
         resp = requests.post(
             f"{base_url}/chat/completions",
             json={
-                "model": model or "local-model",
+                "model": model,
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": max_tokens or 700,
             },
