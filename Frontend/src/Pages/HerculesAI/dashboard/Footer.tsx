@@ -2,13 +2,15 @@
  * Footer — Plan 14 §3.8.
  *
  * Single thin strip: calibration progress · last updated · "See full time
- * analysis" link (opens TimeDrawer in commit 6).
+ * analysis" link that opens TimeDrawer.
  *
  * Locked answer for Q2: show both calibration AND updated-time together
- * during learning window.
+ * during learning window, separated by middle dots.
  */
 
+import { useState } from 'react';
 import type { CSSProperties } from 'react';
+import TimeDrawer from './drawers/TimeDrawer';
 import type { RoiPayload } from '../hooks/useRoiPayload';
 
 interface Props {
@@ -22,6 +24,17 @@ const footerStyle: CSSProperties = {
   fontSize: 12,
   color: 'var(--hai-text-tertiary)',
   paddingTop: 4,
+};
+
+const linkStyle: CSSProperties = {
+  color: 'var(--hai-text-secondary)',
+  textDecoration: 'none',
+  cursor: 'pointer',
+  background: 'transparent',
+  border: 'none',
+  fontSize: 12,
+  fontFamily: 'inherit',
+  padding: 0,
 };
 
 function relativeTime(iso: string | undefined | null): string {
@@ -41,41 +54,43 @@ function relativeTime(iso: string | undefined | null): string {
 }
 
 export default function Footer({ payload }: Props) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   const calibrating = !!payload?.savings?.calibrating;
   const daysOfHistory = payload?.savings?.days_of_history ?? 0;
   const daysLeft = Math.max(0, 30 - daysOfHistory);
-  const updatedAt = relativeTime(payload?.generated_at as any);
+  const updatedAt = relativeTime((payload as any)?.generated_at);
 
   return (
-    <div style={footerStyle}>
-      <span>
-        {calibrating && daysLeft > 0 && (
-          <>
-            <span style={{ color: 'var(--hai-text-secondary)' }}>
-              Hercules learning · {daysLeft} day{daysLeft === 1 ? '' : 's'} left
-            </span>
-            {updatedAt && (
-              <>
-                <span style={{ margin: '0 8px' }}>·</span>
-                {updatedAt}
-              </>
-            )}
-          </>
-        )}
-        {!calibrating && updatedAt}
-      </span>
+    <>
+      <div style={footerStyle}>
+        <span>
+          {calibrating && daysLeft > 0 && (
+            <>
+              <span style={{ color: 'var(--hai-text-secondary)' }}>
+                Hercules learning · {daysLeft} day{daysLeft === 1 ? '' : 's'} left
+              </span>
+              {updatedAt && (
+                <>
+                  <span style={{ margin: '0 8px' }}>·</span>
+                  {updatedAt}
+                </>
+              )}
+            </>
+          )}
+          {!calibrating && updatedAt}
+        </span>
 
-      <a
-        href="#time-drawer"
-        onClick={(e) => { e.preventDefault(); /* TimeDrawer wiring in commit 6 */ }}
-        style={{
-          color: 'var(--hai-text-secondary)',
-          textDecoration: 'none',
-          cursor: 'pointer',
-        }}
-      >
-        See full time analysis →
-      </a>
-    </div>
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          style={linkStyle}
+          aria-label="Open the full time-period analysis"
+        >
+          See full time analysis →
+        </button>
+      </div>
+      <TimeDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+    </>
   );
 }
