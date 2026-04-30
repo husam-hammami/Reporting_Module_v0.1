@@ -70,6 +70,7 @@ a = Analysis(
         'ai_prompts',
         'ai_chart_generator',
         'ai_kpi_scorer',
+        'cfo_fallback_template',
         'matplotlib',
         'matplotlib.backends.backend_agg',
         'anthropic',

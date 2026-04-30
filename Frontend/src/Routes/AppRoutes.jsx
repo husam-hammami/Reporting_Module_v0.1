@@ -34,6 +34,7 @@ import MyAccount from '../Pages/Profile/MyAccount';
 import AppSettingsPage from '../Pages/AppSettings/AppSettingsPage';
 import SystemLogs from '../Pages/Settings/Logs/SystemLogs';
 import HerculesAISetup from '../Pages/HerculesAI/HerculesAISetup';
+import HerculesAISettingsPage from '../Pages/HerculesAI/SettingsPage';
 import JobLogsPage from '../Pages/JobLogs/JobLogsPage';
 import DigitalTwinPage from '../Pages/DigitalTwin/DigitalTwinPage';
 import { useContext } from 'react';
@@ -210,6 +211,15 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute roles={[Roles.Admin]}>
                 <HerculesAISetup />
+              </ProtectedRoute>
+            }
+          />
+          {/* Hercules AI — Settings (Plan 6 §11 — dedicated route) */}
+          <Route
+            path="hercules-ai/settings"
+            element={
+              <ProtectedRoute roles={[Roles.Admin]}>
+                <HerculesAISettingsPage />
               </ProtectedRoute>
             }
           />

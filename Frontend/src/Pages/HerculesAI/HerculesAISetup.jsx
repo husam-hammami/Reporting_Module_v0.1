@@ -18,6 +18,7 @@ import SegmentedStage, { defaultChip } from './SegmentedStage';
 import AttentionStage from './stages/AttentionStage';
 import MachinesStage from './stages/MachinesStage';
 import AuditStage from './stages/AuditStage';
+import OnboardingModal from './components/OnboardingModal';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -399,6 +400,8 @@ export default function HerculesAISetup() {
   /* ═══ POST-SETUP: INSIGHTS HUB ═══ */
   if (step === 3) return (
     <div style={{ minHeight: '100vh', background: th.pageBg }}>
+      <OnboardingModal enabled={!!status?.setup_completed} />
+
       {/* ── Compact header ── */}
       <div style={{ background: th.surface, borderBottom: `1px solid ${th.border}`, padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <Sparkles size={20} style={{ color: th.accent }} />
@@ -406,46 +409,16 @@ export default function HerculesAISetup() {
         <span style={{ fontSize: 12, color: th.success, fontWeight: 600, background: th.successBg, padding: '2px 10px', borderRadius: 99 }}>✓ Active</span>
         <span style={{ flex: 1 }} />
         <span style={{ fontSize: 12, color: th.textMuted }}>{provider === 'cloud' ? `Cloud — ${modelLabel}` : 'Local'} · {status?.total || 0} tags · {lineCount} lines</span>
-        <button onClick={() => setEditingProvider(!editingProvider)} style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${th.border}`, background: 'none', cursor: 'pointer', color: th.textMuted, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600 }}>
+        {/* Plan 6 §11 — Settings is now a dedicated route, not a collapsible panel */}
+        <a href="/hercules-ai/settings"
+          style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${th.border}`, background: 'none', textDecoration: 'none', color: th.textMuted, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600 }}>
           <Settings size={12} /> Settings
+        </a>
+        <button onClick={() => { setScanResult(null); goTo(1); }}
+          style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${th.border}`, background: 'none', cursor: 'pointer', color: th.textMuted, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600 }}>
+          <RefreshCw size={12} /> Re-scan
         </button>
       </div>
-
-      {/* ── Settings panel (collapsible) ── */}
-      <AnimatePresence>
-        {editingProvider && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
-            <div style={{ maxWidth: 560, margin: '0 auto', padding: '16px 24px' }}>
-              <div style={{ background: th.surface, border: `1px solid ${th.border}`, borderRadius: 12, padding: '20px 24px' }}>
-                <ProviderForm th={th} provider={provider} setProvider={setProvider} apiKey={apiKey} setApiKey={setApiKey}
-                  showKey={showKey} setShowKey={setShowKey} model={model} setModel={setModel} localUrl={localUrl} setLocalUrl={setLocalUrl}
-                  testing={testing} testConnection={testConnection} testResult={testResult} config={config} saving={saving} />
-                <div style={{ marginTop: 12, padding: '12px 0', borderTop: `1px solid ${th.border}` }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: th.textSecondary, marginBottom: 6 }}>
-                    Energy Rate (OMR/kWh)
-                  </label>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      value={tariff}
-                      onChange={e => setTariff(parseFloat(e.target.value) || 0)}
-                      style={{ width: 120, padding: '8px 12px', borderRadius: 8, border: `1px solid ${th.inputBorder}`, background: th.inputBg, color: th.text, fontSize: 13, fontFamily: 'monospace' }}
-                    />
-                    <span style={{ fontSize: 11, color: th.textMuted }}>Default: 0.025 (Oman industrial)</span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                  <button onClick={() => { setScanResult(null); goTo(1); }} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: `1px solid ${th.border}`, background: th.surfaceAlt, color: th.textSecondary, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <RefreshCw size={12} /> Re-scan Tags
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── Plan 6 Boardroom Mode — single sticky verdict card + segmented stage ── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 24px 0' }}>

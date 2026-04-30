@@ -188,17 +188,17 @@ def _validate_rule(data):
         'content_mode': data.get('content_mode', 'report_only'),
     }
 
-    # Validate content_mode
-    valid_modes = ('report_only', 'report_with_ai', 'ai_only')
+    # Validate content_mode (Plan 6 §11 adds 'cfo_briefing')
+    valid_modes = ('report_only', 'report_with_ai', 'ai_only', 'cfo_briefing')
     if cleaned['content_mode'] not in valid_modes:
         return None, f"content_mode must be one of: {', '.join(valid_modes)}"
 
     # Derive include_ai_summary from content_mode for backward compatibility
-    cleaned['include_ai_summary'] = cleaned['content_mode'] in ('report_with_ai', 'ai_only')
+    cleaned['include_ai_summary'] = cleaned['content_mode'] in ('report_with_ai', 'ai_only', 'cfo_briefing')
 
-    # ai_only mode is email-only — disk doesn't make sense
-    if cleaned['content_mode'] == 'ai_only' and cleaned['delivery_method'] == 'disk':
-        return None, "AI Insights Only mode requires email delivery"
+    # ai_only / cfo_briefing modes are email-only — disk doesn't make sense
+    if cleaned['content_mode'] in ('ai_only', 'cfo_briefing') and cleaned['delivery_method'] == 'disk':
+        return None, "AI-only and CFO briefing modes require email delivery"
 
     return cleaned, None
 

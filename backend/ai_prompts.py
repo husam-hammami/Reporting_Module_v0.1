@@ -876,3 +876,193 @@ def validate_insights_schema(obj):
     """Public wrapper around _validate_schema — returns list[str] of errors."""
     return _validate_schema(obj)
 
+
+# =============================================================================
+# CFO Mode prompt (Plan 5 §6.2 / Plan 6 §11)
+# =============================================================================
+# The LLM is the storyteller, never the calculator. This prompt forces the
+# model to return structured JSON whose every monetary figure must come
+# verbatim from the typed RoiPayload. Numeric tolerance ±0.5 OMR.
+# =============================================================================
+
+CFO_PROMPT_VERSION = 1
+
+
+def build_cfo_briefing_prompt(payload):
+    """Build the CFO-mode prompt (system + user) that generates a structured
+    JSON briefing from a typed RoiPayload.
+
+    Args:
+        payload: dict matching ai_money.payload_builder.build() output.
+
+    Returns:
+        {'system': str, 'user': str} — pass straight to anthropic SDK.
+    """
+    money = (payload or {}).get('money', {}) or {}
+    plant_score = (payload or {}).get('plant_score') or {}
+    levers = (payload or {}).get('levers') or []
+    forecasts = (payload or {}).get('forecasts') or {}
+    bill = forecasts.get('daily_bill') or {}
+    anomalies = (payload or {}).get('anomalies') or []
+    verdict_text = (payload or {}).get('plant_status_verdict', '')
+    period_from = (payload or {}).get('period_from', '')
+    period_to = (payload or {}).get('period_to', '')
+
+    # Build a compact key:value list of allowed monetary values.
+    # The validator will reject any OMR figure in the model's output that
+    # isn't within ±0.5 of one of these.
+    allowed_omr = {
+        'savings_this_month_omr':       money.get('savings_this_month_omr', 0),
+        'pf_penalty_omr_month':         money.get('pf_penalty_omr_month', 0),
+        'sec_excess_omr_today':         money.get('sec_excess_omr_today', 0),
+        'cost_omr_today':               money.get('cost_omr_today', 0),
+        'bill_so_far_omr':              bill.get('so_far_omr', 0) if bill else 0,
+        'bill_projected_omr':           bill.get('projected_omr', 0) if bill else 0,
+    }
+    for i, lever in enumerate(levers[:3]):
+        allowed_omr[f'lever_{i+1}_omr_per_month'] = lever.get('omr_per_month', 0)
+    for i, anom in enumerate(anomalies[:5]):
+        if anom.get('omr_at_risk'):
+            allowed_omr[f'anomaly_{i+1}_omr_at_risk'] = anom['omr_at_risk']
+
+    allowed_str = ', '.join(f"{k}={v}" for k, v in allowed_omr.items() if v not in (None, 0))
+
+    # Plain-language ban list. Model must not use these in user-facing output.
+    banned = ['SEC', 'PF', 'kvar', 'kvarh', 'capacitor', 'MAPE', 'p10',
+              'p90', 'z-score', 'IsolationForest', 'EWMA', 'Holt-Winters']
+
+    system = (
+        "You are a CFO-tier plant briefing writer for Hercules AI. "
+        "Your job is to narrate the typed payload below as a short, "
+        "plain-language briefing for a plant owner. You must NEVER compute "
+        "or estimate any monetary figure yourself — the only OMR values "
+        "you may use are listed in `allowed_omr_values`, and only verbatim "
+        "(numeric tolerance ±0.5 OMR). "
+        "You MUST return only valid JSON matching the schema. "
+        "Plain-language only: never use the words " + ', '.join(banned) + "."
+    )
+
+    schema_hint = {
+        "verdict": "<≤8-word plant verdict>",
+        "money": {
+            "savings_this_month_omr": "<int — must equal money.savings_this_month_omr>",
+            "today_running_cost_omr": "<int — must equal money.cost_omr_today>",
+            "today_projected_cost_omr": "<int or null — must equal forecasts.daily_bill.projected_omr>",
+            "utility_penalty_omr_month": "<int — must equal money.pf_penalty_omr_month>"
+        },
+        "actions": [
+            {"rank": 1, "headline": "<≤60 chars>", "omr_per_month": "<int>", "evidence": "<≤200 chars>"},
+            "..."
+        ],
+        "watch": [
+            {"severity": "warn|crit", "headline": "<plain English>", "evidence": "<≤200 chars>"}
+        ],
+        "footer": "<one-line attribution, no OMR figures>"
+    }
+
+    user = (
+        f"PERIOD: {period_from} to {period_to}\n"
+        f"PLANT_VERDICT (deterministic): {verdict_text}\n"
+        f"PLANT_SCORE: {plant_score.get('value')}\n"
+        f"\n"
+        f"allowed_omr_values: {allowed_str or '(none — describe in qualitative terms only)'}\n"
+        f"\n"
+        f"levers (top {len(levers[:3])}):\n"
+        + ''.join(f"  L{i+1}: headline={l.get('headline','')!r} omr_per_month={l.get('omr_per_month',0)} evidence={l.get('evidence','')!r}\n"
+                   for i, l in enumerate(levers[:3]))
+        + (f"\nanomalies (top {len(anomalies[:5])}):\n" if anomalies else "")
+        + ''.join(f"  A{i+1}: severity={a.get('severity','warn')} headline={a.get('headline','')!r} omr_at_risk={a.get('omr_at_risk',0)}\n"
+                   for i, a in enumerate(anomalies[:5]))
+        + f"\nReturn JSON exactly matching this schema:\n{_json.dumps(schema_hint, indent=2)}\n"
+        + "\nRules:\n"
+        + "1. Verdict ≤ 8 words. Plain language.\n"
+        + "2. Every numeric OMR figure in the JSON output MUST equal one of the allowed_omr_values (±0.5 tolerance).\n"
+        + "3. Top 3 actions only. Order by omr_per_month, descending.\n"
+        + "4. Watch list: max 3 items. Severity 'crit' first.\n"
+        + "5. Banned words on user-facing output: " + ', '.join(banned) + "\n"
+        + "6. Return ONLY the JSON object, no prose, no markdown fences.\n"
+    )
+    return {"system": system, "user": user}
+
+
+_OMR_NUMBER_RE = _re.compile(r'(\d+(?:\.\d+)?)')
+
+
+def _extract_numbers(obj):
+    """Walk a dict/list recursively and yield numeric leaves (ints, floats)."""
+    if isinstance(obj, dict):
+        for v in obj.values():
+            yield from _extract_numbers(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            yield from _extract_numbers(v)
+    elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
+        yield float(obj)
+
+
+def validate_cfo_response(response_obj, payload, tolerance=0.5):
+    """Verify that every numeric OMR figure in `response_obj` exists (±tolerance)
+    in the source `payload`. Returns list[str] of errors; empty = passed.
+
+    Numeric leaves outside the allowed set are flagged. Non-monetary numbers
+    (rank, severity counts, etc.) are tolerated only if they're integers ≤ 100
+    and appear in well-known structural keys ('rank', 'severity'…) — those
+    are stripped before the check. The remaining numeric leaves are treated
+    as OMR claims.
+    """
+    if not isinstance(response_obj, dict):
+        return ["Response is not a JSON object"]
+
+    money = (payload or {}).get('money') or {}
+    bill = ((payload or {}).get('forecasts') or {}).get('daily_bill') or {}
+    levers = (payload or {}).get('levers') or []
+    anomalies = (payload or {}).get('anomalies') or []
+
+    allowed = set()
+    def _add(v):
+        try:
+            if v is None: return
+            allowed.add(round(float(v), 1))
+        except (TypeError, ValueError):
+            return
+    _add(money.get('savings_this_month_omr'))
+    _add(money.get('cost_omr_today'))
+    _add(money.get('pf_penalty_omr_month'))
+    _add(money.get('sec_excess_omr_today'))
+    _add(bill.get('so_far_omr'))
+    _add(bill.get('projected_omr'))
+    for l in levers:
+        _add(l.get('omr_per_month'))
+        _add(l.get('omr_per_year'))
+        _add(l.get('one_time_cost_omr'))
+    for a in anomalies:
+        _add(a.get('omr_at_risk'))
+
+    # Strip structural numeric keys before checking
+    clean = _json.loads(_json.dumps(response_obj))   # deep copy
+    def _strip(o):
+        if isinstance(o, dict):
+            for k in list(o.keys()):
+                if k in ('rank',):
+                    del o[k]
+                else:
+                    _strip(o[k])
+        elif isinstance(o, list):
+            for v in o:
+                _strip(v)
+    _strip(clean)
+
+    errors = []
+    for n in _extract_numbers(clean):
+        # Allow zero (commonly used as "no data")
+        if abs(n) < 0.5:
+            continue
+        # Allow integer counts ≤ 12 (digest cadence, watch counts)
+        if n.is_integer() and 0 < n <= 12:
+            continue
+        rounded = round(n, 1)
+        if not any(abs(rounded - a) <= tolerance for a in allowed):
+            errors.append(f"OMR value {n} not in allowed payload (allowed: {sorted(allowed)})")
+
+    return errors
+

@@ -22,6 +22,8 @@
  */
 
 import { useMemo, type CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
+import { Settings as SettingsIcon } from 'lucide-react';
 import GoldCoinStatic from './components/GoldCoinStatic';
 import HeroVerdict from './components/HeroVerdict';
 import type { RoiPayload } from './hooks/useRoiPayload';
@@ -184,6 +186,28 @@ export default function BoardroomCard({ payload, isAdmin = false, onChipChange, 
             Trust {trustScore}/100 — below target
           </span>
         )}
+        <Link
+          to="/hercules-ai/settings"
+          aria-label="Hercules AI settings"
+          title="Settings"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 32,
+            height: 32,
+            borderRadius: 999,
+            border: '1px solid var(--hai-glass-border)',
+            background: 'var(--hai-glass-1)',
+            color: 'var(--hai-text-secondary)',
+            textDecoration: 'none',
+            transition: 'background 200ms cubic-bezier(.22,1,.36,1)',
+          }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = 'var(--hai-glass-2)')}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = 'var(--hai-glass-1)')}
+        >
+          <SettingsIcon size={14} />
+        </Link>
       </div>
 
       {/* Middle row — hero verdict block (spans column 2 + 3) */}

@@ -2890,12 +2890,14 @@ def execute_distribution_rule(rule_id):
         timestamp_str = datetime.now().strftime('%Y%m%d_%H%M')
 
         # ── content_mode logic ──
+        # Plan 5 §16.4 + Plan 6 §11 — content_mode is a router, never breaks legacy.
+        # Legacy rules:        'report_only', 'report_with_ai', 'ai_only'
+        # Plan 5 Phase C add:  'cfo_briefing'  (new — typed-payload + JSON + validator)
         content_mode = rule.get('content_mode', 'report_only')
-        # Backward compat: old rules without content_mode but with include_ai_summary
         if content_mode == 'report_only' and rule.get('include_ai_summary'):
             content_mode = 'report_with_ai'
 
-        need_ai = content_mode in ('report_with_ai', 'ai_only')
+        need_ai = content_mode in ('report_with_ai', 'ai_only', 'cfo_briefing')
         need_reports = content_mode in ('report_only', 'report_with_ai')
 
         # 3. Generate each report (skip when ai_only)
@@ -2973,13 +2975,29 @@ def execute_distribution_rule(rule_id):
 
                 logger.info("AI summary: collecting data for %d reports, %d tags found",
                             len(all_layout_configs), len(all_tag_data))
-                ai_summary_text = _generate_ai_summary(
-                    report_names=report_names,
-                    tag_data=all_tag_data,
-                    from_dt=from_dt,
-                    to_dt=to_dt,
-                    layout_configs=all_layout_configs,
-                )
+
+                # Plan 6 §11 — CFO mode router. Legacy markdown is unchanged.
+                if content_mode == 'cfo_briefing':
+                    ai_summary_text = _generate_cfo_briefing()
+                    if ai_summary_text:
+                        logger.info("CFO briefing generated (%d chars)", len(ai_summary_text))
+                    else:
+                        logger.warning("CFO briefing returned empty; legacy markdown will be used as fallback")
+                        ai_summary_text = _generate_ai_summary(
+                            report_names=report_names,
+                            tag_data=all_tag_data,
+                            from_dt=from_dt,
+                            to_dt=to_dt,
+                            layout_configs=all_layout_configs,
+                        )
+                else:
+                    ai_summary_text = _generate_ai_summary(
+                        report_names=report_names,
+                        tag_data=all_tag_data,
+                        from_dt=from_dt,
+                        to_dt=to_dt,
+                        layout_configs=all_layout_configs,
+                    )
                 if ai_summary_text:
                     logger.info("AI summary generated successfully (%d chars)", len(ai_summary_text))
                 else:
@@ -3422,6 +3440,153 @@ def _extract_report_context(layout_configs):
             parts.append('\n'.join(lines))
 
     return '\n\n'.join(parts) if parts else ''
+
+
+def _generate_cfo_briefing():
+    """Plan 5 §6.2 / Plan 6 §11 — CFO-mode briefing for distribution emails.
+
+    Strategy:
+        1. Build typed RoiPayload via ai_money.payload_builder.build()
+        2. Try LLM with build_cfo_briefing_prompt; validate output via
+           validate_cfo_response (±0.5 OMR tolerance)
+        3. On second validation failure or LLM offline → cfo_fallback_template
+        4. Render the resulting JSON dict into HTML email body
+
+    Returns: HTML string or '' on total failure.
+    """
+    try:
+        from ai_money import payload_builder
+        import ai_prompts
+        import cfo_fallback_template
+        import sys as _sys
+        bp = _sys.modules.get('hercules_ai_bp')
+        if bp is None:
+            import hercules_ai_bp as bp  # noqa: F811
+
+        payload = payload_builder.build()
+        if not payload:
+            return ''
+
+        # Try LLM generation up to 2 times before falling back
+        briefing = None
+        try:
+            from contextlib import closing
+            ai_config = None
+            with closing(get_db_connection()) as conn:
+                actual = conn._conn if hasattr(conn, '_conn') else conn
+                from psycopg2.extras import RealDictCursor
+                cur = actual.cursor(cursor_factory=RealDictCursor)
+                ai_config = bp._get_raw_config(cur)
+                actual.commit()
+
+            if ai_config:
+                import ai_provider
+                prompts = ai_prompts.build_cfo_briefing_prompt(payload)
+                attempts = 0
+                while attempts < 2 and briefing is None:
+                    attempts += 1
+                    try:
+                        out = ai_provider.generate(
+                            prompts['user'], ai_config,
+                            timeout=30, max_tokens=1200, system=prompts['system'],
+                        )
+                        if not out:
+                            break
+                        # Strip code fences if model added any
+                        cleaned = out.strip()
+                        if cleaned.startswith('```'):
+                            cleaned = cleaned.split('```', 2)[1] if '```' in cleaned[3:] else cleaned[3:]
+                            if cleaned.startswith('json'):
+                                cleaned = cleaned[4:]
+                        try:
+                            obj = json.loads(cleaned)
+                        except Exception:
+                            continue
+                        errors = ai_prompts.validate_cfo_response(obj, payload)
+                        if not errors:
+                            briefing = obj
+                            break
+                        logger.warning("CFO briefing validation failed (attempt %d): %s",
+                                       attempts, errors[:3])
+                    except Exception as e:
+                        logger.warning("CFO LLM attempt %d failed: %s", attempts, e)
+        except Exception as e:
+            logger.warning("CFO LLM path errored, falling back: %s", e)
+
+        if briefing is None:
+            briefing = cfo_fallback_template.render_from_payload(payload)
+
+        return _render_cfo_html(briefing)
+    except Exception as e:
+        logger.warning("_generate_cfo_briefing total failure: %s", e, exc_info=True)
+        return ''
+
+
+def _render_cfo_html(briefing):
+    """Render the CFO JSON briefing into the email-friendly HTML body."""
+    if not briefing or not isinstance(briefing, dict):
+        return ''
+
+    money = briefing.get('money', {}) or {}
+    actions = briefing.get('actions') or []
+    watch = briefing.get('watch') or []
+    verdict = (briefing.get('verdict') or '').strip()
+    footer = (briefing.get('footer') or '').strip()
+
+    def _omr(v):
+        if v is None:
+            return '—'
+        try:
+            return f"{int(round(float(v))):,} OMR"
+        except (ValueError, TypeError):
+            return '—'
+
+    body = ['<div style="font-family:Inter,Helvetica,Arial,sans-serif;color:#0f172a;line-height:1.5;max-width:560px;">']
+    if verdict:
+        body.append(f'<h2 style="font-size:20px;font-weight:600;margin:0 0 16px;">{verdict}</h2>')
+    body.append('<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">')
+    body.append('<tr>'
+        f'<td style="padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Saved this month</td>'
+        f'<td style="padding:8px 0;border-bottom:1px solid #e2e8f0;text-align:right;font-size:18px;font-weight:600;color:#b97900;">{_omr(money.get("savings_this_month_omr"))}</td>'
+        '</tr>')
+    body.append('<tr>'
+        f'<td style="padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Today running cost</td>'
+        f'<td style="padding:8px 0;border-bottom:1px solid #e2e8f0;text-align:right;font-size:18px;font-weight:600;">{_omr(money.get("today_running_cost_omr"))}</td>'
+        '</tr>')
+    if money.get('today_projected_cost_omr') is not None:
+        body.append('<tr>'
+            f'<td style="padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Projected by close</td>'
+            f'<td style="padding:8px 0;border-bottom:1px solid #e2e8f0;text-align:right;font-size:18px;font-weight:600;color:#b97900;">{_omr(money.get("today_projected_cost_omr"))}</td>'
+            '</tr>')
+    if money.get('utility_penalty_omr_month'):
+        body.append('<tr>'
+            f'<td style="padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Utility penalty this month</td>'
+            f'<td style="padding:8px 0;border-bottom:1px solid #e2e8f0;text-align:right;font-size:18px;font-weight:600;color:#dc2626;">{_omr(money.get("utility_penalty_omr_month"))}</td>'
+            '</tr>')
+    body.append('</table>')
+
+    if actions:
+        body.append('<h3 style="font-size:14px;text-transform:uppercase;letter-spacing:0.08em;color:#475569;margin:0 0 12px;">Top actions</h3>')
+        for a in actions[:3]:
+            body.append('<div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:8px;">')
+            body.append(f'<div style="font-size:14px;font-weight:600;color:#0f172a;">{a.get("headline","")}</div>')
+            body.append(f'<div style="font-size:13px;color:#b97900;font-weight:600;margin-top:4px;">{_omr(a.get("omr_per_month"))} per month</div>')
+            if a.get('evidence'):
+                body.append(f'<div style="font-size:12px;color:#475569;margin-top:6px;">{a["evidence"]}</div>')
+            body.append('</div>')
+
+    if watch:
+        body.append('<h3 style="font-size:14px;text-transform:uppercase;letter-spacing:0.08em;color:#475569;margin:16px 0 12px;">Watch</h3>')
+        body.append('<ul style="margin:0;padding-left:18px;">')
+        for w in watch[:3]:
+            sev_color = '#dc2626' if w.get('severity') == 'crit' else '#d97706'
+            body.append(f'<li style="font-size:13px;margin-bottom:6px;color:#0f172a;"><span style="color:{sev_color};font-weight:700;">●</span> {w.get("headline","")}</li>')
+        body.append('</ul>')
+
+    if footer:
+        body.append(f'<p style="font-size:11px;color:#94a3b8;margin-top:24px;">{footer}</p>')
+    body.append('</div>')
+    return '\n'.join(body)
 
 
 def _generate_ai_summary(report_names, tag_data, from_dt, to_dt, layout_configs=None):
