@@ -24,18 +24,23 @@ def get_conn_factory():
 def cursor(dict_cursor=False):
     """Context manager that yields a real psycopg2 cursor.
 
+    The pool's connections default to RealDictCursor (set in app.py).
+    We must explicitly pass a cursor_factory either way so dict_cursor=False
+    actually delivers tuple rows.
+
     Usage:
         with cursor(dict_cursor=True) as cur:
             cur.execute(...)
             rows = cur.fetchall()
     """
     from psycopg2.extras import RealDictCursor
+    from psycopg2.extensions import cursor as _DefaultCursor
     get_conn = get_conn_factory()
     conn = get_conn()
     actual = conn._conn if hasattr(conn, '_conn') else conn
     try:
-        cur_kwargs = {'cursor_factory': RealDictCursor} if dict_cursor else {}
-        cur = actual.cursor(**cur_kwargs)
+        factory = RealDictCursor if dict_cursor else _DefaultCursor
+        cur = actual.cursor(cursor_factory=factory)
         try:
             yield cur, actual
         finally:
