@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hercules — Mill B Atlas (Mockup v1)</title>
+<style>
+  :root {
+    --brand: #0ea5e9;
+    --brand-2: #22d3ee;
+    --brand-3: #67e8f9;
+    --brand-warm: #f59e0b;
+    --brand-deep: #0369a1;
+    --bg: #04070c;
+    --bg-2: #07101b;
+    --bg-3: #0a1626;
+    --bg-panel: rgba(9, 15, 25, 0.72);
+    --bg-card: rgba(13,22,36,0.82);
+    --border: rgba(34,211,238,0.16);
+    --border-strong: rgba(34,211,238,0.40);
+    --border-warm: rgba(245,158,11,0.35);
+    --text: #e8edf5;
+    --text-muted: #7b8fa6;
+    --text-dim: #4a5b70;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --fault: #f87171;
+    --paused: #a78bfa;
+    --gold: #fbd04a;
+    --shadow-glow: 0 0 60px rgba(34,211,238,0.25), 0 0 120px rgba(14,165,233,0.12);
+    --shadow-card: 0 8px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(34,211,238,0.10);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin:0; padding:0; height:100%; overflow:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    background: radial-gradient(ellipse at 50% 40%, #0a1828 0%, #050a12 55%, #02050a 100%);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ========= ANIMATED BACKGROUND ========= */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(34,211,238,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,211,238,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    transform-origin: center;
+    animation: gridDrift 60s linear infinite;
+    mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+  }
+  @keyframes gridDrift {
+    0% { transform: perspective(800px) rotateX(60deg) translateY(0); }
+    100% { transform: perspective(800px) rotateX(60deg) translateY(60px); }
+  }
+  .bg-glow {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(circle at 50% 55%, rgba(14,165,233,0.18), transparent 45%),
+      radial-gradient(circle at 20% 80%, rgba(34,211,238,0.08), transparent 40%),
+      radial-gradient(circle at 80% 20%, rgba(103,232,249,0.06), transparent 40%);
+    pointer-events: none;
+  }
+  .particles {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  }
+  .particle {
+    position: absolute; width: 2px; height: 2px;
+    background: var(--brand-3); border-radius: 50%;
+    box-shadow: 0 0 8px var(--brand-2);
+    opacity: 0;
+    animation: float linear infinite;
+  }
+  @keyframes float {
+    0%   { transform: translateY(100vh); opacity: 0; }
+    10%  { opacity: 0.6; }
+    90%  { opacity: 0.6; }
+    100% { transform: translateY(-10vh); opacity: 0; }
+  }
+
+  /* ========= TOP BAR ========= */
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; height: 64px;
+    z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px;
+    background: linear-gradient(180deg, rgba(4,7,12,0.92) 0%, rgba(4,7,12,0) 100%);
+    backdrop-filter: blur(8px);
+  }
+  .brand-block { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--brand-2), var(--brand-deep));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: #04070c; font-size: 18px;
+    box-shadow: 0 0 16px rgba(34,211,238,0.5);
+  }
+  .brand-text {
+    line-height: 1;
+  }
+  .brand-text .t1 {
+    font-size: 11px; letter-spacing: 0.18em; color: var(--text-muted);
+    text-transform: uppercase; font-weight: 600;
+  }
+  .brand-text .t2 {
+    font-size: 16px; font-weight: 700; color: var(--text);
+    margin-top: 4px; letter-spacing: 0.02em;
+  }
+  .brand-text .t2 b { color: var(--brand-2); font-weight: 700; }
+
+  .top-status { display: flex; align-items: center; gap: 22px; }
+  .status-pill {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: 999px;
+    background: rgba(13,22,36,0.6);
+    border: 1px solid var(--border);
+    font-size: 12px; color: var(--text-muted);
+    backdrop-filter: blur(8px);
+  }
+  .status-pill .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 10px var(--ok);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+  }
+  .status-pill b { color: var(--text); font-weight: 600; }
+  .clock {
+    font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums;
+    font-weight: 500; letter-spacing: 0.02em;
+  }
+  .clock .label {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.15em;
+    margin-right: 8px;
+  }
+
+  /* ========= AI VERDICT RIBBON ========= */
+  .ai-ribbon {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 9;
+    width: min(820px, 86vw);
+    background: linear-gradient(135deg, rgba(34,211,238,0.10), rgba(14,165,233,0.04));
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    padding: 14px 22px;
+    display: flex; align-items: center; gap: 18px;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card), 0 0 40px rgba(34,211,238,0.12);
+    overflow: hidden;
+    position: fixed;
+  }
+  .ai-ribbon::before {
+    content: ""; position: absolute; inset: -1px;
+    background: linear-gradient(90deg, transparent, rgba(34,211,238,0.4), transparent);
+    background-size: 200% 100%;
+    animation: ribbonShine 6s linear infinite;
+    pointer-events: none;
+    border-radius: 14px;
+    opacity: 0.5;
+    mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+    mask-composite: exclude;
+    padding: 1px;
+  }
+  @keyframes ribbonShine {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .ai-icon {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--brand-2), var(--brand-deep));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 12px rgba(34,211,238,0.5);
+    position: relative;
+  }
+  .ai-icon::after {
+    content: ""; position: absolute; inset: -3px; border-radius: 12px;
+    border: 1.5px solid rgba(34,211,238,0.4);
+    animation: aiRing 2.8s ease-out infinite;
+  }
+  @keyframes aiRing {
+    0% { transform: scale(0.9); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+  .ai-icon svg { width: 20px; height: 20px; color: #04070c; }
+  .ai-content { flex: 1; min-width: 0; }
+  .ai-label {
+    font-size: 10px; color: var(--brand-2);
+    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .ai-verdict {
+    font-size: 14px; color: var(--text); font-weight: 500;
+    letter-spacing: 0.01em; line-height: 1.4;
+  }
+  .ai-verdict b { color: var(--brand-3); font-weight: 600; }
+  .ai-confidence {
+    flex-shrink: 0;
+    text-align: right;
+    padding-left: 16px;
+    border-left: 1px solid var(--border);
+  }
+  .ai-confidence .c-val {
+    font-size: 18px; font-weight: 700; color: var(--ok);
+    font-variant-numeric: tabular-nums;
+  }
+  .ai-confidence .c-lbl {
+    font-size: 9px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.15em;
+  }
+
+  /* ========= MAIN STAGE ========= */
+  .stage {
+    position: fixed; inset: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    perspective: 1400px;
+    perspective-origin: 50% 55%;
+  }
+
+  /* The 3D mill — built with stacked CSS 3D layers */
+  .mill {
+    position: relative;
+    width: 280px; height: 380px;
+    transform-style: preserve-3d;
+    animation: millSpin 40s linear infinite;
+  }
+  @keyframes millSpin {
+    0%   { transform: rotateY(-15deg) rotateX(8deg); }
+    50%  { transform: rotateY(15deg) rotateX(8deg); }
+    100% { transform: rotateY(-15deg) rotateX(8deg); }
+  }
+
+  /* base platform */
+  .mill-base {
+    position: absolute;
+    bottom: -10px; left: 50%; transform: translateX(-50%) rotateX(70deg);
+    width: 360px; height: 360px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(14,165,233,0.16) 0%, rgba(14,165,233,0.04) 50%, transparent 75%);
+    border: 1px solid var(--border);
+    box-shadow: 0 0 80px rgba(34,211,238,0.18);
+  }
+  .mill-base::before {
+    content: ""; position: absolute; inset: 30px;
+    border-radius: 50%;
+    border: 1px dashed rgba(34,211,238,0.18);
+    animation: ringSpin 22s linear infinite;
+  }
+  .mill-base::after {
+    content: ""; position: absolute; inset: 70px;
+    border-radius: 50%;
+    border: 1px dashed rgba(34,211,238,0.14);
+    animation: ringSpin 32s linear infinite reverse;
+  }
+  @keyframes ringSpin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* The mill silhouette — main building */
+  .mill-body {
+    position: absolute;
+    left: 50%; top: 60px;
+    transform: translateX(-50%);
+    width: 220px; height: 280px;
+  }
+  .mill-floor {
+    position: absolute; left: 0; right: 0;
+    background: linear-gradient(180deg, rgba(13,22,36,0.95) 0%, rgba(7,16,27,0.95) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.04),
+      0 4px 16px rgba(0,0,0,0.5),
+      0 0 24px rgba(34,211,238,0.08);
+  }
+  .mill-floor::before {
+    content: ""; position: absolute; inset: 4px;
+    background-image:
+      linear-gradient(90deg, transparent 0, transparent 20%, rgba(34,211,238,0.06) 20%, rgba(34,211,238,0.06) 21%, transparent 21%),
+      linear-gradient(90deg, transparent 0, transparent 50%, rgba(34,211,238,0.06) 50%, rgba(34,211,238,0.06) 51%, transparent 51%),
+      linear-gradient(90deg, transparent 0, transparent 80%, rgba(34,211,238,0.06) 80%, rgba(34,211,238,0.06) 81%, transparent 81%);
+  }
+  .mill-floor.f1 { bottom: 0; height: 70px; width: 100%; }
+  .mill-floor.f2 { bottom: 70px; height: 70px; width: 88%; left: 6%; }
+  .mill-floor.f3 { bottom: 140px; height: 70px; width: 76%; left: 12%; }
+  .mill-floor.f4 { bottom: 210px; height: 60px; width: 60%; left: 20%; border-radius: 4px 4px 0 0; }
+
+  /* Tiny equipment lights on the building */
+  .mill-light {
+    position: absolute; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--brand-2); box-shadow: 0 0 6px var(--brand-2);
+    animation: lightBlink 3s ease-in-out infinite;
+  }
+  .mill-light.warm { background: var(--brand-warm); box-shadow: 0 0 6px var(--brand-warm); }
+  .mill-light.ok { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  @keyframes lightBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Vertical silos beside the building */
+  .silo {
+    position: absolute;
+    width: 28px; height: 200px;
+    background: linear-gradient(180deg, #0d1624 0%, #050a12 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px 14px 4px 4px;
+    box-shadow: 0 0 18px rgba(34,211,238,0.15), inset -3px 0 6px rgba(0,0,0,0.5);
+  }
+  .silo::before {
+    content: ""; position: absolute; left: 4px; right: 4px; bottom: 4px;
+    height: 60%;
+    background: linear-gradient(180deg, var(--brand-2) 0%, var(--brand-deep) 100%);
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 0 10px rgba(34,211,238,0.4);
+    opacity: 0.7;
+  }
+  .silo::after {
+    content: ""; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--brand-2); box-shadow: 0 0 8px var(--brand-2);
+  }
+  .silo.s-left  { left: -10px; bottom: 30px; }
+  .silo.s-left2 { left: 24px;  bottom: 30px; height: 170px; }
+  .silo.s-right { right: -10px; bottom: 30px; }
+  .silo.s-right2 { right: 24px; bottom: 30px; height: 170px; }
+
+  /* Building label inside the mill */
+  .mill-label {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 22px; font-weight: 800; color: var(--brand-2);
+    text-shadow: 0 0 14px rgba(34,211,238,0.6);
+    letter-spacing: 0.18em;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .mill-label .sub {
+    display: block;
+    font-size: 9px; color: var(--text-muted);
+    letter-spacing: 0.3em; font-weight: 600;
+    margin-top: 4px; text-shadow: none;
+  }
+
+  /* ========= INTELLIGENCE ORBS ========= */
+  .orb-system {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 720px; height: 720px;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .orb {
+    position: absolute;
+    width: 168px;
+    pointer-events: auto;
+    background: linear-gradient(155deg, rgba(13,22,36,0.92) 0%, rgba(7,16,27,0.96) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    padding: 14px 16px;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card), 0 0 24px rgba(34,211,238,0.12);
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    animation: orbFloat 5s ease-in-out infinite;
+  }
+  .orb:hover {
+    transform: translateY(-4px) scale(1.04);
+    border-color: var(--brand-2);
+    box-shadow: var(--shadow-card), 0 0 36px rgba(34,211,238,0.4);
+  }
+  @keyframes orbFloat {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -8px; }
+  }
+  .orb.tl { top: 18%; left: 6%; animation-delay: -1s; }
+  .orb.tr { top: 18%; right: 6%; animation-delay: -2s; }
+  .orb.bl { bottom: 22%; left: 6%; animation-delay: -3s; }
+  .orb.br { bottom: 22%; right: 6%; animation-delay: -4s; }
+
+  .orb-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .orb-icon {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: linear-gradient(135deg, var(--brand-2), var(--brand-deep));
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .orb-icon svg { width: 14px; height: 14px; color: #04070c; }
+  .orb.warm .orb-icon { background: linear-gradient(135deg, #fcd34d, var(--brand-warm)); }
+  .orb.ok .orb-icon { background: linear-gradient(135deg, #6ee7b7, var(--ok)); }
+  .orb-title {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+  }
+  .orb-value {
+    font-size: 28px; font-weight: 800; color: var(--text);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .orb-value .unit {
+    font-size: 12px; color: var(--text-muted); font-weight: 500;
+    margin-left: 4px;
+  }
+  .orb-meta {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 8px;
+    font-size: 11px; color: var(--text-muted);
+  }
+  .orb-trend {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 7px; border-radius: 4px;
+    background: rgba(52,211,153,0.12);
+    color: var(--ok); font-weight: 600; font-size: 10px;
+  }
+  .orb-trend.down { background: rgba(248,113,113,0.12); color: var(--fault); }
+  .orb-trend.warn { background: rgba(251,191,36,0.12); color: var(--warn); }
+
+  /* mini bar visualization inside orb */
+  .orb-bars {
+    display: flex; align-items: flex-end; gap: 2px;
+    height: 22px; margin-top: 8px;
+  }
+  .orb-bars span {
+    flex: 1; background: linear-gradient(180deg, var(--brand-2) 0%, var(--brand-deep) 100%);
+    border-radius: 1px;
+    box-shadow: 0 0 4px rgba(34,211,238,0.4);
+    opacity: 0.85;
+  }
+  .orb.warm .orb-bars span {
+    background: linear-gradient(180deg, #fcd34d 0%, var(--brand-warm) 100%);
+    box-shadow: 0 0 4px rgba(245,158,11,0.4);
+  }
+  .orb.ok .orb-bars span {
+    background: linear-gradient(180deg, #6ee7b7 0%, var(--ok) 100%);
+    box-shadow: 0 0 4px rgba(52,211,153,0.4);
+  }
+
+  /* Connector line from orb to mill — subtle SVG-like CSS line */
+  .orb::after {
+    content: "";
+    position: absolute;
+    width: 60px; height: 1px;
+    background: linear-gradient(90deg, var(--brand-2), transparent);
+    top: 50%;
+    opacity: 0.4;
+  }
+  .orb.tl::after, .orb.bl::after { right: -64px; }
+  .orb.tr::after, .orb.br::after { left: -64px; transform: scaleX(-1); }
+
+  /* ========= ACTION RING (bottom dock) ========= */
+  .action-ring {
+    position: fixed; bottom: 32px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, rgba(13,22,36,0.86) 0%, rgba(7,16,27,0.92) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-card), 0 0 36px rgba(34,211,238,0.12);
+  }
+  .action-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: rgba(13,22,36,0.6);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    position: relative;
+  }
+  .action-btn:hover {
+    background: rgba(34,211,238,0.12);
+    border-color: var(--brand-2);
+    color: var(--brand-2);
+    transform: translateY(-2px);
+  }
+  .action-btn.primary {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--brand-2), var(--brand-deep));
+    border-color: var(--brand-2);
+    color: #04070c;
+    box-shadow: 0 0 24px rgba(34,211,238,0.4);
+  }
+  .action-btn.primary:hover {
+    background: linear-gradient(135deg, var(--brand-3), var(--brand-2));
+    box-shadow: 0 0 32px rgba(34,211,238,0.6);
+  }
+  .action-btn svg { width: 18px; height: 18px; }
+  .action-btn.primary svg { width: 22px; height: 22px; }
+  .action-btn .tooltip {
+    position: absolute; bottom: calc(100% + 12px); left: 50%;
+    transform: translateX(-50%);
+    background: rgba(7,16,27,0.95);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    font-size: 11px; font-weight: 500;
+    padding: 5px 10px; border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease;
+    letter-spacing: 0.02em;
+  }
+  .action-btn:hover .tooltip { opacity: 1; }
+  .action-divider {
+    width: 1px; height: 28px; background: var(--border); margin: 0 4px;
+  }
+
+  /* ========= LIVE TICKER (left side) ========= */
+  .ticker {
+    position: fixed; bottom: 32px; left: 28px;
+    z-index: 9;
+    width: 240px;
+    background: linear-gradient(180deg, rgba(13,22,36,0.82) 0%, rgba(7,16,27,0.92) 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-card);
+  }
+  .ticker-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600;
+  }
+  .ticker-head .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 6px var(--ok);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .ticker-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; padding: 4px 0;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+  .ticker-row:first-of-type { border-top: none; }
+  .ticker-row .lbl { color: var(--text-muted); }
+  .ticker-row .val {
+    color: var(--text); font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .ticker-row .val.up { color: var(--ok); }
+  .ticker-row .val.down { color: var(--fault); }
+
+  /* ========= ALERT CARD (right side) ========= */
+  .alert-card {
+    position: fixed; bottom: 32px; right: 28px;
+    z-index: 9;
+    width: 240px;
+    background: linear-gradient(180deg, rgba(13,22,36,0.82) 0%, rgba(7,16,27,0.92) 100%);
+    border: 1px solid var(--border-warm);
+    border-radius: 12px;
+    padding: 12px 14px;
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-card), 0 0 18px rgba(245,158,11,0.12);
+  }
+  .alert-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .alert-icon {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--brand-warm);
+    display: flex; align-items: center; justify-content: center;
+    color: #04070c; font-weight: 800; font-size: 11px;
+    box-shadow: 0 0 10px rgba(245,158,11,0.5);
+  }
+  .alert-title {
+    font-size: 11px; color: var(--brand-warm);
+    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+  }
+  .alert-body {
+    font-size: 12px; color: var(--text); line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .alert-body b { color: var(--brand-warm); }
+  .alert-action {
+    font-size: 10px; color: var(--brand-2);
+    text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;
+    cursor: pointer;
+  }
+  .alert-action:hover { color: var(--brand-3); }
+
+  /* ========= SCREEN READER / HINT ========= */
+  .hint {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, 220px);
+    z-index: 5;
+    font-size: 10px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.2em;
+    pointer-events: none;
+    text-align: center;
+  }
+
+  /* ========= MOCKUP WATERMARK ========= */
+  .mockup-tag {
+    position: fixed; top: 12px; right: 50%;
+    transform: translateX(50%);
+    z-index: 20;
+    font-size: 9px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.25em;
+    background: rgba(13,22,36,0.7);
+    border: 1px solid var(--border);
+    padding: 3px 10px; border-radius: 4px;
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+  }
+
+  /* responsive nudge — keep it usable but mockup-first */
+  @media (max-width: 1100px) {
+    .orb-system { width: 600px; height: 600px; }
+    .orb { width: 150px; }
+    .ai-ribbon { width: 90vw; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="particles" id="particles"></div>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="brand-block">
+    <div class="brand-mark">H</div>
+    <div class="brand-text">
+      <div class="t1">Hercules · Salalah Flour Mills</div>
+      <div class="t2">Mill <b>B</b> · Atlas</div>
+    </div>
+  </div>
+  <div class="top-status">
+    <div class="status-pill"><span class="dot"></span><span>Plant <b>ONLINE</b></span></div>
+    <div class="status-pill"><span class="dot" style="background:var(--brand-2); box-shadow:0 0 10px var(--brand-2);"></span><span>PLC <b>S7-1500</b></span></div>
+    <div class="clock"><span class="label">UTC+4</span><span id="clock-val">14:32:08</span></div>
+  </div>
+</div>
+
+<div class="mockup-tag">Mockup · v1 · not connected to live data</div>
+
+<!-- AI VERDICT RIBBON -->
+<div class="ai-ribbon">
+  <div class="ai-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+  </div>
+  <div class="ai-content">
+    <div class="ai-label">Hercules AI · Live Verdict</div>
+    <div class="ai-verdict">Mill B is running <b>nominal</b>. Roll-stand RS-3 vibration trending up <b>+8.2%</b> over 4h — likely bearing wear. <b>No action required yet</b>; flagged for tomorrow's PM window.</div>
+  </div>
+  <div class="ai-confidence">
+    <div class="c-val">94<span style="font-size:12px; color:var(--text-muted);">%</span></div>
+    <div class="c-lbl">Confidence</div>
+  </div>
+</div>
+
+<!-- MAIN STAGE: 3D MILL -->
+<div class="stage">
+  <div class="mill">
+    <div class="mill-base"></div>
+    <div class="mill-body">
+      <div class="mill-floor f1">
+        <span class="mill-light ok" style="bottom:10px; left:18px;"></span>
+        <span class="mill-light" style="bottom:10px; left:50%; animation-delay:.5s;"></span>
+        <span class="mill-light ok" style="bottom:10px; right:18px; animation-delay:1s;"></span>
+        <span class="mill-light" style="top:14px; left:30%; animation-delay:1.5s;"></span>
+        <span class="mill-light warm" style="top:14px; right:30%; animation-delay:2s;"></span>
+      </div>
+      <div class="mill-floor f2">
+        <span class="mill-light" style="bottom:10px; left:20%;"></span>
+        <span class="mill-light ok" style="bottom:10px; right:20%; animation-delay:.7s;"></span>
+        <span class="mill-light" style="top:12px; left:50%; animation-delay:1.4s;"></span>
+      </div>
+      <div class="mill-floor f3">
+        <span class="mill-light ok" style="bottom:10px; left:25%;"></span>
+        <span class="mill-light" style="bottom:10px; right:25%; animation-delay:.9s;"></span>
+      </div>
+      <div class="mill-floor f4">
+        <span class="mill-light" style="bottom:8px; left:50%; animation-delay:.4s;"></span>
+      </div>
+      <div class="silo s-left"></div>
+      <div class="silo s-left2"></div>
+      <div class="silo s-right"></div>
+      <div class="silo s-right2"></div>
+    </div>
+    <div class="mill-label">
+      MILL B
+      <span class="sub">SALALAH</span>
+    </div>
+  </div>
+</div>
+
+<!-- INTELLIGENCE ORBS -->
+<div class="orb-system">
+  <!-- TOP LEFT: Production -->
+  <div class="orb tl">
+    <div class="orb-head">
+      <div class="orb-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+      </div>
+      <div class="orb-title">Production</div>
+    </div>
+    <div class="orb-value">14.8<span class="unit">t/h</span></div>
+    <div class="orb-meta">
+      <span class="orb-trend">▲ 3.2%</span>
+      <span>vs target 14.0</span>
+    </div>
+    <div class="orb-bars">
+      <span style="height:40%"></span><span style="height:55%"></span>
+      <span style="height:48%"></span><span style="height:62%"></span>
+      <span style="height:58%"></span><span style="height:70%"></span>
+      <span style="height:65%"></span><span style="height:78%"></span>
+      <span style="height:72%"></span><span style="height:85%"></span>
+      <span style="height:80%"></span><span style="height:92%"></span>
+    </div>
+  </div>
+
+  <!-- TOP RIGHT: Quality -->
+  <div class="orb tr ok">
+    <div class="orb-head">
+      <div class="orb-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="orb-title">Quality</div>
+    </div>
+    <div class="orb-value">98.4<span class="unit">%</span></div>
+    <div class="orb-meta">
+      <span class="orb-trend">▲ 0.6%</span>
+      <span>flour grade A</span>
+    </div>
+    <div class="orb-bars">
+      <span style="height:88%"></span><span style="height:92%"></span>
+      <span style="height:90%"></span><span style="height:95%"></span>
+      <span style="height:93%"></span><span style="height:96%"></span>
+      <span style="height:94%"></span><span style="height:97%"></span>
+      <span style="height:96%"></span><span style="height:98%"></span>
+      <span style="height:97%"></span><span style="height:98%"></span>
+    </div>
+  </div>
+
+  <!-- BOTTOM LEFT: Energy -->
+  <div class="orb bl warm">
+    <div class="orb-head">
+      <div class="orb-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <div class="orb-title">Energy</div>
+    </div>
+    <div class="orb-value">412<span class="unit">kW</span></div>
+    <div class="orb-meta">
+      <span class="orb-trend warn">▲ 4.1%</span>
+      <span>27.8 kWh/t</span>
+    </div>
+    <div class="orb-bars">
+      <span style="height:60%"></span><span style="height:62%"></span>
+      <span style="height:58%"></span><span style="height:65%"></span>
+      <span style="height:68%"></span><span style="height:64%"></span>
+      <span style="height:70%"></span><span style="height:72%"></span>
+      <span style="height:68%"></span><span style="height:75%"></span>
+      <span style="height:78%"></span><span style="height:80%"></span>
+    </div>
+  </div>
+
+  <!-- BOTTOM RIGHT: Equipment Health -->
+  <div class="orb br">
+    <div class="orb-head">
+      <div class="orb-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="orb-title">Equipment</div>
+    </div>
+    <div class="orb-value">96<span class="unit">%</span></div>
+    <div class="orb-meta">
+      <span class="orb-trend warn">1 watch</span>
+      <span>RS-3 bearing</span>
+    </div>
+    <div class="orb-bars">
+      <span style="height:96%"></span><span style="height:97%"></span>
+      <span style="height:95%"></span><span style="height:96%"></span>
+      <span style="height:94%"></span><span style="height:95%"></span>
+      <span style="height:92%"></span><span style="height:93%"></span>
+      <span style="height:90%"></span><span style="height:91%"></span>
+      <span style="height:88%"></span><span style="height:86%"></span>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE TICKER -->
+<div class="ticker">
+  <div class="ticker-head"><span class="live-dot"></span>Live · last 60s</div>
+  <div class="ticker-row"><span class="lbl">Throughput</span><span class="val up" id="t1">14.84 t/h</span></div>
+  <div class="ticker-row"><span class="lbl">Moisture</span><span class="val" id="t2">14.2 %</span></div>
+  <div class="ticker-row"><span class="lbl">Roll temp</span><span class="val" id="t3">42.7 °C</span></div>
+  <div class="ticker-row"><span class="lbl">Sifter load</span><span class="val" id="t4">68 %</span></div>
+  <div class="ticker-row"><span class="lbl">Ambient</span><span class="val" id="t5">31 °C</span></div>
+</div>
+
+<!-- ALERT CARD -->
+<div class="alert-card">
+  <div class="alert-head">
+    <div class="alert-icon">!</div>
+    <div class="alert-title">Watchlist · 1</div>
+  </div>
+  <div class="alert-body">
+    <b>RS-3 bearing</b> vibration trending +8.2% over 4 hours. Schedule inspection in next PM window.
+  </div>
+  <div class="alert-action">View details →</div>
+</div>
+
+<!-- ACTION RING -->
+<div class="action-ring">
+  <div class="action-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span class="tooltip">Overview</span>
+  </div>
+  <div class="action-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span class="tooltip">Live KPIs</span>
+  </div>
+  <div class="action-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span class="tooltip">Alerts</span>
+  </div>
+  <div class="action-divider"></div>
+  <div class="action-btn primary">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+    <span class="tooltip">Ask Hercules AI</span>
+  </div>
+  <div class="action-divider"></div>
+  <div class="action-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <span class="tooltip">Reports</span>
+  </div>
+  <div class="action-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span class="tooltip">Settings</span>
+  </div>
+</div>
+
+<script>
+  // Particles
+  (function(){
+    const layer = document.getElementById('particles');
+    const N = 28;
+    for (let i = 0; i < N; i++) {
+      const p = document.createElement('span');
+      p.className = 'particle';
+      p.style.left = (Math.random() * 100) + 'vw';
+      p.style.animationDuration = (10 + Math.random() * 18) + 's';
+      p.style.animationDelay = (-Math.random() * 20) + 's';
+      p.style.opacity = (0.3 + Math.random() * 0.4).toFixed(2);
+      layer.appendChild(p);
+    }
+  })();
+
+  // Clock
+  (function(){
+    const el = document.getElementById('clock-val');
+    function tick(){
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      const ss = String(d.getSeconds()).padStart(2,'0');
+      el.textContent = hh + ':' + mm + ':' + ss;
+    }
+    tick(); setInterval(tick, 1000);
+  })();
+
+  // Subtle live ticker jitter (mockup feel of live data)
+  (function(){
+    const rows = [
+      { id:'t1', base: 14.84, range: 0.4, decimals: 2, suffix: ' t/h' },
+      { id:'t2', base: 14.2,  range: 0.3, decimals: 1, suffix: ' %' },
+      { id:'t3', base: 42.7,  range: 0.6, decimals: 1, suffix: ' °C' },
+      { id:'t4', base: 68,    range: 4,   decimals: 0, suffix: ' %' },
+      { id:'t5', base: 31,    range: 1,   decimals: 0, suffix: ' °C' }
+    ];
+    function jitter(){
+      rows.forEach(r => {
+        const v = r.base + (Math.random() - 0.5) * r.range;
+        const el = document.getElementById(r.id);
+        if (el) el.textContent = v.toFixed(r.decimals) + r.suffix;
+      });
+    }
+    setInterval(jitter, 1800);
+  })();
+</script>
+
+</body>
+</html>
