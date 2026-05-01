@@ -27,7 +27,12 @@ export default function ProductionHero({ data, t }) {
 
       <div className="atlas-hero__divider" style={{ margin: '20px 0 18px' }} />
 
-      <div className="atlas-hero__pred-lbl">{t('atlas.production.eodForecast')}</div>
+      <div
+        className="atlas-hero__pred-lbl"
+        style={{ flexWrap: 'wrap', lineHeight: 1.3, whiteSpace: 'normal', overflowWrap: 'anywhere' }}
+      >
+        {t('atlas.production.eodForecast')}
+      </div>
       <div className="atlas-hero__value atlas-hero__value--pred" style={{ marginTop: '8px' }}>
         <span className="atlas-hero__num atlas-num">
           {Math.round(data.predicted_eod_tons)}
