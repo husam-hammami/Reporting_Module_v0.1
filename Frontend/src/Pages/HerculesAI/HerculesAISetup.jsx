@@ -22,14 +22,18 @@ import OnboardingModal from './components/OnboardingModal';
 // Plan 14 — single-page dashboard (feature-flagged; default off until commit 11)
 import HerculesAIDashboard from './dashboard/HerculesAIDashboard';
 
-// Read the feature flag once on module load. Toggle in DevTools console:
-//   localStorage.setItem('hercules.dashboard.v2', '1');  // enable
-//   localStorage.removeItem('hercules.dashboard.v2');    // disable
+// Plan 14 dashboard flag — DEFAULT IS NOW ON.
+// Customer escape hatch (revert to legacy chip-based view) via DevTools console:
+//   localStorage.setItem('hercules.dashboard.v2', '0');  // force legacy
+//   localStorage.removeItem('hercules.dashboard.v2');    // back to default (new dashboard)
 function _readDashboardV2Flag() {
   try {
-    return typeof window !== 'undefined' && localStorage.getItem('hercules.dashboard.v2') === '1';
+    if (typeof window === 'undefined') return true;
+    const v = localStorage.getItem('hercules.dashboard.v2');
+    if (v === '0') return false;   // explicit opt-out for users who want legacy
+    return true;                    // everyone else gets the new bento
   } catch {
-    return false;
+    return true;
   }
 }
 
