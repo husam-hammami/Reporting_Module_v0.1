@@ -1,4 +1,4 @@
-import { LayoutGrid, BarChart2, Settings, Table2, Send, Sparkles, ClipboardList, Box } from 'lucide-react';
+import { LayoutGrid, BarChart2, Settings, Table2, Send, Sparkles, ClipboardList, Box, Compass } from 'lucide-react';
 import { Roles } from './Roles';
 
 export const getMenuItems = (t) => [
@@ -54,6 +54,14 @@ export const getMenuItems = (t) => [
     badgeKey: 'unseen_reports_count',
   },
   {
+    name: t('nav.atlas'),
+    icon: Compass,
+    tooltip: t('nav.tooltip.atlas'),
+    link: '/atlas',
+    roles: [Roles.Admin, Roles.Manager, Roles.Operator],
+    badge: 'NEW',
+  },
+  {
     name: t('nav.engineering'),
     icon: Settings,
     tooltip: t('nav.tooltip.engineering'),
@@ -72,6 +80,7 @@ export const menuItems = getMenuItems((key) => {
     'nav.jobLogs': 'Job Logs',
     'nav.distribution': 'Distribution',
     'nav.herculesAI': 'Hercules AI',
+    'nav.atlas': 'Hercules Atlas',
     'nav.engineering': 'Engineering',
     'nav.tooltip.builder': 'Design and build reports',
     'nav.tooltip.digitalTwin': '3D plant view',
@@ -80,6 +89,7 @@ export const menuItems = getMenuItems((key) => {
     'nav.tooltip.jobLogs': 'Production order history',
     'nav.tooltip.distribution': 'Scheduled report delivery',
     'nav.tooltip.herculesAI': 'AI-powered insights and summaries',
+    'nav.tooltip.atlas': 'Live production & cost forecast',
     'nav.tooltip.engineering': 'Tags, groups, formulas, mappings',
   };
   return fallback[key] || key;

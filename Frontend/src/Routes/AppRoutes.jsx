@@ -35,6 +35,7 @@ import AppSettingsPage from '../Pages/AppSettings/AppSettingsPage';
 import SystemLogs from '../Pages/Settings/Logs/SystemLogs';
 import HerculesAISetup from '../Pages/HerculesAI/HerculesAISetup';
 import HerculesAISettingsPage from '../Pages/HerculesAI/SettingsPage';
+import AtlasPage from '../Pages/Atlas/AtlasPage';
 import JobLogsPage from '../Pages/JobLogs/JobLogsPage';
 import DigitalTwinPage from '../Pages/DigitalTwin/DigitalTwinPage';
 import { useContext } from 'react';
@@ -220,6 +221,16 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute roles={[Roles.Admin]}>
                 <HerculesAISettingsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Hercules Atlas — Production & cost forecast (Plan 17) */}
+          <Route
+            path="atlas"
+            element={
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+                <AtlasPage />
               </ProtectedRoute>
             }
           />

@@ -119,6 +119,14 @@ export default function SideNav() {
                         {item.name}
                       </span>
                     )}
+                    {open && item.badge && (
+                      <span
+                        className="ml-auto text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 rounded
+                                   bg-[#22d3ee] text-[#0a0f1a]"
+                      >
+                        {item.badge}
+                      </span>
+                    )}
                   </div>
                 </Tooltip>
               )}
