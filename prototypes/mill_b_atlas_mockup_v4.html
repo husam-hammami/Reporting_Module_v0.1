@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en" class="dark" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hercules Atlas — In-App Mockup v4</title>
+<style>
+  /* ============================================================
+     TOKENS — copied from Frontend/src/Pages/HerculesAI/tokens.css
+     (stay verbatim so the mockup matches production exactly)
+     ============================================================ */
+  [data-theme='dark'].dark {
+    --hai-surface-canvas: #0a0f1a;
+    --hai-surface-100: #111827;
+    --hai-surface-200: #0d1422;
+    --hai-surface-300: #1e293b;
+    --hai-surface-border: #1e293b;
+    --hai-surface-border-strong: #334155;
+
+    --hai-text-primary: #f0f4f8;
+    --hai-text-secondary: #8899ab;
+    --hai-text-tertiary: #556677;
+    --hai-text-disabled: #334155;
+
+    --hai-status-ok-600: #2E9E6A;
+    --hai-status-ok-100: #0F2A1E;
+    --hai-status-warn-600: #D98D17;
+    --hai-status-warn-100: #2B1E08;
+    --hai-status-crit-600: #DE4945;
+    --hai-status-crit-100: #2D1513;
+    --hai-status-info-600: #3E82D8;
+    --hai-status-info-100: #0F1E30;
+    --hai-status-idle-600: #7C818C;
+
+    --hai-data-1: #7CA9F5;
+    --hai-data-3: #8FCB9C;
+    --hai-data-5: #7BC4C9;
+
+    --hai-money:        #f0b54f;
+    --hai-money-glow:   rgba(240, 181, 79, 0.22);
+    --hai-glass-1:      rgba(255, 255, 255, 0.04);
+    --hai-glass-2:      rgba(255, 255, 255, 0.07);
+    --hai-glass-border: rgba(255, 255, 255, 0.10);
+    --hai-glass-highlight: rgba(255, 255, 255, 0.18);
+    --hai-shadow-rest:  0 8px 16px -8px rgba(0, 0, 0, 0.40);
+    --hai-shadow-deep:  0 24px 48px -12px rgba(0, 0, 0, 0.55);
+    --hai-future:       #8b9ff7;
+    --hai-forecast-band: rgba(46,158,106,0.12);
+
+    --shell-topbar-bg: #111827;
+    --shell-sidebar-bg: #0d1422;
+    --shell-sidebar-active-bg: rgba(34,211,238,0.10);
+    --shell-sidebar-active-fg: #22d3ee;
+    --shell-hover: #1a2233;
+    --accent: #22d3ee;
+  }
+
+  :root,
+  [data-theme='light']:not(.dark) {
+    --hai-surface-canvas: #f1f5f9;
+    --hai-surface-100: #ffffff;
+    --hai-surface-200: #f8fafc;
+    --hai-surface-300: #f1f5f9;
+    --hai-surface-border: #e2e8f0;
+    --hai-surface-border-strong: #cbd5e1;
+
+    --hai-text-primary: #0f172a;
+    --hai-text-secondary: #475569;
+    --hai-text-tertiary: #64748b;
+    --hai-text-disabled: #94a3b8;
+
+    --hai-status-ok-600: #15804A;
+    --hai-status-ok-100: #DCF3E6;
+    --hai-status-warn-600: #B36A00;
+    --hai-status-warn-100: #FCEBCA;
+    --hai-status-crit-600: #B8312D;
+    --hai-status-crit-100: #FADDDB;
+    --hai-status-info-600: #1E5FB5;
+    --hai-status-info-100: #DDE9F8;
+    --hai-status-idle-600: #6B6E77;
+
+    --hai-data-1: #2E5FBF;
+    --hai-data-3: #3A8D56;
+    --hai-data-5: #2C7A82;
+
+    --hai-money:        #b97900;
+    --hai-money-glow:   rgba(185, 121, 0, 0.18);
+    --hai-glass-1:      rgba(15, 23, 42, 0.04);
+    --hai-glass-2:      rgba(15, 23, 42, 0.07);
+    --hai-glass-border: rgba(15, 23, 42, 0.10);
+    --hai-glass-highlight: rgba(15, 23, 42, 0.05);
+    --hai-shadow-rest:  0 8px 16px -8px rgba(15, 23, 42, 0.12);
+    --hai-shadow-deep:  0 24px 48px -12px rgba(15, 23, 42, 0.20);
+    --hai-future:       #6b73c5;
+    --hai-forecast-band: rgba(21,128,74,0.10);
+
+    --shell-topbar-bg: #ffffff;
+    --shell-sidebar-bg: #f8fafc;
+    --shell-sidebar-active-bg: rgba(30,95,181,0.10);
+    --shell-sidebar-active-fg: #1E5FB5;
+    --shell-hover: #f1f5f9;
+    --accent: #1E5FB5;
+  }
+
+  :root {
+    --hai-space-1: 4px; --hai-space-2: 8px; --hai-space-3: 12px;
+    --hai-space-4: 16px; --hai-space-5: 20px; --hai-space-6: 24px;
+    --hai-radius-md: 10px; --hai-radius-lg: 14px; --hai-radius-xl: 18px;
+    --hai-font-sans: 'Inter Tight', 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+    --hai-num-features: 'tnum' 1, 'lnum' 1, 'ss02' 1;
+
+    --topbar-h: 72px;
+    --sidebar-w: 232px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    font-family: var(--hai-font-sans);
+    background: var(--hai-surface-canvas);
+    color: var(--hai-text-primary);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color .25s ease, color .25s ease;
+  }
+  .num { font-feature-settings: var(--hai-num-features); font-variant-numeric: tabular-nums lining-nums; }
+
+  /* ============================================================
+     APP SHELL — top bar
+     ============================================================ */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h);
+    background: var(--shell-topbar-bg);
+    border-bottom: 1px solid var(--hai-surface-border);
+    z-index: 30;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px;
+    transition: background-color .25s ease, border-color .25s ease;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--hai-text-secondary);
+    background: transparent; border: none; cursor: pointer;
+    transition: all .2s ease;
+  }
+  .icon-btn:hover { background: var(--shell-hover); color: var(--hai-text-primary); }
+  .icon-btn svg { width: 20px; height: 20px; }
+
+  .brand-logo {
+    display: flex; align-items: center; gap: 10px;
+    margin-left: 4px;
+  }
+  .brand-mark {
+    width: 38px; height: 38px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), #0369a1);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: var(--hai-surface-canvas); font-size: 19px;
+    box-shadow: 0 0 14px rgba(34,211,238,0.4);
+  }
+  .brand-text-block { line-height: 1.1; }
+  .brand-text-block .brand-name {
+    font-size: 14px; font-weight: 800; color: var(--hai-text-primary);
+    letter-spacing: 0.04em;
+  }
+  .brand-text-block .brand-sub {
+    font-size: 9px; color: var(--hai-text-tertiary);
+    letter-spacing: 0.2em; text-transform: uppercase; margin-top: 2px;
+  }
+
+  /* center pill */
+  .live-pill {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 16px; border-radius: 999px;
+    background: rgba(46,158,106,0.06);
+    color: var(--hai-status-ok-600);
+    border: 1px solid rgba(46,158,106,0.25);
+  }
+  :root [data-theme='light'] .live-pill,
+  html:not(.dark) .live-pill {
+    background: var(--hai-status-ok-100);
+    border-color: rgba(21,128,74,0.30);
+  }
+  .live-pill .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--hai-status-ok-600);
+    box-shadow: 0 0 6px currentColor;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  .live-pill .live-text {
+    font-size: 11px; font-weight: 800; letter-spacing: 0.18em;
+  }
+  .live-pill .page-name {
+    font-size: 11px; color: var(--hai-text-tertiary);
+    font-weight: 500; letter-spacing: 0.04em;
+  }
+
+  /* logos on the right */
+  .client-logo {
+    height: 40px; padding: 4px 10px; border-radius: 8px;
+    background: rgba(255,255,255,0.95);
+    color: #0f172a; font-weight: 700; font-size: 13px;
+    display: flex; align-items: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    letter-spacing: 0.05em;
+  }
+  .topbar-divider {
+    width: 1px; height: 28px; background: var(--hai-surface-border); margin: 0 4px;
+  }
+  .lang-btn {
+    min-width: 36px; height: 32px; padding: 0 10px;
+    border-radius: 8px; border: none; cursor: pointer;
+    background: transparent; color: var(--hai-text-secondary);
+    font-size: 12px; font-weight: 700; letter-spacing: 0.05em;
+    transition: all .2s ease;
+  }
+  .lang-btn:hover { background: var(--shell-hover); color: var(--hai-text-primary); }
+
+  .user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--hai-data-1), var(--hai-status-info-600));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 12px;
+    cursor: pointer;
+  }
+
+  /* ============================================================
+     APP SHELL — sidebar
+     ============================================================ */
+  .sidebar {
+    position: fixed; top: var(--topbar-h); bottom: 0; left: 0;
+    width: var(--sidebar-w);
+    background: var(--shell-sidebar-bg);
+    border-right: 1px solid var(--hai-surface-border);
+    z-index: 20;
+    display: flex; flex-direction: column;
+    padding: 16px 12px;
+    overflow-y: auto;
+    transition: background-color .25s ease, border-color .25s ease;
+  }
+  .nav-section-label {
+    font-size: 9px; color: var(--hai-text-tertiary);
+    letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700;
+    padding: 8px 12px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 8px;
+    color: var(--hai-text-secondary);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: all .15s ease;
+    margin-bottom: 2px;
+    text-decoration: none;
+    position: relative;
+  }
+  .nav-item:hover {
+    background: var(--shell-hover);
+    color: var(--hai-text-primary);
+  }
+  .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .nav-item.active {
+    background: var(--shell-sidebar-active-bg);
+    color: var(--shell-sidebar-active-fg);
+    font-weight: 600;
+  }
+  .nav-item.active::before {
+    content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
+    background: var(--shell-sidebar-active-fg);
+    border-radius: 0 3px 3px 0;
+  }
+  .nav-item .badge-new {
+    margin-left: auto;
+    font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
+    padding: 2px 6px; border-radius: 4px;
+    background: var(--shell-sidebar-active-fg);
+    color: var(--hai-surface-canvas);
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 12px;
+    border-top: 1px solid var(--hai-surface-border);
+    font-size: 10px; color: var(--hai-text-tertiary);
+    letter-spacing: 0.05em;
+  }
+  .sidebar-footer .v {
+    color: var(--hai-text-secondary); font-weight: 600;
+  }
+
+  /* ============================================================
+     PAGE CONTENT (Atlas)
+     ============================================================ */
+  .content {
+    position: fixed;
+    top: var(--topbar-h);
+    bottom: 0;
+    left: var(--sidebar-w);
+    right: 0;
+    padding: 16px 18px 14px;
+    overflow: hidden;
+    background: var(--hai-surface-canvas);
+    transition: background-color .25s ease;
+  }
+  .page-grid {
+    height: 100%;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    grid-template-rows: 1fr 1fr auto auto;
+    gap: 12px;
+    grid-template-areas:
+      "prod-card  prod-chart"
+      "cost-card  cost-chart"
+      "ai-bar     ai-bar"
+      "kpis       kpis";
+  }
+
+  /* ----- hero cards (production / cost) ----- */
+  .hero-card {
+    border-radius: var(--hai-radius-xl);
+    padding: 16px 18px 14px;
+    display: flex; flex-direction: column;
+    background: var(--hai-surface-100);
+    border: 1px solid var(--hai-surface-border);
+    box-shadow: var(--hai-shadow-rest);
+    position: relative;
+    overflow: hidden;
+    transition: background-color .25s ease, border-color .25s ease;
+  }
+  .hero-card.production { grid-area: prod-card; }
+  .hero-card.cost { grid-area: cost-card; }
+
+  .hero-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .hero-card.production::before {
+    background: linear-gradient(90deg, var(--hai-money), var(--hai-status-ok-600));
+  }
+  .hero-card.cost::before {
+    background: linear-gradient(90deg, var(--hai-status-info-600), var(--hai-status-ok-600));
+  }
+
+  .hero-eyebrow {
+    font-size: 10px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
+  }
+  .hero-label {
+    font-size: 14px; color: var(--hai-text-primary);
+    font-weight: 600; margin-top: 3px;
+  }
+  .now-block { margin-top: 12px; }
+  .now-lbl, .pred-lbl {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700;
+  }
+  .now-lbl { color: var(--hai-text-tertiary); }
+  .pred-lbl {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--hai-status-info-600);
+  }
+  .production .pred-lbl { color: var(--hai-money); }
+  .pred-lbl::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .now-val, .pred-val {
+    display: flex; align-items: baseline; gap: 6px;
+    margin-top: 4px;
+  }
+  .now-val .num-big {
+    font-size: 36px; font-weight: 800; color: var(--hai-text-primary);
+    line-height: 1; letter-spacing: -0.02em;
+  }
+  .pred-val .num-big {
+    font-size: 28px; font-weight: 800; color: var(--hai-status-ok-600);
+    line-height: 1; letter-spacing: -0.02em;
+  }
+  .unit {
+    font-size: 12px; color: var(--hai-text-tertiary); font-weight: 500;
+  }
+  .arrow {
+    font-size: 16px; color: var(--hai-status-ok-600); font-weight: 700;
+  }
+  .pred-divider {
+    height: 1px;
+    background: var(--hai-surface-border);
+    margin: 12px 0 10px;
+  }
+  .savings-pill {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: var(--hai-status-ok-100);
+    border: 1px solid rgba(46,158,106,0.30);
+    border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  html:not(.dark) .savings-pill { border-color: rgba(21,128,74,0.30); }
+  .savings-pill .lbl {
+    font-size: 9px; color: var(--hai-status-ok-600);
+    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
+  }
+  .savings-pill .val {
+    font-size: 14px; font-weight: 700; color: var(--hai-text-primary);
+  }
+
+  /* ----- chart cards ----- */
+  .chart-card {
+    border-radius: var(--hai-radius-xl);
+    padding: 14px 16px 10px;
+    display: flex; flex-direction: column;
+    background: var(--hai-surface-100);
+    border: 1px solid var(--hai-surface-border);
+    box-shadow: var(--hai-shadow-rest);
+    position: relative;
+    overflow: hidden;
+    transition: background-color .25s ease, border-color .25s ease;
+  }
+  .chart-card.prod-chart { grid-area: prod-chart; }
+  .chart-card.cost-chart { grid-area: cost-chart; }
+
+  .chart-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 4px;
+  }
+  .chart-title {
+    font-size: 14px; font-weight: 700; color: var(--hai-text-primary);
+  }
+  .chart-sub {
+    font-size: 10px; color: var(--hai-text-tertiary); margin-top: 2px;
+  }
+  .chart-legend { display: flex; gap: 12px; }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: var(--hai-text-secondary);
+  }
+  .legend-swatch { width: 14px; height: 3px; border-radius: 2px; }
+  .legend-swatch.actual-cost { background: var(--hai-status-info-600); }
+  .legend-swatch.actual-prod { background: var(--hai-money); }
+  .legend-swatch.predicted {
+    background-image: linear-gradient(90deg, var(--hai-status-ok-600) 50%, transparent 50%);
+    background-size: 5px 100%;
+    background-repeat: repeat-x;
+    height: 3px;
+  }
+
+  .chart-svg-wrap { flex: 1; position: relative; min-height: 0; }
+  .chart-svg { width: 100%; height: 100%; display: block; }
+
+  .now-pill {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    color: var(--hai-surface-canvas);
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 2px 7px; border-radius: 4px;
+    text-transform: uppercase;
+    pointer-events: none;
+    margin-top: -4px;
+  }
+  .now-pill.cost { background: var(--hai-status-info-600); box-shadow: 0 4px 8px rgba(62,130,216,0.4); }
+  .now-pill.prod { background: var(--hai-money); box-shadow: 0 4px 8px rgba(240,181,79,0.4); }
+
+  .chart-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 4px;
+    font-size: 9px; color: var(--hai-text-disabled);
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+
+  /* ----- AI bar ----- */
+  .ai-bar {
+    grid-area: ai-bar;
+    background: var(--hai-surface-100);
+    border: 1px solid var(--hai-surface-border-strong);
+    border-radius: var(--hai-radius-lg);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: var(--hai-shadow-rest);
+    position: relative;
+    overflow: hidden;
+    transition: background-color .25s ease, border-color .25s ease;
+  }
+  .ai-bar::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--hai-status-info-600), var(--hai-status-ok-600));
+  }
+  .ai-bar-icon {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--hai-status-info-600), #0369a1);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(62,130,216,0.35);
+  }
+  .ai-bar-icon svg { width: 18px; height: 18px; }
+  .ai-bar-text { flex: 1; min-width: 0; }
+  .ai-bar-eyebrow {
+    font-size: 10px; color: var(--hai-status-info-600);
+    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .ai-bar-msg {
+    font-size: 13px; color: var(--hai-text-primary); font-weight: 500;
+    line-height: 1.45;
+  }
+  .ai-bar-msg b { color: var(--hai-status-ok-600); font-weight: 700; }
+  .ai-bar-msg .gold { color: var(--hai-money); font-weight: 700; }
+  .ai-bar-msg .hi { color: var(--hai-future); font-weight: 600; }
+
+  .ai-bar-cta {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    background: var(--hai-status-info-600);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    cursor: pointer;
+    border: none;
+    transition: all .2s ease;
+  }
+  .ai-bar-cta:hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+  /* ----- KPI strip ----- */
+  .kpis {
+    grid-area: kpis;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .kpi-card {
+    background: var(--hai-surface-100);
+    border: 1px solid var(--hai-surface-border);
+    border-radius: var(--hai-radius-md);
+    padding: 12px 14px;
+    display: flex; flex-direction: column;
+    box-shadow: var(--hai-shadow-rest);
+    transition: background-color .25s ease, border-color .25s ease;
+  }
+  .kpi-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .kpi-name {
+    font-size: 10px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600;
+  }
+  .kpi-status {
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .kpi-status.good { background: var(--hai-status-ok-100); color: var(--hai-status-ok-600); }
+  .kpi-status.warn { background: var(--hai-status-warn-100); color: var(--hai-status-warn-600); }
+  .kpi-value {
+    display: flex; align-items: baseline; gap: 5px;
+  }
+  .kpi-value .num-mid {
+    font-size: 22px; font-weight: 800; color: var(--hai-text-primary);
+    line-height: 1; letter-spacing: -0.02em;
+  }
+  .kpi-msg {
+    font-size: 10px; color: var(--hai-text-tertiary);
+    margin-top: 5px; line-height: 1.4;
+  }
+  .kpi-msg b { color: var(--hai-text-secondary); font-weight: 600; }
+
+  /* mockup tag */
+  .mockup-tag {
+    position: fixed; bottom: 8px; right: 14px;
+    z-index: 40;
+    font-size: 9px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.25em;
+    background: var(--hai-surface-100);
+    border: 1px solid var(--hai-surface-border);
+    padding: 4px 10px; border-radius: 4px;
+    pointer-events: none;
+  }
+
+  @media (max-width: 1280px) {
+    .page-grid { grid-template-columns: 240px 1fr; }
+    .now-val .num-big { font-size: 30px; }
+    .pred-val .num-big { font-size: 24px; }
+    .ai-bar-msg { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================== TOPBAR ============================== -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="icon-btn" title="Toggle sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="brand-logo">
+      <div class="brand-mark">H</div>
+      <div class="brand-text-block">
+        <div class="brand-name">HERCULES</div>
+        <div class="brand-sub">Reporting Module</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="live-pill">
+    <span class="dot"></span>
+    <span class="live-text">LIVE</span>
+    <span class="page-name">Hercules Atlas</span>
+  </div>
+
+  <div class="topbar-right">
+    <div class="client-logo">SFM</div>
+    <div class="client-logo">ASM</div>
+    <div class="topbar-divider"></div>
+    <button class="lang-btn" title="Switch language">EN</button>
+    <button class="icon-btn" id="theme-toggle" title="Toggle theme">
+      <svg id="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg id="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+    <div class="user-avatar" title="Sam">SH</div>
+  </div>
+</header>
+
+<!-- ============================== SIDEBAR ============================== -->
+<aside class="sidebar">
+  <div class="nav-section-label">Workspace</div>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <span>Builder</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    <span>Digital Twin</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span>Dashboards</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/><line x1="15" y1="9" x2="15" y2="21"/></svg>
+    <span>Table Reports</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+    <span>Job Logs</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    <span>Distribution</span>
+  </a>
+
+  <div class="nav-section-label" style="margin-top:14px;">Intelligence</div>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v1.5M12 19.5V21M3 12h1.5M19.5 12H21M5.6 5.6l1 1M17.4 17.4l1 1M5.6 18.4l1-1M17.4 6.6l1-1"/><circle cx="12" cy="12" r="4"/></svg>
+    <span>Hercules AI</span>
+  </a>
+  <a class="nav-item active" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+    <span>Hercules Atlas</span>
+    <span class="badge-new">NEW</span>
+  </a>
+
+  <div class="nav-section-label" style="margin-top:14px;">System</div>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 1 1 4.27 16.9l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.27l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>Engineering</span>
+  </a>
+
+  <div class="sidebar-footer">
+    <span class="v">v1.0.664</span> · Salalah Mill B
+  </div>
+</aside>
+
+<!-- ============================== CONTENT (Atlas) ============================== -->
+<main class="content">
+  <div class="page-grid">
+
+    <!-- Production hero -->
+    <div class="hero-card production">
+      <div class="hero-eyebrow">Today · headline</div>
+      <div class="hero-label">Production output · flour</div>
+      <div class="now-block">
+        <div class="now-lbl">So far today</div>
+        <div class="now-val">
+          <span class="num-big num" id="prod-now">68.4</span>
+          <span class="unit">tons</span>
+        </div>
+      </div>
+      <div class="pred-divider"></div>
+      <div class="pred-lbl">AI forecast · end of day</div>
+      <div class="pred-val">
+        <span class="num-big num">108</span>
+        <span class="unit">tons</span>
+        <span class="arrow">↑</span>
+      </div>
+      <div class="savings-pill">
+        <span class="lbl">vs plan (102 t)</span>
+        <span class="val num">+6 tons</span>
+      </div>
+    </div>
+
+    <!-- Production chart -->
+    <div class="chart-card prod-chart">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">Production output today (cumulative)</div>
+          <div class="chart-sub">Tons of flour produced. Solid line = actual so far. Dashed = AI forecast.</div>
+        </div>
+        <div class="chart-legend">
+          <div class="legend-item"><span class="legend-swatch actual-prod"></span>Actual</div>
+          <div class="legend-item"><span class="legend-swatch predicted"></span>AI forecast</div>
+        </div>
+      </div>
+      <div class="chart-svg-wrap">
+        <svg class="chart-svg" id="prod-chart" viewBox="0 0 800 200" preserveAspectRatio="none"></svg>
+        <div id="prod-now-pill" class="now-pill prod">NOW</div>
+      </div>
+      <div class="chart-footer">
+        <span>00:00</span><span>06:00</span><span>12:00</span>
+        <span style="color:var(--hai-money);">14:32</span>
+        <span>18:00</span><span>24:00</span>
+      </div>
+    </div>
+
+    <!-- Cost hero -->
+    <div class="hero-card cost">
+      <div class="hero-eyebrow">Today · efficiency</div>
+      <div class="hero-label">Energy cost per ton</div>
+      <div class="now-block">
+        <div class="now-lbl">Right now</div>
+        <div class="now-val">
+          <span class="num-big num">1.42</span>
+          <span class="unit">OMR / ton</span>
+        </div>
+      </div>
+      <div class="pred-divider"></div>
+      <div class="pred-lbl">AI forecast · next shift</div>
+      <div class="pred-val">
+        <span class="num-big num">1.31</span>
+        <span class="unit">OMR / ton</span>
+        <span class="arrow">↓</span>
+      </div>
+      <div class="savings-pill">
+        <span class="lbl">Estimated savings</span>
+        <span class="val num">12 OMR / 8h</span>
+      </div>
+    </div>
+
+    <!-- Cost chart -->
+    <div class="chart-card cost-chart">
+      <div class="chart-head">
+        <div>
+          <div class="chart-title">Energy cost per ton — last 24h & forecast</div>
+          <div class="chart-sub">Computed from submeter kWh × tariff (0.025 OMR/kWh) ÷ flour produced.</div>
+        </div>
+        <div class="chart-legend">
+          <div class="legend-item"><span class="legend-swatch actual-cost"></span>Actual</div>
+          <div class="legend-item"><span class="legend-swatch predicted"></span>AI forecast</div>
+        </div>
+      </div>
+      <div class="chart-svg-wrap">
+        <svg class="chart-svg" id="cost-chart" viewBox="0 0 800 200" preserveAspectRatio="none"></svg>
+        <div id="cost-now-pill" class="now-pill cost">NOW</div>
+      </div>
+      <div class="chart-footer">
+        <span>−24h</span><span>−12h</span>
+        <span style="color:var(--hai-status-info-600);">Now</span>
+        <span>+6h</span><span>+12h</span>
+      </div>
+    </div>
+
+    <!-- AI insight bar -->
+    <div class="ai-bar">
+      <div class="ai-bar-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div class="ai-bar-text">
+        <div class="ai-bar-eyebrow">Hercules AI · in plain words</div>
+        <div class="ai-bar-msg">
+          On track for <span class="gold">108 tons</span> of flour today — <b>6 tons above plan</b>.
+          Energy cost per ton will ease <b>0.11 OMR ↓</b> overnight as ambient temperature drops.
+          <span class="hi">One thing to watch:</span> bearing on RS-3.
+        </div>
+      </div>
+      <button class="ai-bar-cta">Why?</button>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="kpis">
+      <div class="kpi-card">
+        <div class="kpi-head"><div class="kpi-name">Pace</div><div class="kpi-status good">On track</div></div>
+        <div class="kpi-value"><span class="num-mid num" id="kpi-pace">6.66</span><span class="unit">tons/hour</span></div>
+        <div class="kpi-msg">Plan <b>6.30</b>. Ahead by <b>5.7%</b>.</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-head"><div class="kpi-name">Yield</div><div class="kpi-status good">Excellent</div></div>
+        <div class="kpi-value"><span class="num-mid num">72.4</span><span class="unit">% flour</span></div>
+        <div class="kpi-msg">Best recent run: <b>73.5%</b>. Within 1 point.</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-head"><div class="kpi-name">Energy</div><div class="kpi-status warn">Slightly high</div></div>
+        <div class="kpi-value"><span class="num-mid num">376</span><span class="unit">kW</span></div>
+        <div class="kpi-msg">SEC <b>56.7 kWh/t</b> — 2.6% below 7-day average.</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-head"><div class="kpi-name">Maintenance</div><div class="kpi-status warn">1 watch</div></div>
+        <div class="kpi-value"><span class="num-mid num">96</span><span class="unit">% healthy</span></div>
+        <div class="kpi-msg">Bearing on <b>RS-3</b> — schedule inspection.</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<div class="mockup-tag">Mockup v4 · in-app shell · click <svg style="display:inline;width:11px;height:11px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/></svg> to flip theme</div>
+
+<script>
+  // ============== Theme toggle ==============
+  const root = document.documentElement;
+  const moon = document.getElementById('moon-icon');
+  const sun = document.getElementById('sun-icon');
+  function setTheme(theme) {
+    if (theme === 'light') {
+      root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
+      moon.style.display = 'none';
+      sun.style.display = 'block';
+    } else {
+      root.classList.add('dark');
+      root.setAttribute('data-theme', 'dark');
+      moon.style.display = 'block';
+      sun.style.display = 'none';
+    }
+    // redraw charts so token-bound colors flip cleanly
+    setTimeout(() => { drawProdChart(); drawCostChart(); placePills(); }, 30);
+  }
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    setTheme(root.classList.contains('dark') ? 'light' : 'dark');
+  });
+
+  // ============== SVG helper ==============
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs){
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function tokColor(name){
+    return getComputedStyle(root).getPropertyValue(name).trim() || '#888';
+  }
+
+  // ============== PRODUCTION CHART ==============
+  function drawProdChart() {
+    const svg = document.getElementById('prod-chart');
+    svg.innerHTML = '';
+    const W = 800, H = 200;
+    const padL = 44, padR = 14, padT = 12, padB = 22;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+    const HOURS = 24;
+    const NOW_H = 14.53;
+
+    // build data
+    const cum = [];
+    let total = 0;
+    for (let h = 0; h <= HOURS; h++) {
+      let rate = 0;
+      if (h >= 6 && h < 11) rate = 6.5;
+      else if (h >= 11 && h < 12) rate = 3.2;
+      else if (h >= 12 && h < 14.5) rate = 7.0;
+      total += rate;
+      cum.push({ h, t: total });
+    }
+    const actualPts = cum.filter(p => p.h <= Math.floor(NOW_H));
+    const before = cum[Math.floor(NOW_H)];
+    const after = cum[Math.floor(NOW_H) + 1];
+    const nowT = before.t + (after.t - before.t) * (NOW_H - Math.floor(NOW_H));
+    actualPts.push({ h: NOW_H, t: nowT });
+
+    const fcPts = [{ h: NOW_H, t: nowT }];
+    for (let h = Math.ceil(NOW_H); h <= HOURS; h++) {
+      let rate = 0;
+      if (h <= 22) rate = 6.6;
+      const last = fcPts[fcPts.length - 1];
+      fcPts.push({ h, t: last.t + rate * (h - last.h) });
+    }
+
+    const yMin = 0, yMax = 120;
+    const xAt = h => padL + (h / HOURS) * innerW;
+    const yAt = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
+
+    const muted = tokColor('--hai-text-disabled');
+    const tertiary = tokColor('--hai-text-tertiary');
+    const gridStroke = tokColor('--hai-surface-border');
+
+    [0, 30, 60, 90, 120].forEach(v => {
+      const y = yAt(v);
+      svg.appendChild(el('line', { x1: padL, x2: W - padR, y1: y, y2: y,
+        stroke: gridStroke, 'stroke-width': 1, 'shape-rendering': 'crispEdges', opacity: 0.6 }));
+      const lbl = el('text', { x: padL - 6, y: y + 3, 'text-anchor': 'end',
+        'font-size': 9, fill: muted, 'font-variant-numeric': 'tabular-nums' });
+      lbl.textContent = v;
+      svg.appendChild(lbl);
+    });
+
+    const yT = el('text', { x: padL - 30, y: padT + innerH/2, 'text-anchor': 'middle',
+      'font-size': 9, fill: tertiary, 'letter-spacing': '0.1em',
+      transform: `rotate(-90 ${padL - 30} ${padT + innerH/2})` });
+    yT.textContent = 'TONS';
+    svg.appendChild(yT);
+
+    const nowX = xAt(NOW_H);
+    const moneyClr = tokColor('--hai-money');
+    const okClr = tokColor('--hai-status-ok-600');
+    const bandClr = tokColor('--hai-forecast-band');
+
+    svg.appendChild(el('line', { x1: nowX, x2: nowX, y1: padT, y2: padT + innerH,
+      stroke: moneyClr, 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0.5 }));
+
+    // confidence band
+    let bandTop = '', bandBot = '';
+    fcPts.forEach((p, i) => {
+      bandTop += (i === 0 ? 'M ' : ' L ') + xAt(p.h) + ' ' + yAt(p.t * (1 + 0.015 * (p.h - NOW_H)) + 1);
+    });
+    for (let i = fcPts.length - 1; i >= 0; i--) {
+      const p = fcPts[i];
+      bandBot += ' L ' + xAt(p.h) + ' ' + yAt(p.t * (1 - 0.015 * (p.h - NOW_H)) - 1);
+    }
+    svg.appendChild(el('path', { d: bandTop + bandBot + ' Z',
+      fill: bandClr, stroke: okClr, 'stroke-width': 0.5, 'stroke-opacity': 0.25 }));
+
+    // actual line
+    const actualD = actualPts.map((p, i) => (i === 0 ? 'M ' : ' L ') + xAt(p.h) + ' ' + yAt(p.t)).join('');
+    svg.appendChild(el('path', { d: actualD, fill: 'none',
+      stroke: moneyClr, 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+
+    // forecast line
+    const fcD = fcPts.map((p, i) => (i === 0 ? 'M ' : ' L ') + xAt(p.h) + ' ' + yAt(p.t)).join('');
+    svg.appendChild(el('path', { d: fcD, fill: 'none',
+      stroke: okClr, 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      'stroke-dasharray': '6 5' }));
+
+    // end marker
+    const endP = fcPts[fcPts.length - 1];
+    const endX = xAt(endP.h), endY = yAt(endP.t);
+    svg.appendChild(el('circle', { cx: endX, cy: endY, r: 4.5, fill: okClr,
+      stroke: tokColor('--hai-surface-100'), 'stroke-width': 2 }));
+    const endLbl = el('text', { x: endX - 8, y: endY - 8, 'text-anchor': 'end',
+      'font-size': 11, 'font-weight': 700, fill: okClr, 'font-variant-numeric': 'tabular-nums' });
+    endLbl.textContent = '108 t';
+    svg.appendChild(endLbl);
+
+    // now dot
+    svg.appendChild(el('circle', { cx: nowX, cy: yAt(nowT), r: 4.5,
+      fill: moneyClr, stroke: tokColor('--hai-surface-100'), 'stroke-width': 2 }));
+  }
+
+  // ============== COST CHART ==============
+  function drawCostChart() {
+    const svg = document.getElementById('cost-chart');
+    svg.innerHTML = '';
+    const W = 800, H = 200;
+    const padL = 44, padR = 14, padT = 12, padB = 22;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+
+    const NOW = 23, TOTAL = 36;
+    const actual = [
+      1.45,1.44,1.43,1.42,1.41,1.40,
+      1.41,1.43,1.48,1.52,1.55,1.53,
+      1.50,1.48,1.46,1.45,1.44,1.43,
+      1.42,1.41,1.40,1.41,1.42,1.42
+    ];
+    const fc = [1.41,1.39,1.37,1.34,1.32,1.31,1.30,1.30,1.31,1.32,1.34,1.36];
+    const band = fc.map((_, i) => 0.02 + i * 0.004);
+
+    const yMin = 1.20, yMax = 1.65;
+    const xAt = i => padL + (i / (TOTAL - 1)) * innerW;
+    const yAt = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
+
+    const muted = tokColor('--hai-text-disabled');
+    const tertiary = tokColor('--hai-text-tertiary');
+    const gridStroke = tokColor('--hai-surface-border');
+
+    [1.25,1.35,1.45,1.55,1.65].forEach(v => {
+      const y = yAt(v);
+      svg.appendChild(el('line', { x1: padL, x2: W - padR, y1: y, y2: y,
+        stroke: gridStroke, 'stroke-width': 1, 'shape-rendering': 'crispEdges', opacity: 0.6 }));
+      const lbl = el('text', { x: padL - 6, y: y + 3, 'text-anchor': 'end',
+        'font-size': 9, fill: muted, 'font-variant-numeric': 'tabular-nums' });
+      lbl.textContent = v.toFixed(2);
+      svg.appendChild(lbl);
+    });
+
+    const yT = el('text', { x: padL - 30, y: padT + innerH/2, 'text-anchor': 'middle',
+      'font-size': 9, fill: tertiary, 'letter-spacing': '0.1em',
+      transform: `rotate(-90 ${padL - 30} ${padT + innerH/2})` });
+    yT.textContent = 'OMR / TON';
+    svg.appendChild(yT);
+
+    const nowX = xAt(NOW);
+    const infoClr = tokColor('--hai-status-info-600');
+    const okClr = tokColor('--hai-status-ok-600');
+    const bandClr = tokColor('--hai-forecast-band');
+
+    svg.appendChild(el('line', { x1: nowX, x2: nowX, y1: padT, y2: padT + innerH,
+      stroke: infoClr, 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0.5 }));
+
+    // band
+    let bandTop = `M ${xAt(NOW)} ${yAt(actual[NOW])}`;
+    fc.forEach((v, i) => { bandTop += ` L ${xAt(NOW + 1 + i)} ${yAt(v + band[i])}`; });
+    let bandBot = '';
+    for (let i = fc.length - 1; i >= 0; i--) {
+      bandBot += ` L ${xAt(NOW + 1 + i)} ${yAt(fc[i] - band[i])}`;
+    }
+    bandBot += ` L ${xAt(NOW)} ${yAt(actual[NOW])} Z`;
+    svg.appendChild(el('path', { d: bandTop + bandBot,
+      fill: bandClr, stroke: okClr, 'stroke-width': 0.5, 'stroke-opacity': 0.25 }));
+
+    // actual
+    let actD = '';
+    actual.forEach((v, i) => { actD += (i === 0 ? 'M ' : ' L ') + xAt(i) + ' ' + yAt(v); });
+    svg.appendChild(el('path', { d: actD, fill: 'none',
+      stroke: infoClr, 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+
+    // forecast
+    let fcD = `M ${nowX} ${yAt(actual[NOW])}`;
+    fc.forEach((v, i) => { fcD += ` L ${xAt(NOW + 1 + i)} ${yAt(v)}`; });
+    svg.appendChild(el('path', { d: fcD, fill: 'none',
+      stroke: okClr, 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      'stroke-dasharray': '6 5' }));
+
+    // end marker
+    const endX = xAt(TOTAL - 1);
+    const endY = yAt(fc[fc.length - 1]);
+    svg.appendChild(el('circle', { cx: endX, cy: endY, r: 4.5, fill: okClr,
+      stroke: tokColor('--hai-surface-100'), 'stroke-width': 2 }));
+    const endLbl = el('text', { x: endX - 8, y: endY - 8, 'text-anchor': 'end',
+      'font-size': 11, 'font-weight': 700, fill: okClr, 'font-variant-numeric': 'tabular-nums' });
+    endLbl.textContent = '1.31 OMR';
+    svg.appendChild(endLbl);
+
+    svg.appendChild(el('circle', { cx: nowX, cy: yAt(actual[NOW]), r: 4.5,
+      fill: infoClr, stroke: tokColor('--hai-surface-100'), 'stroke-width': 2 }));
+  }
+
+  // ============== Position NOW pills ==============
+  function placePills() {
+    const place = (svgId, pillId) => {
+      const svg = document.getElementById(svgId);
+      const wrap = svg.parentElement;
+      const rect = wrap.getBoundingClientRect();
+      const pill = document.getElementById(pillId);
+      const xPct = svgId === 'cost-chart' ? (44 + 23/35 * (800-44-14)) / 800 : (44 + 14.53/24 * (800-44-14)) / 800;
+      pill.style.left = (xPct * rect.width) + 'px';
+      pill.style.top = (12 / 200 * rect.height) + 'px';
+    };
+    place('prod-chart', 'prod-now-pill');
+    place('cost-chart', 'cost-now-pill');
+  }
+
+  // ============== Init ==============
+  drawProdChart();
+  drawCostChart();
+  placePills();
+  window.addEventListener('resize', () => { placePills(); });
+
+  // small live updates
+  setInterval(() => {
+    const p = document.getElementById('prod-now');
+    if (p) p.textContent = (68.2 + Math.random() * 0.5).toFixed(1);
+    const k = document.getElementById('kpi-pace');
+    if (k) k.textContent = (6.5 + Math.random() * 0.4).toFixed(2);
+  }, 2200);
+</script>
+
+</body>
+</html>

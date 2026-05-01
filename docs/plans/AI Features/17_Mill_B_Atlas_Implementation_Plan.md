@@ -1,25 +1,30 @@
-# Mill B Atlas - Implementation Plan - 02_05
+# Hercules Atlas - Implementation Plan - 02_05
 
 Branch: `Salalah_Mill_B`
 Status: ready for implementation
+Page name: **Hercules Atlas** (user-facing label, sidebar entry, page title)
+Route: **`/atlas`** (Sam decision, 02_05)
 Builds on: `16_Hercules_AI_Mill_B_Atlas_Redesign_Plan_01_05.md` (concept, layout, data contract, deterministic math, phases, risks)
 Grounded in: `15_Salalah_Mill_B_Hercules_AI_Data_Inventory_01_05.md` (real Mill B tag inventory)
-Visual reference: `prototypes/mill_b_atlas_mockup_v3.html` (approved by Sam, 02_05)
+Visual references:
+- `prototypes/mill_b_atlas_mockup_v3.html` — approved standalone layout (02_05)
+- `prototypes/mill_b_atlas_mockup_v4.html` — approved in-app shell (sidebar, top bar, light + dark, 02_05)
 
 ---
 
 ## 1. Purpose
 
-Plan 16 specified **what** the Mill B Atlas page is. Plan 17 specifies **how** it gets built inside the existing Reporting Module — which directories, which existing components to reuse, which CSS tokens to bind to, what new fields the snapshot API must expose, and what ships in each phase.
+Plan 16 specified **what** the Atlas page is. Plan 17 specifies **how** it gets built inside the existing Reporting Module — which directories, which existing components to reuse, which CSS tokens to bind to, what new fields the snapshot API must expose, and what ships in each phase.
 
-Treat this document as the engineering checklist that turns the v3 mockup into a production page at a **new route**, while leaving the existing Hercules AI page untouched.
+Treat this document as the engineering checklist that turns the v3 + v4 mockups into a production page at a **new route**, while leaving the existing Hercules AI page untouched and looking native to the rest of the app.
 
 ## 2. Architectural posture (the rule everything below follows)
 
-**Mill B Atlas is a NEW page on a NEW route. It is NOT a modification of, replacement for, or feature-flagged variant of the existing Hercules AI page.**
+**Hercules Atlas is a NEW page on a NEW route. It is NOT a modification of, replacement for, or feature-flagged variant of the existing Hercules AI page.**
 
-- New route: `/mill-b-atlas` (final name in §7.1).
-- New page module: `Frontend/src/Pages/MillBAtlas/` — a separate top-level module.
+- New route: **`/atlas`**.
+- New page module: `Frontend/src/Pages/Atlas/` — a separate top-level module.
+- Page name (user-facing, sidebar, title bar): **Hercules Atlas**.
 - Existing `/hercules-ai` route, the `HerculesAISetup` page, and the `Frontend/src/Pages/HerculesAI/` module are **not modified** by this plan.
 
 **However, Atlas reuses everything reusable** from the existing Hercules AI module — by **import**, not by copy-paste:
@@ -29,17 +34,18 @@ Treat this document as the engineering checklist that turns the v3 mockup into a
 - Design tokens in `Frontend/src/Pages/HerculesAI/tokens.css` — import the file once at the page root.
 - The existing `herculesAIApi.js` API wrapper — import its helpers; only add new wrappers for endpoints we extend.
 
-If a needed primitive doesn't exist yet, add it under `Frontend/src/Pages/HerculesAI/components/` (so the existing page benefits too) — do not fork it into `MillBAtlas/`.
+If a needed primitive doesn't exist yet, add it under `Frontend/src/Pages/HerculesAI/components/` (so the existing page benefits too) — do not fork it into `Atlas/`.
 
-The mental model: `MillBAtlas/` is a thin **composition layer** over the shared Hercules AI primitives, not a parallel implementation.
+The mental model: `Atlas/` is a thin **composition layer** over the shared Hercules AI primitives, not a parallel implementation.
 
 ## 3. What's new vs. Plan 16
 
-The v3 mockup approved by Sam, plus Sam's 02_05 routing clarification, supersede three Plan 16 decisions:
+The v3 + v4 mockups approved by Sam, plus Sam's 02_05 routing and naming decisions, supersede four Plan 16 decisions:
 
 1. **Production output forecast is now a hero element**, equal in weight to the cost/SEC orb. Plan 16's snapshot contract has `yield.predicted_end_of_shift_pct` but no `production.predicted_eod_tons`. We extend the contract to add that.
 2. **OMR/ton is labeled "Energy cost per ton"**, not "Cost per ton". Plan 15 confirms only the energy portion is derivable from current data (~1.4 OMR/t at the configured 0.025 OMR/kWh tariff). Full per-ton cost (raw wheat + labor + overhead) is out of scope until those config inputs exist.
-3. **Atlas lives at its own route, not behind a flag on `/hercules-ai`.** Plan 16 §15 says Atlas replaces `/hercules-ai` with a feature flag and pushes the existing setup to `/hercules-ai/legacy`. Per Sam's 02_05 instruction, that swap is cancelled. Both pages now coexist as independent routes.
+3. **Atlas lives at its own route, not behind a flag on `/hercules-ai`.** Plan 16 §15 says Atlas replaces `/hercules-ai` with a feature flag and pushes the existing setup to `/hercules-ai/legacy`. Per Sam's 02_05 instruction, that swap is cancelled. Both pages now coexist as independent routes. Final route is **`/atlas`**, page name is **"Hercules Atlas"**.
+4. **Atlas renders inside the standard app shell** — same fixed top bar (logo, live pill, language toggle, theme toggle, user avatar) and same left sidebar as every other page in the app, with a new "Hercules Atlas" entry in the sidebar's Intelligence section. The v3 standalone mockup is the *content area only*; the v4 mockup shows how it sits in the shell. **Both light and dark themes** are first-class — every color comes from `tokens.css`, never a hex literal, so the existing theme toggle in `Components/Navbar/Navbar.jsx` flips Atlas like any other page.
 
 Plan 16 sections that remain authoritative and are NOT re-litigated here: §6 (3D centerpiece, deferred to Phase 5), §10 (visual language), §13 (deterministic math), §17 (reliability), §18 (accessibility), §22 (risks), §23 (production safety). Plan 16 §15 (routing/flag) and the parts of §16 that talk about endpoint **introduction** are reframed below as endpoint **extension**.
 
@@ -71,9 +77,9 @@ The 3D mill thumbnail from earlier mockups is **dropped from the v1 layout**. Re
 
 ## 5. Component architecture
 
-Atlas lives at `Frontend/src/Pages/MillBAtlas/` — a new sibling module to `Frontend/src/Pages/HerculesAI/`. Atlas **imports from** the HerculesAI module; it does not nest inside it.
+Atlas lives at `Frontend/src/Pages/Atlas/` — a new sibling module to `Frontend/src/Pages/HerculesAI/`. Atlas **imports from** the HerculesAI module; it does not nest inside it.
 
-### 5.1 New files in `MillBAtlas/`
+### 5.1 New files in `Atlas/`
 
 | File | Role |
 |---|---|
@@ -109,13 +115,13 @@ Every entry below is an `import` from the existing HerculesAI module — Atlas o
 | `Pages/HerculesAI/hooks/useRoiPayload.ts` | reference pattern only | Read for shape, then write `useMillBSnapshot` with the same React Query conventions. |
 | `API/herculesAIApi.js` | both `useMillBSnapshot` and `useVerdict` | Add **new** wrapper methods (`getMillBSnapshot`, `postMillBVerdict`) to this file rather than creating a parallel API client. |
 
-If a needed primitive is missing (for example a `ConfidenceBandLegend`), add it under `Pages/HerculesAI/components/` so the existing page can adopt it later. **Never create a `MillBAtlas/components/` directory.**
+If a needed primitive is missing (for example a `ConfidenceBandLegend`), add it under `Pages/HerculesAI/components/` so the existing page can adopt it later. **Never create a `Atlas/components/` directory.**
 
 ### 5.3 Charts
 
 Use `react-chartjs-2 ^5.3.0` (already in `Frontend/package.json`) on top of `chart.js ^4.5.0`. Both charts are line charts with a confidence-band fill drawn as a second dataset with `fill: '+1'`.
 
-A thin wrapper `MillBAtlas/charts/AtlasLineChart.tsx` configures the shared options:
+A thin wrapper `Atlas/charts/AtlasLineChart.tsx` configures the shared options:
 - Inherit colors from CSS variables via `getComputedStyle(document.documentElement).getPropertyValue('--hai-data-1')` etc., so light/dark themes flip cleanly.
 - `--hai-future` for forecast line, `--hai-money` for production confidence band, `--hai-data-5` for actual production line, `--hai-status-info-600` for actual cost line.
 - Tabular numerics on tooltips: `font: { family: 'Inter Tight', features: 'tnum' }`.
@@ -125,7 +131,7 @@ Do **not** introduce D3, Recharts, or Nivo. We already have a chart library and 
 
 ### 5.4 The 3D mill thumbnail (deferred)
 
-Not in v1 page. If reintroduced post-Phase 4, build under `MillBAtlas/three/MillBMini.tsx` using `@react-three/fiber ^8.17.0` (already installed). Stick to Plan 16 §6 implementation rules: low-poly, oscillation, particle cap, SVG fallback. For v1 we explicitly deliver a 2-column layout with no twin to keep Phase 1 tractable.
+Not in v1 page. If reintroduced post-Phase 4, build under `Atlas/three/MillBMini.tsx` using `@react-three/fiber ^8.17.0` (already installed). Stick to Plan 16 §6 implementation rules: low-poly, oscillation, particle cap, SVG fallback. For v1 we explicitly deliver a 2-column layout with no twin to keep Phase 1 tractable.
 
 ## 6. Design system integration
 
@@ -238,7 +244,7 @@ No new tables, no migrations, no PLC changes. Read-only on production DB. Produc
 ### 7.5 Frontend data layer
 
 ```ts
-// MillBAtlas/hooks/useMillBSnapshot.ts (sketch)
+// Atlas/hooks/useMillBSnapshot.ts (sketch)
 import { getMillBSnapshot } from '../../../API/herculesAIApi';   // shared API wrapper
 
 export function useMillBSnapshot() {
@@ -253,7 +259,7 @@ export function useMillBSnapshot() {
 ```
 
 ```ts
-// MillBAtlas/hooks/useVerdict.ts (sketch)
+// Atlas/hooks/useVerdict.ts (sketch)
 import { postMillBVerdict } from '../../../API/herculesAIApi';
 
 export function useVerdict() {
@@ -274,22 +280,22 @@ export function useVerdict() {
 
 ### 8.1 Routes (Sam's 02_05 clarification — no swap)
 
-Atlas is a **new, independent route**. The existing `/hercules-ai` route is left intact.
+Atlas is a **new, independent route at `/atlas`**. The existing `/hercules-ai` route is left intact. The page renders inside the same shell (top bar + sidebar) every other page uses — that wiring is owned by `AppRouter` / the shell layout, not by Atlas itself.
 
 Edit `Frontend/src/Routes/AppRoutes.jsx`:
 
 ```jsx
-import AtlasPage from '../Pages/MillBAtlas/AtlasPage';
+import AtlasPage from '../Pages/Atlas/AtlasPage';
 // existing imports stay:
 // import HerculesAISetup from '../Pages/HerculesAI/HerculesAISetup';
 // import HerculesAISettingsPage from '../Pages/HerculesAI/SettingsPage';
 
-<Route path="mill-b-atlas" element={<AtlasPage />} />          // NEW
-<Route path="hercules-ai" element={<HerculesAISetup />} />     // unchanged
+<Route path="atlas" element={<AtlasPage />} />                              // NEW
+<Route path="hercules-ai" element={<HerculesAISetup />} />                  // unchanged
 <Route path="hercules-ai/settings" element={<HerculesAISettingsPage />} />  // unchanged
 ```
 
-No `/hercules-ai/legacy` route. No flag-driven page swap on `/hercules-ai`. The two pages are independent and both reachable.
+No `/hercules-ai/legacy` route. No flag-driven page swap on `/hercules-ai`. The two pages are independent and both reachable. The top bar's "current page" pill (set in `Navbar.jsx`'s `PAGE_LABELS` map) gets a new entry: `'atlas': t('nav.atlas')`.
 
 ### 8.2 Feature flag (optional, in-development gating only)
 
@@ -297,23 +303,30 @@ A `localStorage` flag is **not** required for routing. Atlas is just a page at i
 
 ### 8.3 Navbar
 
-`Frontend/src/Data/Navbar.js`: **add** a new entry, do not modify the existing Hercules AI entry.
+`Frontend/src/Data/Navbar.js`: **add** a new entry, do not modify the existing Hercules AI entry. The new entry slots in **after** Hercules AI (Intelligence section), before Engineering (System section).
 
 ```js
 // existing entry stays:
-//   { name: 'nav.herculesAI', link: '/hercules-ai', badgeEndpoint: '/api/hercules-ai/status', ... }
+//   { name: 'nav.herculesAI', link: '/hercules-ai', icon: Sparkles, ... }
 
-// NEW entry:
-{ name: 'nav.millBAtlas', link: '/mill-b-atlas', badgeEndpoint: '/api/hercules-ai/status', ... }
+// NEW entry — uses the Compass icon from lucide-react (matches v4 mockup):
+{
+  name: 'nav.atlas',
+  icon: Compass,                      // import from 'lucide-react'
+  tooltip: t('nav.tooltip.atlas'),
+  link: '/atlas',
+  roles: [Roles.Admin, Roles.Manager, Roles.Operator],
+  badgeEndpoint: '/api/hercules-ai/status',
+}
 ```
 
-The badge endpoint is shared since both pages care about the same plant-online status.
+The badge endpoint is shared since both pages care about the same plant-online status. The English fallback in the same file gets `'nav.atlas': 'Hercules Atlas'` and `'nav.tooltip.atlas': 'Live production & cost forecast'`.
 
 ### 8.4 i18n
 
 Per CLAUDE.md, all four language files (`en.json`, `ar.json`, `hi.json`, `ur.json`) must add the new strings together. Approximate v1 string surface:
 
-- New nav label `nav.millBAtlas` — "Mill B Atlas"
+- New nav label `nav.atlas` — "Hercules Atlas"
 - Page section labels (Today's headline, Right now, AI forecast · end of day, AI forecast · next shift, Estimated savings, vs plan)
 - KPI labels and statuses (On track, Excellent, Slightly high, 1 watch)
 - Chart titles and subtitles
@@ -324,10 +337,10 @@ Use simple, non-technical language per CLAUDE.md Rule §5. Specifically: "Energy
 ## 9. Phased delivery
 
 ### Phase 1 — Static layout with mock data
-Goal: page exists at `/mill-b-atlas`, looks like the v3 mockup, runs on hardcoded sample data shaped exactly like §7.3.
+Goal: page exists at `/atlas`, looks like the v3 mockup, runs on hardcoded sample data shaped exactly like §7.3.
 
 Scope:
-- New `Frontend/src/Pages/MillBAtlas/` directory with all components from §5.1.
+- New `Frontend/src/Pages/Atlas/` directory with all components from §5.1.
 - New nav entry (gated to staff during dev — see §8.2).
 - Hardcoded `mockSnapshot` constant returned by `useMillBSnapshot` (no network call).
 - All design tokens wired through (imported from `Pages/HerculesAI/tokens.css`).
@@ -335,7 +348,7 @@ Scope:
 - Both themes validated.
 - Wallboard density validated.
 
-Exit criteria: Sam can navigate to `/mill-b-atlas` and see the page render identically in light and dark, on a 1440×900 laptop and 1920×1080 wallboard. No backend changes shipped. The existing `/hercules-ai` page is unchanged.
+Exit criteria: Sam can navigate to `/atlas` and see the page render identically in light and dark, on a 1440×900 laptop and 1920×1080 wallboard. No backend changes shipped. The existing `/hercules-ai` page is unchanged.
 
 ### Phase 2 — Live data hookup (extend the shared snapshot endpoint)
 Goal: page reads from a real, **shared** snapshot endpoint with deterministic math from raw `tag_history`. Numbers are real. Forecasts can still be naive (current-pace projection).
@@ -403,13 +416,13 @@ Backend Python: no new packages. Snapshot math uses `psycopg2` queries on existi
 | Build trigger fatigue — every push to `Salalah_Mill_B` builds installer (~8 min) | medium | low | Batch commits per phase; avoid pushing iterative WIP to the branch. CLAUDE.md already flags this. |
 | Migration of `assets_view` still failing on client | medium | medium | Plan 15 §1. Snapshot module does NOT depend on `assets_view`. Independent failure path. |
 | Two requirements files diverge if backend deps change | low | high | CLAUDE.md "Adding New Features" checklist; lint script in CI could check parity (out of scope here, worth flagging for later). |
-| **Atlas duplicates HerculesAI primitives by accident** | medium | high | §2 architectural posture, §5.2 reuse table. Code review rule: any component, hook, or token that ends up under `MillBAtlas/` must be Atlas-specific composition; if it's reusable, it lives under `HerculesAI/components/`. |
+| **Atlas duplicates HerculesAI primitives by accident** | medium | high | §2 architectural posture, §5.2 reuse table. Code review rule: any component, hook, or token that ends up under `Atlas/` must be Atlas-specific composition; if it's reusable, it lives under `HerculesAI/components/`. |
 | **Two routes drift apart visually as HerculesAI evolves** | medium | medium | Both pages consume the same `tokens.css` and the same `components/`; visual drift requires a token change, which both pages inherit. Periodic visual diff in QA. |
 
 ## 12. Files touched (summary)
 
 ### New (Atlas-specific)
-- `Frontend/src/Pages/MillBAtlas/` — entire directory per §5.1 (separate sibling module to `HerculesAI/`)
+- `Frontend/src/Pages/Atlas/` — entire directory per §5.1 (separate sibling module to `HerculesAI/`)
 
 ### New (shared infra — lives outside Atlas, reusable by HerculesAI later)
 - `backend/ai_money/mill_b_snapshot.py`
@@ -417,8 +430,8 @@ Backend Python: no new packages. Snapshot math uses `psycopg2` queries on existi
 - `backend/ai_forecast/cost_per_ton.py`
 
 ### Modified
-- `Frontend/src/Routes/AppRoutes.jsx` — add `mill-b-atlas` route. **Existing `hercules-ai` route untouched.**
-- `Frontend/src/Data/Navbar.js` — add `nav.millBAtlas` entry. Existing entry untouched.
+- `Frontend/src/Routes/AppRoutes.jsx` — add `atlas` route. **Existing `hercules-ai` route untouched.**
+- `Frontend/src/Data/Navbar.js` — add `nav.atlas` entry. Existing entry untouched.
 - `Frontend/src/API/herculesAIApi.js` — add `getMillBSnapshot` and `postMillBVerdict` helpers (extension, not replacement).
 - `Frontend/src/Pages/HerculesAI/tokens.css` — add one new token: `--hai-forecast-band` (light + dark).
 - `Frontend/src/i18n/{en,ar,hi,ur}.json` — string additions per §8.4.
@@ -434,11 +447,17 @@ Backend Python: no new packages. Snapshot math uses `psycopg2` queries on existi
 
 ## 13. Open decisions (Sam input)
 
-1. **Final route name**: `/mill-b-atlas` (current proposal, descriptive) vs `/atlas` (shorter, scales if more assets get atlas pages later) vs `/mill-b` (asset-first). Recommendation: `/mill-b-atlas` for v1 — clear and unambiguous; revisit if other mills get atlas pages.
-2. **Production hero accent color**: gold (`--hai-money`) like v3 mockup, or green (`--hai-status-ok-600`) to keep gold reserved strictly for OMR? Recommendation: gold. Tons of flour are the throughput-money equivalent in this context, and the visual hierarchy works.
-3. **Plan tons source**: pull `plan_tons` from `dynamic_orders` if an active order has a target, else hide the "vs plan" pill. Recommendation: yes, hide gracefully.
-4. **Energy-cost-per-ton chart Y axis**: free-floating (1.20–1.65 in mockup) or anchored at zero? Recommendation: free-floating with grid lines every 0.10 OMR — anchoring at zero would flatten the variance the chart exists to show.
-5. **Phase 1 ship target**: directly to `Salalah_Mill_B` (triggers installer build) or stage on `main` first then cherry-pick? Recommendation: ship Phase 1 to `main` first to validate the page in dev, then merge to `Salalah_Mill_B` once ready for client preview. Atlas being on its own route means the Salalah client never accidentally loses access to Hercules AI.
+### Resolved 02_05
+- ~~**Route name**~~ → **`/atlas`** (Sam, 02_05).
+- ~~**Page name**~~ → **"Hercules Atlas"** (Sam, 02_05).
+- ~~**App-shell integration**~~ → **inside the standard top bar + sidebar** with a new sidebar entry. Both light and dark themes mandatory. v4 mockup approved (Sam, 02_05).
+
+### Still open
+1. **Production hero accent color**: gold (`--hai-money`) like v3/v4 mockups, or green (`--hai-status-ok-600`) to keep gold reserved strictly for OMR? Recommendation: gold. Tons of flour are the throughput-money equivalent in this context, and the visual hierarchy works.
+2. **Plan tons source**: pull `plan_tons` from `dynamic_orders` if an active order has a target, else hide the "vs plan" pill. Recommendation: yes, hide gracefully.
+3. **Energy-cost-per-ton chart Y axis**: free-floating (1.20–1.65 in mockup) or anchored at zero? Recommendation: free-floating with grid lines every 0.10 OMR — anchoring at zero would flatten the variance the chart exists to show.
+4. **Phase 1 ship target**: directly to `Salalah_Mill_B` (triggers installer build) or stage on `main` first then cherry-pick? Recommendation: ship Phase 1 to `main` first to validate the page in dev, then merge to `Salalah_Mill_B` once ready for client preview. Atlas being on its own route means the Salalah client never accidentally loses access to Hercules AI.
+5. **Sidebar icon**: v4 mockup uses `Compass` from lucide-react (matches the "atlas" / navigator metaphor). Alternatives: `Globe`, `Map`. Recommendation: `Compass`.
 
 ## 14. Success criteria (mirrors Plan 16 §25, extended)
 
@@ -449,7 +468,7 @@ Backend Python: no new packages. Snapshot math uses `psycopg2` queries on existi
 - Page survives 60 s network blip and an LLM outage with no error toast.
 - Light theme and wallboard density both pass WCAG AA contrast.
 - The existing `/hercules-ai` page is unchanged and reachable throughout all phases — no regressions in Hercules AI Setup, Settings, or any related route.
-- A grep for hardcoded hex colors or duplicated `MetricCard`-like components inside `Pages/MillBAtlas/` returns zero hits.
+- A grep for hardcoded hex colors or duplicated `MetricCard`-like components inside `Pages/Atlas/` returns zero hits.
 
 ## 15. References
 
