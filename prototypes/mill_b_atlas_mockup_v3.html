@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hercules — Mill B Atlas v3 · Production + Cost Forecast</title>
+<style>
+  :root {
+    --brand: #0ea5e9;
+    --brand-2: #22d3ee;
+    --brand-3: #67e8f9;
+    --brand-deep: #0369a1;
+    --gold: #fbbf24;
+    --gold-2: #fcd34d;
+    --bg: #04070c;
+    --bg-2: #07101b;
+    --bg-panel: rgba(13,22,36,0.86);
+    --bg-card: rgba(13,22,36,0.94);
+    --border: rgba(34,211,238,0.16);
+    --border-strong: rgba(34,211,238,0.36);
+    --border-gold: rgba(251,191,36,0.30);
+    --text: #e8edf5;
+    --text-muted: #7b8fa6;
+    --text-dim: #4a5b70;
+    --good: #34d399;
+    --good-2: #6ee7b7;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --shadow-card: 0 10px 30px rgba(0,0,0,0.55), 0 0 0 1px rgba(34,211,238,0.10);
+    --shadow-glow-cyan: 0 0 40px rgba(34,211,238,0.18);
+    --shadow-glow-gold: 0 0 40px rgba(251,191,36,0.14);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    background: radial-gradient(ellipse at 50% 30%, #0a1828 0%, #050a12 60%, #02050a 100%);
+    -webkit-font-smoothing: antialiased;
+  }
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(34,211,238,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,211,238,0.035) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(ellipse at center, #000 30%, transparent 80%);
+  }
+
+  /* ========= TOP BAR ========= */
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; height: 56px;
+    z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px;
+    background: linear-gradient(180deg, rgba(4,7,12,0.92) 0%, rgba(4,7,12,0) 100%);
+    backdrop-filter: blur(8px);
+  }
+  .brand-block { display: flex; align-items: center; gap: 12px; }
+  .brand-mark {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--brand-2), var(--brand-deep));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: #04070c; font-size: 16px;
+    box-shadow: 0 0 14px rgba(34,211,238,0.5);
+  }
+  .brand-text { line-height: 1; }
+  .brand-text .t1 {
+    font-size: 9px; letter-spacing: 0.18em; color: var(--text-muted);
+    text-transform: uppercase; font-weight: 600;
+  }
+  .brand-text .t2 {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin-top: 4px; letter-spacing: 0.02em;
+  }
+  .brand-text .t2 b { color: var(--brand-2); }
+
+  .top-status { display: flex; align-items: center; gap: 14px; }
+  .status-pill {
+    display: flex; align-items: center; gap: 7px;
+    padding: 6px 12px; border-radius: 999px;
+    background: rgba(13,22,36,0.6);
+    border: 1px solid var(--border);
+    font-size: 11px; color: var(--text-muted);
+    backdrop-filter: blur(8px);
+  }
+  .status-pill .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--good);
+    box-shadow: 0 0 8px var(--good);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+  }
+  .status-pill b { color: var(--text); font-weight: 600; }
+  .clock {
+    font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+  .clock .label {
+    font-size: 9px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.15em;
+    margin-right: 6px;
+  }
+  .mockup-tag {
+    position: fixed; top: 12px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    font-size: 9px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.25em;
+    background: rgba(13,22,36,0.7);
+    border: 1px solid var(--border);
+    padding: 3px 12px; border-radius: 4px;
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+  }
+
+  /* ========= MAIN GRID ========= */
+  .layout {
+    position: fixed;
+    top: 56px; bottom: 14px; left: 14px; right: 14px;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: 1fr 1fr auto auto;
+    gap: 12px;
+    grid-template-areas:
+      "prod-card  prod-chart"
+      "cost-card  cost-chart"
+      "ai-bar     ai-bar"
+      "kpis       kpis";
+  }
+
+  /* ========= HERO CARDS ========= */
+  .hero-card {
+    border-radius: 16px;
+    padding: 18px 20px 16px;
+    display: flex; flex-direction: column;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-card.production {
+    grid-area: prod-card;
+    background: linear-gradient(165deg, rgba(13,22,36,0.96) 0%, rgba(7,16,27,0.96) 100%);
+    border: 1px solid var(--border-gold);
+    box-shadow: var(--shadow-card), var(--shadow-glow-gold);
+  }
+  .hero-card.production::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--gold-2) 0%, var(--good) 100%);
+  }
+  .hero-card.cost {
+    grid-area: cost-card;
+    background: linear-gradient(165deg, rgba(13,22,36,0.96) 0%, rgba(7,16,27,0.96) 100%);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-card), var(--shadow-glow-cyan);
+  }
+  .hero-card.cost::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--brand-2) 0%, var(--good) 100%);
+  }
+
+  .hero-eyebrow {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
+  }
+  .hero-label {
+    font-size: 14px; color: var(--text);
+    font-weight: 600; margin-top: 3px;
+    letter-spacing: 0.01em;
+  }
+
+  .now-block { margin-top: 12px; }
+  .now-lbl {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.15em;
+  }
+  .now-val {
+    display: flex; align-items: baseline; gap: 6px;
+    margin-top: 4px;
+  }
+  .now-val .num {
+    font-size: 38px; font-weight: 800; color: var(--text);
+    line-height: 1; font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .now-val .unit {
+    font-size: 12px; color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .pred-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 12px 0 10px;
+  }
+  .pred-lbl {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700;
+  }
+  .pred-lbl::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .production .pred-lbl { color: var(--gold-2); }
+  .production .pred-lbl::before { background: var(--gold-2); box-shadow: 0 0 6px var(--gold-2); }
+  .cost .pred-lbl { color: var(--brand-2); }
+  .cost .pred-lbl::before { background: var(--brand-2); box-shadow: 0 0 6px var(--brand-2); }
+
+  .pred-val {
+    display: flex; align-items: baseline; gap: 6px;
+    margin-top: 4px;
+  }
+  .pred-val .num {
+    font-size: 30px; font-weight: 800; color: var(--good);
+    line-height: 1; font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .pred-val .unit {
+    font-size: 12px; color: var(--text-muted);
+    font-weight: 500;
+  }
+  .pred-val .arrow {
+    font-size: 18px; color: var(--good); font-weight: 700;
+  }
+
+  .savings-pill {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(52,211,153,0.10), rgba(110,231,183,0.04));
+    border: 1px solid rgba(52,211,153,0.30);
+    border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .savings-pill .lbl {
+    font-size: 9px; color: var(--good-2);
+    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
+  }
+  .savings-pill .val {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ========= CHARTS ========= */
+  .chart-card {
+    border-radius: 16px;
+    padding: 14px 18px 10px;
+    display: flex; flex-direction: column;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    background: linear-gradient(165deg, rgba(13,22,36,0.94) 0%, rgba(7,16,27,0.96) 100%);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .chart-card.production-chart { grid-area: prod-chart; }
+  .chart-card.cost-chart { grid-area: cost-chart; }
+
+  .chart-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 4px;
+  }
+  .chart-title {
+    font-size: 15px; font-weight: 700; color: var(--text);
+    letter-spacing: 0.01em;
+  }
+  .chart-sub {
+    font-size: 10px; color: var(--text-muted); margin-top: 2px;
+    letter-spacing: 0.02em;
+  }
+  .chart-legend {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: var(--text-muted);
+  }
+  .legend-swatch {
+    width: 14px; height: 3px; border-radius: 2px;
+  }
+  .legend-swatch.actual-cyan { background: var(--brand-2); }
+  .legend-swatch.actual-gold { background: var(--gold-2); }
+  .legend-swatch.predicted {
+    background-image: linear-gradient(90deg, var(--good) 50%, transparent 50%);
+    background-size: 5px 100%;
+    background-repeat: repeat-x;
+    height: 3px;
+  }
+  .chart-svg-wrap { flex: 1; position: relative; min-height: 0; }
+  .chart-svg { width: 100%; height: 100%; display: block; }
+
+  .now-pill {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    background: var(--brand-2); color: #04070c;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 2px 7px; border-radius: 4px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 10px rgba(34,211,238,0.4);
+    pointer-events: none;
+    margin-top: -4px;
+  }
+  .now-pill.gold { background: var(--gold-2); box-shadow: 0 4px 10px rgba(251,191,36,0.4); }
+
+  .chart-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 4px;
+    font-size: 9px; color: var(--text-dim);
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+
+  /* ========= AI BAR ========= */
+  .ai-bar {
+    grid-area: ai-bar;
+    background: linear-gradient(135deg, rgba(34,211,238,0.10), rgba(52,211,153,0.04));
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 16px;
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+  }
+  .ai-bar::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: linear-gradient(180deg, var(--brand-2), var(--good));
+  }
+  .ai-bar-icon {
+    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--brand-2), var(--brand-deep));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 14px rgba(34,211,238,0.4);
+    position: relative;
+  }
+  .ai-bar-icon::after {
+    content: ""; position: absolute; inset: -4px; border-radius: 14px;
+    border: 1.5px solid rgba(34,211,238,0.35);
+    animation: aiRing 2.8s ease-out infinite;
+  }
+  @keyframes aiRing {
+    0% { transform: scale(0.9); opacity: 1; }
+    100% { transform: scale(1.45); opacity: 0; }
+  }
+  .ai-bar-icon svg { width: 20px; height: 20px; color: #04070c; }
+
+  .ai-bar-text { flex: 1; min-width: 0; }
+  .ai-bar-eyebrow {
+    font-size: 10px; color: var(--brand-2);
+    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .ai-bar-msg {
+    font-size: 14px; color: var(--text); font-weight: 500;
+    line-height: 1.45; letter-spacing: 0.005em;
+  }
+  .ai-bar-msg b { color: var(--good); font-weight: 700; }
+  .ai-bar-msg .gold { color: var(--gold-2); font-weight: 700; }
+  .ai-bar-msg .hi { color: var(--brand-3); font-weight: 600; }
+
+  .ai-bar-cta {
+    flex-shrink: 0;
+    padding: 9px 16px;
+    background: linear-gradient(135deg, var(--brand-2), var(--brand-deep));
+    color: #04070c;
+    border-radius: 8px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 12px rgba(34,211,238,0.3);
+    transition: all 0.2s ease;
+  }
+  .ai-bar-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(34,211,238,0.5);
+  }
+
+  /* ========= KPI ROW ========= */
+  .kpis {
+    grid-area: kpis;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .kpi-card {
+    background: linear-gradient(165deg, rgba(13,22,36,0.94) 0%, rgba(7,16,27,0.96) 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex; flex-direction: column;
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+  .kpi-card.good { border-color: rgba(52,211,153,0.30); }
+  .kpi-card.warn { border-color: rgba(251,191,36,0.30); }
+
+  .kpi-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .kpi-name {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600;
+  }
+  .kpi-status {
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .kpi-status.good { background: rgba(52,211,153,0.15); color: var(--good-2); }
+  .kpi-status.warn { background: rgba(251,191,36,0.15); color: var(--warn); }
+
+  .kpi-value {
+    display: flex; align-items: baseline; gap: 5px;
+    margin-top: 2px;
+  }
+  .kpi-value .num {
+    font-size: 24px; font-weight: 800; color: var(--text);
+    font-variant-numeric: tabular-nums; line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .kpi-value .unit {
+    font-size: 11px; color: var(--text-muted); font-weight: 500;
+  }
+  .kpi-msg {
+    font-size: 10px; color: var(--text-muted);
+    margin-top: 5px; line-height: 1.4;
+  }
+  .kpi-msg b { color: var(--text); font-weight: 600; }
+
+  @media (max-width: 1280px) {
+    .layout { grid-template-columns: 270px 1fr; }
+    .now-val .num { font-size: 32px; }
+    .pred-val .num { font-size: 26px; }
+    .ai-bar-msg { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="brand-block">
+    <div class="brand-mark">H</div>
+    <div class="brand-text">
+      <div class="t1">Hercules · Salalah</div>
+      <div class="t2">Mill <b>B</b> · Production & Cost Forecast</div>
+    </div>
+  </div>
+  <div class="top-status">
+    <div class="status-pill"><span class="dot"></span><span>Plant <b>RUNNING</b></span></div>
+    <div class="status-pill">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--brand-2)" stroke-width="3" stroke-linecap="round"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+      <span>Order <b>MILB4</b> · 7h 37m</span>
+    </div>
+    <div class="clock"><span class="label">UTC+4</span><span id="clock-val">14:32:08</span></div>
+  </div>
+</div>
+
+<div class="mockup-tag">Mockup v3 · Sample data · Forecasts are heuristic projections</div>
+
+<div class="layout">
+
+  <!-- ========= PRODUCTION HERO ========= -->
+  <div class="hero-card production">
+    <div class="hero-eyebrow">Today · headline</div>
+    <div class="hero-label">Production output · flour</div>
+
+    <div class="now-block">
+      <div class="now-lbl">So far today</div>
+      <div class="now-val">
+        <span class="num" id="prod-now">68.4</span>
+        <span class="unit">tons</span>
+      </div>
+    </div>
+
+    <div class="pred-divider"></div>
+
+    <div>
+      <div class="pred-lbl">AI forecast · end of day</div>
+      <div class="pred-val">
+        <span class="num">108</span>
+        <span class="unit">tons</span>
+        <span class="arrow">↑</span>
+      </div>
+    </div>
+
+    <div class="savings-pill">
+      <span class="lbl">vs plan (102 t)</span>
+      <span class="val">+6 tons</span>
+    </div>
+  </div>
+
+  <!-- ========= PRODUCTION CHART ========= -->
+  <div class="chart-card production-chart">
+    <div class="chart-head">
+      <div>
+        <div class="chart-title">Production output today (cumulative)</div>
+        <div class="chart-sub">Tons of flour produced. Solid line = actual so far. Dashed = AI forecast for the rest of the day.</div>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><span class="legend-swatch actual-gold"></span>Actual</div>
+        <div class="legend-item"><span class="legend-swatch predicted"></span>AI forecast</div>
+      </div>
+    </div>
+    <div class="chart-svg-wrap">
+      <svg class="chart-svg" id="prod-chart" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+      <div id="prod-now-pill" class="now-pill gold">NOW</div>
+    </div>
+    <div class="chart-footer">
+      <span>00:00</span><span>06:00</span><span>12:00</span>
+      <span style="color:var(--gold-2);">14:32</span>
+      <span>18:00</span><span>24:00</span>
+    </div>
+  </div>
+
+  <!-- ========= COST HERO ========= -->
+  <div class="hero-card cost">
+    <div class="hero-eyebrow">Today · efficiency</div>
+    <div class="hero-label">Energy cost per ton</div>
+
+    <div class="now-block">
+      <div class="now-lbl">Right now</div>
+      <div class="now-val">
+        <span class="num">1.42</span>
+        <span class="unit">OMR / ton</span>
+      </div>
+    </div>
+
+    <div class="pred-divider"></div>
+
+    <div>
+      <div class="pred-lbl">AI forecast · next shift</div>
+      <div class="pred-val">
+        <span class="num">1.31</span>
+        <span class="unit">OMR / ton</span>
+        <span class="arrow">↓</span>
+      </div>
+    </div>
+
+    <div class="savings-pill">
+      <span class="lbl">Estimated savings</span>
+      <span class="val">12 OMR / 8h</span>
+    </div>
+  </div>
+
+  <!-- ========= COST CHART ========= -->
+  <div class="chart-card cost-chart">
+    <div class="chart-head">
+      <div>
+        <div class="chart-title">Energy cost per ton — last 24h & forecast</div>
+        <div class="chart-sub">Computed from submeter kWh × tariff (0.025 OMR/kWh) ÷ flour produced.</div>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><span class="legend-swatch actual-cyan"></span>Actual</div>
+        <div class="legend-item"><span class="legend-swatch predicted"></span>AI forecast</div>
+      </div>
+    </div>
+    <div class="chart-svg-wrap">
+      <svg class="chart-svg" id="cost-chart" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+      <div id="cost-now-pill" class="now-pill">NOW</div>
+    </div>
+    <div class="chart-footer">
+      <span>−24h</span><span>−12h</span>
+      <span style="color:var(--brand-2);">Now</span>
+      <span>+6h</span><span>+12h</span>
+    </div>
+  </div>
+
+  <!-- ========= AI BAR ========= -->
+  <div class="ai-bar">
+    <div class="ai-bar-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/></svg>
+    </div>
+    <div class="ai-bar-text">
+      <div class="ai-bar-eyebrow">Hercules AI · in plain words</div>
+      <div class="ai-bar-msg">
+        On track for <span class="gold">108 tons</span> of flour today — <b>6 tons above plan</b>.
+        Energy cost per ton will ease <b>0.11 OMR ↓</b> overnight as ambient temperature drops.
+        <span class="hi">One thing to watch:</span> bearing on RS-3.
+      </div>
+    </div>
+    <button class="ai-bar-cta">Why?</button>
+  </div>
+
+  <!-- ========= KPI ROW ========= -->
+  <div class="kpis">
+    <div class="kpi-card good">
+      <div class="kpi-head">
+        <div class="kpi-name">Pace</div>
+        <div class="kpi-status good">On track</div>
+      </div>
+      <div class="kpi-value"><span class="num" id="kpi-pace">6.66</span><span class="unit">tons/hour</span></div>
+      <div class="kpi-msg">Plan <b>6.30</b>. Ahead by <b>5.7%</b>.</div>
+    </div>
+
+    <div class="kpi-card good">
+      <div class="kpi-head">
+        <div class="kpi-name">Yield</div>
+        <div class="kpi-status good">Excellent</div>
+      </div>
+      <div class="kpi-value"><span class="num">72.4</span><span class="unit">% flour</span></div>
+      <div class="kpi-msg">Best recent run: <b>73.5%</b>. Within 1 point.</div>
+    </div>
+
+    <div class="kpi-card warn">
+      <div class="kpi-head">
+        <div class="kpi-name">Energy</div>
+        <div class="kpi-status warn">Slightly high</div>
+      </div>
+      <div class="kpi-value"><span class="num">376</span><span class="unit">kW</span></div>
+      <div class="kpi-msg">SEC <b>56.7 kWh/t</b> — 2.6% below 7-day average.</div>
+    </div>
+
+    <div class="kpi-card warn">
+      <div class="kpi-head">
+        <div class="kpi-name">Maintenance</div>
+        <div class="kpi-status warn">1 watch</div>
+      </div>
+      <div class="kpi-value"><span class="num">96</span><span class="unit">% healthy</span></div>
+      <div class="kpi-msg">Bearing on <b>RS-3</b> — schedule inspection.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Clock
+  (function(){
+    const el = document.getElementById('clock-val');
+    function tick(){
+      const d = new Date();
+      el.textContent = String(d.getHours()).padStart(2,'0') + ':' +
+                       String(d.getMinutes()).padStart(2,'0') + ':' +
+                       String(d.getSeconds()).padStart(2,'0');
+    }
+    tick(); setInterval(tick, 1000);
+  })();
+
+  // SVG namespace
+  const NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs){
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  // ========= PRODUCTION CHART =========
+  // Cumulative tons by hour for today (0-24h). Actual up to NOW (hour ~14.5),
+  // dashed forecast continuing to hour 24 ending at 108t.
+  (function(){
+    const svg = document.getElementById('prod-chart');
+    const W = 800, H = 220;
+    const padL = 48, padR = 16, padT = 14, padB = 24;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+
+    // Sample cumulative production tons by hour 0..24 (mill stops Sundays/midnight, ramps from 06:00)
+    // Realistic: idle 00-06, production 06-22 at ~6.6 t/h with one stoppage
+    const HOURS = 24;
+    const NOW_H = 14.53; // 14:32
+    const cumActual = [];
+    let total = 0;
+    for (let h = 0; h <= HOURS; h++) {
+      let rate = 0;
+      if (h >= 6 && h < 11) rate = 6.5;        // morning shift
+      else if (h >= 11 && h < 12) rate = 3.2;  // brief slowdown
+      else if (h >= 12 && h < 14.5) rate = 7.0; // ramped back up
+      total += rate;
+      cumActual.push({ h, t: total });
+    }
+    // Actual up to NOW = ~68.4 (let's calibrate)
+    // Compute actual array sliced to NOW_H, interpolated final point
+    const actualPts = cumActual.filter(p => p.h <= Math.floor(NOW_H));
+    // interpolate at NOW_H
+    const before = cumActual[Math.floor(NOW_H)];
+    const after = cumActual[Math.floor(NOW_H) + 1];
+    const nowT = before.t + (after.t - before.t) * (NOW_H - Math.floor(NOW_H));
+    actualPts.push({ h: NOW_H, t: nowT });
+
+    // Forecast from NOW to 24h: continue at ~6.6 t/h, dropping to 0 at 22:00
+    const forecastPts = [{ h: NOW_H, t: nowT }];
+    for (let h = Math.ceil(NOW_H); h <= HOURS; h++) {
+      let rate = 0;
+      if (h <= 22) rate = 6.6;
+      const hStart = forecastPts[forecastPts.length - 1].h;
+      const dt = h - hStart;
+      forecastPts.push({ h, t: forecastPts[forecastPts.length - 1].t + rate * dt });
+    }
+
+    // y range: 0..120
+    const yMin = 0, yMax = 120;
+    const xAt = h => padL + (h / HOURS) * innerW;
+    const yAt = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
+
+    // gridlines + labels
+    [0, 30, 60, 90, 120].forEach(v => {
+      const y = yAt(v);
+      svg.appendChild(svgEl('line', { x1: padL, x2: W - padR, y1: y, y2: y,
+        stroke: 'rgba(34,211,238,0.07)', 'stroke-width': 1, 'shape-rendering': 'crispEdges' }));
+      const lbl = svgEl('text', { x: padL - 6, y: y + 3, 'text-anchor': 'end',
+        'font-size': 9, fill: '#4a5b70', 'font-variant-numeric': 'tabular-nums' });
+      lbl.textContent = v;
+      svg.appendChild(lbl);
+    });
+    const yTitle = svgEl('text', { x: padL - 32, y: padT + innerH / 2, 'text-anchor': 'middle',
+      'font-size': 9, fill: '#7b8fa6', 'letter-spacing': '0.1em',
+      transform: `rotate(-90 ${padL - 32} ${padT + innerH / 2})` });
+    yTitle.textContent = 'TONS';
+    svg.appendChild(yTitle);
+
+    // NOW vertical line
+    const nowX = xAt(NOW_H);
+    svg.appendChild(svgEl('line', { x1: nowX, x2: nowX, y1: padT, y2: padT + innerH,
+      stroke: 'rgba(251,191,36,0.5)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }));
+
+    // gradient for production fill
+    const defs = svgEl('defs', {});
+    defs.innerHTML = `
+      <linearGradient id="prodGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.45"/>
+        <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+      </linearGradient>
+    `;
+    svg.appendChild(defs);
+
+    // actual area
+    const actualLineD = actualPts.map((p, i) => (i === 0 ? 'M ' : ' L ') + xAt(p.h) + ' ' + yAt(p.t)).join('');
+    const actualArea = actualLineD + ` L ${nowX} ${padT + innerH} L ${xAt(0)} ${padT + innerH} Z`;
+    svg.appendChild(svgEl('path', { d: actualArea, fill: 'url(#prodGrad)', opacity: 0.6 }));
+
+    // actual line
+    svg.appendChild(svgEl('path', { d: actualLineD, fill: 'none',
+      stroke: '#fbbf24', 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      filter: 'drop-shadow(0 0 4px rgba(251,191,36,0.5))' }));
+
+    // forecast confidence band (widening)
+    const bandTopD = forecastPts.map((p, i) => (i === 0 ? 'M ' : ' L ') +
+      xAt(p.h) + ' ' + yAt(p.t * (1 + 0.015 * (p.h - NOW_H)) + 1)).join('');
+    let bandBotD = '';
+    for (let i = forecastPts.length - 1; i >= 0; i--) {
+      const p = forecastPts[i];
+      bandBotD += ` L ${xAt(p.h)} ${yAt(p.t * (1 - 0.015 * (p.h - NOW_H)) - 1)}`;
+    }
+    svg.appendChild(svgEl('path', { d: bandTopD + bandBotD + ' Z',
+      fill: 'rgba(52,211,153,0.10)', stroke: 'rgba(52,211,153,0.18)', 'stroke-width': 0.5 }));
+
+    // forecast line (dashed)
+    const forecastD = forecastPts.map((p, i) => (i === 0 ? 'M ' : ' L ') + xAt(p.h) + ' ' + yAt(p.t)).join('');
+    svg.appendChild(svgEl('path', { d: forecastD, fill: 'none',
+      stroke: '#34d399', 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      'stroke-dasharray': '6 5',
+      filter: 'drop-shadow(0 0 4px rgba(52,211,153,0.5))' }));
+
+    // end pill
+    const endP = forecastPts[forecastPts.length - 1];
+    const endX = xAt(endP.h), endY = yAt(endP.t);
+    svg.appendChild(svgEl('circle', { cx: endX, cy: endY, r: 5, fill: '#34d399',
+      stroke: '#04070c', 'stroke-width': 2 }));
+    const endLbl = svgEl('text', { x: endX - 8, y: endY - 8, 'text-anchor': 'end',
+      'font-size': 11, 'font-weight': 700, fill: '#34d399', 'font-variant-numeric': 'tabular-nums' });
+    endLbl.textContent = '108 t';
+    svg.appendChild(endLbl);
+
+    // now dot
+    svg.appendChild(svgEl('circle', { cx: nowX, cy: yAt(nowT), r: 5,
+      fill: '#fbbf24', stroke: '#04070c', 'stroke-width': 2 }));
+
+    // Position the NOW pill
+    function placePill(){
+      const wrap = svg.parentElement;
+      const rect = wrap.getBoundingClientRect();
+      const pill = document.getElementById('prod-now-pill');
+      pill.style.left = (nowX / W * rect.width) + 'px';
+      pill.style.top = (padT / H * rect.height) + 'px';
+    }
+    placePill();
+    window.addEventListener('resize', placePill);
+    setTimeout(placePill, 50);
+  })();
+
+  // ========= COST CHART =========
+  (function(){
+    const svg = document.getElementById('cost-chart');
+    const W = 800, H = 220;
+    const padL = 48, padR = 16, padT = 14, padB = 24;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+
+    // 24h actual + 12h forecast for OMR/ton (energy basis, ~1.4 OMR/t)
+    const NOW_INDEX = 23;
+    const TOTAL = 36;
+    const actual = [
+      1.45, 1.44, 1.43, 1.42, 1.41, 1.40,
+      1.41, 1.43, 1.48, 1.52, 1.55, 1.53,
+      1.50, 1.48, 1.46, 1.45, 1.44, 1.43,
+      1.42, 1.41, 1.40, 1.41, 1.42, 1.42
+    ];
+    const forecast = [
+      1.41, 1.39, 1.37, 1.34, 1.32, 1.31,
+      1.30, 1.30, 1.31, 1.32, 1.34, 1.36
+    ];
+    const band = forecast.map((_, i) => 0.02 + i * 0.004);
+
+    const yMin = 1.20, yMax = 1.65;
+    const xAt = i => padL + (i / (TOTAL - 1)) * innerW;
+    const yAt = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
+
+    [1.25, 1.35, 1.45, 1.55, 1.65].forEach(v => {
+      const y = yAt(v);
+      svg.appendChild(svgEl('line', { x1: padL, x2: W - padR, y1: y, y2: y,
+        stroke: 'rgba(34,211,238,0.07)', 'stroke-width': 1, 'shape-rendering': 'crispEdges' }));
+      const lbl = svgEl('text', { x: padL - 6, y: y + 3, 'text-anchor': 'end',
+        'font-size': 9, fill: '#4a5b70', 'font-variant-numeric': 'tabular-nums' });
+      lbl.textContent = v.toFixed(2);
+      svg.appendChild(lbl);
+    });
+    const yTitle = svgEl('text', { x: padL - 32, y: padT + innerH / 2, 'text-anchor': 'middle',
+      'font-size': 9, fill: '#7b8fa6', 'letter-spacing': '0.1em',
+      transform: `rotate(-90 ${padL - 32} ${padT + innerH / 2})` });
+    yTitle.textContent = 'OMR / TON';
+    svg.appendChild(yTitle);
+
+    const nowX = xAt(NOW_INDEX);
+    svg.appendChild(svgEl('line', { x1: nowX, x2: nowX, y1: padT, y2: padT + innerH,
+      stroke: 'rgba(34,211,238,0.5)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }));
+
+    // gradient
+    const defs = svgEl('defs', {});
+    defs.innerHTML = `
+      <linearGradient id="costGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.40"/>
+        <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+      </linearGradient>
+    `;
+    svg.appendChild(defs);
+
+    // band
+    let bandTop = `M ${xAt(NOW_INDEX)} ${yAt(actual[NOW_INDEX])}`;
+    forecast.forEach((v, i) => {
+      bandTop += ` L ${xAt(NOW_INDEX + 1 + i)} ${yAt(v + band[i])}`;
+    });
+    let bandBot = '';
+    for (let i = forecast.length - 1; i >= 0; i--) {
+      bandBot += ` L ${xAt(NOW_INDEX + 1 + i)} ${yAt(forecast[i] - band[i])}`;
+    }
+    bandBot += ` L ${xAt(NOW_INDEX)} ${yAt(actual[NOW_INDEX])} Z`;
+    svg.appendChild(svgEl('path', { d: bandTop + bandBot,
+      fill: 'rgba(52,211,153,0.10)', stroke: 'rgba(52,211,153,0.18)', 'stroke-width': 0.5 }));
+
+    // actual area
+    let actualLine = '';
+    actual.forEach((v, i) => {
+      actualLine += (i === 0 ? 'M ' : ' L ') + xAt(i) + ' ' + yAt(v);
+    });
+    svg.appendChild(svgEl('path', { d: actualLine + ` L ${nowX} ${padT + innerH} L ${xAt(0)} ${padT + innerH} Z`,
+      fill: 'url(#costGrad)', opacity: 0.5 }));
+
+    // actual line
+    svg.appendChild(svgEl('path', { d: actualLine, fill: 'none',
+      stroke: '#22d3ee', 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      filter: 'drop-shadow(0 0 4px rgba(34,211,238,0.5))' }));
+
+    // forecast line
+    let forecastLine = `M ${nowX} ${yAt(actual[NOW_INDEX])}`;
+    forecast.forEach((v, i) => {
+      forecastLine += ` L ${xAt(NOW_INDEX + 1 + i)} ${yAt(v)}`;
+    });
+    svg.appendChild(svgEl('path', { d: forecastLine, fill: 'none',
+      stroke: '#34d399', 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      'stroke-dasharray': '6 5', filter: 'drop-shadow(0 0 4px rgba(52,211,153,0.5))' }));
+
+    // end pill
+    const endX = xAt(TOTAL - 1);
+    const endY = yAt(forecast[forecast.length - 1]);
+    svg.appendChild(svgEl('circle', { cx: endX, cy: endY, r: 5, fill: '#34d399',
+      stroke: '#04070c', 'stroke-width': 2 }));
+    const endLbl = svgEl('text', { x: endX - 8, y: endY - 8, 'text-anchor': 'end',
+      'font-size': 11, 'font-weight': 700, fill: '#34d399', 'font-variant-numeric': 'tabular-nums' });
+    endLbl.textContent = '1.31 OMR';
+    svg.appendChild(endLbl);
+
+    svg.appendChild(svgEl('circle', { cx: nowX, cy: yAt(actual[NOW_INDEX]), r: 5,
+      fill: '#22d3ee', stroke: '#04070c', 'stroke-width': 2 }));
+
+    function placePill(){
+      const wrap = svg.parentElement;
+      const rect = wrap.getBoundingClientRect();
+      const pill = document.getElementById('cost-now-pill');
+      pill.style.left = (nowX / W * rect.width) + 'px';
+      pill.style.top = (padT / H * rect.height) + 'px';
+    }
+    placePill();
+    window.addEventListener('resize', placePill);
+    setTimeout(placePill, 50);
+  })();
+
+  // tiny live updates
+  setInterval(() => {
+    const p = document.getElementById('prod-now');
+    if (p) p.textContent = (68.2 + Math.random() * 0.5).toFixed(1);
+    const k = document.getElementById('kpi-pace');
+    if (k) k.textContent = (6.5 + Math.random() * 0.4).toFixed(2);
+  }, 2200);
+</script>
+
+</body>
+</html>
