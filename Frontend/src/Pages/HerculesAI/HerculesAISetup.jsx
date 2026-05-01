@@ -22,19 +22,20 @@ import OnboardingModal from './components/OnboardingModal';
 // Plan 14 — single-page dashboard (feature-flagged; default off until commit 11)
 import HerculesAIDashboard from './dashboard/HerculesAIDashboard';
 
-// Plan 14 dashboard flag — TEMPORARILY ROLLED BACK to default OFF after the
-// 2026-05-01 cutover surfaced two crashes (useTimePeriod arg shape mismatch +
-// AssetDrawer prop names). Bugs fixed in same commit; flag stays default-off
-// until those fixes are verified live, then a follow-up commit flips it back.
+// Plan 14 dashboard flag — DEFAULT IS ON (re-flipped after 2026-05-01 fixes
+// for the useTimePeriod arg-shape mismatch + AssetDrawer prop names).
 //
-// Opt in early via DevTools console:
-//   localStorage.setItem('hercules.dashboard.v2', '1');  // force new dashboard
-//   localStorage.removeItem('hercules.dashboard.v2');    // back to default (legacy)
+// Customer escape hatch — back to legacy chip-tab view via DevTools console:
+//   localStorage.setItem('hercules.dashboard.v2', '0');  // force legacy
+//   localStorage.removeItem('hercules.dashboard.v2');    // back to default (new)
 function _readDashboardV2Flag() {
   try {
-    return typeof window !== 'undefined' && localStorage.getItem('hercules.dashboard.v2') === '1';
+    if (typeof window === 'undefined') return true;
+    const v = localStorage.getItem('hercules.dashboard.v2');
+    if (v === '0') return false;
+    return true;
   } catch {
-    return false;
+    return true;
   }
 }
 
