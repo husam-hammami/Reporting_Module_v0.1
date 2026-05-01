@@ -22,18 +22,19 @@ import OnboardingModal from './components/OnboardingModal';
 // Plan 14 — single-page dashboard (feature-flagged; default off until commit 11)
 import HerculesAIDashboard from './dashboard/HerculesAIDashboard';
 
-// Plan 14 dashboard flag — DEFAULT IS NOW ON.
-// Customer escape hatch (revert to legacy chip-based view) via DevTools console:
-//   localStorage.setItem('hercules.dashboard.v2', '0');  // force legacy
-//   localStorage.removeItem('hercules.dashboard.v2');    // back to default (new dashboard)
+// Plan 14 dashboard flag — TEMPORARILY ROLLED BACK to default OFF after the
+// 2026-05-01 cutover surfaced two crashes (useTimePeriod arg shape mismatch +
+// AssetDrawer prop names). Bugs fixed in same commit; flag stays default-off
+// until those fixes are verified live, then a follow-up commit flips it back.
+//
+// Opt in early via DevTools console:
+//   localStorage.setItem('hercules.dashboard.v2', '1');  // force new dashboard
+//   localStorage.removeItem('hercules.dashboard.v2');    // back to default (legacy)
 function _readDashboardV2Flag() {
   try {
-    if (typeof window === 'undefined') return true;
-    const v = localStorage.getItem('hercules.dashboard.v2');
-    if (v === '0') return false;   // explicit opt-out for users who want legacy
-    return true;                    // everyone else gets the new bento
+    return typeof window !== 'undefined' && localStorage.getItem('hercules.dashboard.v2') === '1';
   } catch {
-    return true;
+    return false;
   }
 }
 

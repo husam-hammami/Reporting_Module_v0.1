@@ -75,8 +75,11 @@ const emptyBox: CSSProperties = {
 };
 
 export default function TimeDrawer({ open, onClose }: Props) {
+  // useTimePeriod signature: (initialTab = 'live', shiftsConfig = null) —
+  // positional args, NOT an options object. Passing an object corrupts the
+  // reducer's initial state and crashed the dashboard on 2026-05-01 cutover.
   const { state: timePeriod, actions: tpActions, dateRange } =
-    useTimePeriod({ initialTab: 'yesterday' });
+    useTimePeriod('yesterday');
   const [analyzing, setAnalyzing] = useState(false);
   const [insightsResult, setInsightsResult] = useState<any>(null);
   const [insightsError, setInsightsError] = useState<string>('');

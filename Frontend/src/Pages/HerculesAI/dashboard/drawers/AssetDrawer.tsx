@@ -51,29 +51,26 @@ export default function AssetDrawer({ open, onClose, asset, payload }: Props) {
 
       {assetData && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* SEC */}
-          {assetData.sec_available && (
+          {/* SEC — Phase 1 SecCard takes `summary` (NOT `secData`/`asset`). */}
+          {assetData.sec_available && assetData.sec && (
             <>
               <div style={sectionLabel}>Energy efficiency</div>
-              {/* @ts-expect-error — Phase 1 component is JS, takes asset prop */}
-              <SecCard asset={asset} secData={assetData.sec} />
+              <SecCard summary={assetData.sec} />
             </>
           )}
 
-          {/* PF */}
+          {/* PF — Phase 1 PfPenaltyCard takes `status` (NOT `pfData`/`asset`). */}
           {assetData.pf && (
             <>
               <div style={sectionLabel}>Power factor</div>
-              {/* @ts-expect-error — Phase 1 component is JS */}
-              <PfPenaltyCard asset={asset} pfData={assetData.pf} />
+              <PfPenaltyCard status={assetData.pf} />
             </>
           )}
 
-          {/* Shift pace */}
+          {/* Shift pace — PacingRing takes `pace` (this one was correct). */}
           {pace && (
             <>
               <div style={sectionLabel}>Today's pace</div>
-              {/* @ts-expect-error — Phase 1 component is JS */}
               <PacingRing pace={pace} />
             </>
           )}
