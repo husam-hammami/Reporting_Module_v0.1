@@ -1,53 +1,54 @@
 /**
- * Energy cost per ton hero — current OMR/t + AI next-shift forecast + savings.
+ * Energy cost per ton hero — horizontal flow: NOW → AI next-shift forecast.
+ * Savings is rendered as a pill badge in the header row.
  */
 
 export default function EnergyCostHero({ data, t }) {
-  const arrow = data.predicted_next_shift_omr_per_t < data.current_omr_per_t ? '↓' : '↑';
+  const willImprove = data.predicted_next_shift_omr_per_t < data.current_omr_per_t;
+  const hasSavings = typeof data.savings_omr_8h === 'number';
 
   return (
     <section
       className="atlas-hero atlas-hero--cost"
       aria-label={t('atlas.cost.aria')}
-      style={{ padding: '22px 24px 20px' }}
     >
-      <div className="atlas-hero__eyebrow">{t('atlas.cost.eyebrow')}</div>
-      <div className="atlas-hero__label">{t('atlas.cost.label')}</div>
-
-      <div className="atlas-hero__now" style={{ marginTop: '20px' }}>
-        <div className="atlas-hero__now-lbl">{t('atlas.cost.rightNow')}</div>
-        <div className="atlas-hero__value atlas-hero__value--now" style={{ marginTop: '8px' }}>
-          <span className="atlas-hero__num atlas-num">
-            {Number(data.current_omr_per_t).toFixed(2)}
-          </span>
-          <span className="atlas-hero__unit">{t('atlas.unit.omrPerTon')}</span>
+      <header className="atlas-hero__head">
+        <div className="atlas-hero__eyebrow-row">
+          <span className="atlas-hero__eyebrow">{t('atlas.cost.eyebrow')}</span>
+          {hasSavings && (
+            <span className={`atlas-hero__badge atlas-hero__badge--${willImprove ? 'good' : 'warn'}`}>
+              <span className="atlas-num">{`-${data.savings_omr_8h}`}</span>
+              <span className="atlas-hero__badge-unit">{t('atlas.unit.omr')}</span>
+              <span className="atlas-hero__badge-sub">{t('atlas.cost.savingsShort')}</span>
+            </span>
+          )}
         </div>
-      </div>
-
-      <div className="atlas-hero__divider" style={{ margin: '20px 0 18px' }} />
+        <h2 className="atlas-hero__label">{t('atlas.cost.label')}</h2>
+      </header>
 
       <div
-        className="atlas-hero__pred-lbl"
-        style={{ flexWrap: 'wrap', lineHeight: 1.3, whiteSpace: 'normal', overflowWrap: 'anywhere' }}
+        className={`atlas-hero__flow atlas-hero__flow--${willImprove ? 'down' : 'up'}`}
       >
-        {t('atlas.cost.nextShiftForecast')}
-      </div>
-      <div className="atlas-hero__value atlas-hero__value--pred" style={{ marginTop: '8px' }}>
-        <span className="atlas-hero__num atlas-num">
-          {Number(data.predicted_next_shift_omr_per_t).toFixed(2)}
-        </span>
-        <span className="atlas-hero__unit">{t('atlas.unit.omrPerTon')}</span>
-        <span className="atlas-hero__arrow" aria-hidden="true">{arrow}</span>
-      </div>
-
-      {typeof data.savings_omr_8h === 'number' && (
-        <div className="atlas-hero__pill">
-          <span className="atlas-hero__pill-lbl">{t('atlas.cost.savings')}</span>
-          <span className="atlas-hero__pill-val atlas-num">
-            {`${data.savings_omr_8h} ${t('atlas.unit.omrPer8h')}`}
+        <div className="atlas-hero__flow-block atlas-hero__flow-block--now">
+          <span className="atlas-hero__flow-lbl">{t('atlas.cost.now')}</span>
+          <span className="atlas-hero__flow-num atlas-num">
+            {Number(data.current_omr_per_t).toFixed(2)}
           </span>
+          <span className="atlas-hero__flow-unit">{t('atlas.unit.omrPerTon')}</span>
         </div>
-      )}
+
+        <div className="atlas-hero__flow-arrow" aria-hidden="true">
+          <span className="atlas-hero__flow-arrow-pulse" />
+        </div>
+
+        <div className="atlas-hero__flow-block atlas-hero__flow-block--pred">
+          <span className="atlas-hero__flow-lbl">{t('atlas.cost.nextShift')}</span>
+          <span className="atlas-hero__flow-num atlas-num">
+            {Number(data.predicted_next_shift_omr_per_t).toFixed(2)}
+          </span>
+          <span className="atlas-hero__flow-unit">{t('atlas.unit.omrPerTon')}</span>
+        </div>
+      </div>
     </section>
   );
 }
