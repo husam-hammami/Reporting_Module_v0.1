@@ -52,7 +52,7 @@ export default function EnergyCostChart({ series }) {
           pointRadius: 0,
           fill: '+1',
           order: 4,
-          tension: 0.25,
+          tension: 0.3,
         },
         {
           label: 'forecast-lo',
@@ -62,7 +62,7 @@ export default function EnergyCostChart({ series }) {
           pointRadius: 0,
           fill: false,
           order: 3,
-          tension: 0.25,
+          tension: 0.3,
         },
         {
           label: 'Forecast',
@@ -75,7 +75,7 @@ export default function EnergyCostChart({ series }) {
           pointBackgroundColor: okClr,
           pointBorderColor: surface,
           pointBorderWidth: 2,
-          tension: 0.25,
+          tension: 0.3,
           order: 2,
         },
         {
@@ -88,7 +88,7 @@ export default function EnergyCostChart({ series }) {
           pointBackgroundColor: infoClr,
           pointBorderColor: surface,
           pointBorderWidth: 2,
-          tension: 0.25,
+          tension: 0.3,
           order: 1,
         },
       ],

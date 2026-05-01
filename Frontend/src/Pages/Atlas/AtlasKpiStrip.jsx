@@ -30,9 +30,9 @@ function formatValue(value, precision) {
 
 export default function AtlasKpiStrip({ kpis }) {
   return (
-    <div className="atlas-kpis" role="list">
+    <div className="atlas-kpis" role="list" style={{ gap: '18px' }}>
       {kpis.map((kpi) => (
-        <div key={kpi.key} className="atlas-kpi-card" role="listitem">
+        <div key={kpi.key} className="atlas-kpi-card" role="listitem" style={{ padding: '16px 18px' }}>
           <div className="atlas-kpi-head">
             <div className="atlas-kpi-name">{kpi.label}</div>
             <div className={`atlas-kpi-status atlas-kpi-status--${kpi.status}`}>

@@ -9,13 +9,14 @@ export default function EnergyCostHero({ data, t }) {
     <section
       className="atlas-hero atlas-hero--cost"
       aria-label={t('atlas.cost.aria')}
+      style={{ padding: '22px 24px 20px' }}
     >
       <div className="atlas-hero__eyebrow">{t('atlas.cost.eyebrow')}</div>
       <div className="atlas-hero__label">{t('atlas.cost.label')}</div>
 
-      <div className="atlas-hero__now">
+      <div className="atlas-hero__now" style={{ marginTop: '20px' }}>
         <div className="atlas-hero__now-lbl">{t('atlas.cost.rightNow')}</div>
-        <div className="atlas-hero__value atlas-hero__value--now">
+        <div className="atlas-hero__value atlas-hero__value--now" style={{ marginTop: '8px' }}>
           <span className="atlas-hero__num atlas-num">
             {Number(data.current_omr_per_t).toFixed(2)}
           </span>
@@ -23,10 +24,10 @@ export default function EnergyCostHero({ data, t }) {
         </div>
       </div>
 
-      <div className="atlas-hero__divider" />
+      <div className="atlas-hero__divider" style={{ margin: '20px 0 18px' }} />
 
       <div className="atlas-hero__pred-lbl">{t('atlas.cost.nextShiftForecast')}</div>
-      <div className="atlas-hero__value atlas-hero__value--pred">
+      <div className="atlas-hero__value atlas-hero__value--pred" style={{ marginTop: '8px' }}>
         <span className="atlas-hero__num atlas-num">
           {Number(data.predicted_next_shift_omr_per_t).toFixed(2)}
         </span>
