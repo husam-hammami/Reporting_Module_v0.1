@@ -961,9 +961,332 @@
     font-size: 22px;
   }
 
+  /* ===== TAB PANES ===== */
+  .tab-pane { display: none; flex-direction: column; gap: 14px; flex: 1; }
+  .tab-pane.active { display: flex; }
+  .tab-bar { display: none; }
+  .tab-bar.active { display: flex; }
+
+  /* ===== PRODUCTION TAB ===== */
+  .row-prod-1 { grid-template-columns: 1.4fr 1.5fr 1.05fr; }
+  .row-prod-2 { grid-template-columns: repeat(6, 1fr); gap: 11px; }
+  .row-prod-3 { grid-template-columns: 1fr 1.2fr 1fr; }
+
+  .prod-now { padding: 14px 16px; min-height: 210px; display: flex; flex-direction: column; }
+  .on-track-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 4px 11px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    border-radius: 999px;
+    color: var(--green);
+    font-size: 10.5px;
+    font-weight: 700;
+    align-self: flex-start;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .on-track-pill .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 1.6s infinite;
+  }
+  .prod-now-headline {
+    font-size: 14px; font-weight: 600; color: #fff;
+    margin-top: 10px;
+  }
+  .prod-now-sub {
+    font-size: 11.5px; color: var(--text-muted);
+    margin-top: 3px;
+  }
+  .prod-rings {
+    display: flex; gap: 22px;
+    align-items: center; justify-content: center;
+    margin-top: 14px;
+    flex: 1;
+  }
+  .prod-ring-col { display: flex; flex-direction: column; align-items: center; }
+  .prod-ring {
+    width: 92px; height: 92px;
+    position: relative;
+  }
+  .prod-ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .prod-ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 7; }
+  .prod-ring-fg { fill: none; stroke-width: 7; stroke-linecap: round; }
+  .prod-ring-fg.green { stroke: var(--green); filter: drop-shadow(0 0 4px rgba(16,185,129,0.5)); }
+  .prod-ring-fg.cyan { stroke: var(--cyan-bright); filter: drop-shadow(0 0 4px rgba(34,211,238,0.5)); }
+  .prod-ring-num {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    line-height: 1;
+  }
+  .prod-ring-num .v {
+    font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .prod-ring-num .u { font-size: 9.5px; color: var(--text-muted); margin-top: 3px; }
+  .prod-ring-cap {
+    text-align: center; font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-weight: 500;
+  }
+  .prod-ring-cap.green { color: var(--green); }
+  .prod-ring-cap.cyan { color: var(--cyan-bright); }
+  .prod-now-foot {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-top: 10px;
+  }
+
+  .forecast-card { padding: 14px 16px; min-height: 210px; display: flex; flex-direction: column; }
+  .forecast-title { font-size: 12.5px; font-weight: 600; color: #fff; }
+  .forecast-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; margin-bottom: 6px; }
+  .forecast-chart { width: 100%; flex: 1; min-height: 140px; }
+  .forecast-legend {
+    display: flex; gap: 14px;
+    font-size: 10px; color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .forecast-legend-item { display: inline-flex; align-items: center; gap: 5px; }
+  .forecast-legend-line {
+    width: 14px; height: 2px; border-radius: 2px;
+  }
+  .forecast-legend-line.solid { background: var(--cyan-bright); }
+  .forecast-legend-line.dashed {
+    background: linear-gradient(90deg, var(--green) 50%, transparent 50%);
+    background-size: 5px 2px;
+  }
+
+  .prod-target { padding: 14px 16px; min-height: 210px; display: flex; flex-direction: column; }
+  .prod-target .big {
+    font-size: 36px; font-weight: 800;
+    color: var(--green);
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  .prod-target .big .u { font-size: 14px; font-weight: 500; color: var(--text-muted); margin-left: 4px; }
+  .prod-target-mini {
+    width: 60px; height: 60px;
+    margin-top: 12px;
+    position: relative;
+  }
+  .prod-target-mini-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .prod-target-mini-num {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff;
+  }
+  .prod-target-row {
+    display: flex; justify-content: space-between;
+    font-size: 11px;
+    margin-top: 12px;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .prod-target-row:last-child { border-bottom: none; }
+  .prod-target-row .l { color: var(--text-muted); }
+  .prod-target-row .v { color: #fff; font-weight: 600; }
+  .prod-target-row .v.green { color: var(--green); }
+  .prod-target-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    margin-top: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .prod-target-bar-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--green), #34d399);
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(16,185,129,0.5);
+  }
+
+  /* Live production strip */
+  .metric-card {
+    padding: 11px 13px;
+    border-radius: 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 4px;
+    position: relative;
+    transition: border-color 0.18s, transform 0.18s;
+  }
+  .metric-card:hover { border-color: var(--border-strong); }
+  .metric-icon-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  .metric-icon {
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.25);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--cyan-bright);
+  }
+  .metric-card.amber .metric-icon { background: rgba(245, 158, 11, 0.1); border-color: rgba(245,158,11,0.3); color: var(--amber); }
+  .metric-card.green .metric-icon { background: rgba(16, 185, 129, 0.1); border-color: rgba(16,185,129,0.3); color: var(--green); }
+  .metric-card.red .metric-icon { background: rgba(239, 68, 68, 0.1); border-color: rgba(239,68,68,0.3); color: var(--red); }
+  .metric-trend {
+    font-size: 9.5px; color: var(--green); font-weight: 600;
+    display: inline-flex; align-items: center; gap: 2px;
+  }
+  .metric-trend.down { color: var(--red); }
+  .metric-label {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+  .metric-value {
+    font-size: 20px; font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    display: flex; align-items: baseline; gap: 4px;
+  }
+  .metric-value .u { font-size: 10.5px; color: var(--text-muted); font-weight: 500; }
+
+  /* Donut */
+  .donut-card { padding: 12px 14px; min-height: 175px; }
+  .donut-wrap { display: flex; gap: 14px; align-items: center; margin-top: 6px; }
+  .donut-svg { width: 110px; height: 110px; flex-shrink: 0; }
+  .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 8px; font-size: 11px; min-width: 0; }
+  .donut-row { display: flex; justify-content: space-between; align-items: center; }
+  .donut-name { display: inline-flex; align-items: center; gap: 7px; color: var(--text-secondary); }
+  .donut-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .donut-pct { font-weight: 700; color: #fff; font-size: 12px; }
+
+  /* Energy chart */
+  .energy-card { padding: 12px 14px; min-height: 175px; display: flex; flex-direction: column; }
+  .energy-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; margin-bottom: 6px; }
+  .energy-chart { width: 100%; flex: 1; min-height: 80px; }
+  .energy-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 6px; margin-top: 6px; padding-top: 7px;
+    border-top: 1px solid var(--border);
+  }
+  .energy-stat-label { font-size: 9px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+  .energy-stat-value { font-size: 11.5px; color: #fff; font-weight: 600; margin-top: 2px; }
+
+  /* Enablers list */
+  .enabler-card { padding: 12px 14px; min-height: 175px; }
+  .enabler-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .enabler-row:last-child { border-bottom: none; }
+  .enabler-info { flex: 1; min-width: 0; }
+  .enabler-name { font-size: 11.5px; font-weight: 500; color: var(--text-secondary); }
+  .enabler-desc { font-size: 9.5px; color: var(--text-faint); margin-top: 1px; }
+  .enabler-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 9px; border-radius: 999px;
+    font-size: 9.5px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .enabler-pill .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    box-shadow: 0 0 5px currentColor;
+  }
+  .enabler-pill.ok { color: var(--green); background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); }
+  .enabler-pill.ok .dot { background: var(--green); }
+  .enabler-pill.warn { color: var(--amber); background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); }
+  .enabler-pill.warn .dot { background: var(--amber); }
+
+  /* ===== ASK ATLAS CHAT BAR ===== */
+  .ask-bar {
+    align-items: center;
+    gap: 14px;
+    padding: 11px 22px;
+    background: linear-gradient(180deg, rgba(14, 165, 233, 0.06), rgba(14, 165, 233, 0.02));
+    border-top: 1px solid rgba(34, 211, 238, 0.28);
+    box-shadow: 0 -1px 14px rgba(34, 211, 238, 0.1);
+  }
+  .ask-input-wrap {
+    flex: 1;
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(34, 211, 238, 0.22);
+    border-radius: 999px;
+    padding: 7px 6px 7px 18px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .ask-input-wrap:focus-within {
+    border-color: rgba(34, 211, 238, 0.55);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+  }
+  .ask-input {
+    flex: 1;
+    background: transparent;
+    border: none; outline: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12.5px;
+  }
+  .ask-input::placeholder { color: var(--text-muted); }
+  .ask-send {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--cyan), var(--teal));
+    color: white;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 10px rgba(14, 165, 233, 0.4);
+    flex-shrink: 0;
+    transition: transform 0.12s;
+  }
+  .ask-send:hover { transform: scale(1.06); }
+  .ask-chips { display: flex; gap: 6px; }
+  .ask-chip {
+    padding: 5px 11px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .ask-chip:hover { color: var(--cyan-bright); border-color: rgba(34,211,238,0.3); background: rgba(34,211,238,0.05); }
+
+  /* ===== YIELD PLACEHOLDER ===== */
+  .placeholder-card {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 14px;
+    padding: 80px 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .placeholder-card .ph-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: rgba(34, 211, 238, 0.06);
+    border: 1px solid rgba(34, 211, 238, 0.18);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--cyan-bright);
+  }
+  .placeholder-card .ph-title { font-size: 15px; font-weight: 600; color: var(--text-secondary); }
+  .placeholder-card .ph-sub { font-size: 12px; color: var(--text-muted); max-width: 380px; }
+
   @media (max-width: 1280px) {
     .row-1, .row-3 { grid-template-columns: 1fr 1fr; }
     .row-2 { grid-template-columns: 1fr 1fr; }
+    .row-prod-1 { grid-template-columns: 1fr 1fr; }
+    .row-prod-2 { grid-template-columns: repeat(3, 1fr); }
+    .row-prod-3 { grid-template-columns: 1fr 1fr; }
   }
 </style>
 </head>
@@ -1066,9 +1389,9 @@
         <span class="live-pill"><span class="dot"></span>LIVE</span>
       </div>
       <div class="top-tabs">
-        <div class="top-tab">Production</div>
-        <div class="top-tab active">Predictive Maintenance</div>
-        <div class="top-tab">Yield Optimization</div>
+        <div class="top-tab active" data-tab="production">Production</div>
+        <div class="top-tab" data-tab="pdm">Predictive Maintenance</div>
+        <div class="top-tab" data-tab="yield">Yield Optimization</div>
       </div>
       <div class="topbar-right">
         <div class="icon-btn">
@@ -1085,11 +1408,261 @@
     <!-- CONTENT -->
     <div class="content">
 
-      <!-- ROW 1 -->
-      <div class="row row-1">
-        <!-- HEALTH SCORE -->
-        <div class="card health-card">
-          <div class="card-label">Health Now</div>
+      <!-- ============ PRODUCTION TAB ============ -->
+      <div class="tab-pane active" id="tab-production">
+
+        <!-- ROW 1 -->
+        <div class="row row-prod-1">
+          <!-- HOW'S PRODUCTION NOW -->
+          <div class="card prod-now">
+            <span class="on-track-pill"><span class="dot"></span>On track</span>
+            <div class="prod-now-headline">You are producing as expected. Keep it up!</div>
+            <div class="prod-now-sub">on target at 108 tons</div>
+            <div class="prod-rings">
+              <div class="prod-ring-col">
+                <div class="prod-ring">
+                  <svg class="prod-ring-svg" viewBox="0 0 100 100">
+                    <circle class="prod-ring-bg" cx="50" cy="50" r="42"/>
+                    <circle class="prod-ring-fg green" cx="50" cy="50" r="42"
+                            stroke-dasharray="263.9" stroke-dashoffset="98.5"/>
+                  </svg>
+                  <div class="prod-ring-num"><div class="v">68.4</div><div class="u">tons</div></div>
+                </div>
+                <div class="prod-ring-cap green">Produced now</div>
+              </div>
+              <div class="prod-ring-col">
+                <div class="prod-ring">
+                  <svg class="prod-ring-svg" viewBox="0 0 100 100">
+                    <circle class="prod-ring-bg" cx="50" cy="50" r="42"/>
+                    <circle class="prod-ring-fg cyan" cx="50" cy="50" r="42"
+                            stroke-dasharray="263.9" stroke-dashoffset="0"/>
+                  </svg>
+                  <div class="prod-ring-num"><div class="v">108</div><div class="u">tons</div></div>
+                </div>
+                <div class="prod-ring-cap cyan">Forecast end of day</div>
+              </div>
+            </div>
+            <div class="prod-now-foot">As of 10:24 AM</div>
+          </div>
+
+          <!-- AI FORECAST -->
+          <div class="card forecast-card">
+            <div class="forecast-title">AI forecast by end of day</div>
+            <div class="forecast-sub">Cumulative production · actual vs AI projection</div>
+            <svg class="forecast-chart" id="forecastChart" viewBox="0 0 400 150" preserveAspectRatio="none"></svg>
+            <div class="forecast-legend">
+              <span class="forecast-legend-item"><span class="forecast-legend-line solid"></span>Actual</span>
+              <span class="forecast-legend-item"><span class="forecast-legend-line dashed"></span>AI forecast</span>
+              <span class="forecast-legend-item" style="margin-left: auto;">0 — 24h · tons</span>
+            </div>
+          </div>
+
+          <!-- PRODUCTION TARGET -->
+          <div class="card prod-target">
+            <div class="card-label">Production Target</div>
+            <div class="big">108<span class="u">tons</span></div>
+            <div class="prod-target-row">
+              <span class="l">Produced</span>
+              <span class="v green">68.4 tons</span>
+            </div>
+            <div class="prod-target-row">
+              <span class="l">To go</span>
+              <span class="v">39.6 tons</span>
+            </div>
+            <div class="prod-target-bar">
+              <div class="prod-target-bar-fill" style="width: 63%;"></div>
+            </div>
+            <div class="prod-target-row" style="border: none; padding-top: 8px;">
+              <span class="l">Progress</span>
+              <span class="v green">63% · on pace</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 2 — LIVE PRODUCTION STRIP -->
+        <div class="row row-prod-2">
+          <div class="metric-card">
+            <div class="metric-icon-row">
+              <div class="metric-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c2 4 4 6 4 10a4 4 0 0 1-8 0c0-4 2-6 4-10z"/></svg>
+              </div>
+              <span class="metric-trend">▲ 2.1%</span>
+            </div>
+            <div class="metric-label">Flour output</div>
+            <div class="metric-value">6.64 <span class="u">t/h</span></div>
+          </div>
+
+          <div class="metric-card amber">
+            <div class="metric-icon-row">
+              <div class="metric-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+              </div>
+              <span class="metric-trend">▲ 0.4%</span>
+            </div>
+            <div class="metric-label">Bran output</div>
+            <div class="metric-value">1.57 <span class="u">t/h</span></div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon-row">
+              <div class="metric-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+              </div>
+              <span class="metric-trend">▲ 1.8%</span>
+            </div>
+            <div class="metric-label">Total wheat in</div>
+            <div class="metric-value">8.40 <span class="u">t/h</span></div>
+          </div>
+
+          <div class="metric-card green">
+            <div class="metric-icon-row">
+              <div class="metric-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z M9 12l2 2 4-4"/></svg>
+              </div>
+              <span class="metric-trend">▲ 0.3%</span>
+            </div>
+            <div class="metric-label">Flour extraction</div>
+            <div class="metric-value">79.1<span class="u">%</span></div>
+          </div>
+
+          <div class="metric-card amber">
+            <div class="metric-icon-row">
+              <div class="metric-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>
+              </div>
+              <span class="metric-trend">▼ 0.2%</span>
+            </div>
+            <div class="metric-label">Bran split</div>
+            <div class="metric-value">18.7<span class="u">%</span></div>
+          </div>
+
+          <div class="metric-card red">
+            <div class="metric-icon-row">
+              <div class="metric-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5 M12 5l-7 7 7 7"/></svg>
+              </div>
+              <span class="metric-trend down">▲ 0.1%</span>
+            </div>
+            <div class="metric-label">Loss</div>
+            <div class="metric-value">2.3<span class="u">%</span></div>
+          </div>
+        </div>
+
+        <!-- ROW 3 -->
+        <div class="row row-prod-3">
+          <!-- DONUT -->
+          <div class="card donut-card">
+            <div class="row3-title">Production breakdown</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Where your wheat goes</div>
+            <div class="donut-wrap">
+              <svg class="donut-svg" viewBox="0 0 42 42">
+                <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="rgba(255,255,255,0.05)" stroke-width="6"/>
+                <!-- Flour 79.1% -->
+                <circle cx="21" cy="21" r="15.915" fill="transparent"
+                        stroke="#22d3ee" stroke-width="6"
+                        stroke-dasharray="79.1 20.9" stroke-dashoffset="25"
+                        style="filter: drop-shadow(0 0 4px rgba(34,211,238,0.5));"/>
+                <!-- Bran 18.7% -->
+                <circle cx="21" cy="21" r="15.915" fill="transparent"
+                        stroke="#f59e0b" stroke-width="6"
+                        stroke-dasharray="18.7 81.3" stroke-dashoffset="-54.1"
+                        style="filter: drop-shadow(0 0 4px rgba(245,158,11,0.4));"/>
+                <!-- Loss 2.3% -->
+                <circle cx="21" cy="21" r="15.915" fill="transparent"
+                        stroke="#ef4444" stroke-width="6"
+                        stroke-dasharray="2.3 97.7" stroke-dashoffset="-72.8"/>
+                <text x="21" y="20" text-anchor="middle" fill="#fff" font-size="6" font-weight="800">79.1%</text>
+                <text x="21" y="26" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="3">flour</text>
+              </svg>
+              <div class="donut-legend">
+                <div class="donut-row">
+                  <span class="donut-name"><span class="donut-dot" style="background: var(--cyan-bright);"></span>Flour</span>
+                  <span class="donut-pct">79.1%</span>
+                </div>
+                <div class="donut-row">
+                  <span class="donut-name"><span class="donut-dot" style="background: var(--amber);"></span>Bran</span>
+                  <span class="donut-pct">18.7%</span>
+                </div>
+                <div class="donut-row">
+                  <span class="donut-name"><span class="donut-dot" style="background: var(--red);"></span>Loss</span>
+                  <span class="donut-pct">2.3%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ENERGY COST -->
+          <div class="card energy-card">
+            <div class="row3-title">Energy cost per ton</div>
+            <div class="energy-sub">Live vs AI forecast · OMR/t</div>
+            <svg class="energy-chart" id="energyChart" viewBox="0 0 400 100" preserveAspectRatio="none"></svg>
+            <div class="energy-stats">
+              <div>
+                <div class="energy-stat-label">Energy / ton</div>
+                <div class="energy-stat-value">0.025 <span style="font-size:9px;color:var(--text-muted);">OMR/kWh</span></div>
+              </div>
+              <div>
+                <div class="energy-stat-label">Tariff</div>
+                <div class="energy-stat-value">0.025</div>
+              </div>
+              <div>
+                <div class="energy-stat-label">Total energy</div>
+                <div class="energy-stat-value">4141 <span style="font-size:9px;color:var(--text-muted);">kWh</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ENABLERS -->
+          <div class="card enabler-card">
+            <div class="row3-title">What's helping your production?</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Top enablers today</div>
+            <div class="enabler-row">
+              <div class="enabler-info">
+                <div class="enabler-name">Stable wheat feed</div>
+                <div class="enabler-desc">Input variation under 2% in last 4h</div>
+              </div>
+              <span class="enabler-pill ok"><span class="dot"></span>Good</span>
+            </div>
+            <div class="enabler-row">
+              <div class="enabler-info">
+                <div class="enabler-name">Good extraction</div>
+                <div class="enabler-desc">79.1% — above target of 78.5%</div>
+              </div>
+              <span class="enabler-pill ok"><span class="dot"></span>Good</span>
+            </div>
+            <div class="enabler-row">
+              <div class="enabler-info">
+                <div class="enabler-name">Dampening ON</div>
+                <div class="enabler-desc">Moisture set to 16% — running steady</div>
+              </div>
+              <span class="enabler-pill ok"><span class="dot"></span>On</span>
+            </div>
+            <div class="enabler-row">
+              <div class="enabler-info">
+                <div class="enabler-name">Vitamin feeder ON</div>
+                <div class="enabler-desc">Dosing on schedule</div>
+              </div>
+              <span class="enabler-pill ok"><span class="dot"></span>On</span>
+            </div>
+            <div class="enabler-row">
+              <div class="enabler-info">
+                <div class="enabler-name">Energy efficiency</div>
+                <div class="enabler-desc">Slightly above benchmark — watch peak hours</div>
+              </div>
+              <span class="enabler-pill warn"><span class="dot"></span>Watch</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ PdM TAB ============ -->
+      <div class="tab-pane" id="tab-pdm">
+
+        <!-- ROW 1 -->
+        <div class="row row-1">
+          <!-- HEALTH SCORE -->
+          <div class="card health-card">
+            <div class="card-label">Health Now</div>
           <div class="health-body">
             <div class="health-text">
               <div class="health-headline">One area needs attention</div>
@@ -1358,10 +1931,40 @@
           </div>
         </div>
       </div>
+      </div>
+      <!-- ============ /PdM TAB ============ -->
+
+      <!-- ============ YIELD TAB (placeholder) ============ -->
+      <div class="tab-pane" id="tab-yield">
+        <div class="placeholder-card">
+          <div class="ph-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+          </div>
+          <div class="ph-title">Yield Optimization</div>
+          <div class="ph-sub">Coming next — extraction tuning, recipe optimization, and AI-driven yield improvement recommendations.</div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- AI INSIGHT BAR -->
-    <div class="ai-bar">
+    <!-- ============ PRODUCTION CHAT BAR ============ -->
+    <div class="ai-bar ask-bar tab-bar active" id="bar-production">
+      <div class="ai-icon">AI</div>
+      <div class="ask-input-wrap">
+        <input type="text" class="ask-input" placeholder="Ask anything about today's production, forecast, or how to improve..." />
+        <button class="ask-send" type="button" aria-label="Send">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <div class="ask-chips">
+        <div class="ask-chip">Why is L2 high?</div>
+        <div class="ask-chip">How to hit 110t?</div>
+        <div class="ask-chip">Cut energy cost</div>
+      </div>
+    </div>
+
+    <!-- ============ PdM AI INSIGHT BAR ============ -->
+    <div class="ai-bar tab-bar" id="bar-pdm">
       <div class="ai-icon">AI</div>
       <div class="ai-text">
         <b>Atlas AI Insight:</b>
@@ -1370,6 +1973,15 @@
       <div class="ai-cta">
         View AI Recommendations
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+    </div>
+
+    <!-- ============ YIELD BAR (placeholder) ============ -->
+    <div class="ai-bar tab-bar" id="bar-yield">
+      <div class="ai-icon">AI</div>
+      <div class="ai-text">
+        <b>Atlas AI:</b>
+        Yield optimization insights will appear here once this tab is built.
       </div>
     </div>
   </main>
@@ -1598,18 +2210,183 @@
     setTimeout(resize, 60);
   })();
 
-  /* ============ TAB SWITCH (placeholders) ============ */
-  document.querySelectorAll('.top-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const label = tab.textContent.trim();
-      if (label === 'Predictive Maintenance') return;
-      document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      alert(`${label} tab — coming next.`);
-      document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
-      document.querySelector('.top-tab:nth-child(2)').classList.add('active');
+  /* ============ FORECAST CHART (Production tab) ============ */
+  (function buildForecastChart() {
+    const svg = document.getElementById('forecastChart');
+    if (!svg) return;
+    const W = 400, H = 150;
+    const padL = 30, padR = 12, padT = 10, padB = 22;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+
+    // 24 hourly cumulative tons — actual up to "now" (10:24 AM ≈ hour 10.4)
+    // forecast continues through to 24:00 hitting 108
+    const nowHour = 10.4;
+    const totalHours = 24;
+    const final = 108;
+    // S-curve-ish hourly cumulative — flat overnight, ramp through the day
+    const baseProfile = [0, 1.5, 3, 4.5, 6.5, 9, 12, 16, 22, 30, 40, 51,
+                          62, 72, 80, 86, 91, 95, 99, 102, 104, 106, 107, 107.5, 108];
+    function toX(h) { return padL + (h / totalHours) * innerW; }
+    function toY(v) { return padT + innerH - (v / 120) * innerH; }
+
+    // grid + y labels
+    let grid = '';
+    [0, 20, 40, 60, 80, 100, 120].forEach(v => {
+      const y = toY(v);
+      grid += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>`;
+      grid += `<text x="${padL - 5}" y="${y + 3}" text-anchor="end" fill="rgba(255,255,255,0.35)" font-size="9">${v}</text>`;
     });
-  });
+    // x labels
+    let xlabels = '';
+    [0, 6, 12, 18, 24].forEach(h => {
+      const x = toX(h);
+      const lbl = h === 24 ? '24:00' : (String(h).padStart(2, '0') + ':00');
+      xlabels += `<text x="${x}" y="${H - 6}" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="9">${lbl}</text>`;
+    });
+
+    // actual area path (0 .. nowHour)
+    const actualPts = [];
+    for (let h = 0; h <= nowHour; h += 0.25) {
+      const i = Math.floor(h);
+      const f = h - i;
+      const v = (baseProfile[i] || 0) + ((baseProfile[i + 1] || baseProfile[i] || 0) - (baseProfile[i] || 0)) * f;
+      actualPts.push([toX(h), toY(v)]);
+    }
+    let actualLine = `M ${actualPts[0][0]} ${actualPts[0][1]}`;
+    actualPts.slice(1).forEach(p => { actualLine += ` L ${p[0]} ${p[1]}`; });
+    let actualArea = actualLine;
+    actualArea += ` L ${actualPts[actualPts.length - 1][0]} ${toY(0)} L ${actualPts[0][0]} ${toY(0)} Z`;
+
+    // forecast dashed line (nowHour .. 24)
+    const fcPts = [];
+    for (let h = nowHour; h <= 24; h += 0.5) {
+      const i = Math.floor(h);
+      const f = h - i;
+      const v = (baseProfile[i] || 0) + ((baseProfile[i + 1] || baseProfile[i] || 0) - (baseProfile[i] || 0)) * f;
+      fcPts.push([toX(h), toY(v)]);
+    }
+    let fcLine = `M ${fcPts[0][0]} ${fcPts[0][1]}`;
+    fcPts.slice(1).forEach(p => { fcLine += ` L ${p[0]} ${p[1]}`; });
+
+    const nowX = toX(nowHour);
+    const finalX = toX(24), finalY = toY(108);
+    const nowY = toY(68.4);
+
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="fcAreaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="rgba(34, 211, 238, 0.45)"/>
+          <stop offset="100%" stop-color="rgba(34, 211, 238, 0)"/>
+        </linearGradient>
+      </defs>
+      ${grid}
+      ${xlabels}
+      <path d="${actualArea}" fill="url(#fcAreaGrad)"/>
+      <path d="${actualLine}" fill="none" stroke="#22d3ee" stroke-width="2.2" stroke-linecap="round"
+            style="filter: drop-shadow(0 0 4px rgba(34,211,238,0.6));"/>
+      <path d="${fcLine}" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"
+            stroke-dasharray="5 4"
+            style="filter: drop-shadow(0 0 3px rgba(16,185,129,0.6));"/>
+      <line x1="${nowX}" y1="${padT}" x2="${nowX}" y2="${padT + innerH}"
+            stroke="rgba(255,255,255,0.45)" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="${nowX + 4}" y="${padT + 10}" fill="rgba(255,255,255,0.7)" font-size="9" font-weight="600">Now</text>
+      <circle cx="${nowX}" cy="${nowY}" r="4" fill="#22d3ee" stroke="#0a0e18" stroke-width="2"
+              style="filter: drop-shadow(0 0 5px rgba(34,211,238,0.8));"/>
+      <circle cx="${finalX}" cy="${finalY}" r="3.5" fill="#10b981" stroke="#0a0e18" stroke-width="2"
+              style="filter: drop-shadow(0 0 5px rgba(16,185,129,0.8));"/>
+      <text x="${finalX - 4}" y="${finalY - 6}" text-anchor="end" fill="#10b981" font-size="9.5" font-weight="700">108t</text>
+    `;
+  })();
+
+  /* ============ ENERGY CHART (Production tab) ============ */
+  (function buildEnergyChart() {
+    const svg = document.getElementById('energyChart');
+    if (!svg) return;
+    const W = 400, H = 100;
+    const padL = 28, padR = 38, padT = 8, padB = 16;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+
+    // Last 24h actual + forecast
+    // hourly OMR/t — fluctuates around 1.42
+    const actual = [1.48, 1.50, 1.52, 1.54, 1.55, 1.53, 1.51, 1.49, 1.46, 1.44, 1.42, 1.43,
+                    1.44, 1.42, 1.41, 1.42];
+    // forecast trends down to 1.31
+    const forecast = [1.42, 1.40, 1.39, 1.37, 1.35, 1.34, 1.33, 1.32, 1.31];
+
+    function toX(i, total) { return padL + (i / (total - 1)) * innerW; }
+    function toY(v) {
+      const min = 1.25, max = 1.6;
+      return padT + innerH - ((v - min) / (max - min)) * innerH;
+    }
+
+    const totalPoints = actual.length + forecast.length - 1;
+    const nowIndex = actual.length - 1;
+    function getX(idx) { return padL + (idx / (totalPoints - 1)) * innerW; }
+
+    // grid
+    let grid = '';
+    [1.3, 1.4, 1.5, 1.6].forEach(v => {
+      const y = toY(v);
+      grid += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="rgba(255,255,255,0.04)"/>`;
+      grid += `<text x="${padL - 4}" y="${y + 3}" text-anchor="end" fill="rgba(255,255,255,0.35)" font-size="8">${v.toFixed(1)}</text>`;
+    });
+
+    let actLine = '';
+    actual.forEach((v, i) => {
+      const x = getX(i), y = toY(v);
+      actLine += (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+    });
+
+    let fcLine = '';
+    forecast.forEach((v, i) => {
+      const x = getX(nowIndex + i), y = toY(v);
+      fcLine += (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+    });
+
+    const nowX = getX(nowIndex);
+    const fcEndX = getX(totalPoints - 1);
+    const fcEndY = toY(1.31);
+    const actEndY = toY(1.42);
+
+    svg.innerHTML = `
+      ${grid}
+      <path d="${actLine}" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round"
+            style="filter: drop-shadow(0 0 3px rgba(34,211,238,0.5));"/>
+      <path d="${fcLine}" fill="none" stroke="#10b981" stroke-width="1.8" stroke-linecap="round"
+            stroke-dasharray="4 3"
+            style="filter: drop-shadow(0 0 3px rgba(16,185,129,0.55));"/>
+      <line x1="${nowX}" y1="${padT}" x2="${nowX}" y2="${padT + innerH}"
+            stroke="rgba(255,255,255,0.4)" stroke-dasharray="2 2"/>
+      <text x="${nowX + 3}" y="${padT + 8}" fill="rgba(255,255,255,0.6)" font-size="8" font-weight="600">Now</text>
+      <circle cx="${nowX}" cy="${actEndY}" r="3" fill="#22d3ee" stroke="#0a0e18" stroke-width="1.5"/>
+      <text x="${nowX + 6}" y="${actEndY + 3}" fill="#22d3ee" font-size="9" font-weight="700">1.42</text>
+      <circle cx="${fcEndX}" cy="${fcEndY}" r="3" fill="#10b981" stroke="#0a0e18" stroke-width="1.5"/>
+      <text x="${fcEndX - 2}" y="${fcEndY - 5}" text-anchor="end" fill="#10b981" font-size="9" font-weight="700">1.31 ▼</text>
+    `;
+  })();
+
+  /* ============ TAB SWITCH ============ */
+  (function setupTabs() {
+    const tabs = document.querySelectorAll('.top-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const id = tab.getAttribute('data-tab');
+        if (!id) return;
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        const pane = document.getElementById(`tab-${id}`);
+        if (pane) pane.classList.add('active');
+        document.querySelectorAll('.tab-bar').forEach(b => b.classList.remove('active'));
+        const bar = document.getElementById(`bar-${id}`);
+        if (bar) bar.classList.add('active');
+        // trigger motor resize when PdM tab becomes visible
+        if (id === 'pdm') window.dispatchEvent(new Event('resize'));
+      });
+    });
+  })();
 </script>
 </body>
 </html>
