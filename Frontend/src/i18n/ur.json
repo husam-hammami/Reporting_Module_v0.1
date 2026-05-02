@@ -20,6 +20,12 @@
   "nav.herculesAI": "ہرکیولیز AI",
   "nav.atlas": "ہرکیولیز اٹلس",
   "nav.tooltip.atlas": "لائیو پروڈکشن اور لاگت کی پیش گوئی",
+  "nav.atlasAI": "اٹلس AI",
+  "nav.tooltip.atlasAI": "پیداوار · پیش گوئی دیکھ بھال · پیداوار اصلاح",
+  "atlasAI.tabs.production": "پیداوار",
+  "atlasAI.tabs.pdm": "پیش گوئی دیکھ بھال",
+  "atlasAI.tabs.yield": "پیداوار اصلاح",
+  "atlasAI.askAtlas": "اٹلس سے پوچھیں",
   "nav.digitalTwin": "ڈیجیٹل ٹوئن",
   "nav.tooltip.digitalTwin": "3D پلانٹ ویو",
 

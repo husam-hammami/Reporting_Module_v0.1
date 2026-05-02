@@ -20,6 +20,12 @@
   "nav.herculesAI": "हरक्यूलिस AI",
   "nav.atlas": "हरक्यूलिस एटलस",
   "nav.tooltip.atlas": "लाइव उत्पादन और लागत पूर्वानुमान",
+  "nav.atlasAI": "एटलस AI",
+  "nav.tooltip.atlasAI": "उत्पादन · पूर्वानुमानित रखरखाव · उपज अनुकूलन",
+  "atlasAI.tabs.production": "उत्पादन",
+  "atlasAI.tabs.pdm": "पूर्वानुमानित रखरखाव",
+  "atlasAI.tabs.yield": "उपज अनुकूलन",
+  "atlasAI.askAtlas": "एटलस से पूछें",
   "nav.digitalTwin": "डिजिटल ट्विन",
   "nav.tooltip.digitalTwin": "3D संयंत्र दृश्य",
 

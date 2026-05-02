@@ -20,6 +20,12 @@
   "nav.herculesAI": "هرقل AI",
   "nav.atlas": "أطلس هرقل",
   "nav.tooltip.atlas": "توقع الإنتاج والتكلفة المباشر",
+  "nav.atlasAI": "أطلس AI",
+  "nav.tooltip.atlasAI": "الإنتاج · الصيانة التنبؤية · تحسين الإنتاجية",
+  "atlasAI.tabs.production": "الإنتاج",
+  "atlasAI.tabs.pdm": "الصيانة التنبؤية",
+  "atlasAI.tabs.yield": "تحسين الإنتاجية",
+  "atlasAI.askAtlas": "اسأل أطلس",
   "nav.digitalTwin": "التوأم الرقمي",
   "nav.tooltip.digitalTwin": "عرض المصنع ثلاثي الأبعاد",
 
