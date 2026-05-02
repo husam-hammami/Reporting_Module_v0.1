@@ -1710,6 +1710,359 @@
   .rec-title { font-size: 11.5px; font-weight: 600; color: #fff; line-height: 1.3; }
   .rec-desc { font-size: 10px; color: var(--text-muted); line-height: 1.45; }
 
+  /* ===== YIELD V2 (Sankey design) ===== */
+  .row-y2-top { grid-template-columns: repeat(7, 1fr); gap: 11px; }
+  .row-y2-mid { grid-template-columns: 1.65fr 1fr; gap: 14px; }
+  .row-y2-bot { grid-template-columns: 1.5fr 1fr; gap: 14px; }
+
+  /* KPI mini-cards */
+  .kpi-mini {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    gap: 4px;
+    transition: border-color 0.18s;
+    min-width: 0;
+  }
+  .kpi-mini:hover { border-color: var(--border-strong); }
+  .kpi-mini-head {
+    display: flex; align-items: center; gap: 7px;
+  }
+  .kpi-mini-icon {
+    width: 22px; height: 22px;
+    border-radius: 7px;
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.25);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--cyan-bright);
+    flex-shrink: 0;
+  }
+  .kpi-mini.amber .kpi-mini-icon { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: var(--amber); }
+  .kpi-mini.red .kpi-mini-icon { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: var(--red); }
+  .kpi-mini.green .kpi-mini-icon { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: var(--green); }
+  .kpi-mini-label {
+    font-size: 9.5px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    line-height: 1.2;
+  }
+  .kpi-mini-value {
+    font-size: 19px; font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    display: flex; align-items: baseline; gap: 3px;
+  }
+  .kpi-mini-value .u { font-size: 10px; color: var(--text-muted); font-weight: 500; }
+  .kpi-mini-value.amber { color: var(--amber); }
+  .kpi-mini-value.red { color: var(--red); }
+  .kpi-mini-value.green { color: var(--green); }
+
+  /* Sankey card */
+  .sankey-card {
+    padding: 14px 16px;
+    display: flex; flex-direction: column;
+    min-height: 380px;
+  }
+  .sankey-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .sankey-title { font-size: 13px; font-weight: 600; color: #fff; }
+  .sankey-tabs {
+    display: flex; gap: 3px;
+    background: rgba(255,255,255,0.025);
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .sankey-tab {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .sankey-tab:hover { color: var(--text-secondary); }
+  .sankey-tab.active {
+    color: #fff;
+    background: linear-gradient(180deg, rgba(34, 211, 238, 0.18), rgba(14, 165, 233, 0.06));
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.35), 0 0 10px rgba(34, 211, 238, 0.18);
+  }
+
+  .sankey-stage {
+    flex: 1;
+    border-radius: 10px;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 50%, rgba(14, 165, 233, 0.06), transparent 70%),
+      linear-gradient(180deg, #0a1220 0%, #060a14 100%);
+    border: 1px solid rgba(14, 165, 233, 0.12);
+    position: relative;
+    overflow: hidden;
+    padding: 8px;
+    min-height: 290px;
+  }
+  .sankey-svg { width: 100%; height: 100%; min-height: 280px; display: block; }
+
+  .sankey-legend {
+    display: flex;
+    gap: 18px;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .sankey-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .sankey-legend-key {
+    width: 22px; height: 8px; border-radius: 2px;
+  }
+  .sankey-legend-key.solid {
+    background: linear-gradient(90deg, var(--amber), var(--cyan-bright));
+    box-shadow: 0 0 6px rgba(34,211,238,0.3);
+  }
+  .sankey-legend-key.outline {
+    background: transparent;
+    border: 1.5px dashed var(--green);
+  }
+
+  /* Sankey corner brackets */
+  .sankey-corners {
+    position: absolute; inset: 6px;
+    pointer-events: none; z-index: 1;
+  }
+  .sankey-corners::before, .sankey-corners::after,
+  .sankey-corners > span::before, .sankey-corners > span::after {
+    content: ''; position: absolute;
+    width: 12px; height: 12px;
+    border: 1.5px solid rgba(34, 211, 238, 0.45);
+  }
+  .sankey-corners::before { top: 0; left: 0; border-right: none; border-bottom: none; }
+  .sankey-corners::after { top: 0; right: 0; border-left: none; border-bottom: none; }
+  .sankey-corners > span { display: block; }
+  .sankey-corners > span::before { bottom: 0; left: 0; border-right: none; border-top: none; }
+  .sankey-corners > span::after { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+  /* Right column panels (3 stacked) */
+  .y2-right-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .y2-panel {
+    padding: 12px 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex; flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+  .y2-panel.current { border-left: 3px solid var(--amber); }
+  .y2-panel.suggest { border-left: 3px solid var(--cyan-bright); }
+  .y2-panel.recommend { border-left: 3px solid var(--green); }
+  .y2-panel-head {
+    font-size: 9.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .y2-panel.current .y2-panel-head { color: var(--amber); }
+  .y2-panel.suggest .y2-panel-head { color: var(--cyan-bright); }
+  .y2-panel.recommend .y2-panel-head { color: var(--green); }
+
+  .y2-panel-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px;
+    padding: 4px 0;
+    color: var(--text-secondary);
+  }
+  .y2-panel-row .v { font-weight: 700; color: #fff; }
+  .y2-panel-row .v.amber { color: var(--amber); }
+  .y2-panel-row .v.green { color: var(--green); }
+
+  .y2-amber-callout {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-left: 3px solid var(--amber);
+    border-radius: 7px;
+    padding: 7px 10px;
+    margin-top: 8px;
+    font-size: 10.5px;
+    color: var(--amber);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .y2-suggest-line {
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding: 4px 0;
+    line-height: 1.45;
+  }
+  .y2-suggest-line b { color: #fff; font-weight: 600; }
+  .y2-suggest-action {
+    font-size: 11px;
+    color: var(--cyan-bright);
+    font-weight: 700;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .y2-recommend-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .y2-recommend-text b { color: #fff; }
+  .y2-recommend-cta {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px;
+    background: linear-gradient(135deg, var(--green), #34d399);
+    color: #fff;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    align-self: flex-start;
+  }
+  .y2-recommend-cta:hover { transform: translateY(-1px); }
+
+  /* Expected results card (bottom-left) */
+  .expected-card {
+    padding: 0;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    min-height: 200px;
+  }
+  .expected-header {
+    background: linear-gradient(90deg, rgba(16,185,129,0.18), rgba(16,185,129,0.05));
+    border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .expected-header-title {
+    font-size: 12.5px; font-weight: 700;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .expected-header-target {
+    font-size: 11.5px;
+    color: #fff;
+    font-weight: 600;
+  }
+  .expected-header-target b { color: var(--green); font-weight: 800; }
+  .expected-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    flex: 1;
+  }
+  .expected-cell {
+    padding: 14px 14px;
+    border-right: 1px solid var(--border);
+  }
+  .expected-cell:last-child { border-right: none; }
+  .expected-cell-label {
+    font-size: 9.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+  .expected-cell-from {
+    font-size: 11px; color: var(--text-muted);
+  }
+  .expected-cell-arrow {
+    color: var(--text-faint);
+    margin: 0 4px;
+  }
+  .expected-cell-to {
+    font-size: 17px; font-weight: 800;
+    color: var(--green);
+    letter-spacing: -0.02em;
+    margin-top: 2px;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .expected-cell-to .delta {
+    font-size: 10px; font-weight: 700;
+    color: var(--green);
+    background: rgba(16,185,129,0.13);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* Extraction comparison card (bottom-right) */
+  .compare-card {
+    padding: 12px 14px;
+    display: flex; flex-direction: column;
+    min-height: 200px;
+  }
+  .compare-bars {
+    display: flex; gap: 12px;
+    align-items: flex-end;
+    justify-content: space-around;
+    height: 88px;
+    padding-top: 16px;
+    margin-top: 6px;
+  }
+  .compare-col { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+  .compare-num { font-size: 12.5px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.01em; }
+  .compare-num.teal { color: var(--cyan-bright); }
+  .compare-num.green { color: var(--green); }
+  .compare-num.green-bright { color: #34d399; text-shadow: 0 0 8px rgba(16,185,129,0.5); }
+  .compare-bar { width: 28px; border-radius: 4px 4px 2px 2px; }
+  .compare-bar.teal { background: linear-gradient(180deg, var(--cyan-bright), var(--cyan)); box-shadow: 0 0 10px rgba(34,211,238,0.3); }
+  .compare-bar.green { background: linear-gradient(180deg, #34d399, var(--green)); box-shadow: 0 0 10px rgba(16,185,129,0.3); }
+  .compare-bar.green-bright { background: linear-gradient(180deg, #6ee7b7, var(--green)); box-shadow: 0 0 16px rgba(16,185,129,0.5); }
+  .compare-label {
+    font-size: 9.5px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    text-align: center;
+    line-height: 1.25;
+  }
+
+  .gauge-wrap {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .gauge-svg-wrap { width: 130px; height: 70px; flex-shrink: 0; position: relative; }
+  .gauge-svg { width: 100%; height: 100%; }
+  .gauge-readout {
+    position: absolute;
+    bottom: 4px; left: 0; right: 0;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--green);
+    letter-spacing: -0.01em;
+    text-shadow: 0 0 8px rgba(16,185,129,0.4);
+  }
+  .gauge-info { flex: 1; min-width: 0; }
+  .gauge-info-label {
+    font-size: 9.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .gauge-info-row {
+    display: flex; justify-content: space-between;
+    font-size: 11px;
+    padding: 3px 0;
+    color: var(--text-secondary);
+  }
+  .gauge-info-row .v { font-weight: 700; color: #fff; }
+  .gauge-info-row .v.green { color: var(--green); }
+
   /* ===== YIELD PLACEHOLDER (legacy fallback) ===== */
   .placeholder-card {
     flex: 1;
@@ -2389,212 +2742,229 @@
       </div>
       <!-- ============ /PdM TAB ============ -->
 
-      <!-- ============ YIELD TAB ============ -->
+      <!-- ============ YIELD TAB (Sankey design) ============ -->
       <div class="tab-pane" id="tab-yield">
 
-        <!-- ROW 1 — three numbered question cards -->
-        <div class="row row-yield-1">
-          <!-- ① How is yield now? -->
-          <div class="card yield-step-card">
-            <div class="yield-step-header">
-              <span class="step-num">1</span>
-              <span class="yield-step-title">How is yield now?</span>
+        <!-- ROW 1 — KPI strip (7 metrics) -->
+        <div class="row row-y2-top">
+          <div class="kpi-mini">
+            <div class="kpi-mini-head">
+              <div class="kpi-mini-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+              </div>
+              <div class="kpi-mini-label">Flour Extraction</div>
             </div>
-            <span class="yield-status"><span class="dot"></span>Good, but below best</span>
-            <div class="yield-stats-list">
-              <div class="yield-stat-row"><span class="l">Flour extraction</span><span class="v amber">79.1%</span></div>
-              <div class="yield-stat-row"><span class="l">Flour output</span><span class="v">6.64 t/h</span></div>
-              <div class="yield-stat-row"><span class="l">Bran output</span><span class="v">1.57 t/h</span></div>
-              <div class="yield-stat-row"><span class="l">Total wheat input</span><span class="v">8.40 t/h</span></div>
-              <div class="yield-stat-row"><span class="l">Bran split</span><span class="v amber">18.7%</span></div>
-              <div class="yield-stat-row"><span class="l">Loss</span><span class="v">2.3%</span></div>
-              <div class="yield-stat-row"><span class="l">Energy cost / ton</span><span class="v">1.42 OMR/t</span></div>
+            <div class="kpi-mini-value">79.1<span class="u">%</span></div>
+          </div>
+          <div class="kpi-mini amber">
+            <div class="kpi-mini-head">
+              <div class="kpi-mini-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+              </div>
+              <div class="kpi-mini-label">Bran Split</div>
+            </div>
+            <div class="kpi-mini-value amber">18.7<span class="u">%</span></div>
+          </div>
+          <div class="kpi-mini red">
+            <div class="kpi-mini-head">
+              <div class="kpi-mini-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+              </div>
+              <div class="kpi-mini-label">Loss</div>
+            </div>
+            <div class="kpi-mini-value red">2.3<span class="u">%</span></div>
+          </div>
+          <div class="kpi-mini">
+            <div class="kpi-mini-head">
+              <div class="kpi-mini-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c2 4 4 6 4 10a4 4 0 0 1-8 0c0-4 2-6 4-10z"/></svg>
+              </div>
+              <div class="kpi-mini-label">Flour Output</div>
+            </div>
+            <div class="kpi-mini-value">6.64<span class="u">t/h</span></div>
+          </div>
+          <div class="kpi-mini amber">
+            <div class="kpi-mini-head">
+              <div class="kpi-mini-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+              </div>
+              <div class="kpi-mini-label">Bran Output</div>
+            </div>
+            <div class="kpi-mini-value">1.57<span class="u">t/h</span></div>
+          </div>
+          <div class="kpi-mini">
+            <div class="kpi-mini-head">
+              <div class="kpi-mini-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M12 3v18"/></svg>
+              </div>
+              <div class="kpi-mini-label">Total Wheat In</div>
+            </div>
+            <div class="kpi-mini-value">8.40<span class="u">t/h</span></div>
+          </div>
+          <div class="kpi-mini">
+            <div class="kpi-mini-head">
+              <div class="kpi-mini-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 L4 14h7l-1 8 9-12h-7z"/></svg>
+              </div>
+              <div class="kpi-mini-label">Energy / Ton</div>
+            </div>
+            <div class="kpi-mini-value">1.42<span class="u">OMR</span></div>
+          </div>
+        </div>
+
+        <!-- ROW 2 — Sankey + right column (3 stacked) -->
+        <div class="row row-y2-mid">
+
+          <!-- SANKEY -->
+          <div class="card sankey-card">
+            <div class="sankey-head">
+              <div class="sankey-title">Yield Flow <span style="color: var(--text-muted); font-weight: 400; font-size: 11.5px;">— wheat → flour, bran, loss</span></div>
+              <div class="sankey-tabs" id="sankey-tabs">
+                <div class="sankey-tab active" data-stab="current">Current</div>
+                <div class="sankey-tab" data-stab="ai">AI Suggestion</div>
+                <div class="sankey-tab" data-stab="expected">Expected Result</div>
+              </div>
+            </div>
+
+            <div class="sankey-stage">
+              <div class="sankey-corners"><span></span></div>
+              <svg class="sankey-svg" id="sankeySvg" viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet"></svg>
+            </div>
+
+            <div class="sankey-legend">
+              <span class="sankey-legend-item"><span class="sankey-legend-key solid"></span>Solid = Current values</span>
+              <span class="sankey-legend-item"><span class="sankey-legend-key outline"></span>Dashed = AI optimized target</span>
+              <span class="sankey-legend-item" style="margin-left: auto; color: var(--cyan-bright);">● Live flow</span>
             </div>
           </div>
 
-          <!-- ② What can Atlas improve? -->
-          <div class="card yield-step-card">
-            <div class="yield-step-header">
-              <span class="step-num">2</span>
-              <span class="yield-step-title">What can Atlas improve?</span>
+          <!-- RIGHT COLUMN -->
+          <div class="y2-right-col">
+            <!-- CURRENT STATE -->
+            <div class="y2-panel current">
+              <div class="y2-panel-head">Current State</div>
+              <div class="y2-panel-row"><span>Extraction at</span><span class="v">79.1%</span></div>
+              <div class="y2-panel-row"><span>Bran split elevated at</span><span class="v amber">18.7%</span></div>
+              <div class="y2-panel-row"><span>Loss stable at</span><span class="v">2.3%</span></div>
+              <div class="y2-amber-callout">Gap to optimal yield is costing ~12 OMR/hour</div>
             </div>
-            <div class="improve-context">
-              Historical best extraction for this wheat source: <b>79.8%</b>.<br>
-              AI optimized potential based on current conditions:
-            </div>
-            <div class="improve-cmp">
-              <div class="improve-bar-block">
-                <div class="improve-bar-label">Current</div>
-                <div class="improve-bar-value current">79.1<span class="u">%</span></div>
-                <div class="improve-bar"><div class="improve-bar-fill current" style="width: 79.1%;"></div></div>
-              </div>
-              <div class="improve-arrow">→</div>
-              <div class="improve-bar-block">
-                <div class="improve-bar-label">AI optimized</div>
-                <div class="improve-bar-value optimized">80.2<span class="u">%</span></div>
-                <div class="improve-bar"><div class="improve-bar-fill optimized" style="width: 80.2%;"></div></div>
-              </div>
-            </div>
-            <div class="gap-callout">
-              <div class="gap-callout-row">
-                <span class="l">Gap to optimized</span>
-                <span class="v">+1.1%</span>
-              </div>
-              <div class="gap-callout-cost">This gap is costing ~12 OMR/hour</div>
-            </div>
-          </div>
 
-          <!-- ③ What should we change next? -->
-          <div class="card yield-step-card">
-            <div class="yield-step-header">
-              <span class="step-num">3</span>
-              <span class="yield-step-title">What should we change next?</span>
+            <!-- AI SUGGESTIONS -->
+            <div class="y2-panel suggest">
+              <div class="y2-panel-head">AI Suggestions</div>
+              <div class="y2-suggest-line">Historical best extraction for this wheat source: <b>79.8%</b></div>
+              <div class="y2-suggest-line">AI optimized potential: <b style="color: var(--green);">80.2%</b></div>
+              <div class="y2-suggest-line">Bran split is <b style="color: var(--amber);">0.7% above normal</b></div>
+              <div class="y2-suggest-action">Suggested action: Sifter adjustment</div>
             </div>
-            <div class="suggestion-headline">Reduce bran split by adjusting the sifter.</div>
-            <div class="suggestion-sub">Bran split is <b style="color: var(--amber);">0.7% above normal</b>.</div>
-            <div class="suggestion-callout">
-              <b>Fine-tuning the sifter</b> is the primary suggestion to recover the lost extraction.
-            </div>
-            <div class="suggestion-impact">
-              <b>Impact:</b> Higher extraction, lower loss, better profitability.
+
+            <!-- AI RECOMMENDATION -->
+            <div class="y2-panel recommend">
+              <div class="y2-panel-head">AI Recommendation</div>
+              <div class="y2-recommend-text">
+                <b>Adjust sifter settings</b> to reduce bran split and improve extraction.
+              </div>
+              <div class="y2-recommend-cta">
+                Apply recommendation
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- ROW 2 — 3D milling scene -->
-        <div class="card milling-card">
-          <div class="milling-title-row">
-            <div class="milling-title">Where the opportunity is <span class="muted">— Milling process overview</span></div>
-            <span class="att-badge" style="color: var(--cyan-bright); border-color: rgba(34,211,238,0.35); background: rgba(34,211,238,0.08);">Live process</span>
-          </div>
-          <div class="milling-stage">
-            <div class="milling-corners"><span></span></div>
-            <canvas id="milling-canvas"></canvas>
-            <div class="milling-tag">Optimization opportunity here</div>
-            <svg class="milling-arrow" width="60" height="60" viewBox="0 0 60 60" fill="none">
-              <path d="M 8 50 Q 25 35 50 14" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 3"
-                    style="filter: drop-shadow(0 0 4px rgba(245,158,11,0.7));"/>
-              <path d="M 14 56 L 8 50 L 14 44" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" fill="none"
-                    style="filter: drop-shadow(0 0 4px rgba(245,158,11,0.7));"/>
-            </svg>
-            <div class="milling-label-box input">Wheat in · 8.40 t/h</div>
-            <div class="milling-label-box flour">Flour out · 6.64 t/h</div>
-            <div class="milling-label-box bran">Bran out · 1.57 t/h</div>
-          </div>
-        </div>
+        <!-- ROW 3 — Expected results + Extraction comparison -->
+        <div class="row row-y2-bot">
 
-        <!-- ROW 3 — three result panels -->
-        <div class="row row-yield-3">
-          <div class="card result-panel current">
-            <div class="row3-title">Current state</div>
-            <div class="result-row"><span class="l">Extraction</span><span class="v">79.1%</span></div>
-            <div class="result-row"><span class="l">Bran split</span><span class="v amber">18.7%</span></div>
-            <div class="result-row"><span class="l">Loss</span><span class="v">2.3%</span></div>
-            <div class="result-row"><span class="l">Cost impact</span><span class="v amber">~12 OMR/hour</span></div>
-          </div>
-
-          <div class="card result-panel suggestion">
-            <div class="row3-title">AI suggestion</div>
-            <div class="result-suggestion-text">
-              Adjust the sifter to reduce bran split back to normal range.
+          <!-- EXPECTED RESULTS -->
+          <div class="card expected-card">
+            <div class="expected-header">
+              <div class="expected-header-title">Expected Results After Optimization</div>
+              <div class="expected-header-target">Optimized Bran Split Target: <b>17.8%</b></div>
             </div>
-            <div class="result-suggestion-sub">
-              Slightly tighter sifter setting — Atlas estimates a <b style="color:#fff;">−0.7%</b> shift on bran split with no negative effect on flour quality.
-            </div>
-            <div class="result-good-tag">Tune sifter →</div>
-          </div>
-
-          <div class="card result-panel expected">
-            <div class="row3-title">Expected after optimization</div>
-            <div class="result-row">
-              <span class="l">Extraction</span>
-              <span class="v green">80.2% <span class="delta up">+1.1%</span></span>
-            </div>
-            <div class="result-row">
-              <span class="l">Bran split</span>
-              <span class="v">~18.0% <span class="delta down">−0.7%</span></span>
-            </div>
-            <div class="result-row">
-              <span class="l">Loss</span>
-              <span class="v">~2.0% <span class="delta down">−0.3%</span></span>
-            </div>
-            <div class="result-row">
-              <span class="l">Cost impact</span>
-              <span class="v green">~0 OMR/hour</span>
-            </div>
-            <div class="result-good-tag">Better profitability</div>
-          </div>
-        </div>
-
-        <!-- ROW 4 — performance bars + opportunity + recommendations -->
-        <div class="row row-yield-4">
-          <!-- LEFT: Yield performance -->
-          <div class="card perf-card">
-            <div class="row3-title">Yield performance</div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Current · Historical best · AI potential</div>
-            <div class="perf-bars">
-              <div class="perf-col">
-                <div class="perf-num teal">79.1%</div>
-                <div class="perf-bar teal" style="height: 60%;"></div>
-                <div class="perf-label">Current</div>
+            <div class="expected-grid">
+              <div class="expected-cell">
+                <div class="expected-cell-label">Projected Extraction</div>
+                <div class="expected-cell-from">79.1% <span class="expected-cell-arrow">→</span></div>
+                <div class="expected-cell-to">80.2% <span class="delta">+1.1%</span></div>
               </div>
-              <div class="perf-col">
-                <div class="perf-num green">79.8%</div>
-                <div class="perf-bar green" style="height: 78%;"></div>
-                <div class="perf-label">Historical best</div>
+              <div class="expected-cell">
+                <div class="expected-cell-label">Projected Flour Output</div>
+                <div class="expected-cell-from">6.64 t/h <span class="expected-cell-arrow">→</span></div>
+                <div class="expected-cell-to">6.74 <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">t/h</span> <span class="delta">+0.10</span></div>
               </div>
-              <div class="perf-col">
-                <div class="perf-num green-bright">80.2%</div>
-                <div class="perf-bar green-bright" style="height: 92%;"></div>
-                <div class="perf-label">AI potential</div>
+              <div class="expected-cell">
+                <div class="expected-cell-label">Yield Recovery</div>
+                <div class="expected-cell-from">Estimated</div>
+                <div class="expected-cell-to">+0.10 <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">t/h</span> <span class="delta">+1.5%</span></div>
+              </div>
+              <div class="expected-cell">
+                <div class="expected-cell-label">Cost Recovery</div>
+                <div class="expected-cell-from">Per hour</div>
+                <div class="expected-cell-to">~12 <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">OMR/h</span> <span class="delta">~$31/h</span></div>
               </div>
             </div>
-            <div class="perf-foot">
-              Closing the gap from 79.1% to <b>80.2%</b> would lift profitability and reduce loss.
-            </div>
           </div>
 
-          <!-- RIGHT: Opportunity + Recommendations -->
-          <div class="right-col">
-            <div class="card opp-card">
-              <div class="opp-num-block">
-                <div class="opp-big">80.2<span class="u">%</span></div>
-                <div class="opp-cap">Opportunity impact</div>
+          <!-- EXTRACTION COMPARISON -->
+          <div class="card compare-card">
+            <div class="row3-title">Extraction Comparison</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Current · Historical · AI potential</div>
+            <div class="compare-bars">
+              <div class="compare-col">
+                <div class="compare-num teal">79.1%</div>
+                <div class="compare-bar teal" style="height: 70%;"></div>
+                <div class="compare-label">Current</div>
               </div>
-              <div class="opp-text">
-                <div class="opp-text-title">Closing the extraction gap</div>
-                <div class="opp-savings">~12 OMR/hour potential savings</div>
-                <div class="opp-savings-sub">Cumulative across the working day · sifter-driven optimization</div>
+              <div class="compare-col">
+                <div class="compare-num green">79.8%</div>
+                <div class="compare-bar green" style="height: 86%;"></div>
+                <div class="compare-label">Historical best</div>
+              </div>
+              <div class="compare-col">
+                <div class="compare-num green-bright">80.2%</div>
+                <div class="compare-bar green-bright" style="height: 96%;"></div>
+                <div class="compare-label">AI optimized</div>
               </div>
             </div>
 
-            <div>
-              <div class="row3-title" style="margin-bottom: 8px;">What Atlas recommends</div>
-              <div class="rec-list">
-                <div class="rec-card">
-                  <div class="rec-head">
-                    <span class="rec-num">1</span>
-                    <span class="rec-impact high">High impact</span>
-                  </div>
-                  <div class="rec-title">Adjust sifter settings</div>
-                  <div class="rec-desc">Tighten the top sifter screen to bring bran split back into normal range.</div>
-                </div>
-                <div class="rec-card">
-                  <div class="rec-head">
-                    <span class="rec-num">2</span>
-                    <span class="rec-impact med">Medium impact</span>
-                  </div>
-                  <div class="rec-title">Reduce bran split deviation</div>
-                  <div class="rec-desc">Watch deviations through the shift to confirm the adjustment held.</div>
-                </div>
-                <div class="rec-card">
-                  <div class="rec-head">
-                    <span class="rec-num">3</span>
-                    <span class="rec-impact med">Medium impact</span>
-                  </div>
-                  <div class="rec-title">Maintain efficient energy use</div>
-                  <div class="rec-desc">Keep grinding load steady — energy/ton drift would offset extraction gains.</div>
-                </div>
+            <div class="gauge-wrap">
+              <div class="gauge-svg-wrap">
+                <svg class="gauge-svg" viewBox="0 0 130 70">
+                  <defs>
+                    <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stop-color="#ef4444"/>
+                      <stop offset="35%" stop-color="#f59e0b"/>
+                      <stop offset="65%" stop-color="#10b981"/>
+                      <stop offset="100%" stop-color="#34d399"/>
+                    </linearGradient>
+                  </defs>
+                  <!-- semicircle background -->
+                  <path d="M 12 60 A 53 53 0 0 1 118 60"
+                        fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="9" stroke-linecap="round"/>
+                  <!-- gradient arc -->
+                  <path d="M 12 60 A 53 53 0 0 1 118 60"
+                        fill="none" stroke="url(#gaugeGrad)" stroke-width="9" stroke-linecap="round"
+                        style="filter: drop-shadow(0 0 4px rgba(16,185,129,0.4));"/>
+                  <!-- needle pointing at 80.2% -->
+                  <!-- 80.2% along arc: 78-80% is far-right of green zone -->
+                  <g transform="translate(65 60) rotate(72)">
+                    <line x1="0" y1="0" x2="0" y2="-46" stroke="#fff" stroke-width="2" stroke-linecap="round"
+                          style="filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));"/>
+                    <circle cx="0" cy="0" r="4" fill="#fff"/>
+                    <circle cx="0" cy="0" r="2" fill="#10b981"/>
+                  </g>
+                  <!-- tick labels -->
+                  <text x="12" y="68" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="7">76%</text>
+                  <text x="65" y="14" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="7">80%</text>
+                  <text x="118" y="68" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="7">82%</text>
+                </svg>
+                <div class="gauge-readout">80.2%</div>
+              </div>
+              <div class="gauge-info">
+                <div class="gauge-info-label" style="margin-bottom: 4px;">Flour extraction · target zone</div>
+                <div class="gauge-info-row"><span>Current</span><span class="v">79.1%</span></div>
+                <div class="gauge-info-row"><span>Target</span><span class="v green">80.2%</span></div>
+                <div class="gauge-info-row"><span>Gap</span><span class="v" style="color: var(--amber);">+1.1%</span></div>
               </div>
             </div>
           </div>
@@ -3027,306 +3397,222 @@
     `;
   })();
 
-  /* ============ THREE.JS MILLING SCENE (Yield tab) ============ */
-  let millingInitialized = false;
-  let millingResize = null;
-  function initMillingScene() {
-    if (millingInitialized) { if (millingResize) millingResize(); return; }
-    const canvas = document.getElementById('milling-canvas');
-    if (!canvas) return;
-    const stage = canvas.parentElement;
+  /* ============ ANIMATED SANKEY (Yield tab) ============ */
+  /* Renders the yield flow Sankey diagram for a chosen scenario:
+     'current'  — values as measured now (79.1 / 18.7 / 2.3)
+     'ai'       — AI suggestion overlay (target outline visible)
+     'expected' — expected post-optimization (80.2 / 17.8 / 2.0) */
+  function renderSankey(scenario) {
+    const svg = document.getElementById('sankeySvg');
+    if (!svg) return;
 
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x06101c, 8, 22);
+    const VW = 720, VH = 320;
+    const padTop = 22, padBot = 22;
+    const sourceX = 40, sourceW = 28;
+    const targetX = 632, targetW = 28;
+    const flowH = VH - padTop - padBot;
 
-    function getSize() {
-      const r = stage.getBoundingClientRect();
-      return { w: Math.max(r.width, 300), h: Math.max(r.height, 220) };
-    }
-    let { w, h } = getSize();
-
-    const camera = new THREE.PerspectiveCamera(35, w / h, 0.1, 100);
-    camera.position.set(2.0, 3.2, 7.5);
-    camera.lookAt(0.5, 0.4, 0);
-
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(w, h, false);
-
-    /* ---- LIGHTS ---- */
-    scene.add(new THREE.AmbientLight(0x223a4c, 0.6));
-    const key = new THREE.DirectionalLight(0xffffff, 0.7);
-    key.position.set(5, 7, 5);
-    scene.add(key);
-    const cyanFill = new THREE.PointLight(0x22d3ee, 1.4, 14);
-    cyanFill.position.set(-3, 2, 3);
-    scene.add(cyanFill);
-    const cyanRim = new THREE.PointLight(0x0ea5e9, 0.85, 12);
-    cyanRim.position.set(2, 0.5, -3);
-    scene.add(cyanRim);
-    const amberSpot = new THREE.PointLight(0xf59e0b, 0.7, 6);
-    amberSpot.position.set(0.4, 0.4, 1.2);
-    scene.add(amberSpot);
-
-    /* ---- MATERIALS ---- */
-    const rollerMat = new THREE.MeshPhongMaterial({
-      color: 0x1a3a5c, specular: 0x4a8fc7, shininess: 60,
-      emissive: 0x081428, emissiveIntensity: 0.4
-    });
-    const rollerEndMat = new THREE.MeshPhongMaterial({
-      color: 0x0f2238, specular: 0x3a6a96, shininess: 30
-    });
-    const cyanAccent = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
-    const amberAccent = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
-    const sifterFrameMat = new THREE.MeshPhongMaterial({
-      color: 0x16334e, specular: 0x4a8fc7, shininess: 40
-    });
-
-    /* ---- INTAKE HOPPER (left) ---- */
-    const hopperGroup = new THREE.Group();
-    const hopper = new THREE.Mesh(
-      new THREE.ConeGeometry(0.55, 0.85, 20, 1, true),
-      new THREE.MeshPhongMaterial({ color: 0x1a3a5c, specular: 0x4a8fc7, shininess: 50, side: THREE.DoubleSide })
-    );
-    hopper.rotation.x = Math.PI;
-    hopper.position.set(-2.7, 1.4, 0);
-    hopperGroup.add(hopper);
-    const hopperRim = new THREE.Mesh(
-      new THREE.TorusGeometry(0.55, 0.025, 8, 32),
-      cyanAccent
-    );
-    hopperRim.rotation.x = Math.PI / 2;
-    hopperRim.position.set(-2.7, 1.83, 0);
-    hopperGroup.add(hopperRim);
-    scene.add(hopperGroup);
-
-    /* ---- GRINDING ROLLERS (center) ---- */
-    const rollerGroup = new THREE.Group();
-    const rollerLen = 1.2, rollerR = 0.42;
-
-    const rollerA = new THREE.Mesh(new THREE.CylinderGeometry(rollerR, rollerR, rollerLen, 36), rollerMat);
-    rollerA.rotation.z = Math.PI / 2;
-    rollerA.position.set(-0.5, 0.85, 0.32);
-    rollerGroup.add(rollerA);
-    const rollerAEnd1 = new THREE.Mesh(new THREE.CylinderGeometry(rollerR + 0.05, rollerR + 0.05, 0.07, 24), rollerEndMat);
-    rollerAEnd1.rotation.z = Math.PI / 2;
-    rollerAEnd1.position.set(0.13, 0.85, 0.32);
-    rollerGroup.add(rollerAEnd1);
-    const rollerAEnd2 = rollerAEnd1.clone();
-    rollerAEnd2.position.x = -1.13;
-    rollerGroup.add(rollerAEnd2);
-
-    const rollerB = new THREE.Mesh(new THREE.CylinderGeometry(rollerR, rollerR, rollerLen, 36), rollerMat);
-    rollerB.rotation.z = Math.PI / 2;
-    rollerB.position.set(-0.5, 0.85, -0.32);
-    rollerGroup.add(rollerB);
-    const rollerBEnd1 = new THREE.Mesh(new THREE.CylinderGeometry(rollerR + 0.05, rollerR + 0.05, 0.07, 24), rollerEndMat);
-    rollerBEnd1.rotation.z = Math.PI / 2;
-    rollerBEnd1.position.set(0.13, 0.85, -0.32);
-    rollerGroup.add(rollerBEnd1);
-    const rollerBEnd2 = rollerBEnd1.clone();
-    rollerBEnd2.position.x = -1.13;
-    rollerGroup.add(rollerBEnd2);
-
-    /* cyan accent rings on rollers */
-    function addRollerRing(x, z) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(rollerR + 0.005, 0.012, 8, 36), cyanAccent);
-      ring.rotation.y = Math.PI / 2;
-      ring.position.set(x, 0.85, z);
-      rollerGroup.add(ring);
-    }
-    addRollerRing(-0.05, 0.32);
-    addRollerRing(-0.95, 0.32);
-    addRollerRing(-0.05, -0.32);
-    addRollerRing(-0.95, -0.32);
-
-    scene.add(rollerGroup);
-
-    /* ---- SIFTER (slanted mesh plane) ---- */
-    const sifterGroup = new THREE.Group();
-    sifterGroup.position.set(0.9, 0.3, 0);
-    sifterGroup.rotation.z = -0.18;
-
-    const sifterFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(1.5, 0.05, 1.0),
-      sifterFrameMat
-    );
-    sifterGroup.add(sifterFrame);
-
-    /* mesh grid lines for sifter screen */
-    const meshLineMat = new THREE.LineBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.55 });
-    const meshGroup = new THREE.Group();
-    const sw = 1.4, sh = 0.92, divs = 10;
-    for (let i = 0; i <= divs; i++) {
-      const t = -sw / 2 + (i / divs) * sw;
-      const g = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(t, 0.03, -sh / 2),
-        new THREE.Vector3(t, 0.03, sh / 2)
-      ]);
-      meshGroup.add(new THREE.Line(g, meshLineMat));
-    }
-    for (let i = 0; i <= divs; i++) {
-      const t = -sh / 2 + (i / divs) * sh;
-      const g = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-sw / 2, 0.03, t),
-        new THREE.Vector3(sw / 2, 0.03, t)
-      ]);
-      meshGroup.add(new THREE.Line(g, meshLineMat));
-    }
-    sifterGroup.add(meshGroup);
-
-    /* sifter side rails (cyan accent) */
-    const railMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.7 });
-    const rail1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.025, 0.025), railMat);
-    rail1.position.set(0, 0.04, sh / 2);
-    sifterGroup.add(rail1);
-    const rail2 = rail1.clone();
-    rail2.position.z = -sh / 2;
-    sifterGroup.add(rail2);
-
-    /* amber halo plane underneath the sifter (highlight) */
-    const haloGeom = new THREE.CircleGeometry(1.2, 32);
-    const haloMat = new THREE.MeshBasicMaterial({
-      color: 0xf59e0b, transparent: true, opacity: 0.16
-    });
-    const halo = new THREE.Mesh(haloGeom, haloMat);
-    halo.rotation.x = -Math.PI / 2;
-    halo.position.set(0.9, -0.74, 0);
-    scene.add(halo);
-
-    scene.add(sifterGroup);
-
-    /* ---- WHEAT INTAKE PARTICLES (left → rollers) ---- */
-    function makeParticles(count, color, opacity) {
-      const geo = new THREE.BufferGeometry();
-      const pos = new Float32Array(count * 3);
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      const mat = new THREE.PointsMaterial({
-        color, size: 0.06, transparent: true, opacity,
-        blending: THREE.AdditiveBlending, depthWrite: false
-      });
-      return { points: new THREE.Points(geo, mat), geo, pos, count };
-    }
-
-    /* Wheat intake particles: fall into hopper, accelerate down toward rollers */
-    const wheat = makeParticles(60, 0xfbbf24, 0.85);
-    const wheatState = []; // each: t (progress 0-1)
-    for (let i = 0; i < wheat.count; i++) {
-      wheatState.push({ t: Math.random() });
-    }
-    scene.add(wheat.points);
-
-    /* Flour particles: from rollers/sifter going up-right */
-    const flour = makeParticles(80, 0x22d3ee, 0.9);
-    const flourState = [];
-    for (let i = 0; i < flour.count; i++) {
-      flourState.push({ t: Math.random(), o: Math.random() * 0.4 + 0.7 });
-    }
-    scene.add(flour.points);
-
-    /* Bran particles: from sifter going down-right */
-    const bran = makeParticles(50, 0xf59e0b, 0.85);
-    const branState = [];
-    for (let i = 0; i < bran.count; i++) {
-      branState.push({ t: Math.random(), o: Math.random() * 0.4 + 0.6 });
-    }
-    scene.add(bran.points);
-
-    /* ---- GRID FLOOR ---- */
-    const grid = new THREE.GridHelper(18, 36, 0x22d3ee, 0x0a3548);
-    grid.position.y = -0.95;
-    grid.material.transparent = true;
-    grid.material.opacity = 0.32;
-    scene.add(grid);
-
-    /* glow disk under sifter */
-    const glowDisk = new THREE.Mesh(
-      new THREE.CircleGeometry(2.0, 32),
-      new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.06 })
-    );
-    glowDisk.rotation.x = -Math.PI / 2;
-    glowDisk.position.y = -0.94;
-    scene.add(glowDisk);
-
-    /* ---- ANIMATION ---- */
-    let frame = 0;
-    function animate() {
-      requestAnimationFrame(animate);
-      frame += 0.01;
-
-      /* Counter-rotating rollers */
-      rollerA.rotation.x += 0.08;
-      rollerB.rotation.x -= 0.08;
-
-      /* Wheat: from hopper top (-2.7, 1.85) down to roller intake (-0.5, 1.2) */
-      for (let i = 0; i < wheat.count; i++) {
-        const s = wheatState[i];
-        s.t += 0.012;
-        if (s.t > 1) s.t -= 1;
-        const ease = s.t * s.t;
-        const x = -2.7 + ease * 2.2 + (Math.random() - 0.5) * 0.04;
-        const y = 1.85 - ease * 0.65;
-        const z = (Math.random() - 0.5) * 0.18;
-        wheat.pos[i * 3] = x;
-        wheat.pos[i * 3 + 1] = y;
-        wheat.pos[i * 3 + 2] = z;
-      }
-      wheat.geo.attributes.position.needsUpdate = true;
-
-      /* Flour: leaves sifter going up-right
-         start near sifter top (~0.9, 0.4), end up-right (3.2, 1.7) */
-      for (let i = 0; i < flour.count; i++) {
-        const s = flourState[i];
-        s.t += 0.011;
-        if (s.t > 1) s.t -= 1;
-        const t = s.t;
-        const x = 0.6 + t * 2.6 + (Math.random() - 0.5) * 0.05;
-        const y = 0.5 + t * 1.25 + Math.sin(t * Math.PI) * 0.18;
-        const z = (Math.random() - 0.5) * 0.4;
-        flour.pos[i * 3] = x;
-        flour.pos[i * 3 + 1] = y;
-        flour.pos[i * 3 + 2] = z;
-      }
-      flour.geo.attributes.position.needsUpdate = true;
-      flour.points.material.opacity = 0.85;
-
-      /* Bran: from sifter going down-right */
-      for (let i = 0; i < bran.count; i++) {
-        const s = branState[i];
-        s.t += 0.01;
-        if (s.t > 1) s.t -= 1;
-        const t = s.t;
-        const x = 0.7 + t * 2.4 + (Math.random() - 0.5) * 0.05;
-        const y = 0.2 - t * 1.0 - Math.sin(t * Math.PI) * 0.05;
-        const z = (Math.random() - 0.5) * 0.5;
-        bran.pos[i * 3] = x;
-        bran.pos[i * 3 + 1] = y;
-        bran.pos[i * 3 + 2] = z;
-      }
-      bran.geo.attributes.position.needsUpdate = true;
-
-      /* subtle scene breathing */
-      cyanFill.intensity = 1.3 + Math.sin(frame * 1.6) * 0.18;
-      amberSpot.intensity = 0.55 + Math.sin(frame * 2.2) * 0.2;
-      halo.material.opacity = 0.16 + Math.sin(frame * 1.8) * 0.05;
-
-      /* slight scene rotation drift for life */
-      scene.rotation.y = Math.sin(frame * 0.18) * 0.06;
-
-      renderer.render(scene, camera);
-    }
-    animate();
-
-    /* ---- RESIZE ---- */
-    millingResize = function () {
-      const sz = getSize();
-      camera.aspect = sz.w / sz.h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(sz.w, sz.h, false);
+    const scenarios = {
+      current:  { flour: 79.1, bran: 18.7, loss: 2.3,  outline: { flour: 80.2, bran: 17.8, loss: 2.0 } },
+      ai:       { flour: 79.1, bran: 18.7, loss: 2.3,  outline: { flour: 80.2, bran: 17.8, loss: 2.0 }, emphasizeOutline: true },
+      expected: { flour: 80.2, bran: 17.8, loss: 2.0,  outline: null }
     };
-    window.addEventListener('resize', millingResize);
-    setTimeout(millingResize, 80);
-    millingInitialized = true;
+    const data = scenarios[scenario] || scenarios.current;
+    const total = data.flour + data.bran + data.loss;
+
+    function ribbonHeights(d) {
+      const t = d.flour + d.bran + d.loss;
+      return {
+        flour: (d.flour / t) * flowH,
+        bran:  (d.bran  / t) * flowH,
+        loss:  (d.loss  / t) * flowH
+      };
+    }
+    const h = ribbonHeights(data);
+
+    /* Source-side band positions (stacked top→bottom: flour, bran, loss) */
+    const srcFlourTop = padTop;
+    const srcFlourBot = srcFlourTop + h.flour;
+    const srcBranTop = srcFlourBot;
+    const srcBranBot = srcBranTop + h.bran;
+    const srcLossTop = srcBranBot;
+    const srcLossBot = srcLossTop + h.loss;
+
+    /* Target-side band positions (separated with small gaps for readability) */
+    const gap = 6;
+    const tgtFlourTop = padTop;
+    const tgtFlourBot = tgtFlourTop + h.flour;
+    const tgtBranTop = tgtFlourBot + gap;
+    const tgtBranBot = tgtBranTop + h.bran;
+    const tgtLossTop = tgtBranBot + gap;
+    const tgtLossBot = tgtLossTop + Math.max(h.loss, 6); // min 6px so loss is readable
+
+    /* Build a smooth ribbon path between source band and target band */
+    function ribbon(srcXL, srcXR, srcT, srcB, tgtXL, tgtXR, tgtT, tgtB) {
+      const cp1 = srcXR + (tgtXL - srcXR) * 0.5;
+      const cp2 = cp1;
+      return `M ${srcXR} ${srcT}
+              C ${cp1} ${srcT}, ${cp2} ${tgtT}, ${tgtXL} ${tgtT}
+              L ${tgtXL} ${tgtB}
+              C ${cp2} ${tgtB}, ${cp1} ${srcB}, ${srcXR} ${srcB} Z`;
+    }
+    /* Centerline path used by particles */
+    function centerline(srcX, srcMid, tgtX, tgtMid) {
+      const cp1 = srcX + (tgtX - srcX) * 0.5;
+      return `M ${srcX} ${srcMid} C ${cp1} ${srcMid}, ${cp1} ${tgtMid}, ${tgtX} ${tgtMid}`;
+    }
+
+    /* Outline (AI target) ribbon — uses outline values, anchored at same source y */
+    let outlineSvg = '';
+    if (data.outline) {
+      const ho = ribbonHeights(data.outline);
+      const flrTopO = padTop;
+      const flrBotO = flrTopO + ho.flour;
+      const branTopO = flrBotO + gap;
+      const branBotO = branTopO + ho.bran;
+      const lossTopO = branBotO + gap;
+      const lossBotO = lossTopO + Math.max(ho.loss, 6);
+
+      outlineSvg = `
+        <path d="${ribbon(sourceX, sourceX + sourceW, srcFlourTop, srcFlourTop + (data.outline.flour / total) * flowH, targetX, targetX + targetW, flrTopO, flrBotO)}"
+              fill="none" stroke="#34d399" stroke-width="1.8" stroke-dasharray="6 4" opacity="${data.emphasizeOutline ? 0.95 : 0.75}"
+              style="filter: drop-shadow(0 0 3px rgba(16,185,129,0.6));"/>
+        <path d="${ribbon(sourceX, sourceX + sourceW, srcFlourTop + (data.outline.flour / total) * flowH, srcFlourTop + (data.outline.flour / total) * flowH + (data.outline.bran / total) * flowH, targetX, targetX + targetW, branTopO, branBotO)}"
+              fill="none" stroke="#fbbf24" stroke-width="1.6" stroke-dasharray="5 3" opacity="${data.emphasizeOutline ? 0.9 : 0.7}"/>
+      `;
+    }
+
+    /* Build everything */
+    const flourMidSrc = (srcFlourTop + srcFlourBot) / 2;
+    const flourMidTgt = (tgtFlourTop + tgtFlourBot) / 2;
+    const branMidSrc = (srcBranTop + srcBranBot) / 2;
+    const branMidTgt = (tgtBranTop + tgtBranBot) / 2;
+    const lossMidSrc = (srcLossTop + srcLossBot) / 2;
+    const lossMidTgt = (tgtLossTop + tgtLossBot) / 2;
+
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="srcGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#fbbf24"/>
+          <stop offset="100%" stop-color="#f59e0b"/>
+        </linearGradient>
+        <linearGradient id="flourGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.9"/>
+          <stop offset="35%" stop-color="#22d3ee" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.65"/>
+        </linearGradient>
+        <linearGradient id="branGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.7"/>
+          <stop offset="100%" stop-color="#f97316" stop-opacity="0.7"/>
+        </linearGradient>
+        <linearGradient id="lossGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#f97316" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#ef4444" stop-opacity="0.7"/>
+        </linearGradient>
+        <filter id="ribbonGlow" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+
+        <!-- centerline paths used by particle motion -->
+        <path id="path-flour" d="${centerline(sourceX + sourceW, flourMidSrc, targetX, flourMidTgt)}"/>
+        <path id="path-bran"  d="${centerline(sourceX + sourceW, branMidSrc, targetX, branMidTgt)}"/>
+        <path id="path-loss"  d="${centerline(sourceX + sourceW, lossMidSrc, targetX, lossMidTgt)}"/>
+      </defs>
+
+      <!-- SOURCE block (wheat input) -->
+      <rect x="${sourceX}" y="${padTop}" width="${sourceW}" height="${flowH}" rx="3"
+            fill="url(#srcGrad)" filter="url(#ribbonGlow)"
+            style="filter: drop-shadow(0 0 6px rgba(245,158,11,0.45));"/>
+      <text x="${sourceX + sourceW / 2}" y="${padTop - 8}" text-anchor="middle"
+            fill="#fbbf24" font-size="11" font-weight="700">Wheat Input</text>
+      <text x="${sourceX + sourceW / 2}" y="${padTop + flowH + 14}" text-anchor="middle"
+            fill="#fff" font-size="11" font-weight="700">8.40 t/h</text>
+
+      <!-- RIBBONS (filled, current values) -->
+      <path d="${ribbon(sourceX, sourceX + sourceW, srcFlourTop, srcFlourBot, targetX, targetX + targetW, tgtFlourTop, tgtFlourBot)}"
+            fill="url(#flourGrad)" opacity="0.85" style="filter: drop-shadow(0 0 4px rgba(34,211,238,0.3));"/>
+      <path d="${ribbon(sourceX, sourceX + sourceW, srcBranTop, srcBranBot, targetX, targetX + targetW, tgtBranTop, tgtBranBot)}"
+            fill="url(#branGrad)" opacity="0.85" style="filter: drop-shadow(0 0 4px rgba(245,158,11,0.3));"/>
+      <path d="${ribbon(sourceX, sourceX + sourceW, srcLossTop, srcLossBot, targetX, targetX + targetW, tgtLossTop, tgtLossBot)}"
+            fill="url(#lossGrad)" opacity="0.9" style="filter: drop-shadow(0 0 3px rgba(239,68,68,0.4));"/>
+
+      <!-- DASHED OUTLINE (AI optimized target) -->
+      ${outlineSvg}
+
+      <!-- TARGET BLOCKS -->
+      <rect x="${targetX}" y="${tgtFlourTop}" width="${targetW}" height="${tgtFlourBot - tgtFlourTop}" rx="3"
+            fill="#22d3ee" opacity="0.9" style="filter: drop-shadow(0 0 8px rgba(34,211,238,0.5));"/>
+      <rect x="${targetX}" y="${tgtBranTop}" width="${targetW}" height="${tgtBranBot - tgtBranTop}" rx="3"
+            fill="#f59e0b" opacity="0.9" style="filter: drop-shadow(0 0 6px rgba(245,158,11,0.4));"/>
+      <rect x="${targetX}" y="${tgtLossTop}" width="${targetW}" height="${tgtLossBot - tgtLossTop}" rx="2"
+            fill="#ef4444" opacity="0.9"/>
+
+      <!-- TARGET LABELS -->
+      <text x="${targetX + targetW + 14}" y="${tgtFlourTop + 14}" fill="#22d3ee" font-size="12" font-weight="800">Flour</text>
+      <text x="${targetX + targetW + 14}" y="${tgtFlourTop + 30}" fill="#fff" font-size="11" font-weight="700">${data.flour.toFixed(1)}%</text>
+      <text x="${targetX + targetW + 14}" y="${tgtFlourTop + 44}" fill="rgba(255,255,255,0.55)" font-size="9.5">${(data.flour * 0.084).toFixed(2)} t/h</text>
+      ${data.outline ? `<text x="${targetX + targetW + 14}" y="${tgtFlourTop + 58}" fill="#34d399" font-size="9" font-weight="700">⤬ AI ${data.outline.flour}%</text>` : ''}
+
+      <text x="${targetX + targetW + 14}" y="${(tgtBranTop + tgtBranBot) / 2 - 4}" fill="#f59e0b" font-size="11" font-weight="800">Bran</text>
+      <text x="${targetX + targetW + 14}" y="${(tgtBranTop + tgtBranBot) / 2 + 10}" fill="#fff" font-size="10.5" font-weight="700">${data.bran.toFixed(1)}%</text>
+      ${data.outline ? `<text x="${targetX + targetW + 14}" y="${(tgtBranTop + tgtBranBot) / 2 + 23}" fill="#34d399" font-size="9" font-weight="700">⤬ AI ${data.outline.bran}%</text>` : ''}
+
+      <text x="${targetX + targetW + 14}" y="${(tgtLossTop + tgtLossBot) / 2 + 4}" fill="#ef4444" font-size="10.5" font-weight="800">Loss ${data.loss.toFixed(1)}%</text>
+
+      <!-- ANIMATED PARTICLES -->
+      ${[0, 0.6, 1.2, 1.8, 2.4].map(begin => `
+        <circle r="3" fill="#22d3ee" opacity="0.9"
+                style="filter: drop-shadow(0 0 4px #22d3ee);">
+          <animateMotion dur="3s" repeatCount="indefinite" begin="${begin}s">
+            <mpath xlink:href="#path-flour"/>
+          </animateMotion>
+          <animate attributeName="opacity" values="0;0.95;0.95;0" dur="3s" repeatCount="indefinite" begin="${begin}s"/>
+        </circle>
+      `).join('')}
+      ${[0.3, 1.1, 1.9, 2.7].map(begin => `
+        <circle r="2.5" fill="#f59e0b" opacity="0.9"
+                style="filter: drop-shadow(0 0 3px #f59e0b);">
+          <animateMotion dur="3.4s" repeatCount="indefinite" begin="${begin}s">
+            <mpath xlink:href="#path-bran"/>
+          </animateMotion>
+          <animate attributeName="opacity" values="0;0.95;0.95;0" dur="3.4s" repeatCount="indefinite" begin="${begin}s"/>
+        </circle>
+      `).join('')}
+      ${[0.4, 1.6, 2.8].map(begin => `
+        <circle r="1.8" fill="#ef4444" opacity="0.9"
+                style="filter: drop-shadow(0 0 3px #ef4444);">
+          <animateMotion dur="3.6s" repeatCount="indefinite" begin="${begin}s">
+            <mpath xlink:href="#path-loss"/>
+          </animateMotion>
+          <animate attributeName="opacity" values="0;0.95;0.95;0" dur="3.6s" repeatCount="indefinite" begin="${begin}s"/>
+        </circle>
+      `).join('')}
+    `;
+  }
+
+  /* Sankey sub-tabs (Current / AI Suggestion / Expected Result) */
+  (function setupSankeyTabs() {
+    const tabs = document.querySelectorAll('#sankey-tabs .sankey-tab');
+    tabs.forEach(t => {
+      t.addEventListener('click', () => {
+        tabs.forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        renderSankey(t.getAttribute('data-stab'));
+      });
+    });
+  })();
+
+  /* Initial render so the SVG is ready before the tab is opened */
+  renderSankey('current');
+
+  /* Re-render once the Yield tab is first shown to make sure measurements/animation start cleanly */
+  let sankeyRendered = false;
+  function ensureSankey() {
+    if (sankeyRendered) return;
+    const active = document.querySelector('#sankey-tabs .sankey-tab.active');
+    renderSankey(active ? active.getAttribute('data-stab') : 'current');
+    sankeyRendered = true;
   }
 
   /* ============ TAB SWITCH ============ */
@@ -3346,8 +3632,8 @@
         if (bar) bar.classList.add('active');
         if (id === 'pdm') window.dispatchEvent(new Event('resize'));
         if (id === 'yield') {
-          /* lazy init the milling scene only when the tab is first opened */
-          setTimeout(initMillingScene, 30);
+          /* re-render the Sankey when first opened so the SMIL animations restart cleanly */
+          setTimeout(ensureSankey, 30);
         }
       });
     });
