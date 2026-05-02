@@ -140,14 +140,26 @@ DB Port: 5433
 9. Health poll → load main window → destroy splash
 
 ### OTA Auto-Update System
-- **Runs on every app startup** before backend starts
+Two flows in `desktop/main.js`, both routed through `otaLog()` to `%APPDATA%/Hercules/logs/ota.log` (5 MB rotation, kept outside `BACKEND_DIR` so it survives updates).
+
+**Startup OTA** (`checkAndApplyUpdate`)
+- Runs once on every app startup before the backend starts, with splash UI
 - Checks GitHub Releases API for `.zip` asset matching branch prefix (e.g. `salalah_mill_b-v*`)
-- Downloads with progress bar on splash screen
 - Backs up `resources/backend/` → extracts new zip → writes new version
-- **Rollback**: If extraction fails, restores backup automatically
-- **LIMITATION**: OTA only replaces `resources/backend/`. It does NOT update the Electron shell (`main.js`, `splash.html`, `preload.js`). Electron-level fixes require a new installer.
+- Rollback: if extraction fails, restores backup automatically
+
+**Live OTA** (`startLiveOTA`)
+- Polls GitHub every 10 min while the app is running
+- Before applying, runs **production-idle check**: `psql.exe` on local PG (port 5435) counting `tag_history` rows in the last `PRODUCTION_IDLE_WINDOW_MIN` (5) minutes. Zero rows → mill is idle → safe to update. Any error in the query → assume ACTIVE and defer (fail closed).
+- Single-flight: `liveOtaWaiterActive` + `otaInProgress` flags prevent overlapping ticks from re-entering the apply path while a download/extract is running
+- If active when an update is pending: log and retry next 10-min cycle
+- **Do NOT use UI-idle (keyboard/focus events) as the gate** — it has no relationship to whether the mill is making product
+
+**Shared limitations**
+- OTA only replaces `resources/backend/`. It does NOT update the Electron shell (`main.js`, `splash.html`, `preload.js`). Electron-level fixes require a new installer.
 - Version/branch files: `resources/version.txt` and `resources/release_branch.txt`
 - Settings > Updates page has "Install & Restart" button for manual OTA trigger
+- Logs at `%APPDATA%/Hercules/logs/ota.log` are the source of truth for diagnosing OTA — `console.log` output is not captured anywhere when the app is launched via NSIS shortcut / Run-key
 
 ### Splash Screen Behavior
 - **NEVER use `closable: false`** — it prevents `splashWindow.close()` from working programmatically

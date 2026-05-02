@@ -40,6 +40,8 @@ const APPDATA_DIR = path.join(process.env.APPDATA || os.homedir(), 'Hercules');
 const CONFIG_DIR = path.join(APPDATA_DIR, 'config');
 const PG_DATA_DIR = path.join(APPDATA_DIR, 'pgdata');
 const LICENSE_CACHE = path.join(APPDATA_DIR, 'license_cache.json');
+const LOG_DIR = path.join(APPDATA_DIR, 'logs');
+const OTA_LOG_FILE = path.join(LOG_DIR, 'ota.log');
 
 const LICENSE_SERVER = 'https://api.herculesv2.app';
 const BACKEND_PORT = 5001;
@@ -61,11 +63,11 @@ let backendProcess = null;
 let backendRestarts = 0;
 let pgStarted = false;
 let otaInProgress = false;
-let lastUserActivity = Date.now();
 let liveOtaInterval = null;
+let liveOtaWaiterActive = false;
 const MAX_BACKEND_RESTARTS = 3;
-const OTA_POLL_INTERVAL = 5 * 60 * 1000; // check every 5 minutes
-const IDLE_THRESHOLD = 60 * 1000;         // 60 seconds of no interaction
+const OTA_POLL_INTERVAL = 10 * 60 * 1000; // check GitHub every 10 minutes
+const PRODUCTION_IDLE_WINDOW_MIN = 5;     // mill is "idle" if no tag_history rows in last 5 minutes
 
 // ─── Machine ID (must match backend/machine_id.py exactly) ──────────────────
 function getMachineId() {
@@ -500,6 +502,80 @@ function stopBackend() {
 }
 
 // ─── OTA Auto-Update ────────────────────────────────────────────────────────
+
+/**
+ * Append a line to %APPDATA%/Hercules/logs/ota.log.
+ * Persists across OTA updates (logs dir is outside BACKEND_DIR which gets replaced).
+ * Rotates at 5 MB (one .1 backup kept).
+ */
+function otaLog(level, msg) {
+  const line = `${new Date().toISOString()} [${String(level).toUpperCase()}] ${msg}\n`;
+  try {
+    if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+    fs.appendFileSync(OTA_LOG_FILE, line);
+    try {
+      const stats = fs.statSync(OTA_LOG_FILE);
+      if (stats.size > 5 * 1024 * 1024) {
+        const rotated = OTA_LOG_FILE + '.1';
+        try { fs.unlinkSync(rotated); } catch { /* none */ }
+        fs.renameSync(OTA_LOG_FILE, rotated);
+      }
+    } catch { /* rotation is best-effort */ }
+  } catch { /* never crash on logging */ }
+  if (level === 'error' || level === 'warn') console.warn('[OTA]', msg);
+  else console.log('[OTA]', msg);
+}
+
+/**
+ * Returns true when no rows have been inserted into tag_history in the last
+ * PRODUCTION_IDLE_WINDOW_MIN minutes. Returns false on any error or when the
+ * mill appears active — failing closed (skip the update) is the safe default.
+ */
+function checkProductionIdle() {
+  return new Promise((resolve) => {
+    if (!fs.existsSync(PSQL_EXE)) {
+      otaLog('warn', `idle-check: psql.exe not found at ${PSQL_EXE} → assuming ACTIVE (skip update)`);
+      resolve(false);
+      return;
+    }
+    const env = {
+      ...process.env,
+      PGPASSWORD: '',
+    };
+    const sql = `SELECT COUNT(*) FROM tag_history WHERE timestamp >= NOW() - INTERVAL '${PRODUCTION_IDLE_WINDOW_MIN} minutes'`;
+    const args = [
+      '-h', '127.0.0.1',
+      '-p', String(PG_PORT),
+      '-U', 'postgres',
+      '-d', PG_DB,
+      '-tA',
+      '-c', sql,
+    ];
+    execFile(PSQL_EXE, args, {
+      timeout: 10000,
+      windowsHide: true,
+      env,
+    }, (err, stdout, stderr) => {
+      if (err) {
+        const errMsg = (stderr || err.message || '').toString().trim().split('\n').slice(0, 2).join(' | ');
+        otaLog('warn', `idle-check: psql failed (${errMsg}) → assuming ACTIVE (skip update)`);
+        resolve(false);
+        return;
+      }
+      const raw = String(stdout || '').trim();
+      const n = parseInt(raw, 10);
+      if (!Number.isFinite(n)) {
+        otaLog('warn', `idle-check: unparseable psql output "${raw}" → assuming ACTIVE`);
+        resolve(false);
+        return;
+      }
+      const idle = n === 0;
+      otaLog('info', `idle-check: ${n} tag_history rows in last ${PRODUCTION_IDLE_WINDOW_MIN}min → ${idle ? 'IDLE' : 'ACTIVE'}`);
+      resolve(idle);
+    });
+  });
+}
+
 function getLocalVersion() {
   for (const f of [VERSION_FILE, path.join(BACKEND_DIR, 'version.txt')]) {
     try {
@@ -665,20 +741,20 @@ async function checkAndApplyUpdate() {
   const slug = branch.replace(/\//g, '-').toLowerCase();
   const prefix = slug + '-v';
 
-  console.log(`[OTA] Current version: ${localVer}, branch: ${branch} (${slug})`);
+  otaLog('info', `startup-check: local=v${localVer} branch=${branch} (${slug})`);
   updateSplashStatus('Checking for updates...');
 
   let releases;
   try {
     releases = await httpsGetJSON(`${GITHUB_RELEASES_URL}?per_page=20`);
   } catch (err) {
-    console.warn('[OTA] Cannot reach GitHub (offline?):', err.message);
+    otaLog('warn', `startup-check: GitHub unreachable: ${err.message}`);
     updateSplashStatus('Starting services...');
     return null;
   }
 
   if (!Array.isArray(releases)) {
-    console.warn('[OTA] Unexpected releases response');
+    otaLog('warn', `startup-check: unexpected releases response (not an array, got ${typeof releases})`);
     updateSplashStatus('Starting services...');
     return null;
   }
@@ -696,7 +772,7 @@ async function checkAndApplyUpdate() {
   }
 
   if (!bestRelease) {
-    console.log('[OTA] Already up to date.');
+    otaLog('info', `startup-check: already up to date (v${localVer})`);
     updateSplashStatus('Starting services...');
     return null;
   }
@@ -704,12 +780,12 @@ async function checkAndApplyUpdate() {
   // Find the .zip OTA asset
   const zipAsset = (bestRelease.assets || []).find(a => a.name.endsWith('.zip'));
   if (!zipAsset) {
-    console.warn('[OTA] No .zip asset found in release', bestRelease.tag_name);
+    otaLog('warn', `startup-check: no .zip asset in release ${bestRelease.tag_name}`);
     updateSplashStatus('Starting services...');
     return null;
   }
 
-  console.log(`[OTA] Update available: ${localVer} → ${bestVersion}`);
+  otaLog('info', `startup-check: update available v${localVer} → v${bestVersion}`);
   otaInProgress = true;
   updateSplashStatus(`Downloading update v${bestVersion}...`, 0);
 
@@ -719,7 +795,7 @@ async function checkAndApplyUpdate() {
       updateSplashStatus(`Downloading update v${bestVersion}... ${Math.round(pct)}%`, pct);
     });
   } catch (err) {
-    console.error('[OTA] Download failed:', err.message);
+    otaLog('error', `startup-check: download failed: ${err.message}`);
     otaInProgress = false;
     updateSplashStatus('Starting services...');
     return null;
@@ -740,7 +816,7 @@ async function checkAndApplyUpdate() {
     // Backup current backend
     if (fs.existsSync(BACKEND_DIR)) {
       fs.renameSync(BACKEND_DIR, backupDir);
-      console.log('[OTA] Backed up current backend');
+      otaLog('info', 'startup-check: backed up current backend');
     }
 
     // Extract zip — the zip contains a backend/ folder at root
@@ -748,7 +824,7 @@ async function checkAndApplyUpdate() {
       `powershell -NoProfile -Command "Expand-Archive -Path '${tmpZip}' -DestinationPath '${RESOURCES_DIR}' -Force"`,
       { stdio: 'pipe', timeout: 120000 }
     );
-    console.log('[OTA] Extracted update');
+    otaLog('info', 'startup-check: extracted update zip');
 
     // Verify extraction worked
     if (!fs.existsSync(BACKEND_EXE)) {
@@ -757,7 +833,7 @@ async function checkAndApplyUpdate() {
 
     // Write new version
     fs.writeFileSync(VERSION_FILE, bestVersion, 'utf-8');
-    console.log(`[OTA] Updated version file to ${bestVersion}`);
+    otaLog('info', `startup-check: wrote version file v${bestVersion}`);
 
     // Clean up backup and temp zip
     if (fs.existsSync(backupDir)) {
@@ -765,13 +841,13 @@ async function checkAndApplyUpdate() {
     }
     try { fs.unlinkSync(tmpZip); } catch { /* ignore */ }
 
-    console.log(`[OTA] Successfully updated to v${bestVersion}`);
+    otaLog('info', `startup-check: successfully updated to v${bestVersion}`);
     otaInProgress = false;
     updateSplashStatus(`Updated to v${bestVersion}!`);
     return bestVersion;
 
   } catch (err) {
-    console.error('[OTA] Install failed, rolling back:', err.message);
+    otaLog('error', `startup-check: install failed, rolling back: ${err.message}`);
     // Rollback: remove partial extraction, restore backup
     if (fs.existsSync(BACKEND_DIR) && fs.existsSync(backupDir)) {
       try { fs.rmSync(BACKEND_DIR, { recursive: true, force: true }); } catch { /* ignore */ }
@@ -801,9 +877,15 @@ async function checkForUpdateSilently() {
   let releases;
   try {
     releases = await httpsGetJSON(`${GITHUB_RELEASES_URL}?per_page=10`);
-  } catch { return null; }
+  } catch (err) {
+    otaLog('warn', `live-poll: GitHub fetch failed: ${err.message}`);
+    return null;
+  }
 
-  if (!Array.isArray(releases)) return null;
+  if (!Array.isArray(releases)) {
+    otaLog('warn', `live-poll: unexpected releases response (type=${typeof releases})`);
+    return null;
+  }
 
   let bestRelease = null;
   let bestVersion = localVer;
@@ -819,7 +901,10 @@ async function checkForUpdateSilently() {
   if (!bestRelease) return null;
 
   const zipAsset = (bestRelease.assets || []).find(a => a.name.endsWith('.zip'));
-  if (!zipAsset) return null;
+  if (!zipAsset) {
+    otaLog('warn', `live-poll: release ${bestRelease.tag_name} has no .zip asset`);
+    return null;
+  }
 
   return { version: bestVersion, zipUrl: zipAsset.browser_download_url, zipName: zipAsset.name };
 }
@@ -830,13 +915,18 @@ async function checkForUpdateSilently() {
 async function applyUpdateAndRestart(updateInfo) {
   if (otaInProgress) return;
   otaInProgress = true;
-  console.log(`[LiveOTA] Applying update to v${updateInfo.version}...`);
+  otaLog('info', `live-apply: starting update to v${updateInfo.version}`);
 
   const tmpZip = path.join(os.tmpdir(), updateInfo.zipName);
   try {
     // Download silently (no splash)
+    let lastLoggedPct = -1;
     await downloadFile(updateInfo.zipUrl, tmpZip, (pct) => {
-      console.log(`[LiveOTA] Downloading... ${Math.round(pct)}%`);
+      const rounded = Math.round(pct / 10) * 10; // log every 10%
+      if (rounded !== lastLoggedPct) {
+        lastLoggedPct = rounded;
+        otaLog('info', `live-apply: download ${rounded}%`);
+      }
     });
 
     // Stop the running backend
@@ -883,10 +973,10 @@ async function applyUpdateAndRestart(updateInfo) {
     }
 
     otaInProgress = false;
-    console.log(`[LiveOTA] v${updateInfo.version} is live.`);
+    otaLog('info', `live-apply: v${updateInfo.version} is live`);
 
   } catch (err) {
-    console.error('[LiveOTA] Update failed, rolling back:', err.message);
+    otaLog('error', `live-apply: failed, rolling back: ${err.message}`);
     const backupDir = BACKEND_DIR + '_backup';
     if (fs.existsSync(BACKEND_DIR) && fs.existsSync(backupDir)) {
       try { fs.rmSync(BACKEND_DIR, { recursive: true, force: true }); } catch { /* */ }
@@ -898,62 +988,62 @@ async function applyUpdateAndRestart(updateInfo) {
 
     // Restart backend from backup
     backendRestarts = 0;
-    try { startBackend(); await waitForBackend(); } catch { /* */ }
+    try { startBackend(); await waitForBackend(); } catch (e) { otaLog('error', `live-apply: backup restart failed: ${e.message}`); }
 
     otaInProgress = false;
   }
 }
 
 /**
- * Start periodic background OTA check. Called after app is fully loaded.
+ * Start periodic background OTA check. Called once after app is fully loaded.
+ *
+ * Cycle (every OTA_POLL_INTERVAL):
+ *   1. Poll GitHub for the latest salalah_mill_b-v* release.
+ *   2. If a newer version exists, check if the mill is production-idle
+ *      (no tag_history rows in the last PRODUCTION_IDLE_WINDOW_MIN minutes).
+ *   3. If idle: apply the update (download → stop backend → extract → restart).
+ *      If active: log and wait for the next cycle.
+ *
+ * `liveOtaWaiterActive` prevents overlapping cycles from re-entering apply
+ * while a download/extract is in flight.
  */
 function startLiveOTA() {
   if (liveOtaInterval) return;
-  console.log('[LiveOTA] Background update check enabled (every 5 min, restart when idle).');
+  otaLog('info', `live-poll: enabled — every ${OTA_POLL_INTERVAL / 60000}min, idle window ${PRODUCTION_IDLE_WINDOW_MIN}min`);
 
-  liveOtaInterval = setInterval(async () => {
-    if (otaInProgress) return;
+  const tick = async () => {
+    if (otaInProgress || liveOtaWaiterActive) {
+      otaLog('info', `live-poll: tick skipped (otaInProgress=${otaInProgress} waiter=${liveOtaWaiterActive})`);
+      return;
+    }
+    liveOtaWaiterActive = true;
+    try {
+      const localVer = getLocalVersion();
+      otaLog('info', `live-poll: checking GitHub (local=v${localVer})`);
+      const updateInfo = await checkForUpdateSilently();
+      if (!updateInfo) {
+        otaLog('info', 'live-poll: no newer release available');
+        return;
+      }
+      otaLog('info', `live-poll: update available v${localVer} → v${updateInfo.version}`);
 
-    const updateInfo = await checkForUpdateSilently();
-    if (!updateInfo) return;
+      const idle = await checkProductionIdle();
+      if (!idle) {
+        otaLog('info', 'live-poll: mill is ACTIVE — deferring update to next cycle');
+        return;
+      }
+      otaLog('info', `live-poll: mill is IDLE — applying v${updateInfo.version}`);
+      await applyUpdateAndRestart(updateInfo);
+    } catch (err) {
+      otaLog('error', `live-poll: tick error: ${err.stack || err.message}`);
+    } finally {
+      liveOtaWaiterActive = false;
+    }
+  };
 
-    console.log(`[LiveOTA] Update found: v${updateInfo.version}. Waiting for idle...`);
-
-    // Wait for idle before applying
-    const waitForIdle = () => {
-      const idleCheck = setInterval(async () => {
-        const idleMs = Date.now() - lastUserActivity;
-        if (idleMs >= IDLE_THRESHOLD && !otaInProgress) {
-          clearInterval(idleCheck);
-          console.log(`[LiveOTA] User idle for ${Math.round(idleMs / 1000)}s. Applying update...`);
-          await applyUpdateAndRestart(updateInfo);
-        }
-      }, 10000); // check every 10 seconds
-
-      // Give up after 30 minutes of waiting for idle
-      setTimeout(() => clearInterval(idleCheck), 30 * 60 * 1000);
-    };
-
-    waitForIdle();
-  }, OTA_POLL_INTERVAL);
-}
-
-/**
- * Track user activity in the main window for idle detection.
- */
-function trackUserActivity() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-
-  // Track mouse/keyboard events via the web contents
-  mainWindow.webContents.on('before-input-event', () => {
-    lastUserActivity = Date.now();
-  });
-
-  // Also track window focus
-  mainWindow.on('focus', () => { lastUserActivity = Date.now(); });
-
-  // Track mouse movement via IPC (optional, the input event covers keyboard + clicks)
-  console.log('[LiveOTA] User activity tracking enabled.');
+  liveOtaInterval = setInterval(tick, OTA_POLL_INTERVAL);
+  // Run a first tick after a short delay so the backend has time to settle.
+  setTimeout(tick, 60 * 1000);
 }
 
 // ─── Windows ─────────────────────────────────────────────────────────────────
@@ -1251,8 +1341,7 @@ app.on('ready', async () => {
     createTray();
     startPeriodicLicenseCheck();
 
-    // 8. Start live OTA (background polling + idle-aware auto-restart)
-    trackUserActivity();
+    // 8. Start live OTA (background polling + production-idle auto-restart)
     startLiveOTA();
 
   } catch (err) {
