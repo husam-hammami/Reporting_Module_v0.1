@@ -1258,7 +1258,459 @@
   }
   .ask-chip:hover { color: var(--cyan-bright); border-color: rgba(34,211,238,0.3); background: rgba(34,211,238,0.05); }
 
-  /* ===== YIELD PLACEHOLDER ===== */
+  /* ===== YIELD TAB ===== */
+  .row-yield-1 { grid-template-columns: 1fr 1fr 1fr; }
+  .row-yield-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .row-yield-4 { grid-template-columns: 0.95fr 1.55fr; }
+
+  .step-num {
+    width: 22px; height: 22px;
+    background: rgba(34, 211, 238, 0.12);
+    border: 1px solid rgba(34, 211, 238, 0.4);
+    color: var(--cyan-bright);
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.3);
+  }
+  .yield-step-card {
+    padding: 14px 16px;
+    min-height: 250px;
+    display: flex; flex-direction: column;
+  }
+  .yield-step-header {
+    display: flex; align-items: center; gap: 9px;
+    margin-bottom: 8px;
+  }
+  .yield-step-title {
+    font-size: 12.5px; font-weight: 600; color: #fff;
+  }
+
+  .yield-status {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 4px 11px;
+    background: linear-gradient(90deg, rgba(16,185,129,0.12), rgba(245,158,11,0.1));
+    border: 1px solid rgba(245,158,11,0.35);
+    border-radius: 999px;
+    font-size: 10.5px; font-weight: 700;
+    color: var(--amber);
+    align-self: flex-start;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+  }
+  .yield-status .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: linear-gradient(45deg, var(--green), var(--amber));
+    box-shadow: 0 0 5px var(--amber);
+  }
+
+  .yield-stats-list {
+    display: flex; flex-direction: column;
+    margin-top: 4px;
+  }
+  .yield-stat-row {
+    display: flex; justify-content: space-between;
+    padding: 5.5px 0;
+    font-size: 11px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .yield-stat-row:last-child { border-bottom: none; }
+  .yield-stat-row .l { color: var(--text-muted); }
+  .yield-stat-row .v { color: #fff; font-weight: 700; }
+  .yield-stat-row .v.amber { color: var(--amber); }
+  .yield-stat-row .v.green { color: var(--green); }
+
+  /* What can Atlas improve */
+  .improve-context {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .improve-context b { color: var(--text-secondary); font-weight: 600; }
+  .improve-cmp {
+    display: flex; align-items: center; gap: 10px;
+    margin: 4px 0 10px;
+  }
+  .improve-bar-block { flex: 1; min-width: 0; }
+  .improve-bar-label {
+    font-size: 9.5px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 3px;
+  }
+  .improve-bar-value {
+    font-size: 22px; font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .improve-bar-value.current { color: #fff; }
+  .improve-bar-value.optimized { color: var(--green); text-shadow: 0 0 12px rgba(16,185,129,0.4); }
+  .improve-bar-value .u { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-left: 2px; }
+  .improve-bar {
+    height: 7px; border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    position: relative; overflow: hidden;
+    margin-top: 6px;
+  }
+  .improve-bar-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    border-radius: 4px;
+  }
+  .improve-bar-fill.current { background: linear-gradient(90deg, var(--cyan), var(--cyan-bright)); }
+  .improve-bar-fill.optimized {
+    background: linear-gradient(90deg, #34d399, var(--green));
+    box-shadow: 0 0 10px rgba(16,185,129,0.5);
+  }
+  .improve-arrow {
+    font-size: 22px; color: var(--green);
+    flex-shrink: 0;
+    text-shadow: 0 0 8px rgba(16,185,129,0.6);
+  }
+  .gap-callout {
+    background: rgba(245, 158, 11, 0.07);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-left: 3px solid var(--amber);
+    border-radius: 8px;
+    padding: 8px 11px;
+    margin-top: auto;
+  }
+  .gap-callout-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px;
+  }
+  .gap-callout-row .l { color: var(--text-muted); }
+  .gap-callout-row .v { color: var(--amber); font-weight: 700; font-size: 13px; }
+  .gap-callout-cost {
+    font-size: 11px; color: var(--amber);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  /* What should we change next */
+  .suggestion-headline {
+    font-size: 15.5px; font-weight: 700;
+    color: var(--amber);
+    line-height: 1.35;
+    margin-top: 4px;
+    text-shadow: 0 0 14px rgba(245,158,11,0.25);
+  }
+  .suggestion-sub {
+    font-size: 11.5px; color: var(--text-muted);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+  .suggestion-callout {
+    background: rgba(34, 211, 238, 0.06);
+    border: 1px solid rgba(34, 211, 238, 0.22);
+    border-left: 3px solid var(--cyan-bright);
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  .suggestion-callout b { color: #fff; font-weight: 600; }
+  .suggestion-impact {
+    font-size: 11px;
+    color: var(--green);
+    margin-top: auto;
+    padding-top: 10px;
+    line-height: 1.5;
+  }
+  .suggestion-impact b { color: var(--green); }
+
+  /* 3D milling scene */
+  .milling-card {
+    padding: 14px 16px;
+    min-height: 290px;
+    display: flex; flex-direction: column;
+  }
+  .milling-title-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .milling-title {
+    font-size: 13px; font-weight: 600; color: #fff;
+  }
+  .milling-title .muted { color: var(--text-muted); font-weight: 400; }
+  .milling-stage {
+    position: relative;
+    flex: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 50%, rgba(14, 165, 233, 0.08), transparent 70%),
+      linear-gradient(180deg, #0a1220 0%, #060a14 100%);
+    border: 1px solid rgba(14, 165, 233, 0.12);
+    min-height: 240px;
+  }
+  #milling-canvas { width: 100%; height: 100%; display: block; }
+
+  .milling-tag {
+    position: absolute;
+    top: 16px; right: 22px;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.55);
+    color: var(--amber);
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    z-index: 3;
+    box-shadow: 0 0 12px rgba(245,158,11,0.35);
+    text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .milling-tag::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 6px var(--amber);
+    animation: pulse 1.5s infinite;
+  }
+
+  .milling-arrow {
+    position: absolute;
+    top: 36px; right: 38px;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .milling-label-box {
+    position: absolute;
+    z-index: 3;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 9px;
+    background: rgba(10, 14, 24, 0.78);
+    border-radius: 5px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+  }
+  .milling-label-box.input {
+    top: 50%; left: 14px; transform: translateY(-50%);
+    color: rgba(255,255,255,0.85);
+    border: 1px solid var(--border-strong);
+  }
+  .milling-label-box.flour {
+    top: 22%; right: 14px;
+    color: var(--cyan-bright);
+    border: 1px solid rgba(34,211,238,0.35);
+  }
+  .milling-label-box.bran {
+    bottom: 22%; right: 14px;
+    color: var(--amber);
+    border: 1px solid rgba(245,158,11,0.35);
+  }
+  .milling-corners {
+    position: absolute;
+    inset: 6px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .milling-corners::before, .milling-corners::after,
+  .milling-corners > span::before, .milling-corners > span::after {
+    content: ''; position: absolute;
+    width: 14px; height: 14px;
+    border: 1.5px solid rgba(34, 211, 238, 0.5);
+  }
+  .milling-corners::before { top: 0; left: 0; border-right: none; border-bottom: none; }
+  .milling-corners::after { top: 0; right: 0; border-left: none; border-bottom: none; }
+  .milling-corners > span { display: block; }
+  .milling-corners > span::before { bottom: 0; left: 0; border-right: none; border-top: none; }
+  .milling-corners > span::after { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+  /* Result panels */
+  .result-panel { padding: 12px 14px; min-height: 130px; display: flex; flex-direction: column; }
+  .result-panel.current { border-left: 3px solid rgba(255,255,255,0.25); }
+  .result-panel.suggestion { border-left: 3px solid var(--cyan-bright); }
+  .result-panel.expected {
+    border-left: 3px solid var(--green);
+    box-shadow: -1px 0 14px -2px rgba(16,185,129,0.18) inset;
+  }
+  .result-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px;
+    padding: 4.5px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .result-row:last-child { border-bottom: none; }
+  .result-row .l { color: var(--text-muted); }
+  .result-row .v { font-weight: 700; color: #fff; display: inline-flex; align-items: center; gap: 5px; }
+  .result-row .v.green { color: var(--green); }
+  .result-row .v.amber { color: var(--amber); }
+  .result-row .v.red { color: var(--red); }
+  .result-row .delta {
+    font-size: 9.5px; font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .result-row .delta.up { color: var(--green); background: rgba(16,185,129,0.12); }
+  .result-row .delta.down { color: var(--green); background: rgba(16,185,129,0.12); }
+  .result-row .delta.neutral { color: var(--text-muted); background: rgba(255,255,255,0.04); }
+  .result-suggestion-text {
+    font-size: 11.5px; color: var(--text-secondary);
+    line-height: 1.5;
+    margin-top: 4px;
+  }
+  .result-suggestion-sub { font-size: 10.5px; color: var(--text-muted); margin-top: 6px; line-height: 1.45; }
+  .result-good-tag {
+    font-size: 10px; color: var(--green); font-weight: 700;
+    margin-top: 8px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  /* Yield performance bars */
+  .perf-card {
+    padding: 14px 16px;
+    min-height: 220px;
+    display: flex; flex-direction: column;
+  }
+  .perf-bars {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    gap: 14px;
+    padding: 22px 6px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .perf-col {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .perf-num {
+    font-size: 14.5px; font-weight: 800;
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+  .perf-num.teal { color: var(--cyan-bright); }
+  .perf-num.green { color: var(--green); }
+  .perf-num.green-bright { color: #34d399; text-shadow: 0 0 10px rgba(16,185,129,0.5); }
+  .perf-bar {
+    width: 38px;
+    border-radius: 5px 5px 2px 2px;
+    box-shadow: inset 0 -3px 6px rgba(0,0,0,0.2);
+  }
+  .perf-bar.teal {
+    background: linear-gradient(180deg, var(--cyan-bright) 0%, var(--cyan) 100%);
+    box-shadow: 0 0 14px rgba(34,211,238,0.35), inset 0 -3px 6px rgba(0,0,0,0.2);
+  }
+  .perf-bar.green {
+    background: linear-gradient(180deg, #34d399 0%, var(--green) 100%);
+    box-shadow: 0 0 14px rgba(16,185,129,0.4), inset 0 -3px 6px rgba(0,0,0,0.2);
+  }
+  .perf-bar.green-bright {
+    background: linear-gradient(180deg, #6ee7b7 0%, #34d399 50%, var(--green) 100%);
+    box-shadow: 0 0 22px rgba(16,185,129,0.6), 0 0 36px rgba(16,185,129,0.25), inset 0 -3px 6px rgba(0,0,0,0.2);
+  }
+  .perf-label {
+    font-size: 10px; font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 7px;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .perf-foot {
+    font-size: 11px; color: var(--text-muted);
+    margin-top: 9px;
+    line-height: 1.4;
+  }
+  .perf-foot b { color: var(--green); }
+
+  /* Right column: opportunity + recs */
+  .right-col { display: grid; grid-template-rows: auto 1fr; gap: 14px; min-width: 0; }
+  .opp-card {
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 18px;
+    background: linear-gradient(135deg, rgba(16,185,129,0.06), rgba(34,211,238,0.03));
+  }
+  .opp-num-block { flex-shrink: 0; }
+  .opp-big {
+    font-size: 38px; font-weight: 800;
+    color: var(--green);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    text-shadow: 0 0 16px rgba(16,185,129,0.3);
+  }
+  .opp-big .u { font-size: 14px; font-weight: 500; color: var(--text-muted); margin-left: 2px; }
+  .opp-cap {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+  .opp-text { flex: 1; min-width: 0; }
+  .opp-text-title { font-size: 12.5px; font-weight: 600; color: #fff; }
+  .opp-savings {
+    font-size: 13px;
+    color: var(--amber);
+    font-weight: 700;
+    margin-top: 4px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .opp-savings::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 6px var(--amber);
+  }
+  .opp-savings-sub {
+    font-size: 10.5px; color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .rec-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .rec-card {
+    padding: 11px 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.18s, transform 0.18s;
+  }
+  .rec-card:hover { border-color: var(--border-strong); }
+  .rec-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 6px;
+  }
+  .rec-num {
+    width: 22px; height: 22px;
+    background: rgba(34, 211, 238, 0.12);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    color: var(--cyan-bright);
+    border-radius: 50%;
+    font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .rec-impact {
+    font-size: 8.5px; font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .rec-impact.high { color: var(--green); background: rgba(16,185,129,0.14); border: 1px solid rgba(16,185,129,0.35); }
+  .rec-impact.med { color: var(--amber); background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); }
+  .rec-title { font-size: 11.5px; font-weight: 600; color: #fff; line-height: 1.3; }
+  .rec-desc { font-size: 10px; color: var(--text-muted); line-height: 1.45; }
+
+  /* ===== YIELD PLACEHOLDER (legacy fallback) ===== */
   .placeholder-card {
     flex: 1;
     display: flex; align-items: center; justify-content: center;
@@ -1287,6 +1739,9 @@
     .row-prod-1 { grid-template-columns: 1fr 1fr; }
     .row-prod-2 { grid-template-columns: repeat(3, 1fr); }
     .row-prod-3 { grid-template-columns: 1fr 1fr; }
+    .row-yield-1 { grid-template-columns: 1fr; }
+    .row-yield-3 { grid-template-columns: 1fr; }
+    .row-yield-4 { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -1934,14 +2389,215 @@
       </div>
       <!-- ============ /PdM TAB ============ -->
 
-      <!-- ============ YIELD TAB (placeholder) ============ -->
+      <!-- ============ YIELD TAB ============ -->
       <div class="tab-pane" id="tab-yield">
-        <div class="placeholder-card">
-          <div class="ph-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+
+        <!-- ROW 1 — three numbered question cards -->
+        <div class="row row-yield-1">
+          <!-- ① How is yield now? -->
+          <div class="card yield-step-card">
+            <div class="yield-step-header">
+              <span class="step-num">1</span>
+              <span class="yield-step-title">How is yield now?</span>
+            </div>
+            <span class="yield-status"><span class="dot"></span>Good, but below best</span>
+            <div class="yield-stats-list">
+              <div class="yield-stat-row"><span class="l">Flour extraction</span><span class="v amber">79.1%</span></div>
+              <div class="yield-stat-row"><span class="l">Flour output</span><span class="v">6.64 t/h</span></div>
+              <div class="yield-stat-row"><span class="l">Bran output</span><span class="v">1.57 t/h</span></div>
+              <div class="yield-stat-row"><span class="l">Total wheat input</span><span class="v">8.40 t/h</span></div>
+              <div class="yield-stat-row"><span class="l">Bran split</span><span class="v amber">18.7%</span></div>
+              <div class="yield-stat-row"><span class="l">Loss</span><span class="v">2.3%</span></div>
+              <div class="yield-stat-row"><span class="l">Energy cost / ton</span><span class="v">1.42 OMR/t</span></div>
+            </div>
           </div>
-          <div class="ph-title">Yield Optimization</div>
-          <div class="ph-sub">Coming next — extraction tuning, recipe optimization, and AI-driven yield improvement recommendations.</div>
+
+          <!-- ② What can Atlas improve? -->
+          <div class="card yield-step-card">
+            <div class="yield-step-header">
+              <span class="step-num">2</span>
+              <span class="yield-step-title">What can Atlas improve?</span>
+            </div>
+            <div class="improve-context">
+              Historical best extraction for this wheat source: <b>79.8%</b>.<br>
+              AI optimized potential based on current conditions:
+            </div>
+            <div class="improve-cmp">
+              <div class="improve-bar-block">
+                <div class="improve-bar-label">Current</div>
+                <div class="improve-bar-value current">79.1<span class="u">%</span></div>
+                <div class="improve-bar"><div class="improve-bar-fill current" style="width: 79.1%;"></div></div>
+              </div>
+              <div class="improve-arrow">→</div>
+              <div class="improve-bar-block">
+                <div class="improve-bar-label">AI optimized</div>
+                <div class="improve-bar-value optimized">80.2<span class="u">%</span></div>
+                <div class="improve-bar"><div class="improve-bar-fill optimized" style="width: 80.2%;"></div></div>
+              </div>
+            </div>
+            <div class="gap-callout">
+              <div class="gap-callout-row">
+                <span class="l">Gap to optimized</span>
+                <span class="v">+1.1%</span>
+              </div>
+              <div class="gap-callout-cost">This gap is costing ~12 OMR/hour</div>
+            </div>
+          </div>
+
+          <!-- ③ What should we change next? -->
+          <div class="card yield-step-card">
+            <div class="yield-step-header">
+              <span class="step-num">3</span>
+              <span class="yield-step-title">What should we change next?</span>
+            </div>
+            <div class="suggestion-headline">Reduce bran split by adjusting the sifter.</div>
+            <div class="suggestion-sub">Bran split is <b style="color: var(--amber);">0.7% above normal</b>.</div>
+            <div class="suggestion-callout">
+              <b>Fine-tuning the sifter</b> is the primary suggestion to recover the lost extraction.
+            </div>
+            <div class="suggestion-impact">
+              <b>Impact:</b> Higher extraction, lower loss, better profitability.
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 2 — 3D milling scene -->
+        <div class="card milling-card">
+          <div class="milling-title-row">
+            <div class="milling-title">Where the opportunity is <span class="muted">— Milling process overview</span></div>
+            <span class="att-badge" style="color: var(--cyan-bright); border-color: rgba(34,211,238,0.35); background: rgba(34,211,238,0.08);">Live process</span>
+          </div>
+          <div class="milling-stage">
+            <div class="milling-corners"><span></span></div>
+            <canvas id="milling-canvas"></canvas>
+            <div class="milling-tag">Optimization opportunity here</div>
+            <svg class="milling-arrow" width="60" height="60" viewBox="0 0 60 60" fill="none">
+              <path d="M 8 50 Q 25 35 50 14" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 3"
+                    style="filter: drop-shadow(0 0 4px rgba(245,158,11,0.7));"/>
+              <path d="M 14 56 L 8 50 L 14 44" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" fill="none"
+                    style="filter: drop-shadow(0 0 4px rgba(245,158,11,0.7));"/>
+            </svg>
+            <div class="milling-label-box input">Wheat in · 8.40 t/h</div>
+            <div class="milling-label-box flour">Flour out · 6.64 t/h</div>
+            <div class="milling-label-box bran">Bran out · 1.57 t/h</div>
+          </div>
+        </div>
+
+        <!-- ROW 3 — three result panels -->
+        <div class="row row-yield-3">
+          <div class="card result-panel current">
+            <div class="row3-title">Current state</div>
+            <div class="result-row"><span class="l">Extraction</span><span class="v">79.1%</span></div>
+            <div class="result-row"><span class="l">Bran split</span><span class="v amber">18.7%</span></div>
+            <div class="result-row"><span class="l">Loss</span><span class="v">2.3%</span></div>
+            <div class="result-row"><span class="l">Cost impact</span><span class="v amber">~12 OMR/hour</span></div>
+          </div>
+
+          <div class="card result-panel suggestion">
+            <div class="row3-title">AI suggestion</div>
+            <div class="result-suggestion-text">
+              Adjust the sifter to reduce bran split back to normal range.
+            </div>
+            <div class="result-suggestion-sub">
+              Slightly tighter sifter setting — Atlas estimates a <b style="color:#fff;">−0.7%</b> shift on bran split with no negative effect on flour quality.
+            </div>
+            <div class="result-good-tag">Tune sifter →</div>
+          </div>
+
+          <div class="card result-panel expected">
+            <div class="row3-title">Expected after optimization</div>
+            <div class="result-row">
+              <span class="l">Extraction</span>
+              <span class="v green">80.2% <span class="delta up">+1.1%</span></span>
+            </div>
+            <div class="result-row">
+              <span class="l">Bran split</span>
+              <span class="v">~18.0% <span class="delta down">−0.7%</span></span>
+            </div>
+            <div class="result-row">
+              <span class="l">Loss</span>
+              <span class="v">~2.0% <span class="delta down">−0.3%</span></span>
+            </div>
+            <div class="result-row">
+              <span class="l">Cost impact</span>
+              <span class="v green">~0 OMR/hour</span>
+            </div>
+            <div class="result-good-tag">Better profitability</div>
+          </div>
+        </div>
+
+        <!-- ROW 4 — performance bars + opportunity + recommendations -->
+        <div class="row row-yield-4">
+          <!-- LEFT: Yield performance -->
+          <div class="card perf-card">
+            <div class="row3-title">Yield performance</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Current · Historical best · AI potential</div>
+            <div class="perf-bars">
+              <div class="perf-col">
+                <div class="perf-num teal">79.1%</div>
+                <div class="perf-bar teal" style="height: 60%;"></div>
+                <div class="perf-label">Current</div>
+              </div>
+              <div class="perf-col">
+                <div class="perf-num green">79.8%</div>
+                <div class="perf-bar green" style="height: 78%;"></div>
+                <div class="perf-label">Historical best</div>
+              </div>
+              <div class="perf-col">
+                <div class="perf-num green-bright">80.2%</div>
+                <div class="perf-bar green-bright" style="height: 92%;"></div>
+                <div class="perf-label">AI potential</div>
+              </div>
+            </div>
+            <div class="perf-foot">
+              Closing the gap from 79.1% to <b>80.2%</b> would lift profitability and reduce loss.
+            </div>
+          </div>
+
+          <!-- RIGHT: Opportunity + Recommendations -->
+          <div class="right-col">
+            <div class="card opp-card">
+              <div class="opp-num-block">
+                <div class="opp-big">80.2<span class="u">%</span></div>
+                <div class="opp-cap">Opportunity impact</div>
+              </div>
+              <div class="opp-text">
+                <div class="opp-text-title">Closing the extraction gap</div>
+                <div class="opp-savings">~12 OMR/hour potential savings</div>
+                <div class="opp-savings-sub">Cumulative across the working day · sifter-driven optimization</div>
+              </div>
+            </div>
+
+            <div>
+              <div class="row3-title" style="margin-bottom: 8px;">What Atlas recommends</div>
+              <div class="rec-list">
+                <div class="rec-card">
+                  <div class="rec-head">
+                    <span class="rec-num">1</span>
+                    <span class="rec-impact high">High impact</span>
+                  </div>
+                  <div class="rec-title">Adjust sifter settings</div>
+                  <div class="rec-desc">Tighten the top sifter screen to bring bran split back into normal range.</div>
+                </div>
+                <div class="rec-card">
+                  <div class="rec-head">
+                    <span class="rec-num">2</span>
+                    <span class="rec-impact med">Medium impact</span>
+                  </div>
+                  <div class="rec-title">Reduce bran split deviation</div>
+                  <div class="rec-desc">Watch deviations through the shift to confirm the adjustment held.</div>
+                </div>
+                <div class="rec-card">
+                  <div class="rec-head">
+                    <span class="rec-num">3</span>
+                    <span class="rec-impact med">Medium impact</span>
+                  </div>
+                  <div class="rec-title">Maintain efficient energy use</div>
+                  <div class="rec-desc">Keep grinding load steady — energy/ton drift would offset extraction gains.</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1976,12 +2632,16 @@
       </div>
     </div>
 
-    <!-- ============ YIELD BAR (placeholder) ============ -->
+    <!-- ============ YIELD AI INSIGHT BAR ============ -->
     <div class="ai-bar tab-bar" id="bar-yield">
       <div class="ai-icon">AI</div>
       <div class="ai-text">
-        <b>Atlas AI:</b>
-        Yield optimization insights will appear here once this tab is built.
+        <b>Atlas AI Insight:</b>
+        Your extraction is slightly below the best for this wheat source. The main opportunity is at the sifter stage — bran split is above normal by 0.7%. Adjusting the sifter should lift extraction toward 80.2% and save ~12 OMR/hour.
+      </div>
+      <div class="ai-cta">
+        Ask Atlas AI
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
       </div>
     </div>
   </main>
@@ -2367,6 +3027,308 @@
     `;
   })();
 
+  /* ============ THREE.JS MILLING SCENE (Yield tab) ============ */
+  let millingInitialized = false;
+  let millingResize = null;
+  function initMillingScene() {
+    if (millingInitialized) { if (millingResize) millingResize(); return; }
+    const canvas = document.getElementById('milling-canvas');
+    if (!canvas) return;
+    const stage = canvas.parentElement;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x06101c, 8, 22);
+
+    function getSize() {
+      const r = stage.getBoundingClientRect();
+      return { w: Math.max(r.width, 300), h: Math.max(r.height, 220) };
+    }
+    let { w, h } = getSize();
+
+    const camera = new THREE.PerspectiveCamera(35, w / h, 0.1, 100);
+    camera.position.set(2.0, 3.2, 7.5);
+    camera.lookAt(0.5, 0.4, 0);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(w, h, false);
+
+    /* ---- LIGHTS ---- */
+    scene.add(new THREE.AmbientLight(0x223a4c, 0.6));
+    const key = new THREE.DirectionalLight(0xffffff, 0.7);
+    key.position.set(5, 7, 5);
+    scene.add(key);
+    const cyanFill = new THREE.PointLight(0x22d3ee, 1.4, 14);
+    cyanFill.position.set(-3, 2, 3);
+    scene.add(cyanFill);
+    const cyanRim = new THREE.PointLight(0x0ea5e9, 0.85, 12);
+    cyanRim.position.set(2, 0.5, -3);
+    scene.add(cyanRim);
+    const amberSpot = new THREE.PointLight(0xf59e0b, 0.7, 6);
+    amberSpot.position.set(0.4, 0.4, 1.2);
+    scene.add(amberSpot);
+
+    /* ---- MATERIALS ---- */
+    const rollerMat = new THREE.MeshPhongMaterial({
+      color: 0x1a3a5c, specular: 0x4a8fc7, shininess: 60,
+      emissive: 0x081428, emissiveIntensity: 0.4
+    });
+    const rollerEndMat = new THREE.MeshPhongMaterial({
+      color: 0x0f2238, specular: 0x3a6a96, shininess: 30
+    });
+    const cyanAccent = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+    const amberAccent = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+    const sifterFrameMat = new THREE.MeshPhongMaterial({
+      color: 0x16334e, specular: 0x4a8fc7, shininess: 40
+    });
+
+    /* ---- INTAKE HOPPER (left) ---- */
+    const hopperGroup = new THREE.Group();
+    const hopper = new THREE.Mesh(
+      new THREE.ConeGeometry(0.55, 0.85, 20, 1, true),
+      new THREE.MeshPhongMaterial({ color: 0x1a3a5c, specular: 0x4a8fc7, shininess: 50, side: THREE.DoubleSide })
+    );
+    hopper.rotation.x = Math.PI;
+    hopper.position.set(-2.7, 1.4, 0);
+    hopperGroup.add(hopper);
+    const hopperRim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.55, 0.025, 8, 32),
+      cyanAccent
+    );
+    hopperRim.rotation.x = Math.PI / 2;
+    hopperRim.position.set(-2.7, 1.83, 0);
+    hopperGroup.add(hopperRim);
+    scene.add(hopperGroup);
+
+    /* ---- GRINDING ROLLERS (center) ---- */
+    const rollerGroup = new THREE.Group();
+    const rollerLen = 1.2, rollerR = 0.42;
+
+    const rollerA = new THREE.Mesh(new THREE.CylinderGeometry(rollerR, rollerR, rollerLen, 36), rollerMat);
+    rollerA.rotation.z = Math.PI / 2;
+    rollerA.position.set(-0.5, 0.85, 0.32);
+    rollerGroup.add(rollerA);
+    const rollerAEnd1 = new THREE.Mesh(new THREE.CylinderGeometry(rollerR + 0.05, rollerR + 0.05, 0.07, 24), rollerEndMat);
+    rollerAEnd1.rotation.z = Math.PI / 2;
+    rollerAEnd1.position.set(0.13, 0.85, 0.32);
+    rollerGroup.add(rollerAEnd1);
+    const rollerAEnd2 = rollerAEnd1.clone();
+    rollerAEnd2.position.x = -1.13;
+    rollerGroup.add(rollerAEnd2);
+
+    const rollerB = new THREE.Mesh(new THREE.CylinderGeometry(rollerR, rollerR, rollerLen, 36), rollerMat);
+    rollerB.rotation.z = Math.PI / 2;
+    rollerB.position.set(-0.5, 0.85, -0.32);
+    rollerGroup.add(rollerB);
+    const rollerBEnd1 = new THREE.Mesh(new THREE.CylinderGeometry(rollerR + 0.05, rollerR + 0.05, 0.07, 24), rollerEndMat);
+    rollerBEnd1.rotation.z = Math.PI / 2;
+    rollerBEnd1.position.set(0.13, 0.85, -0.32);
+    rollerGroup.add(rollerBEnd1);
+    const rollerBEnd2 = rollerBEnd1.clone();
+    rollerBEnd2.position.x = -1.13;
+    rollerGroup.add(rollerBEnd2);
+
+    /* cyan accent rings on rollers */
+    function addRollerRing(x, z) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(rollerR + 0.005, 0.012, 8, 36), cyanAccent);
+      ring.rotation.y = Math.PI / 2;
+      ring.position.set(x, 0.85, z);
+      rollerGroup.add(ring);
+    }
+    addRollerRing(-0.05, 0.32);
+    addRollerRing(-0.95, 0.32);
+    addRollerRing(-0.05, -0.32);
+    addRollerRing(-0.95, -0.32);
+
+    scene.add(rollerGroup);
+
+    /* ---- SIFTER (slanted mesh plane) ---- */
+    const sifterGroup = new THREE.Group();
+    sifterGroup.position.set(0.9, 0.3, 0);
+    sifterGroup.rotation.z = -0.18;
+
+    const sifterFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 0.05, 1.0),
+      sifterFrameMat
+    );
+    sifterGroup.add(sifterFrame);
+
+    /* mesh grid lines for sifter screen */
+    const meshLineMat = new THREE.LineBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.55 });
+    const meshGroup = new THREE.Group();
+    const sw = 1.4, sh = 0.92, divs = 10;
+    for (let i = 0; i <= divs; i++) {
+      const t = -sw / 2 + (i / divs) * sw;
+      const g = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(t, 0.03, -sh / 2),
+        new THREE.Vector3(t, 0.03, sh / 2)
+      ]);
+      meshGroup.add(new THREE.Line(g, meshLineMat));
+    }
+    for (let i = 0; i <= divs; i++) {
+      const t = -sh / 2 + (i / divs) * sh;
+      const g = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-sw / 2, 0.03, t),
+        new THREE.Vector3(sw / 2, 0.03, t)
+      ]);
+      meshGroup.add(new THREE.Line(g, meshLineMat));
+    }
+    sifterGroup.add(meshGroup);
+
+    /* sifter side rails (cyan accent) */
+    const railMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.7 });
+    const rail1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.025, 0.025), railMat);
+    rail1.position.set(0, 0.04, sh / 2);
+    sifterGroup.add(rail1);
+    const rail2 = rail1.clone();
+    rail2.position.z = -sh / 2;
+    sifterGroup.add(rail2);
+
+    /* amber halo plane underneath the sifter (highlight) */
+    const haloGeom = new THREE.CircleGeometry(1.2, 32);
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: 0xf59e0b, transparent: true, opacity: 0.16
+    });
+    const halo = new THREE.Mesh(haloGeom, haloMat);
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.set(0.9, -0.74, 0);
+    scene.add(halo);
+
+    scene.add(sifterGroup);
+
+    /* ---- WHEAT INTAKE PARTICLES (left → rollers) ---- */
+    function makeParticles(count, color, opacity) {
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(count * 3);
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({
+        color, size: 0.06, transparent: true, opacity,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      });
+      return { points: new THREE.Points(geo, mat), geo, pos, count };
+    }
+
+    /* Wheat intake particles: fall into hopper, accelerate down toward rollers */
+    const wheat = makeParticles(60, 0xfbbf24, 0.85);
+    const wheatState = []; // each: t (progress 0-1)
+    for (let i = 0; i < wheat.count; i++) {
+      wheatState.push({ t: Math.random() });
+    }
+    scene.add(wheat.points);
+
+    /* Flour particles: from rollers/sifter going up-right */
+    const flour = makeParticles(80, 0x22d3ee, 0.9);
+    const flourState = [];
+    for (let i = 0; i < flour.count; i++) {
+      flourState.push({ t: Math.random(), o: Math.random() * 0.4 + 0.7 });
+    }
+    scene.add(flour.points);
+
+    /* Bran particles: from sifter going down-right */
+    const bran = makeParticles(50, 0xf59e0b, 0.85);
+    const branState = [];
+    for (let i = 0; i < bran.count; i++) {
+      branState.push({ t: Math.random(), o: Math.random() * 0.4 + 0.6 });
+    }
+    scene.add(bran.points);
+
+    /* ---- GRID FLOOR ---- */
+    const grid = new THREE.GridHelper(18, 36, 0x22d3ee, 0x0a3548);
+    grid.position.y = -0.95;
+    grid.material.transparent = true;
+    grid.material.opacity = 0.32;
+    scene.add(grid);
+
+    /* glow disk under sifter */
+    const glowDisk = new THREE.Mesh(
+      new THREE.CircleGeometry(2.0, 32),
+      new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.06 })
+    );
+    glowDisk.rotation.x = -Math.PI / 2;
+    glowDisk.position.y = -0.94;
+    scene.add(glowDisk);
+
+    /* ---- ANIMATION ---- */
+    let frame = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      frame += 0.01;
+
+      /* Counter-rotating rollers */
+      rollerA.rotation.x += 0.08;
+      rollerB.rotation.x -= 0.08;
+
+      /* Wheat: from hopper top (-2.7, 1.85) down to roller intake (-0.5, 1.2) */
+      for (let i = 0; i < wheat.count; i++) {
+        const s = wheatState[i];
+        s.t += 0.012;
+        if (s.t > 1) s.t -= 1;
+        const ease = s.t * s.t;
+        const x = -2.7 + ease * 2.2 + (Math.random() - 0.5) * 0.04;
+        const y = 1.85 - ease * 0.65;
+        const z = (Math.random() - 0.5) * 0.18;
+        wheat.pos[i * 3] = x;
+        wheat.pos[i * 3 + 1] = y;
+        wheat.pos[i * 3 + 2] = z;
+      }
+      wheat.geo.attributes.position.needsUpdate = true;
+
+      /* Flour: leaves sifter going up-right
+         start near sifter top (~0.9, 0.4), end up-right (3.2, 1.7) */
+      for (let i = 0; i < flour.count; i++) {
+        const s = flourState[i];
+        s.t += 0.011;
+        if (s.t > 1) s.t -= 1;
+        const t = s.t;
+        const x = 0.6 + t * 2.6 + (Math.random() - 0.5) * 0.05;
+        const y = 0.5 + t * 1.25 + Math.sin(t * Math.PI) * 0.18;
+        const z = (Math.random() - 0.5) * 0.4;
+        flour.pos[i * 3] = x;
+        flour.pos[i * 3 + 1] = y;
+        flour.pos[i * 3 + 2] = z;
+      }
+      flour.geo.attributes.position.needsUpdate = true;
+      flour.points.material.opacity = 0.85;
+
+      /* Bran: from sifter going down-right */
+      for (let i = 0; i < bran.count; i++) {
+        const s = branState[i];
+        s.t += 0.01;
+        if (s.t > 1) s.t -= 1;
+        const t = s.t;
+        const x = 0.7 + t * 2.4 + (Math.random() - 0.5) * 0.05;
+        const y = 0.2 - t * 1.0 - Math.sin(t * Math.PI) * 0.05;
+        const z = (Math.random() - 0.5) * 0.5;
+        bran.pos[i * 3] = x;
+        bran.pos[i * 3 + 1] = y;
+        bran.pos[i * 3 + 2] = z;
+      }
+      bran.geo.attributes.position.needsUpdate = true;
+
+      /* subtle scene breathing */
+      cyanFill.intensity = 1.3 + Math.sin(frame * 1.6) * 0.18;
+      amberSpot.intensity = 0.55 + Math.sin(frame * 2.2) * 0.2;
+      halo.material.opacity = 0.16 + Math.sin(frame * 1.8) * 0.05;
+
+      /* slight scene rotation drift for life */
+      scene.rotation.y = Math.sin(frame * 0.18) * 0.06;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    /* ---- RESIZE ---- */
+    millingResize = function () {
+      const sz = getSize();
+      camera.aspect = sz.w / sz.h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(sz.w, sz.h, false);
+    };
+    window.addEventListener('resize', millingResize);
+    setTimeout(millingResize, 80);
+    millingInitialized = true;
+  }
+
   /* ============ TAB SWITCH ============ */
   (function setupTabs() {
     const tabs = document.querySelectorAll('.top-tab');
@@ -2382,8 +3344,11 @@
         document.querySelectorAll('.tab-bar').forEach(b => b.classList.remove('active'));
         const bar = document.getElementById(`bar-${id}`);
         if (bar) bar.classList.add('active');
-        // trigger motor resize when PdM tab becomes visible
         if (id === 'pdm') window.dispatchEvent(new Event('resize'));
+        if (id === 'yield') {
+          /* lazy init the milling scene only when the tab is first opened */
+          setTimeout(initMillingScene, 30);
+        }
       });
     });
   })();
