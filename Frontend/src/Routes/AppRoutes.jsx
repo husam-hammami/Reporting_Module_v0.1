@@ -36,6 +36,7 @@ import SystemLogs from '../Pages/Settings/Logs/SystemLogs';
 import HerculesAISetup from '../Pages/HerculesAI/HerculesAISetup';
 import HerculesAISettingsPage from '../Pages/HerculesAI/SettingsPage';
 import AtlasPage from '../Pages/Atlas/AtlasPage';
+import AtlasAIPage from '../Pages/AtlasAI/AtlasAIPage';
 import JobLogsPage from '../Pages/JobLogs/JobLogsPage';
 import DigitalTwinPage from '../Pages/DigitalTwin/DigitalTwinPage';
 import { useContext } from 'react';
@@ -231,6 +232,16 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
                 <AtlasPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Atlas AI — Claude Design 3-tab experience (Production / PdM / Yield) */}
+          <Route
+            path="atlas-ai"
+            element={
+              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
+                <AtlasAIPage />
               </ProtectedRoute>
             }
           />

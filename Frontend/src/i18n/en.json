@@ -20,6 +20,8 @@
   "nav.herculesAI": "Hercules AI",
   "nav.atlas": "Hercules Atlas",
   "nav.tooltip.atlas": "Live production & cost forecast",
+  "nav.atlasAI": "Atlas AI",
+  "nav.tooltip.atlasAI": "AI tabs: Production · PdM · Yield",
   "nav.digitalTwin": "Digital Twin",
   "nav.tooltip.digitalTwin": "3D plant view",
 
