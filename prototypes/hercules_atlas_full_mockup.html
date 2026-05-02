@@ -153,13 +153,9 @@
     box-shadow: 0 0 14px rgba(34,211,238,0.4);
   }
   .brand-text-block { line-height: 1.1; }
-  .brand-text-block .brand-name {
-    font-size: 14px; font-weight: 800; color: var(--hai-text-primary); letter-spacing: 0.04em;
-  }
-  .brand-text-block .brand-sub {
-    font-size: 9px; color: var(--hai-text-tertiary);
-    letter-spacing: 0.2em; text-transform: uppercase; margin-top: 2px;
-  }
+  .brand-text-block .brand-name { font-size: 14px; font-weight: 800; color: var(--hai-text-primary); letter-spacing: 0.04em; }
+  .brand-text-block .brand-sub { font-size: 9px; color: var(--hai-text-tertiary); letter-spacing: 0.2em; text-transform: uppercase; margin-top: 2px; }
+
   .live-pill {
     display: flex; align-items: center; gap: 10px;
     padding: 6px 16px; border-radius: 999px;
@@ -167,10 +163,7 @@
     color: var(--hai-status-ok-600);
     border: 1px solid rgba(46,158,106,0.25);
   }
-  html:not(.dark) .live-pill {
-    background: var(--hai-status-ok-100);
-    border-color: rgba(21,128,74,0.30);
-  }
+  html:not(.dark) .live-pill { background: var(--hai-status-ok-100); border-color: rgba(21,128,74,0.30); }
   .live-pill .dot {
     width: 8px; height: 8px; border-radius: 50%;
     background: var(--hai-status-ok-600);
@@ -356,9 +349,9 @@
     animation: pulse 1.6s ease-in-out infinite;
   }
 
-  .panes { flex: 1; position: relative; overflow: hidden; padding: 16px 20px 14px; z-index: 1; }
+  .panes { flex: 1; position: relative; overflow: hidden; padding: 16px 22px 14px; z-index: 1; }
   .pane {
-    position: absolute; inset: 16px 20px 14px 20px;
+    position: absolute; inset: 16px 22px 14px 22px;
     display: flex; flex-direction: column;
     opacity: 0; pointer-events: none;
     transform: translateY(12px) scale(0.992);
@@ -413,7 +406,7 @@
   html:not(.dark) .ambient-grid { opacity: 0.16; }
 
   /* ============================================================
-     SHARED CARD BASE
+     SHARED CARD
      ============================================================ */
   .card-base {
     background:
@@ -437,32 +430,43 @@
     box-shadow: var(--hai-shadow-deep);
   }
 
-  /* ============================================================
-     STORY-FLOW step number eyebrow
-     ============================================================ */
-  .step-eyebrow {
+  /* common card head + eyebrow + title */
+  .card-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 12px; margin-bottom: 10px;
+  }
+  .card-eyebrow {
     display: inline-flex; align-items: center; gap: 8px;
     font-size: 9px; font-weight: 800;
     color: var(--hai-text-tertiary);
     text-transform: uppercase; letter-spacing: 0.20em;
     margin-bottom: 6px;
   }
-  .step-eyebrow .num {
+  .card-eyebrow .num {
     background: var(--hai-glass-2);
     color: var(--hai-text-secondary);
     padding: 3px 7px; border-radius: 4px;
     font-size: 10px; letter-spacing: 0.10em;
     border: 1px solid var(--hai-surface-border);
   }
-  .step-eyebrow.now .num { color: var(--accent); border-color: rgba(34,211,238,0.30); background: rgba(34,211,238,0.06); }
-  .step-eyebrow.fcst .num { color: var(--hai-future); border-color: rgba(139,159,247,0.30); background: rgba(139,159,247,0.06); }
-  .step-eyebrow.act .num { color: var(--hai-status-ok-600); border-color: rgba(46,158,106,0.30); background: var(--hai-status-ok-100); }
-  .step-eyebrow.why .num { color: var(--hai-status-info-600); border-color: rgba(62,130,216,0.30); background: var(--hai-status-info-100); }
-  html:not(.dark) .step-eyebrow.act .num { background: rgba(21,128,74,0.10); border-color: rgba(21,128,74,0.30); }
-  html:not(.dark) .step-eyebrow.why .num { background: rgba(30,95,181,0.10); border-color: rgba(30,95,181,0.30); }
+  .card-eyebrow.now .num   { color: var(--accent); border-color: rgba(34,211,238,0.30); background: rgba(34,211,238,0.06); }
+  .card-eyebrow.in .num    { color: var(--hai-data-5); border-color: rgba(123,196,201,0.30); background: rgba(123,196,201,0.06); }
+  .card-eyebrow.act .num   { color: var(--hai-status-ok-600); border-color: rgba(46,158,106,0.30); background: var(--hai-status-ok-100); }
+  .card-eyebrow.fin .num   { color: var(--hai-money); border-color: rgba(240,181,79,0.30); background: rgba(240,181,79,0.08); }
+  .card-eyebrow.why .num   { color: var(--hai-status-info-600); border-color: rgba(62,130,216,0.30); background: var(--hai-status-info-100); }
+  html:not(.dark) .card-eyebrow.act .num { background: rgba(21,128,74,0.10); border-color: rgba(21,128,74,0.30); }
+  html:not(.dark) .card-eyebrow.why .num { background: rgba(30,95,181,0.10); border-color: rgba(30,95,181,0.30); }
+  html:not(.dark) .card-eyebrow.fin .num { background: rgba(185,121,0,0.10); border-color: rgba(185,121,0,0.30); }
+
+  .card-title {
+    font-size: 16px; font-weight: 800;
+    color: var(--hai-text-primary);
+    line-height: 1.25; letter-spacing: -0.01em;
+  }
+  .card-sub { font-size: 11px; color: var(--hai-text-tertiary); margin-top: 2px; line-height: 1.4; }
 
   /* ============================================================
-     TAB 1 — PRODUCTION (Atlas v4 grid)
+     TAB 1 — PRODUCTION
      ============================================================ */
   .grid-prod {
     height: 100%;
@@ -499,32 +503,20 @@
   .hero-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
   .hero-card.production::before { background: linear-gradient(90deg, var(--hai-money), var(--hai-status-ok-600)); }
   .hero-card.cost::before { background: linear-gradient(90deg, var(--hai-status-info-600), var(--hai-status-ok-600)); }
-  .hero-eyebrow {
-    font-size: 10px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
-  }
+  .hero-eyebrow { font-size: 10px; color: var(--hai-text-tertiary); text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700; }
   .hero-label { font-size: 13px; color: var(--hai-text-primary); font-weight: 600; margin-top: 3px; }
   .now-block { margin-top: 8px; }
-  .now-lbl, .pred-lbl {
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700;
-  }
+  .now-lbl, .pred-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; }
   .now-lbl { color: var(--hai-text-tertiary); }
   .pred-lbl { display: flex; align-items: center; gap: 6px; color: var(--hai-status-info-600); }
   .production .pred-lbl { color: var(--hai-money); }
   .pred-lbl::before {
     content: ""; width: 6px; height: 6px; border-radius: 50%;
-    background: currentColor;
-    animation: pulse 1.6s ease-in-out infinite;
+    background: currentColor; animation: pulse 1.6s ease-in-out infinite;
   }
   .now-val, .pred-val { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
-  .now-val .num-big {
-    font-size: 32px; font-weight: 800; color: var(--hai-text-primary);
-    line-height: 1; letter-spacing: -0.02em;
-  }
-  .pred-val .num-big {
-    font-size: 26px; font-weight: 800; color: var(--hai-status-ok-600);
-    line-height: 1; letter-spacing: -0.02em;
-  }
+  .now-val .num-big { font-size: 32px; font-weight: 800; color: var(--hai-text-primary); line-height: 1; letter-spacing: -0.02em; }
+  .pred-val .num-big { font-size: 26px; font-weight: 800; color: var(--hai-status-ok-600); line-height: 1; letter-spacing: -0.02em; }
   .unit { font-size: 11px; color: var(--hai-text-tertiary); font-weight: 500; }
   .arrow { font-size: 14px; color: var(--hai-status-ok-600); font-weight: 700; }
   .pred-divider { height: 1px; background: var(--hai-surface-border); margin: 10px 0 8px; }
@@ -536,10 +528,7 @@
     display: flex; justify-content: space-between; align-items: baseline;
   }
   html:not(.dark) .savings-pill { border-color: rgba(21,128,74,0.30); }
-  .savings-pill .lbl {
-    font-size: 9px; color: var(--hai-status-ok-600);
-    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
-  }
+  .savings-pill .lbl { font-size: 9px; color: var(--hai-status-ok-600); text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; }
   .savings-pill .val { font-size: 13px; font-weight: 700; color: var(--hai-text-primary); }
   .chart-card { padding: 12px 14px 8px; display: flex; flex-direction: column; min-height: 0; }
   .chart-card.prod-chart { grid-area: prod-chart; }
@@ -600,8 +589,7 @@
     width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
     background: linear-gradient(135deg, var(--hai-status-info-600), #0369a1);
     display: flex; align-items: center; justify-content: center;
-    color: #fff;
-    box-shadow: 0 0 12px rgba(62,130,216,0.35);
+    color: #fff; box-shadow: 0 0 12px rgba(62,130,216,0.35);
     position: relative; z-index: 1;
   }
   .ai-bar-icon svg { width: 16px; height: 16px; }
@@ -631,43 +619,30 @@
   .kpis { grid-area: kpis; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .kpi-card { padding: 10px 12px; display: flex; flex-direction: column; }
   .kpi-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
-  .kpi-name {
-    font-size: 10px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600;
-  }
-  .kpi-status {
-    font-size: 9px; font-weight: 700;
-    padding: 2px 7px; border-radius: 999px;
-    text-transform: uppercase; letter-spacing: 0.1em;
-  }
+  .kpi-name { font-size: 10px; color: var(--hai-text-tertiary); text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600; }
+  .kpi-status { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.1em; }
   .kpi-status.good { background: var(--hai-status-ok-100); color: var(--hai-status-ok-600); }
   .kpi-status.warn { background: var(--hai-status-warn-100); color: var(--hai-status-warn-600); }
   .kpi-value { display: flex; align-items: baseline; gap: 5px; }
-  .kpi-value .num-mid {
-    font-size: 20px; font-weight: 800; color: var(--hai-text-primary);
-    line-height: 1; letter-spacing: -0.02em;
-  }
+  .kpi-value .num-mid { font-size: 20px; font-weight: 800; color: var(--hai-text-primary); line-height: 1; letter-spacing: -0.02em; }
   .kpi-msg { font-size: 10px; color: var(--hai-text-tertiary); margin-top: 4px; line-height: 1.4; }
   .kpi-msg b { color: var(--hai-text-secondary); font-weight: 600; }
 
   /* ============================================================
-     TAB 2 — PdM (story flow)
+     TAB 2 — PdM (fleet table)
      ============================================================ */
   .grid-pdm {
     height: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 1.05fr 1fr;
+    grid-template-rows: 1fr auto;
     gap: 14px;
-    grid-template-areas:
-      "m30      m31      c32"
-      "timeline action   why";
+    grid-template-areas: "fleet" "insight";
   }
 
-  /* equipment card */
-  .equip-card {
+  .fleet-card {
+    grid-area: fleet;
     border-radius: var(--hai-radius-xl);
-    padding: 16px 18px 14px 22px;
+    padding: 18px 22px 16px;
     background:
       linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
       var(--hai-surface-100);
@@ -676,413 +651,254 @@
     backdrop-filter: blur(8px) saturate(140%);
     -webkit-backdrop-filter: blur(8px) saturate(140%);
     display: flex; flex-direction: column;
-    gap: 10px;
     position: relative; overflow: hidden;
     transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
   }
-  .equip-card:hover {
+  .fleet-card:hover {
     transform: translateY(-2px);
     border-color: var(--hai-surface-border-strong);
     box-shadow: var(--hai-shadow-deep);
   }
-  .equip-card.s-m30 { grid-area: m30; }
-  .equip-card.s-m31 { grid-area: m31; }
-  .equip-card.s-c32 { grid-area: c32; }
-  .equip-card::before {
-    content: ""; position: absolute;
-    top: 14px; bottom: 14px; left: 0;
-    width: 3px;
-    border-radius: 0 3px 3px 0;
-    background: var(--hai-status-ok-600);
-    box-shadow: 0 0 14px var(--hai-status-ok-600), 0 0 4px var(--hai-status-ok-600);
-    opacity: 0.85;
-  }
-  .equip-card.warn::before {
-    background: var(--hai-status-warn-600);
-    box-shadow: 0 0 18px var(--hai-status-warn-600), 0 0 6px var(--hai-status-warn-600);
-  }
-  .equip-card.crit::before {
-    background: var(--hai-status-crit-600);
-    box-shadow: 0 0 22px var(--hai-status-crit-600), 0 0 8px var(--hai-status-crit-600);
-    animation: critPulse 1.4s ease-in-out infinite;
-  }
-  @keyframes critPulse {
-    0%,100% { opacity: 0.85; }
-    50%     { opacity: 1; box-shadow: 0 0 32px var(--hai-status-crit-600), 0 0 10px var(--hai-status-crit-600); }
+  .fleet-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--hai-status-warn-600), var(--accent));
   }
 
-  .equip-head-row {
-    display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+  .fleet-counts {
+    display: flex; gap: 8px; flex-shrink: 0;
   }
-  .equip-name {
-    font-size: 22px; font-weight: 800;
-    color: var(--hai-text-primary);
-    line-height: 1; letter-spacing: 0.01em;
-  }
-  .equip-asset {
-    font-size: 10px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
-    margin-top: 4px;
-  }
-  .equip-pill {
-    flex-shrink: 0;
-    font-size: 9px; font-weight: 800;
+  .fleet-counts .count {
+    font-size: 10px; font-weight: 800;
     padding: 5px 11px; border-radius: 999px;
     text-transform: uppercase; letter-spacing: 0.12em;
-    background: var(--hai-status-ok-100);
-    color: var(--hai-status-ok-600);
-    border: 1px solid rgba(46,158,106,0.30);
-    display: inline-flex; align-items: center; gap: 6px;
     line-height: 1;
+    display: inline-flex; align-items: center; gap: 6px;
   }
-  html:not(.dark) .equip-pill { border-color: rgba(21,128,74,0.30); }
-  .equip-pill::before {
-    content: ""; width: 5px; height: 5px; border-radius: 50%;
+  .fleet-counts .count::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
     background: currentColor;
     box-shadow: 0 0 6px currentColor;
   }
-  .equip-pill.warn {
-    background: var(--hai-status-warn-100); color: var(--hai-status-warn-600);
-    border-color: rgba(217,141,23,0.40);
-  }
-  .equip-pill.crit {
-    background: var(--hai-status-crit-100); color: var(--hai-status-crit-600);
-    border-color: rgba(222,73,69,0.45);
-    animation: pillPulse 1.4s ease-in-out infinite;
-  }
-  @keyframes pillPulse { 0%,100% { box-shadow: 0 0 0 transparent; } 50% { box-shadow: 0 0 14px rgba(222,73,69,0.50); } }
+  .fleet-counts .count.good { background: var(--hai-status-ok-100); color: var(--hai-status-ok-600); border: 1px solid rgba(46,158,106,0.30); }
+  .fleet-counts .count.warn { background: var(--hai-status-warn-100); color: var(--hai-status-warn-600); border: 1px solid rgba(217,141,23,0.40); }
+  .fleet-counts .count.crit { background: var(--hai-status-crit-100); color: var(--hai-status-crit-600); border: 1px solid rgba(222,73,69,0.45); }
+  html:not(.dark) .fleet-counts .count.good { border-color: rgba(21,128,74,0.30); }
 
-  /* live readings: 3 columns */
-  .readings {
-    display: grid; grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-    padding: 8px 0;
-  }
-  .reading {
-    display: flex; flex-direction: column; gap: 2px;
-  }
-  .reading .lbl {
-    font-size: 9px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
-  }
-  .reading .val {
-    font-size: 18px; font-weight: 800;
-    color: var(--hai-text-primary);
-    line-height: 1; letter-spacing: -0.02em;
-    font-variant-numeric: tabular-nums;
-  }
-  .reading .val .v-unit {
-    font-size: 10px; font-weight: 600;
-    color: var(--hai-text-tertiary);
-    margin-left: 3px;
-    letter-spacing: 0.04em;
-  }
-  .reading.warn .val { color: var(--hai-status-warn-600); }
-  .reading.crit .val { color: var(--hai-status-crit-600); }
-  .reading .delta {
-    font-size: 9px; font-weight: 700;
-    color: var(--hai-text-tertiary);
-    letter-spacing: 0.04em;
-  }
-  .reading .delta.up   { color: var(--hai-status-warn-600); }
-  .reading .delta.down { color: var(--hai-status-ok-600); }
-
-  /* sparkline */
-  .equip-spark {
-    height: 50px;
-    margin-top: auto;
-    border-top: 1px dashed var(--hai-surface-border);
-    padding-top: 8px;
-    display: flex; flex-direction: column; gap: 3px;
-  }
-  .equip-spark-head {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 9px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
-  }
-  .equip-spark-head .delta {
-    color: var(--hai-status-ok-600);
-    font-weight: 800;
-  }
-  .equip-spark-head .delta.warn { color: var(--hai-status-warn-600); }
-  .equip-spark-svg {
-    flex: 1; min-height: 0;
+  .fleet-table-wrap { flex: 1; overflow: hidden; min-height: 0; }
+  .fleet-table {
     width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
   }
-  .equip-spark-svg svg { width: 100%; height: 100%; display: block; }
-
-  /* ============================================================
-     PdM — Section 2: TIMELINE
-     ============================================================ */
-  .timeline-card {
-    grid-area: timeline;
-    border-radius: var(--hai-radius-xl);
-    padding: 16px 20px;
-    background:
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
-      var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
-    box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(8px) saturate(140%);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    display: flex; flex-direction: column;
-    gap: 10px;
-    position: relative; overflow: hidden;
-    transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
+  .fleet-table thead th {
+    text-align: left;
+    font-size: 9px; font-weight: 800;
+    color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.18em;
+    padding: 10px 12px 12px;
+    border-bottom: 1px solid var(--hai-surface-border-strong);
+    background: var(--hai-glass-1);
   }
-  .timeline-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--hai-surface-border-strong);
-    box-shadow: var(--hai-shadow-deep);
+  .fleet-table thead th:first-child { padding-left: 16px; border-top-left-radius: 10px; }
+  .fleet-table thead th:last-child { padding-right: 16px; border-top-right-radius: 10px; }
+  .fleet-table tbody td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--hai-surface-border);
+    vertical-align: middle;
+    font-size: 13px;
+    color: var(--hai-text-primary);
   }
-  .timeline-title {
-    font-size: 14px; font-weight: 700; color: var(--hai-text-primary);
-    line-height: 1.25;
-  }
-  .timeline-title b { color: var(--hai-status-warn-600); font-weight: 800; }
-  .timeline-svg-wrap {
-    flex: 1; min-height: 0;
+  .fleet-table tbody td:first-child { padding-left: 16px; }
+  .fleet-table tbody td:last-child { padding-right: 16px; }
+  .fleet-table tbody tr {
+    transition: background-color .2s ease;
     position: relative;
   }
-  .timeline-svg-wrap svg { width: 100%; height: 100%; display: block; }
-  .timeline-foot {
-    font-size: 11px; color: var(--hai-text-secondary);
-    line-height: 1.5;
+  .fleet-table tbody tr:hover {
+    background: var(--hai-glass-1);
   }
-  .timeline-foot b { color: var(--hai-text-primary); font-weight: 700; }
+  .fleet-table tbody tr:last-child td { border-bottom: none; }
 
-  /* ============================================================
-     PdM — Section 3: ACTION
-     ============================================================ */
-  .action-card {
-    grid-area: action;
-    border-radius: var(--hai-radius-xl);
-    padding: 16px 20px;
-    background:
-      linear-gradient(135deg, rgba(46,158,106,0.10) 0%, transparent 60%),
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
-      var(--hai-surface-100);
-    border: 1px solid rgba(46,158,106,0.30);
-    box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(8px) saturate(140%);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    display: flex; flex-direction: column;
-    gap: 8px;
-    position: relative; overflow: hidden;
-    transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
-  }
-  html:not(.dark) .action-card { border-color: rgba(21,128,74,0.30); }
-  .action-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(46,158,106,0.55);
-    box-shadow: var(--hai-shadow-deep);
-  }
-  html:not(.dark) .action-card:hover { border-color: rgba(21,128,74,0.55); }
-  .action-card::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: var(--hai-status-ok-600);
-  }
-  .action-title {
-    font-size: 18px; font-weight: 800;
+  /* row left accent */
+  .fleet-table tbody tr.warn td:first-child { box-shadow: inset 3px 0 0 var(--hai-status-warn-600); }
+  .fleet-table tbody tr.crit td:first-child { box-shadow: inset 3px 0 0 var(--hai-status-crit-600); }
+  .fleet-table tbody tr.good td:first-child { box-shadow: inset 3px 0 0 var(--hai-status-ok-600); }
+
+  /* equipment column */
+  .eq-cell .eq-name {
+    font-size: 15px; font-weight: 800;
     color: var(--hai-text-primary);
-    line-height: 1.25; letter-spacing: -0.01em;
+    letter-spacing: 0.01em;
+    line-height: 1;
   }
-  .action-meta {
-    display: flex; gap: 14px; flex-wrap: wrap;
-    padding-top: 4px;
-  }
-  .action-meta .meta {
-    display: flex; flex-direction: column; gap: 1px;
-  }
-  .action-meta .meta-lbl {
-    font-size: 9px; color: var(--hai-text-tertiary);
+  .eq-cell .eq-asset {
+    font-size: 10px;
+    color: var(--hai-text-tertiary);
     text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
+    margin-top: 4px;
   }
-  .action-meta .meta-val {
-    font-size: 14px; font-weight: 800;
-    color: var(--hai-text-primary);
-    line-height: 1; letter-spacing: -0.01em;
-  }
-  .action-meta .meta-val.gold { color: var(--hai-money); text-shadow: 0 0 10px var(--hai-money-glow); }
-  .action-btn {
-    align-self: flex-start;
-    margin-top: auto;
-    padding: 9px 16px;
-    background: var(--hai-status-ok-600);
-    color: #fff; border: none; border-radius: 10px;
-    font-family: inherit;
-    font-size: 11px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.12em;
-    cursor: pointer;
-    box-shadow: 0 0 18px rgba(46,158,106,0.35);
-    transition: all .2s ease;
-  }
-  .action-btn:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 24px rgba(46,158,106,0.50); }
 
-  /* ============================================================
-     PdM/Yield — Section 4: WHY
-     ============================================================ */
-  .why-card {
-    grid-area: why;
+  /* status pill in cell */
+  .st-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 10px; font-weight: 800;
+    padding: 5px 11px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    line-height: 1;
+  }
+  .st-pill::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .st-pill.good { background: var(--hai-status-ok-100); color: var(--hai-status-ok-600); border: 1px solid rgba(46,158,106,0.30); }
+  .st-pill.warn { background: var(--hai-status-warn-100); color: var(--hai-status-warn-600); border: 1px solid rgba(217,141,23,0.40); animation: pillPulse 2s ease-in-out infinite; }
+  .st-pill.crit { background: var(--hai-status-crit-100); color: var(--hai-status-crit-600); border: 1px solid rgba(222,73,69,0.45); animation: pillPulse 1.4s ease-in-out infinite; }
+  html:not(.dark) .st-pill.good { border-color: rgba(21,128,74,0.30); }
+  @keyframes pillPulse { 0%,100% { box-shadow: 0 0 0 transparent; } 50% { box-shadow: 0 0 12px currentColor; } }
+
+  .reading-cell {
+    font-size: 13px; font-weight: 700;
+    color: var(--hai-text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  .reading-cell .sub {
+    color: var(--hai-text-tertiary);
+    font-weight: 500;
+    margin-left: 4px;
+    font-size: 11px;
+  }
+  .reading-cell.warn-r { color: var(--hai-status-warn-600); }
+  .reading-cell.warn-r .sub { color: var(--hai-status-warn-600); opacity: 0.85; }
+  .reading-cell .delta {
+    color: var(--hai-status-ok-600);
+    font-weight: 700;
+    margin-left: 6px;
+    font-size: 11px;
+  }
+  .reading-cell .delta.down { color: var(--hai-status-warn-600); }
+  .reading-cell .delta.up { color: var(--hai-status-warn-600); }
+
+  .next-cell {
+    font-size: 12px; font-weight: 700;
+    color: var(--hai-text-secondary);
+  }
+  .next-cell.warn-n { color: var(--hai-status-warn-600); }
+  .next-cell .date {
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .next-cell.muted { color: var(--hai-text-tertiary); font-weight: 500; }
+
+  .issue-cell {
+    font-size: 12px;
+    color: var(--hai-text-secondary);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .issue-cell.warn-i { color: var(--hai-text-primary); }
+  .issue-cell.muted { color: var(--hai-text-tertiary); }
+
+  /* AI Insight card (below fleet) */
+  .insight-card {
+    grid-area: insight;
     border-radius: var(--hai-radius-xl);
-    padding: 16px 20px;
+    padding: 14px 18px;
     background:
       linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
       var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
+    border: 1px solid var(--hai-surface-border-strong);
     box-shadow: var(--hai-shadow-rest);
     backdrop-filter: blur(8px) saturate(140%);
     -webkit-backdrop-filter: blur(8px) saturate(140%);
-    display: flex; flex-direction: column;
-    gap: 10px;
+    display: flex; align-items: center; gap: 14px;
     position: relative; overflow: hidden;
     transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
   }
-  .why-card:hover {
+  .insight-card:hover {
     transform: translateY(-2px);
     border-color: var(--hai-surface-border-strong);
     box-shadow: var(--hai-shadow-deep);
   }
-  .why-card::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--hai-status-info-600), var(--accent));
-    opacity: 0.7;
+  .insight-card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--hai-status-info-600), var(--hai-status-warn-600));
   }
-  .why-text {
-    font-size: 14px;
-    color: var(--hai-text-primary);
-    line-height: 1.6;
-    font-weight: 500;
-    flex: 1;
+  .insight-card::after {
+    content: ""; position: absolute;
+    top: -50%; bottom: -50%; left: -25%; width: 25%;
+    background: linear-gradient(90deg, transparent 0%, rgba(34,211,238,0.10) 50%, transparent 100%);
+    transform: skewX(-15deg);
+    animation: shimmer 6s linear infinite;
+    pointer-events: none;
   }
-  .why-text b { color: var(--hai-text-primary); font-weight: 800; }
-  .why-text .gold { color: var(--hai-money); font-weight: 700; }
-  .why-text .warn { color: var(--hai-status-warn-600); font-weight: 700; }
-  .why-text .ok { color: var(--hai-status-ok-600); font-weight: 700; }
+  html:not(.dark) .insight-card::after { background: linear-gradient(90deg, transparent 0%, rgba(30,95,181,0.10) 50%, transparent 100%); }
+  .insight-icon {
+    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--hai-status-info-600), #0369a1);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    box-shadow: 0 0 14px rgba(62,130,216,0.40);
+    position: relative; z-index: 1;
+  }
+  .insight-icon svg { width: 20px; height: 20px; }
+  .insight-text {
+    flex: 1; min-width: 0;
+    position: relative; z-index: 1;
+  }
+  .insight-eyebrow {
+    font-size: 10px; color: var(--hai-status-info-600);
+    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 800;
+    margin-bottom: 4px;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .insight-eyebrow::before {
+    content: "AI"; font-size: 9px;
+    background: var(--hai-status-info-600);
+    color: #fff; padding: 2px 6px; border-radius: 4px;
+    letter-spacing: 0.12em;
+  }
+  .insight-msg {
+    font-size: 13px; color: var(--hai-text-primary);
+    font-weight: 500; line-height: 1.55;
+  }
+  .insight-msg b { color: var(--hai-text-primary); font-weight: 800; }
+  .insight-msg b.gold { color: var(--hai-money); }
+  .insight-msg b.warn { color: var(--hai-status-warn-600); }
+  .insight-btn {
+    flex-shrink: 0;
+    padding: 9px 16px;
+    background: var(--hai-status-info-600);
+    color: #fff;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 11px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.10em;
+    cursor: pointer; border: none;
+    transition: all .2s ease;
+    position: relative; z-index: 1;
+  }
+  .insight-btn:hover { transform: translateY(-1px); filter: brightness(1.1); box-shadow: 0 0 18px rgba(62,130,216,0.50); }
 
   /* ============================================================
-     TAB 3 — YIELD (story flow)
+     TAB 3 — YIELD (full picture)
      ============================================================ */
   .grid-yield {
     height: 100%;
     display: grid;
-    grid-template-columns: 1.4fr 1fr;
-    grid-template-rows: 1fr 1fr 0.7fr;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 0.95fr 1.05fr 0.85fr;
     gap: 14px;
     grid-template-areas:
-      "flow      forecast"
-      "flow      optimize"
-      "why       why";
+      "production  inputs"
+      "suggestions suggestions"
+      "expected    expected";
   }
 
-  /* ============================================================
-     YIELD — Section 1: FLOW (Sankey-style infographic)
-     ============================================================ */
-  .flow-card {
-    grid-area: flow;
+  /* metric card (production + inputs) */
+  .metric-card {
     border-radius: var(--hai-radius-xl);
-    padding: 16px 20px;
-    background:
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
-      var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
-    box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(8px) saturate(140%);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    display: flex; flex-direction: column;
-    position: relative; overflow: hidden;
-    transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
-  }
-  .flow-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--hai-surface-border-strong);
-    box-shadow: var(--hai-shadow-deep);
-  }
-  .flow-card::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, #c99752, var(--hai-money), var(--hai-data-3));
-  }
-  .flow-head { display: flex; flex-direction: column; gap: 2px; }
-  .flow-title { font-size: 16px; font-weight: 800; color: var(--hai-text-primary); letter-spacing: -0.01em; }
-  .flow-sub { font-size: 11px; color: var(--hai-text-tertiary); }
-  .flow-body { flex: 1; min-height: 0; position: relative; padding-top: 6px; }
-  .flow-body svg { width: 100%; height: 100%; display: block; }
-
-  /* labels overlay */
-  .flow-label {
-    position: absolute;
-    pointer-events: none;
-    background: var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
-    border-radius: 8px;
-    padding: 6px 10px;
-    box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-  }
-  .flow-label .nm {
-    font-size: 9px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 800;
-  }
-  .flow-label .val {
-    font-size: 14px; font-weight: 800;
-    color: var(--hai-text-primary);
-    line-height: 1; margin-top: 2px;
-    font-variant-numeric: tabular-nums;
-  }
-  .flow-label .pct {
-    font-size: 10px; color: var(--hai-text-tertiary);
-    font-weight: 700; margin-top: 2px;
-    letter-spacing: 0.04em;
-  }
-  .flow-label.flour { border-color: rgba(240,181,79,0.40); }
-  .flow-label.flour .nm { color: var(--hai-money); }
-  .flow-label.flour .pct { color: var(--hai-money); }
-  .flow-label.bran { border-color: rgba(143,203,156,0.40); }
-  .flow-label.bran .nm { color: var(--hai-data-3); }
-  .flow-label.bran .pct { color: var(--hai-data-3); }
-  .flow-label.loss { border-color: rgba(124,129,140,0.40); }
-  .flow-label.loss .nm { color: var(--hai-text-tertiary); }
-  .flow-label.loss .pct { color: var(--hai-text-tertiary); }
-  .flow-label.wheat { border-color: rgba(201,151,82,0.40); }
-  .flow-label.wheat .nm { color: #c99752; }
-
-  /* SVG flow streams */
-  .stream {
-    fill: none;
-    stroke-linecap: round;
-  }
-  .stream.flour {
-    stroke: var(--hai-money);
-    filter: drop-shadow(0 0 8px var(--hai-money-glow));
-  }
-  .stream.bran {
-    stroke: var(--hai-data-3);
-    filter: drop-shadow(0 0 6px rgba(143,203,156,0.25));
-  }
-  .stream.loss {
-    stroke: var(--hai-text-tertiary);
-    opacity: 0.55;
-  }
-  .stream-flow {
-    fill: none;
-    stroke: rgba(255,255,255,0.55);
-    stroke-linecap: round;
-    stroke-dasharray: 14 22;
-    animation: flowDash 1.6s linear infinite;
-  }
-  html:not(.dark) .stream-flow {
-    stroke: rgba(255,255,255,0.85);
-  }
-  @keyframes flowDash { to { stroke-dashoffset: -36; } }
-
-  /* ============================================================
-     YIELD — Section 2: FORECAST
-     ============================================================ */
-  .forecast-card {
-    grid-area: forecast;
-    border-radius: var(--hai-radius-xl);
-    padding: 16px 20px;
+    padding: 18px 22px 16px;
     background:
       linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
       var(--hai-surface-100);
@@ -1095,159 +911,281 @@
     position: relative; overflow: hidden;
     transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
   }
-  .forecast-card:hover {
+  .metric-card:hover {
     transform: translateY(-2px);
     border-color: var(--hai-surface-border-strong);
     box-shadow: var(--hai-shadow-deep);
   }
-  .forecast-card::before {
+  .metric-card.production { grid-area: production; }
+  .metric-card.inputs { grid-area: inputs; }
+  .metric-card.production::before {
     content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--hai-money), var(--hai-future));
+    background: linear-gradient(90deg, var(--hai-money), var(--hai-status-ok-600));
   }
-  .fc-row {
-    display: flex; align-items: baseline; gap: 12px;
+  .metric-card.inputs::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--hai-data-5), var(--accent));
   }
-  .fc-now {
-    display: flex; flex-direction: column;
+
+  .metric-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px 18px;
+    align-content: center;
   }
-  .fc-now .lbl {
+  .metric-card.inputs .metric-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 14px;
+  }
+  .metric {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--hai-glass-1);
+    border: 1px solid var(--hai-glass-border);
+    transition: background-color .2s ease, border-color .2s ease;
+  }
+  .metric:hover {
+    background: var(--hai-glass-2);
+    border-color: var(--hai-surface-border);
+  }
+  .metric.warn {
+    background: rgba(217,141,23,0.06);
+    border-color: rgba(217,141,23,0.25);
+  }
+  html:not(.dark) .metric.warn { background: rgba(179,106,0,0.06); border-color: rgba(179,106,0,0.25); }
+  .metric .lbl {
     font-size: 9px; color: var(--hai-text-tertiary);
     text-transform: uppercase; letter-spacing: 0.16em; font-weight: 800;
   }
-  .fc-now .val {
-    font-size: 28px; font-weight: 800;
+  .metric .val {
+    font-size: 22px; font-weight: 800;
     color: var(--hai-text-primary);
     line-height: 1; letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
+    display: flex; align-items: baseline; gap: 4px;
   }
-  .fc-arrow {
-    font-size: 22px; color: var(--hai-status-warn-600);
-    line-height: 1; padding: 0 4px;
+  .metric.warn .val { color: var(--hai-status-warn-600); }
+  .metric .val .u {
+    font-size: 11px; font-weight: 600;
+    color: var(--hai-text-tertiary);
+    letter-spacing: 0.04em;
   }
-  .fc-target {
-    display: flex; flex-direction: column;
+  .metric.warn .val .u { color: var(--hai-status-warn-600); opacity: 0.8; }
+  .metric .val .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-left: 4px;
+    background: var(--hai-status-ok-600);
+    box-shadow: 0 0 6px var(--hai-status-ok-600);
+    align-self: center;
   }
-  .fc-target .lbl {
-    font-size: 9px; color: var(--hai-status-warn-600);
-    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 800;
-  }
-  .fc-target .val {
-    font-size: 28px; font-weight: 800;
-    color: var(--hai-status-warn-600);
-    line-height: 1; letter-spacing: -0.02em;
-    font-variant-numeric: tabular-nums;
-    text-shadow: 0 0 14px rgba(217,141,23,0.30);
-  }
-  .fc-spark {
-    flex: 1; min-height: 0;
-  }
-  .fc-spark svg { width: 100%; height: 100%; display: block; }
-  .fc-foot {
-    font-size: 11px; color: var(--hai-text-secondary);
-    line-height: 1.5;
-  }
-  .fc-foot b { color: var(--hai-status-warn-600); font-weight: 800; }
+  .metric .val .status-dot.warn { background: var(--hai-status-warn-600); box-shadow: 0 0 6px var(--hai-status-warn-600); }
+  .metric .val.text { font-size: 16px; }
+  .metric .val.text .status-dot { margin-left: 8px; }
 
-  /* ============================================================
-     YIELD — Section 3: OPTIMIZE
-     ============================================================ */
-  .optimize-card {
-    grid-area: optimize;
+  /* SUGGESTIONS */
+  .suggestions-card {
+    grid-area: suggestions;
     border-radius: var(--hai-radius-xl);
-    padding: 16px 20px;
+    padding: 16px 22px 16px;
     background:
-      linear-gradient(135deg, rgba(46,158,106,0.10) 0%, transparent 60%),
       linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
       var(--hai-surface-100);
-    border: 1px solid rgba(46,158,106,0.30);
+    border: 1px solid var(--hai-surface-border);
     box-shadow: var(--hai-shadow-rest);
     backdrop-filter: blur(8px) saturate(140%);
     -webkit-backdrop-filter: blur(8px) saturate(140%);
     display: flex; flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     position: relative; overflow: hidden;
     transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
   }
-  html:not(.dark) .optimize-card { border-color: rgba(21,128,74,0.30); }
-  .optimize-card:hover {
+  .suggestions-card:hover {
     transform: translateY(-2px);
-    border-color: rgba(46,158,106,0.55);
+    border-color: var(--hai-surface-border-strong);
     box-shadow: var(--hai-shadow-deep);
   }
-  .optimize-card::before {
+  .suggestions-card::before {
     content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: var(--hai-status-ok-600);
+    background: linear-gradient(90deg, var(--hai-status-info-600), var(--hai-status-ok-600));
   }
-  .opt-title {
-    font-size: 16px; font-weight: 800;
-    color: var(--hai-text-primary);
-    line-height: 1.25; letter-spacing: -0.01em;
+  .suggestion-list {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
   }
-  .opt-compare {
-    display: grid; grid-template-columns: 1fr auto 1fr;
-    gap: 8px; align-items: center;
-    padding: 8px 0;
-  }
-  .opt-cell {
-    display: flex; flex-direction: column;
-    align-items: center; text-align: center;
-    padding: 8px 6px;
-    border-radius: 10px;
+  .suggestion {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 12px 14px;
+    border-radius: 12px;
     background: var(--hai-glass-1);
     border: 1px solid var(--hai-glass-border);
+    transition: transform .2s ease, border-color .2s ease, background-color .2s ease;
+    position: relative;
   }
-  .opt-cell.after {
-    background: linear-gradient(135deg, rgba(46,158,106,0.14), rgba(46,158,106,0.04));
-    border-color: rgba(46,158,106,0.40);
+  .suggestion:hover {
+    transform: translateY(-1px);
+    background: var(--hai-glass-2);
+    border-color: var(--hai-surface-border-strong);
   }
-  html:not(.dark) .opt-cell.after { border-color: rgba(21,128,74,0.40); }
-  .opt-cell .l {
-    font-size: 9px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 800;
+  .suggestion .s-num {
+    position: absolute; top: -10px; left: 12px;
+    width: 24px; height: 24px;
+    background: var(--hai-status-info-600);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800;
+    box-shadow: 0 0 12px rgba(62,130,216,0.40);
+    border: 2px solid var(--hai-surface-100);
   }
-  .opt-cell.after .l { color: var(--hai-status-ok-600); }
-  .opt-cell .v {
-    font-size: 24px; font-weight: 800;
+  .suggestion .s-title {
+    font-size: 14px; font-weight: 800;
     color: var(--hai-text-primary);
-    line-height: 1; letter-spacing: -0.02em;
-    margin-top: 2px;
+    line-height: 1.3;
+    margin-top: 4px;
+  }
+  .suggestion .s-title b { font-weight: 800; }
+  .suggestion .s-detail {
+    font-size: 11.5px; color: var(--hai-text-secondary);
+    line-height: 1.5;
+    flex: 1;
+  }
+  .suggestion .s-detail b { color: var(--hai-text-primary); font-weight: 700; }
+  .suggestion .s-detail b.ok { color: var(--hai-status-ok-600); }
+  .suggestion .s-detail b.warn { color: var(--hai-status-warn-600); }
+  .suggestion .s-detail b.gold { color: var(--hai-money); }
+  .suggestion .s-btn {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 7px 12px;
+    background: var(--hai-status-ok-600);
+    color: #fff; border: none; border-radius: 8px;
+    font-family: inherit;
+    font-size: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.10em;
+    cursor: pointer;
+    transition: all .2s ease;
+    box-shadow: 0 0 10px rgba(46,158,106,0.30);
+  }
+  .suggestion .s-btn:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 16px rgba(46,158,106,0.45); }
+  .suggestion .s-btn.alt {
+    background: transparent;
+    color: var(--hai-text-secondary);
+    border: 1px solid var(--hai-surface-border-strong);
+    box-shadow: none;
+  }
+  .suggestion .s-btn.alt:hover { color: var(--hai-text-primary); border-color: var(--hai-text-tertiary); }
+
+  /* EXPECTED card */
+  .expected-card {
+    grid-area: expected;
+    border-radius: var(--hai-radius-xl);
+    padding: 16px 22px;
+    background:
+      linear-gradient(135deg, rgba(240,181,79,0.08) 0%, transparent 60%),
+      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
+      var(--hai-surface-100);
+    border: 1px solid rgba(240,181,79,0.30);
+    box-shadow: var(--hai-shadow-rest);
+    backdrop-filter: blur(8px) saturate(140%);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+    display: flex; flex-direction: column;
+    gap: 10px;
+    position: relative; overflow: hidden;
+    transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
+  }
+  html:not(.dark) .expected-card { border-color: rgba(185,121,0,0.30); }
+  .expected-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(240,181,79,0.55);
+    box-shadow: var(--hai-shadow-deep);
+  }
+  html:not(.dark) .expected-card:hover { border-color: rgba(185,121,0,0.55); }
+  .expected-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--hai-money), var(--hai-status-ok-600));
+  }
+  .expected-row {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.2fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+  .ex-cell {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 8px 14px;
+    border-left: 2px solid var(--hai-surface-border);
+  }
+  .ex-cell:first-child { border-left: none; padding-left: 0; }
+  .ex-cell .lbl {
+    font-size: 9px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 800;
+  }
+  .ex-flow {
+    display: flex; align-items: baseline; gap: 6px;
     font-variant-numeric: tabular-nums;
   }
-  .opt-cell.after .v {
+  .ex-flow .from {
+    font-size: 18px; font-weight: 700;
+    color: var(--hai-text-secondary);
+    line-height: 1; letter-spacing: -0.01em;
+  }
+  .ex-flow .ar {
+    font-size: 16px; font-weight: 800;
+    color: var(--hai-status-ok-600);
+  }
+  .ex-flow .to {
+    font-size: 22px; font-weight: 800;
+    color: var(--hai-text-primary);
+    line-height: 1; letter-spacing: -0.02em;
+  }
+  .ex-flow .to.ok {
     color: var(--hai-status-ok-600);
     text-shadow: 0 0 14px rgba(46,158,106,0.30);
   }
-  .opt-arrow {
-    font-size: 18px;
-    color: var(--hai-status-ok-600);
-    font-weight: 800;
+  .ex-flow .to.gold {
+    color: var(--hai-money);
+    text-shadow: 0 0 16px var(--hai-money-glow);
   }
-  .opt-savings {
-    align-self: flex-start;
-    padding: 6px 12px;
-    background: var(--hai-status-ok-100);
-    border: 1px solid rgba(46,158,106,0.30);
-    border-radius: 8px;
-    font-size: 12px; font-weight: 800;
+  .ex-cell .delta {
+    font-size: 11px; font-weight: 700;
     color: var(--hai-status-ok-600);
     letter-spacing: 0.04em;
-    display: inline-flex; align-items: baseline; gap: 4px;
   }
-  .opt-savings .num { font-size: 16px; }
-  .opt-btn {
-    align-self: flex-start;
-    margin-top: auto;
-    padding: 9px 16px;
+  .ex-cell.savings {
+    background: linear-gradient(135deg, rgba(240,181,79,0.12), rgba(240,181,79,0.02));
+    border-radius: 12px;
+    border-left: none;
+    border: 1px solid rgba(240,181,79,0.40);
+    padding: 10px 16px;
+  }
+  html:not(.dark) .ex-cell.savings { border-color: rgba(185,121,0,0.40); }
+  .ex-cell.savings .lbl { color: var(--hai-money); }
+  .ex-cell.savings .ex-flow .to { color: var(--hai-money); text-shadow: 0 0 18px var(--hai-money-glow); font-size: 24px; }
+  .ex-cell.savings .delta { color: var(--hai-money); opacity: 0.85; }
+  .expected-btn {
+    align-self: center;
+    padding: 12px 20px;
     background: var(--hai-status-ok-600);
-    color: #fff; border: none; border-radius: 10px;
+    color: #fff;
+    border: none; border-radius: 12px;
     font-family: inherit;
-    font-size: 11px; font-weight: 800;
+    font-size: 12px; font-weight: 800;
     text-transform: uppercase; letter-spacing: 0.12em;
     cursor: pointer;
-    box-shadow: 0 0 18px rgba(46,158,106,0.35);
+    box-shadow: 0 0 22px rgba(46,158,106,0.40);
     transition: all .2s ease;
+    white-space: nowrap;
   }
-  .opt-btn:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 24px rgba(46,158,106,0.50); }
+  .expected-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+    box-shadow: 0 0 30px rgba(46,158,106,0.55);
+  }
 
   /* mockup tag */
   .mockup-tag {
@@ -1264,9 +1202,12 @@
     .grid-prod { grid-template-columns: 240px 1fr; }
     .now-val .num-big { font-size: 28px; }
     .pred-val .num-big { font-size: 22px; }
-    .equip-name { font-size: 18px; }
-    .reading .val { font-size: 15px; }
-    .opt-cell .v { font-size: 20px; }
+    .metric .val { font-size: 18px; }
+    .ex-flow .to { font-size: 18px; }
+    .ex-flow .from { font-size: 14px; }
+    .fleet-table thead th { font-size: 8px; padding: 8px 10px 10px; }
+    .fleet-table tbody td { font-size: 12px; padding: 12px 10px; }
+    .eq-cell .eq-name { font-size: 14px; }
   }
 </style>
 </head>
@@ -1421,7 +1362,7 @@
             <div class="ai-bar-msg">
               On track for <span class="gold">108 tons</span> of flour today — <b>6 tons above plan</b>.
               Energy cost per ton will ease <b>0.11 OMR ↓</b> overnight as ambient temperature drops.
-              <span class="hi">One thing to watch:</span> M31 plansifter — see PdM tab.
+              <span class="hi">2 things to watch:</span> M31 plansifter motor and P50 dampener pump — see PdM tab.
             </div>
           </div>
           <button class="ai-bar-cta">Why?</button>
@@ -1444,263 +1385,241 @@
             <div class="kpi-msg">SEC <b>56.7 kWh/t</b> — 2.6% below 7-day avg.</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-head"><div class="kpi-name">Maintenance</div><div class="kpi-status warn">1 watch</div></div>
+            <div class="kpi-head"><div class="kpi-name">Maintenance</div><div class="kpi-status warn">2 watch</div></div>
             <div class="kpi-value"><span class="num-mid num">96</span><span class="unit">% healthy</span></div>
-            <div class="kpi-msg">M31 plansifter — schedule check.</div>
+            <div class="kpi-msg">M31 motor &amp; P50 pump — schedule check.</div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- =================== PANE 2: PdM (story flow) =================== -->
+    <!-- =================== PANE 2: PdM (fleet table) =================== -->
     <section class="pane" data-pane="pdm">
       <div class="grid-pdm">
 
-        <!-- M30 -->
-        <div class="equip-card s-m30">
-          <div class="step-eyebrow now"><span class="num">01</span><span>Now · M30</span></div>
-          <div class="equip-head-row">
+        <!-- Fleet table -->
+        <div class="fleet-card">
+          <div class="card-head">
             <div>
-              <div class="equip-name">M30</div>
-              <div class="equip-asset">Pre-cleaner line</div>
+              <div class="card-eyebrow now"><span class="num">FLEET</span><span>Equipment health · all machines</span></div>
+              <div class="card-title">Fleet status</div>
+              <div class="card-sub">Live readings from PLC submeters. Sorted by attention priority.</div>
             </div>
-            <div class="equip-pill">Operational</div>
-          </div>
-          <div class="readings">
-            <div class="reading">
-              <span class="lbl">Current</span>
-              <span class="val num">12.4<span class="v-unit">A</span></span>
-              <span class="delta">stable</span>
-            </div>
-            <div class="reading">
-              <span class="lbl">PF</span>
-              <span class="val num">0.96</span>
-              <span class="delta">target ✓</span>
-            </div>
-            <div class="reading">
-              <span class="lbl">Power</span>
-              <span class="val num">42.1<span class="v-unit">kW</span></span>
-              <span class="delta">normal</span>
+            <div class="fleet-counts">
+              <span class="count warn">2 watch</span>
+              <span class="count good">6 healthy</span>
             </div>
           </div>
-          <div class="equip-spark">
-            <div class="equip-spark-head">
-              <span>Last 24h · current</span>
-              <span class="delta">flat</span>
-            </div>
-            <div class="equip-spark-svg">
-              <svg id="spark-m30" preserveAspectRatio="none"></svg>
-            </div>
+
+          <div class="fleet-table-wrap">
+            <table class="fleet-table">
+              <thead>
+                <tr>
+                  <th style="width:18%;">Equipment</th>
+                  <th style="width:13%;">Status</th>
+                  <th style="width:18%;">Current draw</th>
+                  <th style="width:14%;">Power factor</th>
+                  <th style="width:16%;">Next maintenance</th>
+                  <th style="width:21%;">Predicted issue</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="warn">
+                  <td class="eq-cell"><div class="eq-name">M31</div><div class="eq-asset">Plansifter A · motor</div></td>
+                  <td><span class="st-pill warn">Watch</span></td>
+                  <td class="reading-cell warn-r">45 A <span class="sub">(L2 +12%)</span></td>
+                  <td class="reading-cell">0.91 <span class="delta down">↓ from 0.94</span></td>
+                  <td class="next-cell warn-n">~17 days · <span class="date">May 19</span></td>
+                  <td class="issue-cell warn-i">Phase imbalance — possible loose connection</td>
+                </tr>
+                <tr class="warn">
+                  <td class="eq-cell"><div class="eq-name">P50</div><div class="eq-asset">Dampener pump</div></td>
+                  <td><span class="st-pill warn">Watch</span></td>
+                  <td class="reading-cell">8.4 A <span class="sub">balanced</span></td>
+                  <td class="reading-cell">0.93</td>
+                  <td class="next-cell warn-n">~30 days · <span class="date">Jun 1</span></td>
+                  <td class="issue-cell warn-i">Bearing vibration trend rising</td>
+                </tr>
+                <tr class="good">
+                  <td class="eq-cell"><div class="eq-name">M30</div><div class="eq-asset">Pre-cleaner · motor</div></td>
+                  <td><span class="st-pill good">Healthy</span></td>
+                  <td class="reading-cell">42 A <span class="sub">balanced</span></td>
+                  <td class="reading-cell">0.95</td>
+                  <td class="next-cell muted">No action needed</td>
+                  <td class="issue-cell muted">—</td>
+                </tr>
+                <tr class="good">
+                  <td class="eq-cell"><div class="eq-name">M32</div><div class="eq-asset">Plansifter B · motor</div></td>
+                  <td><span class="st-pill good">Healthy</span></td>
+                  <td class="reading-cell">44 A <span class="sub">balanced</span></td>
+                  <td class="reading-cell">0.94</td>
+                  <td class="next-cell muted">No action needed</td>
+                  <td class="issue-cell muted">—</td>
+                </tr>
+                <tr class="good">
+                  <td class="eq-cell"><div class="eq-name">C32</div><div class="eq-asset">Roller stand RS-3</div></td>
+                  <td><span class="st-pill good">Healthy</span></td>
+                  <td class="reading-cell">38 A <span class="sub">balanced</span></td>
+                  <td class="reading-cell">0.93</td>
+                  <td class="next-cell muted">No action needed</td>
+                  <td class="issue-cell muted">—</td>
+                </tr>
+                <tr class="good">
+                  <td class="eq-cell"><div class="eq-name">C33</div><div class="eq-asset">Conveyor drive</div></td>
+                  <td><span class="st-pill good">Healthy</span></td>
+                  <td class="reading-cell">22 A <span class="sub">balanced</span></td>
+                  <td class="reading-cell">0.92</td>
+                  <td class="next-cell muted">No action needed</td>
+                  <td class="issue-cell muted">—</td>
+                </tr>
+                <tr class="good">
+                  <td class="eq-cell"><div class="eq-name">F40</div><div class="eq-asset">Aspiration fan</div></td>
+                  <td><span class="st-pill good">Healthy</span></td>
+                  <td class="reading-cell">31 A <span class="sub">balanced</span></td>
+                  <td class="reading-cell">0.94</td>
+                  <td class="next-cell muted">No action needed</td>
+                  <td class="issue-cell muted">—</td>
+                </tr>
+                <tr class="good">
+                  <td class="eq-cell"><div class="eq-name">P51</div><div class="eq-asset">Vitamin feed pump</div></td>
+                  <td><span class="st-pill good">Healthy</span></td>
+                  <td class="reading-cell">3.2 A <span class="sub">balanced</span></td>
+                  <td class="reading-cell">0.96</td>
+                  <td class="next-cell muted">No action needed</td>
+                  <td class="issue-cell muted">—</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <!-- M31 (warn) -->
-        <div class="equip-card s-m31 warn">
-          <div class="step-eyebrow now"><span class="num">01</span><span>Now · M31</span></div>
-          <div class="equip-head-row">
-            <div>
-              <div class="equip-name">M31</div>
-              <div class="equip-asset">Plansifter A</div>
-            </div>
-            <div class="equip-pill warn">Attention soon</div>
+        <!-- AI Insight (most important finding) -->
+        <div class="insight-card">
+          <div class="insight-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/></svg>
           </div>
-          <div class="readings">
-            <div class="reading warn">
-              <span class="lbl">Phase 2 I</span>
-              <span class="val num">18.3<span class="v-unit">A</span></span>
-              <span class="delta up">+12% vs L1/L3</span>
-            </div>
-            <div class="reading">
-              <span class="lbl">PF</span>
-              <span class="val num">0.91</span>
-              <span class="delta up">↓ from 0.94</span>
-            </div>
-            <div class="reading">
-              <span class="lbl">Power</span>
-              <span class="val num">68.4<span class="v-unit">kW</span></span>
-              <span class="delta up">+4.2% / 14d</span>
+          <div class="insight-text">
+            <div class="insight-eyebrow">Most important finding</div>
+            <div class="insight-msg">
+              <b>M31</b> phase imbalance grew from 4% to 12% over 14 days. At <b class="warn">0.3% / day</b>, it will cross the 10% threshold in <b>~17 days</b>. Inspect winding connections in the May 19–21 window. Fixing early saves <b class="gold">340 OMR</b> vs an emergency repair.
             </div>
           </div>
-          <div class="equip-spark">
-            <div class="equip-spark-head">
-              <span>Last 14d · phase imbalance</span>
-              <span class="delta warn">+0.3% / day</span>
-            </div>
-            <div class="equip-spark-svg">
-              <svg id="spark-m31" preserveAspectRatio="none"></svg>
-            </div>
-          </div>
-        </div>
-
-        <!-- C32 -->
-        <div class="equip-card s-c32">
-          <div class="step-eyebrow now"><span class="num">01</span><span>Now · C32</span></div>
-          <div class="equip-head-row">
-            <div>
-              <div class="equip-name">C32</div>
-              <div class="equip-asset">Roller stand RS-3</div>
-            </div>
-            <div class="equip-pill">Operational</div>
-          </div>
-          <div class="readings">
-            <div class="reading">
-              <span class="lbl">Bearing T</span>
-              <span class="val num">52<span class="v-unit">°C</span></span>
-              <span class="delta">normal</span>
-            </div>
-            <div class="reading">
-              <span class="lbl">Vib RMS</span>
-              <span class="val num">2.1<span class="v-unit">mm/s</span></span>
-              <span class="delta">smooth</span>
-            </div>
-            <div class="reading">
-              <span class="lbl">Inrush</span>
-              <span class="val num">186<span class="v-unit">A</span></span>
-              <span class="delta">on baseline</span>
-            </div>
-          </div>
-          <div class="equip-spark">
-            <div class="equip-spark-head">
-              <span>Last 24h · bearing temp</span>
-              <span class="delta">stable</span>
-            </div>
-            <div class="equip-spark-svg">
-              <svg id="spark-c32" preserveAspectRatio="none"></svg>
-            </div>
-          </div>
-        </div>
-
-        <!-- TIMELINE (Section 2: Forecast) -->
-        <div class="timeline-card">
-          <div class="step-eyebrow fcst"><span class="num">02</span><span>Forecast · M31</span></div>
-          <div class="timeline-title">
-            Phase imbalance growing <b>0.3% / day</b> — needs attention in <b>~17 days</b>.
-          </div>
-          <div class="timeline-svg-wrap">
-            <svg id="timeline-svg" preserveAspectRatio="xMidYMid meet"></svg>
-          </div>
-          <div class="timeline-foot">
-            Today: <b>8.0%</b>. Threshold: <b>10%</b>. Estimated breach: <b>May 19</b>.
-          </div>
-        </div>
-
-        <!-- ACTION (Section 3) -->
-        <div class="action-card">
-          <div class="step-eyebrow act"><span class="num">03</span><span>Recommended action</span></div>
-          <div class="action-title">Inspect M31 winding connections</div>
-          <div class="action-meta">
-            <div class="meta">
-              <div class="meta-lbl">Effort</div>
-              <div class="meta-val">~2 hours</div>
-            </div>
-            <div class="meta">
-              <div class="meta-lbl">Best window</div>
-              <div class="meta-val">May 19 → 21</div>
-            </div>
-            <div class="meta">
-              <div class="meta-lbl">Saves</div>
-              <div class="meta-val gold">340 OMR</div>
-            </div>
-          </div>
-          <button class="action-btn">Schedule inspection</button>
-        </div>
-
-        <!-- WHY (Section 4) -->
-        <div class="why-card">
-          <div class="step-eyebrow why"><span class="num">04</span><span>Why</span></div>
-          <div class="why-text">
-            <b>Phase 2 current is 12% higher</b> than Phases 1 and 3, growing <span class="warn">steadily over 14 days</span>. This pattern historically indicates loose connections or early winding insulation breakdown.
-          </div>
+          <button class="insight-btn">Schedule inspection</button>
         </div>
 
       </div>
     </section>
 
-    <!-- =================== PANE 3: YIELD (story flow) =================== -->
+    <!-- =================== PANE 3: YIELD (full picture) =================== -->
     <section class="pane" data-pane="yield">
       <div class="grid-yield">
 
-        <!-- FLOW (Section 1: Now) -->
-        <div class="flow-card">
-          <div class="step-eyebrow now"><span class="num">01</span><span>Now · material flow</span></div>
-          <div class="flow-head">
-            <div class="flow-title">Wheat in → Flour + Bran out</div>
-            <div class="flow-sub">Stream width = mass rate. Recipe Blend-7 · live.</div>
-          </div>
-          <div class="flow-body">
-            <svg id="flow-svg" viewBox="0 0 800 360" preserveAspectRatio="xMidYMid meet"></svg>
-            <!-- absolute-positioned labels (positioned in JS to follow svg endpoints) -->
-            <div class="flow-label wheat" id="lbl-wheat">
-              <div class="nm">Wheat in</div>
-              <div class="val num">8.40 t/h</div>
-              <div class="pct">100%</div>
+        <!-- Current Production -->
+        <div class="metric-card production">
+          <div class="card-eyebrow now"><span class="num">01</span><span>Current production</span></div>
+          <div class="card-title">What's coming out right now</div>
+          <div class="metric-grid">
+            <div class="metric">
+              <div class="lbl">Production rate</div>
+              <div class="val num">8.40<span class="u">t/h</span></div>
             </div>
-            <div class="flow-label flour" id="lbl-flour">
-              <div class="nm">Flour out</div>
-              <div class="val num">6.64 t/h</div>
-              <div class="pct">79.1%</div>
+            <div class="metric">
+              <div class="lbl">Flour output</div>
+              <div class="val num">6.64<span class="u">t/h</span></div>
             </div>
-            <div class="flow-label bran" id="lbl-bran">
-              <div class="nm">Bran out</div>
-              <div class="val num">1.57 t/h</div>
-              <div class="pct">18.7%</div>
+            <div class="metric">
+              <div class="lbl">Extraction</div>
+              <div class="val num">79.1<span class="u">%</span></div>
             </div>
-            <div class="flow-label loss" id="lbl-loss">
-              <div class="nm">Loss</div>
-              <div class="val num">0.19 t/h</div>
-              <div class="pct">2.2%</div>
+            <div class="metric">
+              <div class="lbl">Recipe</div>
+              <div class="val text">Blend-7</div>
             </div>
           </div>
         </div>
 
-        <!-- FORECAST (Section 2) -->
-        <div class="forecast-card">
-          <div class="step-eyebrow fcst"><span class="num">02</span><span>Forecast · end of shift</span></div>
-          <div class="fc-row">
-            <div class="fc-now">
-              <div class="lbl">Now</div>
-              <div class="val">79.1%</div>
+        <!-- Current Inputs -->
+        <div class="metric-card inputs">
+          <div class="card-eyebrow in"><span class="num">02</span><span>Current inputs</span></div>
+          <div class="card-title">What's going into the process</div>
+          <div class="metric-grid">
+            <div class="metric">
+              <div class="lbl">Wheat feed</div>
+              <div class="val num">8.40<span class="u">t/h</span></div>
             </div>
-            <div class="fc-arrow">→</div>
-            <div class="fc-target">
-              <div class="lbl">EoS</div>
-              <div class="val">78.8%</div>
+            <div class="metric">
+              <div class="lbl">Dampening</div>
+              <div class="val num">14.5<span class="u">%</span><span class="status-dot"></span></div>
             </div>
-          </div>
-          <div class="fc-spark">
-            <svg id="fc-spark-svg" preserveAspectRatio="none"></svg>
-          </div>
-          <div class="fc-foot">
-            Trending <b>down 0.3 pp</b> over the next 4 hours. Drift driven by sifter 3 feed pattern.
+            <div class="metric">
+              <div class="lbl">Sifters 1–2</div>
+              <div class="val text">Normal<span class="status-dot"></span></div>
+            </div>
+            <div class="metric warn">
+              <div class="lbl">Sifter 3</div>
+              <div class="val num">+3<span class="u">%</span><span class="status-dot warn"></span></div>
+            </div>
+            <div class="metric">
+              <div class="lbl">Vitamin feed</div>
+              <div class="val num">220<span class="u">g/t</span></div>
+            </div>
+            <div class="metric">
+              <div class="lbl">Ambient</div>
+              <div class="val text">28 °C / 42% RH</div>
+            </div>
           </div>
         </div>
 
-        <!-- OPTIMIZE (Section 3) -->
-        <div class="optimize-card">
-          <div class="step-eyebrow act"><span class="num">03</span><span>Optimize</span></div>
-          <div class="opt-title">Adjust sifter 3 feed rate</div>
-          <div class="opt-compare">
-            <div class="opt-cell">
-              <div class="l">Now</div>
-              <div class="v num">79.1%</div>
-            </div>
-            <div class="opt-arrow">→</div>
-            <div class="opt-cell after">
-              <div class="l">After</div>
-              <div class="v num">79.8%</div>
+        <!-- AI Suggestions -->
+        <div class="suggestions-card">
+          <div class="card-head">
+            <div>
+              <div class="card-eyebrow act"><span class="num">03</span><span>AI suggestions</span></div>
+              <div class="card-title">Three changes to consider</div>
             </div>
           </div>
-          <div class="opt-savings">
-            <span>+</span><span class="num">12</span><span>OMR / hour</span>
+          <div class="suggestion-list">
+            <div class="suggestion">
+              <div class="s-num">1</div>
+              <div class="s-title">Reduce feed rate <b>8.4 → 7.8 t/h</b></div>
+              <div class="s-detail">Extraction improves to <b class="ok">80.2%</b> (+1.1 pp). Saves <b class="gold">~12 OMR / hour</b>.</div>
+              <button class="s-btn">Apply</button>
+            </div>
+            <div class="suggestion">
+              <div class="s-num">2</div>
+              <div class="s-title">Check sifter 3 feed rate</div>
+              <div class="s-detail">Bran split is <b class="warn">0.7% above</b> normal. Most likely sifter 3 over-feeding endosperm into the bran stream.</div>
+              <button class="s-btn alt">Open detail</button>
+            </div>
+            <div class="suggestion">
+              <div class="s-num">3</div>
+              <div class="s-title">Increase dampening <b>14.5 → 15.0%</b></div>
+              <div class="s-detail">Best historical Blend-7 runs were dampened slightly higher. Expected: <b class="ok">+0.2 pp</b> extraction.</div>
+              <button class="s-btn">Apply</button>
+            </div>
           </div>
-          <button class="opt-btn">Apply suggestion</button>
         </div>
 
-        <!-- WHY (Section 4) -->
-        <div class="why-card">
-          <div class="step-eyebrow why"><span class="num">04</span><span>Why</span></div>
-          <div class="why-text">
-            Bran split is <span class="warn">0.7% higher</span> than this recipe's best historical runs. <b>Sifter 3</b> is the most likely cause based on flow pattern — its feed rate is slightly above the optimal range, sending too much endosperm into the bran stream.
+        <!-- Expected after optimization -->
+        <div class="expected-card">
+          <div class="card-eyebrow fin"><span class="num">04</span><span>Expected after optimization</span></div>
+          <div class="expected-row">
+            <div class="ex-cell">
+              <div class="lbl">Extraction</div>
+              <div class="ex-flow"><span class="from">79.1%</span><span class="ar">→</span><span class="to ok">80.2%</span></div>
+              <div class="delta">+1.1 pp</div>
+            </div>
+            <div class="ex-cell">
+              <div class="lbl">Flour output</div>
+              <div class="ex-flow"><span class="from">6.64 t/h</span><span class="ar">→</span><span class="to ok">6.74 t/h</span></div>
+              <div class="delta">+100 kg / hour</div>
+            </div>
+            <div class="ex-cell savings">
+              <div class="lbl">Estimated savings</div>
+              <div class="ex-flow"><span class="to gold">+12 OMR / hour</span></div>
+              <div class="delta">≈ 86 OMR / shift · 2,600 OMR / month</div>
+            </div>
+            <button class="expected-btn">Apply all</button>
           </div>
         </div>
 
@@ -1729,7 +1648,7 @@
       moonIcon.style.display = 'block';
       sunIcon.style.display = 'none';
     }
-    setTimeout(redrawAll, 30);
+    setTimeout(() => { drawProdChart(); drawCostChart(); placeProdPills(); }, 30);
   }
   document.getElementById('theme-toggle').addEventListener('click', () => {
     setTheme(root.classList.contains('dark') ? 'light' : 'dark');
@@ -1745,10 +1664,7 @@
     tabButtons.forEach(x => x.classList.toggle('active', x === t));
     panes.forEach(p => p.classList.toggle('active', p.dataset.pane === id));
     pageNamePill.textContent = 'Hercules Atlas · ' + labels[id];
-    requestAnimationFrame(() => {
-      placeProdPills();
-      positionFlowLabels();
-    });
+    requestAnimationFrame(placeProdPills);
   }));
 
   // ============== SVG helpers ==============
@@ -1961,461 +1877,11 @@
     place('cost-chart', 'cost-now-pill');
   }
 
-  // ============== SPARKLINE helper ==============
-  function drawSpark(svgId, data, accentTokenName, opts) {
-    const svg = document.getElementById(svgId);
-    if (!svg) return;
-    svg.innerHTML = '';
-    const W = 200, H = 50;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    const padL = 1, padR = 1, padT = 4, padB = 4;
-    const innerW = W - padL - padR;
-    const innerH = H - padT - padB;
-    const yMin = Math.min.apply(null, data) - (Math.max.apply(null, data) - Math.min.apply(null, data)) * 0.18;
-    const yMax = Math.max.apply(null, data) + (Math.max.apply(null, data) - Math.min.apply(null, data)) * 0.18 || 1;
-    const xAt = i => padL + (i / (data.length - 1)) * innerW;
-    const yAt = v => padT + (1 - (v - yMin) / (yMax - yMin || 1)) * innerH;
-    const accent = tokColor(accentTokenName);
-
-    // area under
-    let areaD = '';
-    data.forEach((v, i) => { areaD += (i === 0 ? 'M ' : ' L ') + xAt(i) + ' ' + yAt(v); });
-    areaD += ` L ${xAt(data.length - 1)} ${padT + innerH} L ${xAt(0)} ${padT + innerH} Z`;
-    svg.appendChild(svgEl('path', { d: areaD, fill: accent, 'fill-opacity': 0.16 }));
-
-    // line
-    let lineD = '';
-    data.forEach((v, i) => { lineD += (i === 0 ? 'M ' : ' L ') + xAt(i) + ' ' + yAt(v); });
-    svg.appendChild(svgEl('path', {
-      d: lineD, fill: 'none',
-      stroke: accent, 'stroke-width': 1.8,
-      'stroke-linecap': 'round', 'stroke-linejoin': 'round'
-    }));
-
-    // end dot
-    const lastV = data[data.length - 1];
-    svg.appendChild(svgEl('circle', {
-      cx: xAt(data.length - 1), cy: yAt(lastV), r: 2.5,
-      fill: accent,
-      stroke: tokColor('--hai-surface-100'),
-      'stroke-width': 1.2,
-      style: 'filter: drop-shadow(0 0 4px ' + accent + ');'
-    }));
-  }
-
-  // ============== PdM TIMELINE ==============
-  function drawTimeline() {
-    const svg = document.getElementById('timeline-svg');
-    if (!svg) return;
-    svg.innerHTML = '';
-    const W = 400, H = 120;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    const padL = 30, padR = 20, padT = 30, padB = 28;
-    const innerW = W - padL - padR;
-    const trackY = padT + 18;
-
-    const muted = tokColor('--hai-text-disabled');
-    const tertiary = tokColor('--hai-text-tertiary');
-    const okClr = tokColor('--hai-status-ok-600');
-    const warnClr = tokColor('--hai-status-warn-600');
-    const critClr = tokColor('--hai-status-crit-600');
-    const surf = tokColor('--hai-surface-100');
-
-    // total range 0..30 days
-    const totalDays = 30;
-    const xAt = d => padL + (d / totalDays) * innerW;
-
-    // background track (zone bands)
-    // Safe (0-14): green, Action (14-21): warn, Risk (21-30): crit
-    const bandH = 8;
-    svg.appendChild(svgEl('rect', {
-      x: padL, y: trackY - bandH/2, width: xAt(14) - padL, height: bandH,
-      fill: okClr, 'fill-opacity': 0.30, rx: 4
-    }));
-    svg.appendChild(svgEl('rect', {
-      x: xAt(14), y: trackY - bandH/2, width: xAt(21) - xAt(14), height: bandH,
-      fill: warnClr, 'fill-opacity': 0.45
-    }));
-    svg.appendChild(svgEl('rect', {
-      x: xAt(21), y: trackY - bandH/2, width: xAt(30) - xAt(21), height: bandH,
-      fill: critClr, 'fill-opacity': 0.40, rx: 4
-    }));
-
-    // tick marks
-    [0, 7, 14, 17, 21, 30].forEach(d => {
-      const x = xAt(d);
-      svg.appendChild(svgEl('line', {
-        x1: x, x2: x, y1: trackY - 8, y2: trackY + 8,
-        stroke: tertiary, 'stroke-width': 0.8, opacity: 0.7
-      }));
-    });
-
-    // band labels
-    const labelY = trackY - 18;
-    const safeText = svgEl('text', {
-      x: (padL + xAt(14)) / 2, y: labelY,
-      'text-anchor': 'middle',
-      'font-size': 9, 'font-weight': 800,
-      fill: okClr, 'letter-spacing': '0.16em'
-    });
-    safeText.textContent = 'SAFE';
-    svg.appendChild(safeText);
-    const actText = svgEl('text', {
-      x: (xAt(14) + xAt(21)) / 2, y: labelY,
-      'text-anchor': 'middle',
-      'font-size': 9, 'font-weight': 800,
-      fill: warnClr, 'letter-spacing': '0.16em'
-    });
-    actText.textContent = 'ACTION';
-    svg.appendChild(actText);
-    const riskText = svgEl('text', {
-      x: (xAt(21) + xAt(30)) / 2, y: labelY,
-      'text-anchor': 'middle',
-      'font-size': 9, 'font-weight': 800,
-      fill: critClr, 'letter-spacing': '0.16em'
-    });
-    riskText.textContent = 'RISK';
-    svg.appendChild(riskText);
-
-    // day labels under track
-    [['Today', 0], ['+7d', 7], ['+14d', 14], ['+21d', 21], ['+30d', 30]].forEach(([t, d]) => {
-      const lbl = svgEl('text', {
-        x: xAt(d), y: trackY + 22,
-        'text-anchor': 'middle',
-        'font-size': 9, fill: muted, 'letter-spacing': '0.05em'
-      });
-      lbl.textContent = t;
-      svg.appendChild(lbl);
-    });
-
-    // today marker (start)
-    svg.appendChild(svgEl('circle', {
-      cx: xAt(0), cy: trackY, r: 6,
-      fill: tokColor('--hai-text-secondary'),
-      stroke: surf, 'stroke-width': 2.5
-    }));
-    const todayLbl = svgEl('text', {
-      x: xAt(0), y: trackY + 38,
-      'text-anchor': 'start',
-      'font-size': 9, 'font-weight': 800,
-      fill: tertiary, 'letter-spacing': '0.10em'
-    });
-    todayLbl.textContent = '8.0% NOW';
-    svg.appendChild(todayLbl);
-
-    // attention marker at +17 days
-    const ax = xAt(17);
-    // pulse halo
-    svg.appendChild(svgEl('circle', {
-      cx: ax, cy: trackY, r: 12,
-      fill: warnClr, 'fill-opacity': 0.18
-    }));
-    svg.appendChild(svgEl('circle', {
-      cx: ax, cy: trackY, r: 7,
-      fill: warnClr, stroke: surf, 'stroke-width': 2.5,
-      style: 'filter: drop-shadow(0 0 8px ' + warnClr + ');'
-    }));
-    // pin / label
-    svg.appendChild(svgEl('line', {
-      x1: ax, x2: ax, y1: trackY - 10, y2: trackY - 30,
-      stroke: warnClr, 'stroke-width': 1.5
-    }));
-    svg.appendChild(svgEl('rect', {
-      x: ax - 30, y: trackY - 50, width: 60, height: 18, rx: 4,
-      fill: warnClr, opacity: 0.95
-    }));
-    const aLbl = svgEl('text', {
-      x: ax, y: trackY - 38,
-      'text-anchor': 'middle',
-      'font-size': 9, 'font-weight': 800,
-      fill: '#fff', 'letter-spacing': '0.12em'
-    });
-    aLbl.textContent = 'INSPECT +17d';
-    svg.appendChild(aLbl);
-    // value below
-    const aVal = svgEl('text', {
-      x: ax, y: trackY + 38,
-      'text-anchor': 'middle',
-      'font-size': 9, 'font-weight': 800,
-      fill: warnClr, 'letter-spacing': '0.10em'
-    });
-    aVal.textContent = '12.0% PROJECTED';
-    svg.appendChild(aVal);
-  }
-
-  // ============== YIELD FLOW ==============
-  function drawFlow() {
-    const svg = document.getElementById('flow-svg');
-    if (!svg) return;
-    svg.innerHTML = '';
-    const W = 800, H = 360;
-
-    const muted = tokColor('--hai-text-disabled');
-    const wheatClr = '#c99752';
-    const moneyClr = tokColor('--hai-money');
-    const branClr = tokColor('--hai-data-3');
-    const tertClr = tokColor('--hai-text-tertiary');
-    const surf = tokColor('--hai-surface-100');
-
-    // wheat input pipe (left rectangle suggestion)
-    const wheatX = 60, wheatY = 130, wheatH = 100;
-    svg.appendChild(svgEl('rect', {
-      x: wheatX, y: wheatY, width: 140, height: wheatH, rx: 14,
-      fill: wheatClr, 'fill-opacity': 0.18,
-      stroke: wheatClr, 'stroke-width': 1.5,
-      'stroke-opacity': 0.6
-    }));
-    // grain icon decoration inside box
-    for (let i = 0; i < 3; i++) {
-      svg.appendChild(svgEl('circle', {
-        cx: wheatX + 28 + i * 16, cy: wheatY + wheatH/2,
-        r: 5, fill: wheatClr, 'fill-opacity': 0.35
-      }));
-    }
-
-    // origin point on right edge of wheat box
-    const ox = wheatX + 140;
-    const oy = wheatY + wheatH / 2; // ~180
-
-    // output endpoints (right side)
-    const flourEnd = { x: 730, y: 90 };
-    const branEnd  = { x: 730, y: 220 };
-    const lossEnd  = { x: 730, y: 285 };
-
-    // stream paths
-    const flourPath = `M ${ox} ${oy - 12} C ${ox + 180} ${oy - 12}, ${flourEnd.x - 200} ${flourEnd.y}, ${flourEnd.x} ${flourEnd.y}`;
-    const branPath  = `M ${ox} ${oy + 14} C ${ox + 180} ${oy + 30}, ${branEnd.x - 200} ${branEnd.y}, ${branEnd.x} ${branEnd.y}`;
-    const lossPath  = `M ${ox} ${oy + 26} C ${ox + 180} ${oy + 60}, ${lossEnd.x - 200} ${lossEnd.y}, ${lossEnd.x} ${lossEnd.y}`;
-
-    // stream widths proportional to mass flow (visual)
-    const wFlour = 64;  // 79.1%
-    const wBran  = 18;  // 18.7%
-    const wLoss  = 4;   // 2.2%
-
-    // base streams
-    svg.appendChild(svgEl('path', {
-      d: flourPath, class: 'stream flour',
-      stroke: moneyClr, 'stroke-width': wFlour,
-      'stroke-linecap': 'round', fill: 'none',
-      'stroke-opacity': 0.85
-    }));
-    svg.appendChild(svgEl('path', {
-      d: branPath, class: 'stream bran',
-      stroke: branClr, 'stroke-width': wBran,
-      'stroke-linecap': 'round', fill: 'none',
-      'stroke-opacity': 0.85
-    }));
-    svg.appendChild(svgEl('path', {
-      d: lossPath, class: 'stream loss',
-      stroke: tertClr, 'stroke-width': wLoss,
-      'stroke-linecap': 'round', fill: 'none',
-      'stroke-opacity': 0.55
-    }));
-
-    // animated flow overlays (dashed lines inside streams)
-    const flowFlour = svgEl('path', {
-      d: flourPath, class: 'stream-flow', fill: 'none',
-      'stroke-width': wFlour * 0.30,
-      'stroke-opacity': 0.55
-    });
-    flowFlour.style.strokeDasharray = '14 22';
-    flowFlour.style.animation = 'flowDash 1.6s linear infinite';
-    svg.appendChild(flowFlour);
-
-    const flowBran = svgEl('path', {
-      d: branPath, class: 'stream-flow', fill: 'none',
-      'stroke-width': wBran * 0.45,
-      'stroke-opacity': 0.55
-    });
-    flowBran.style.strokeDasharray = '10 18';
-    flowBran.style.animation = 'flowDash 2.0s linear infinite';
-    svg.appendChild(flowBran);
-
-    // splitter "node" at origin
-    svg.appendChild(svgEl('circle', {
-      cx: ox, cy: oy, r: 14,
-      fill: surf, stroke: muted,
-      'stroke-width': 1.5, opacity: 0.95
-    }));
-    svg.appendChild(svgEl('circle', {
-      cx: ox, cy: oy, r: 6,
-      fill: tertClr, opacity: 0.7
-    }));
-    // small "SPLIT" text below node
-    const splitLbl = svgEl('text', {
-      x: ox, y: oy + 38,
-      'text-anchor': 'middle',
-      'font-size': 9, 'font-weight': 800,
-      fill: tertClr, 'letter-spacing': '0.16em'
-    });
-    splitLbl.textContent = 'SPLIT';
-    svg.appendChild(splitLbl);
-  }
-
-  // ============== Position FLOW labels (HTML overlays over SVG) ==============
-  function positionFlowLabels() {
-    const svg = document.getElementById('flow-svg');
-    if (!svg) return;
-    const wrap = svg.parentElement;
-    const rect = wrap.getBoundingClientRect();
-    if (rect.width === 0) return;
-    // SVG viewBox is 800x360. The svg fits with preserveAspectRatio="xMidYMid meet" — figure out actual rendered region
-    const aspect = 800 / 360;
-    const wAspect = rect.width / rect.height;
-    let drawW, drawH, offX, offY;
-    if (wAspect > aspect) {
-      // wrap is wider — height fills, horizontal padding
-      drawH = rect.height;
-      drawW = drawH * aspect;
-      offX = (rect.width - drawW) / 2;
-      offY = 0;
-    } else {
-      drawW = rect.width;
-      drawH = drawW / aspect;
-      offX = 0;
-      offY = (rect.height - drawH) / 2;
-    }
-
-    function place(id, vx, vy, anchor) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const x = offX + (vx / 800) * drawW;
-      const y = offY + (vy / 360) * drawH;
-      el.style.left = x + 'px';
-      el.style.top  = y + 'px';
-      // anchor: 'right' means label extends to the right; 'left' to the left; 'center' centers on point
-      el.style.transform = ({
-        right:  'translate(-100%, -50%)',
-        left:   'translate(0, -50%)',
-        center: 'translate(-50%, -50%)'
-      })[anchor || 'left'];
-      el.style.position = 'absolute';
-    }
-
-    // Wheat label sits left-of-box, anchored to (60, 180) = box left-mid
-    place('lbl-wheat', 60, 180, 'right');
-    // Flour endpoint (730, 90)
-    place('lbl-flour', 730, 90, 'right');
-    // Bran endpoint (730, 220)
-    place('lbl-bran', 730, 220, 'right');
-    // Loss endpoint (730, 285)
-    place('lbl-loss', 730, 285, 'right');
-  }
-
-  // ============== FORECAST sparkline (yield) ==============
-  function drawForecastSpark() {
-    const svg = document.getElementById('fc-spark-svg');
-    if (!svg) return;
-    svg.innerHTML = '';
-    const W = 400, H = 90;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    const padL = 8, padR = 8, padT = 12, padB = 24;
-    const innerW = W - padL - padR;
-    const innerH = H - padT - padB;
-
-    // 12 hourly points: actual (8) up to now, forecast (4) after
-    const actual = [79.4, 79.5, 79.4, 79.3, 79.2, 79.2, 79.1, 79.1];
-    const fc     = [79.1, 79.0, 78.9, 78.8];
-    const all = actual.concat(fc);
-    const N = all.length;
-    const NOW = actual.length - 1;
-
-    const yMin = 78.5, yMax = 80.0;
-    const xAt = i => padL + (i / (N - 1)) * innerW;
-    const yAt = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
-
-    const muted = tokColor('--hai-text-disabled');
-    const tertiary = tokColor('--hai-text-tertiary');
-    const moneyClr = tokColor('--hai-money');
-    const futureClr = tokColor('--hai-future');
-    const okClr = tokColor('--hai-status-ok-600');
-    const surf = tokColor('--hai-surface-100');
-
-    // best-line at 79.8
-    const yBest = yAt(79.8);
-    svg.appendChild(svgEl('line', {
-      x1: padL, x2: W - padR, y1: yBest, y2: yBest,
-      stroke: okClr, 'stroke-width': 1,
-      'stroke-dasharray': '4 3', opacity: 0.55
-    }));
-    const bLbl = svgEl('text', {
-      x: padL + 2, y: yBest - 4,
-      'font-size': 8, 'font-weight': 700,
-      fill: okClr, 'letter-spacing': '0.10em'
-    });
-    bLbl.textContent = 'BEST 79.8';
-    svg.appendChild(bLbl);
-
-    // actual line (gold)
-    let actD = '';
-    for (let i = 0; i <= NOW; i++) {
-      actD += (i === 0 ? 'M ' : ' L ') + xAt(i) + ' ' + yAt(actual[i]);
-    }
-    svg.appendChild(svgEl('path', {
-      d: actD, fill: 'none',
-      stroke: moneyClr, 'stroke-width': 2.2,
-      'stroke-linecap': 'round', 'stroke-linejoin': 'round'
-    }));
-
-    // forecast line (purple, dashed)
-    let fcD = `M ${xAt(NOW)} ${yAt(actual[NOW])}`;
-    for (let i = 0; i < fc.length; i++) {
-      fcD += ` L ${xAt(NOW + 1 + i)} ${yAt(fc[i])}`;
-    }
-    svg.appendChild(svgEl('path', {
-      d: fcD, fill: 'none',
-      stroke: futureClr, 'stroke-width': 2.2,
-      'stroke-linecap': 'round', 'stroke-linejoin': 'round',
-      'stroke-dasharray': '5 4'
-    }));
-
-    // now dot
-    svg.appendChild(svgEl('circle', {
-      cx: xAt(NOW), cy: yAt(actual[NOW]), r: 4,
-      fill: moneyClr, stroke: surf, 'stroke-width': 2
-    }));
-    // end dot
-    svg.appendChild(svgEl('circle', {
-      cx: xAt(N - 1), cy: yAt(fc[fc.length - 1]), r: 4,
-      fill: futureClr, stroke: surf, 'stroke-width': 2,
-      style: 'filter: drop-shadow(0 0 6px ' + futureClr + ');'
-    }));
-
-    // x labels
-    [['−4h', 0], ['Now', NOW], ['+4h', N-1]].forEach(([t, i]) => {
-      const lbl = svgEl('text', {
-        x: xAt(i), y: padT + innerH + 14,
-        'text-anchor': i === 0 ? 'start' : (i === N - 1 ? 'end' : 'middle'),
-        'font-size': 9, fill: muted, 'letter-spacing': '0.04em'
-      });
-      lbl.textContent = t;
-      svg.appendChild(lbl);
-    });
-  }
-
-  // ============== Redraw all ==============
-  function redrawAll() {
-    drawProdChart();
-    drawCostChart();
-    placeProdPills();
-
-    // PdM sparklines
-    drawSpark('spark-m30', [12.3,12.4,12.3,12.4,12.5,12.4,12.4,12.3,12.4,12.5,12.4,12.4], '--hai-status-ok-600');
-    drawSpark('spark-m31', [4.0, 4.3, 4.7, 5.1, 5.6, 6.2, 6.9, 7.6, 8.4, 9.1, 9.7, 10.3, 11.1, 12.0], '--hai-status-warn-600');
-    drawSpark('spark-c32', [51.5, 52.0, 51.8, 52.1, 51.9, 52.2, 52.0, 52.1, 51.9, 52.0, 52.1, 52.0], '--hai-status-ok-600');
-
-    drawTimeline();
-    drawFlow();
-    drawForecastSpark();
-    positionFlowLabels();
-  }
-
-  // ============== Init ==============
-  redrawAll();
-  window.addEventListener('resize', () => {
-    placeProdPills();
-    positionFlowLabels();
-  });
+  // Init
+  drawProdChart();
+  drawCostChart();
+  placeProdPills();
+  window.addEventListener('resize', placeProdPills);
 
   // tiny live ticker
   function flashUpdate(el, newText) {
@@ -2423,10 +1889,8 @@
     el.textContent = newText;
   }
   setInterval(() => {
-    flashUpdate(document.getElementById('prod-now'),
-      (68.2 + Math.random() * 0.5).toFixed(1));
-    flashUpdate(document.getElementById('kpi-pace'),
-      (6.5 + Math.random() * 0.4).toFixed(2));
+    flashUpdate(document.getElementById('prod-now'), (68.2 + Math.random() * 0.5).toFixed(1));
+    flashUpdate(document.getElementById('kpi-pace'), (6.5 + Math.random() * 0.4).toFixed(2));
   }, 2400);
 </script>
 
