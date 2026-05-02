@@ -2,11 +2,11 @@
 <html lang="en" class="dark" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Hercules Atlas — Production · PdM · Yield</title>
+<meta name="viewport" content="width=1920, initial-scale=1.0" />
+<title>Hercules Atlas — Full Demo Mockup</title>
 <style>
   /* ============================================================
-     TOKENS — Hercules Atlas (verbatim from Frontend tokens.css)
+     TOKENS — copied from Frontend/src/Pages/HerculesAI/tokens.css
      ============================================================ */
   [data-theme='dark'].dark {
     --hai-surface-canvas: #0a0f1a;
@@ -21,18 +21,20 @@
     --hai-text-tertiary: #556677;
     --hai-text-disabled: #334155;
 
-    --hai-status-ok-600: #2E9E6A;
+    --hai-status-ok-600: #10b981;
     --hai-status-ok-100: #0F2A1E;
-    --hai-status-warn-600: #D98D17;
+    --hai-status-warn-600: #f59e0b;
     --hai-status-warn-100: #2B1E08;
-    --hai-status-crit-600: #DE4945;
+    --hai-status-crit-600: #ef4444;
     --hai-status-crit-100: #2D1513;
-    --hai-status-info-600: #3E82D8;
+    --hai-status-info-600: #0ea5e9;
     --hai-status-info-100: #0F1E30;
     --hai-status-idle-600: #7C818C;
 
     --hai-data-1: #7CA9F5;
+    --hai-data-2: #E6A35A;
     --hai-data-3: #8FCB9C;
+    --hai-data-4: #D48DB5;
     --hai-data-5: #7BC4C9;
 
     --hai-money:        #f0b54f;
@@ -44,7 +46,6 @@
     --hai-shadow-rest:  0 8px 16px -8px rgba(0, 0, 0, 0.40);
     --hai-shadow-deep:  0 24px 48px -12px rgba(0, 0, 0, 0.55);
     --hai-future:       #8b9ff7;
-    --hai-forecast-band: rgba(46,158,106,0.12);
 
     --shell-topbar-bg: #111827;
     --shell-sidebar-bg: #0d1422;
@@ -52,6 +53,12 @@
     --shell-sidebar-active-fg: #22d3ee;
     --shell-hover: #1a2233;
     --accent: #22d3ee;
+    --accent-2: #0ea5e9;
+
+    --tab-bar-bg: rgba(255,255,255,0.03);
+    --tab-active-bg: linear-gradient(135deg, rgba(14,165,233,0.18), rgba(34,211,238,0.10));
+    --tab-active-glow: 0 0 24px rgba(34,211,238,0.35), inset 0 0 0 1px rgba(34,211,238,0.45);
+    --grid-line: rgba(34,211,238,0.04);
   }
 
   :root,
@@ -88,10 +95,9 @@
     --hai-glass-2:      rgba(15, 23, 42, 0.07);
     --hai-glass-border: rgba(15, 23, 42, 0.10);
     --hai-glass-highlight: rgba(15, 23, 42, 0.05);
-    --hai-shadow-rest:  0 8px 16px -8px rgba(15, 23, 42, 0.12);
-    --hai-shadow-deep:  0 24px 48px -12px rgba(15, 23, 42, 0.20);
+    --hai-shadow-rest:  0 8px 16px -8px rgba(15, 23, 42, 0.10);
+    --hai-shadow-deep:  0 24px 48px -12px rgba(15, 23, 42, 0.18);
     --hai-future:       #6b73c5;
-    --hai-forecast-band: rgba(21,128,74,0.10);
 
     --shell-topbar-bg: #ffffff;
     --shell-sidebar-bg: #f8fafc;
@@ -99,6 +105,12 @@
     --shell-sidebar-active-fg: #1E5FB5;
     --shell-hover: #f1f5f9;
     --accent: #1E5FB5;
+    --accent-2: #0ea5e9;
+
+    --tab-bar-bg: rgba(15,23,42,0.04);
+    --tab-active-bg: linear-gradient(135deg, rgba(30,95,181,0.10), rgba(14,165,233,0.06));
+    --tab-active-glow: 0 4px 12px -4px rgba(30,95,181,0.30), inset 0 0 0 1px rgba(30,95,181,0.30);
+    --grid-line: rgba(15,23,42,0.025);
   }
 
   :root {
@@ -107,7 +119,6 @@
     --hai-num-features: 'tnum' 1, 'lnum' 1, 'ss02' 1;
     --topbar-h: 72px;
     --sidebar-w: 232px;
-    --tabs-h: 48px;
   }
 
   * { box-sizing: border-box; }
@@ -120,6 +131,18 @@
     transition: background-color .25s ease, color .25s ease;
   }
   .num { font-feature-settings: var(--hai-num-features); font-variant-numeric: tabular-nums lining-nums; }
+
+  /* Subtle scan-line ambient grid */
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    pointer-events: none; z-index: 1;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask-image: radial-gradient(circle at 50% 40%, black 30%, transparent 80%);
+            mask-image: radial-gradient(circle at 50% 40%, black 30%, transparent 80%);
+  }
 
   /* ============================================================
      APP SHELL — top bar
@@ -144,6 +167,7 @@
   }
   .icon-btn:hover { background: var(--shell-hover); color: var(--hai-text-primary); }
   .icon-btn svg { width: 20px; height: 20px; }
+
   .brand-logo { display: flex; align-items: center; gap: 10px; margin-left: 4px; }
   .brand-mark {
     width: 38px; height: 38px; border-radius: 9px;
@@ -153,15 +177,20 @@
     box-shadow: 0 0 14px rgba(34,211,238,0.4);
   }
   .brand-text-block { line-height: 1.1; }
-  .brand-text-block .brand-name { font-size: 14px; font-weight: 800; color: var(--hai-text-primary); letter-spacing: 0.04em; }
-  .brand-text-block .brand-sub { font-size: 9px; color: var(--hai-text-tertiary); letter-spacing: 0.2em; text-transform: uppercase; margin-top: 2px; }
-
+  .brand-text-block .brand-name {
+    font-size: 14px; font-weight: 800; color: var(--hai-text-primary);
+    letter-spacing: 0.04em;
+  }
+  .brand-text-block .brand-sub {
+    font-size: 9px; color: var(--hai-text-tertiary);
+    letter-spacing: 0.2em; text-transform: uppercase; margin-top: 2px;
+  }
   .live-pill {
     display: flex; align-items: center; gap: 10px;
     padding: 6px 16px; border-radius: 999px;
-    background: rgba(46,158,106,0.06);
+    background: rgba(16,185,129,0.06);
     color: var(--hai-status-ok-600);
-    border: 1px solid rgba(46,158,106,0.25);
+    border: 1px solid rgba(16,185,129,0.25);
   }
   html:not(.dark) .live-pill { background: var(--hai-status-ok-100); border-color: rgba(21,128,74,0.30); }
   .live-pill .dot {
@@ -170,15 +199,17 @@
     box-shadow: 0 0 6px currentColor;
     animation: pulse 1.6s ease-in-out infinite;
   }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
   .live-pill .live-text { font-size: 11px; font-weight: 800; letter-spacing: 0.18em; }
   .live-pill .page-name { font-size: 11px; color: var(--hai-text-tertiary); font-weight: 500; letter-spacing: 0.04em; }
+
   .client-logo {
     height: 40px; padding: 4px 10px; border-radius: 8px;
     background: rgba(255,255,255,0.95);
     color: #0f172a; font-weight: 700; font-size: 13px;
     display: flex; align-items: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.08); letter-spacing: 0.05em;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    letter-spacing: 0.05em;
   }
   .topbar-divider { width: 1px; height: 28px; background: var(--hai-surface-border); margin: 0 4px; }
   .lang-btn {
@@ -193,7 +224,8 @@
     width: 32px; height: 32px; border-radius: 50%;
     background: linear-gradient(135deg, var(--hai-data-1), var(--hai-status-info-600));
     display: flex; align-items: center; justify-content: center;
-    color: #fff; font-weight: 700; font-size: 12px; cursor: pointer;
+    color: #fff; font-weight: 700; font-size: 12px;
+    cursor: pointer;
   }
 
   /* ============================================================
@@ -220,8 +252,11 @@
     padding: 10px 12px; border-radius: 8px;
     color: var(--hai-text-secondary);
     font-size: 13px; font-weight: 500;
-    cursor: pointer; transition: all .15s ease;
-    margin-bottom: 2px; text-decoration: none; position: relative;
+    cursor: pointer;
+    transition: all .15s ease;
+    margin-bottom: 2px;
+    text-decoration: none;
+    position: relative;
   }
   .nav-item:hover { background: var(--shell-hover); color: var(--hai-text-primary); }
   .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
@@ -251,7 +286,7 @@
   .sidebar-footer .v { color: var(--hai-text-secondary); font-weight: 600; }
 
   /* ============================================================
-     PAGE WRAPPER (Atlas)
+     PAGE CONTENT (Atlas)
      ============================================================ */
   .content {
     position: fixed;
@@ -259,955 +294,730 @@
     bottom: 0;
     left: var(--sidebar-w);
     right: 0;
-    display: flex; flex-direction: column;
+    padding: 14px 18px 12px;
+    overflow: hidden;
     background: var(--hai-surface-canvas);
     transition: background-color .25s ease;
-    overflow: hidden;
-  }
-
-  /* premium tab strip */
-  .tabs {
-    height: var(--tabs-h);
-    flex-shrink: 0;
-    border-bottom: 1px solid var(--hai-surface-border);
-    display: flex; align-items: center;
-    padding: 0 18px;
-    gap: 6px;
-    background:
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 100%),
-      var(--hai-surface-100);
-    backdrop-filter: blur(18px) saturate(150%);
-    -webkit-backdrop-filter: blur(18px) saturate(150%);
-    transition: background-color .25s ease, border-color .25s ease;
-    position: relative;
-    z-index: 5;
-  }
-  .tabs::after {
-    content: ""; position: absolute;
-    left: 0; right: 0; bottom: -1px; height: 1px;
-    background: linear-gradient(90deg, transparent 0%, var(--accent) 20%, var(--accent) 80%, transparent 100%);
-    opacity: 0.20;
-    pointer-events: none;
-  }
-  .tab {
-    height: 32px;
-    padding: 0 18px;
-    display: inline-flex; align-items: center; gap: 8px;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    font-family: inherit;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--hai-text-secondary);
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: color .25s ease, background-color .25s ease, border-color .25s ease, box-shadow .35s ease, transform .25s cubic-bezier(.2,.7,.2,1);
-  }
-  .tab::before {
-    content: ""; position: absolute; inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(circle at 50% 130%, currentColor 0%, transparent 65%);
-    opacity: 0;
-    transition: opacity .35s ease;
-    pointer-events: none;
-  }
-  .tab:hover { background: var(--shell-hover); color: var(--hai-text-primary); transform: translateY(-1px); }
-  .tab:hover::before { opacity: 0.10; }
-  .tab.active {
-    color: var(--hai-text-primary);
-    background: linear-gradient(180deg, rgba(34,211,238,0.16) 0%, rgba(34,211,238,0.04) 100%);
-    border-color: rgba(34,211,238,0.45);
-    box-shadow: 0 0 0 4px rgba(34,211,238,0.06), 0 0 22px rgba(34,211,238,0.30), inset 0 1px 0 rgba(255,255,255,0.10);
-  }
-  html:not(.dark) .tab.active {
-    background: linear-gradient(180deg, rgba(30,95,181,0.14) 0%, rgba(30,95,181,0.04) 100%);
-    border-color: rgba(30,95,181,0.45);
-    box-shadow: 0 0 0 4px rgba(30,95,181,0.06), 0 0 22px rgba(30,95,181,0.20), inset 0 1px 0 rgba(255,255,255,0.50);
-  }
-  .tab.active::before { opacity: 0.18; }
-  .tab .tdot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; opacity: .85; }
-  .tab.active .tdot { animation: tdotPulse 1.8s ease-in-out infinite; opacity: 1; }
-  @keyframes tdotPulse {
-    0%,100% { transform: scale(1); box-shadow: 0 0 6px currentColor; }
-    50% { transform: scale(1.35); box-shadow: 0 0 14px currentColor; }
-  }
-  .tabs .breadcrumb {
-    margin-left: auto;
-    font-size: 10px; color: var(--hai-text-tertiary);
-    letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .tabs .breadcrumb b { color: var(--hai-text-secondary); }
-  .tabs .breadcrumb::before {
-    content: ""; width: 5px; height: 5px; border-radius: 50%;
-    background: var(--hai-status-ok-600);
-    box-shadow: 0 0 8px var(--hai-status-ok-600);
-    animation: pulse 1.6s ease-in-out infinite;
-  }
-
-  .panes { flex: 1; position: relative; overflow: hidden; padding: 16px 22px 14px; z-index: 1; }
-  .pane {
-    position: absolute; inset: 16px 22px 14px 22px;
-    display: flex; flex-direction: column;
-    opacity: 0; pointer-events: none;
-    transform: translateY(12px) scale(0.992);
-    filter: blur(6px);
-    transition: opacity .38s cubic-bezier(.2,.7,.2,1), transform .42s cubic-bezier(.2,.7,.2,1), filter .35s ease;
-    z-index: 1;
-  }
-  .pane.active {
-    opacity: 1; pointer-events: auto;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-    transition-delay: .06s;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     z-index: 2;
   }
 
-  /* ============================================================
-     AMBIENT BACKGROUND
-     ============================================================ */
-  .ambient-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
-  .ambient-bg::before, .ambient-bg::after {
-    content: ""; position: absolute;
-    width: 720px; height: 720px;
-    border-radius: 50%;
-    filter: blur(110px);
-    opacity: 0.18;
-    will-change: transform;
+  /* ===== Tab bar ===== */
+  .tab-bar {
+    display: inline-flex;
+    align-self: flex-start;
+    gap: 6px;
+    padding: 5px;
+    border-radius: 999px;
+    background: var(--tab-bar-bg);
+    border: 1px solid var(--hai-glass-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
-  .ambient-bg::before {
-    background: radial-gradient(circle, var(--accent) 0%, transparent 60%);
-    top: -260px; left: -200px;
-    animation: drift1 28s ease-in-out infinite;
+  .tab-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 22px;
+    border-radius: 999px;
+    border: none; cursor: pointer;
+    background: transparent;
+    color: var(--hai-text-secondary);
+    font-size: 12.5px; font-weight: 600; letter-spacing: 0.04em;
+    font-family: inherit;
+    transition: all .25s ease;
   }
-  .ambient-bg::after {
-    background: radial-gradient(circle, var(--hai-money) 0%, transparent 60%);
-    bottom: -260px; right: -200px;
-    animation: drift2 32s ease-in-out infinite;
+  .tab-btn:hover { color: var(--hai-text-primary); background: var(--hai-glass-1); }
+  .tab-btn.active {
+    background: var(--tab-active-bg);
+    color: var(--accent);
+    box-shadow: var(--tab-active-glow);
   }
-  html:not(.dark) .ambient-bg::before { opacity: 0.08; }
-  html:not(.dark) .ambient-bg::after { opacity: 0.07; }
-  @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(120px, 80px); } }
-  @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-100px, -60px); } }
-  .ambient-grid {
-    position: absolute; inset: 0; pointer-events: none;
-    background-image:
-      linear-gradient(var(--hai-surface-border) 1px, transparent 1px),
-      linear-gradient(90deg, var(--hai-surface-border) 1px, transparent 1px);
-    background-size: 36px 36px;
-    opacity: 0.10;
-    -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 30%, transparent 80%);
-            mask-image: radial-gradient(ellipse at 50% 30%, black 30%, transparent 80%);
+  .tab-btn svg { width: 14px; height: 14px; }
+  .tab-btn .pill-badge {
+    font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
+    padding: 2px 6px; border-radius: 999px;
+    background: var(--hai-status-crit-600); color: #fff;
   }
-  html:not(.dark) .ambient-grid { opacity: 0.16; }
 
-  /* ============================================================
-     SHARED CARD
-     ============================================================ */
-  .card-base {
-    background:
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
-      var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
-    border-radius: var(--hai-radius-xl);
+  /* ===== AI Insight bar ===== */
+  .ai-insight {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 18px;
+    border-radius: var(--hai-radius-lg);
+    background: var(--hai-surface-100);
+    border: 1px solid var(--hai-surface-border-strong);
     box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(8px) saturate(140%);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    transition:
-      transform .28s cubic-bezier(.2,.7,.2,1),
-      border-color .28s ease,
-      box-shadow .35s ease;
     position: relative;
     overflow: hidden;
   }
-  .card-base:hover {
-    transform: translateY(-2px);
-    border-color: var(--hai-surface-border-strong);
-    box-shadow: var(--hai-shadow-deep);
+  .ai-insight::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
   }
+  .ai-insight.amber::before { background: linear-gradient(180deg, var(--hai-status-warn-600), #c2670d); }
+  .ai-insight.green::before { background: linear-gradient(180deg, var(--hai-status-ok-600), #0a8a5f); }
+  .ai-insight-icon {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent-2), #0369a1);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    box-shadow: 0 0 16px rgba(14,165,233,0.40);
+  }
+  .ai-insight.amber .ai-insight-icon {
+    background: linear-gradient(135deg, var(--hai-status-warn-600), #c2670d);
+    box-shadow: 0 0 16px rgba(245,158,11,0.40);
+  }
+  .ai-insight.green .ai-insight-icon {
+    background: linear-gradient(135deg, var(--hai-status-ok-600), #0a8a5f);
+    box-shadow: 0 0 16px rgba(16,185,129,0.40);
+  }
+  .ai-insight-icon svg { width: 18px; height: 18px; }
+  .ai-insight-text { flex: 1; min-width: 0; }
+  .ai-insight-eyebrow {
+    font-size: 9.5px; color: var(--accent-2);
+    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .ai-insight.amber .ai-insight-eyebrow { color: var(--hai-status-warn-600); }
+  .ai-insight.green .ai-insight-eyebrow { color: var(--hai-status-ok-600); }
+  .ai-insight-msg {
+    font-size: 13px; color: var(--hai-text-primary); font-weight: 500;
+    line-height: 1.45;
+  }
+  .ai-insight-msg b { color: var(--accent); font-weight: 700; }
+  .ai-insight.amber .ai-insight-msg b { color: var(--hai-status-warn-600); }
+  .ai-insight.green .ai-insight-msg b { color: var(--hai-status-ok-600); }
+  .ai-insight-msg .gold { color: var(--hai-money); font-weight: 700; }
+  .ai-insight-msg .crit { color: var(--hai-status-crit-600); font-weight: 700; }
+  .ai-insight-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn-pill {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    cursor: pointer;
+    border: 1px solid var(--hai-glass-border);
+    background: var(--hai-glass-1);
+    color: var(--hai-text-primary);
+    transition: all .2s ease;
+    font-family: inherit;
+  }
+  .btn-pill:hover { background: var(--hai-glass-2); transform: translateY(-1px); }
+  .btn-pill.primary {
+    background: var(--accent-2);
+    color: #fff;
+    border-color: var(--accent-2);
+  }
+  .btn-pill.primary:hover { filter: brightness(1.1); }
+  .btn-pill.green { background: var(--hai-status-ok-600); border-color: var(--hai-status-ok-600); color: #fff; }
+  .btn-pill.amber { background: var(--hai-status-warn-600); border-color: var(--hai-status-warn-600); color: #fff; }
 
-  /* common card head + eyebrow + title */
-  .card-head {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    gap: 12px; margin-bottom: 10px;
+  /* ===== Tab panels ===== */
+  .tab-panel {
+    flex: 1;
+    min-height: 0;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    animation: fadeIn .35s ease;
   }
-  .card-eyebrow {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-size: 9px; font-weight: 800;
-    color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.20em;
+  .tab-panel.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* ===== Cards / panels ===== */
+  .card {
+    background: var(--hai-surface-100);
+    border: 1px solid var(--hai-surface-border);
+    border-radius: var(--hai-radius-xl);
+    padding: 14px 16px;
+    box-shadow: var(--hai-shadow-rest);
+    position: relative;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: background-color .25s ease, border-color .25s ease;
+  }
+  .card-title {
+    font-size: 11px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .card-title-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .card-title-row .card-title { margin-bottom: 0; }
+  .card-link {
+    font-size: 10px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;
+    text-decoration: none;
+  }
+  .card-link:hover { text-decoration: underline; }
+
+  /* ===== KPI strip ===== */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .kpi-card {
+    background: var(--hai-surface-100);
+    border: 1px solid var(--hai-surface-border);
+    border-radius: var(--hai-radius-xl);
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--hai-shadow-rest);
+  }
+  .kpi-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .kpi-card.production::before { background: linear-gradient(90deg, var(--hai-money), var(--hai-status-ok-600)); }
+  .kpi-card.energy::before { background: linear-gradient(90deg, var(--accent-2), var(--hai-status-ok-600)); }
+  .kpi-card.risk::before { background: linear-gradient(90deg, var(--hai-status-ok-600), #14b89a); }
+  .kpi-card.savings::before { background: linear-gradient(90deg, var(--hai-money), #d99b3a); }
+
+  .kpi-name {
+    font-size: 10px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700;
     margin-bottom: 6px;
   }
-  .card-eyebrow .num {
-    background: var(--hai-glass-2);
-    color: var(--hai-text-secondary);
-    padding: 3px 7px; border-radius: 4px;
-    font-size: 10px; letter-spacing: 0.10em;
-    border: 1px solid var(--hai-surface-border);
+  .kpi-value-row {
+    display: flex; align-items: baseline; gap: 6px;
   }
-  .card-eyebrow.now .num   { color: var(--accent); border-color: rgba(34,211,238,0.30); background: rgba(34,211,238,0.06); }
-  .card-eyebrow.in .num    { color: var(--hai-data-5); border-color: rgba(123,196,201,0.30); background: rgba(123,196,201,0.06); }
-  .card-eyebrow.act .num   { color: var(--hai-status-ok-600); border-color: rgba(46,158,106,0.30); background: var(--hai-status-ok-100); }
-  .card-eyebrow.fin .num   { color: var(--hai-money); border-color: rgba(240,181,79,0.30); background: rgba(240,181,79,0.08); }
-  .card-eyebrow.why .num   { color: var(--hai-status-info-600); border-color: rgba(62,130,216,0.30); background: var(--hai-status-info-100); }
-  html:not(.dark) .card-eyebrow.act .num { background: rgba(21,128,74,0.10); border-color: rgba(21,128,74,0.30); }
-  html:not(.dark) .card-eyebrow.why .num { background: rgba(30,95,181,0.10); border-color: rgba(30,95,181,0.30); }
-  html:not(.dark) .card-eyebrow.fin .num { background: rgba(185,121,0,0.10); border-color: rgba(185,121,0,0.30); }
-
-  .card-title {
-    font-size: 16px; font-weight: 800;
+  .kpi-num {
+    font-size: 30px; font-weight: 800;
     color: var(--hai-text-primary);
-    line-height: 1.25; letter-spacing: -0.01em;
+    line-height: 1; letter-spacing: -0.02em;
   }
-  .card-sub { font-size: 11px; color: var(--hai-text-tertiary); margin-top: 2px; line-height: 1.4; }
+  .kpi-num.gold { color: var(--hai-money); }
+  .kpi-num.green { color: var(--hai-status-ok-600); }
+  .kpi-num.amber { color: var(--hai-status-warn-600); }
+  .kpi-unit { font-size: 12px; color: var(--hai-text-tertiary); font-weight: 500; }
+  .kpi-foot {
+    margin-top: 8px;
+    font-size: 10.5px; color: var(--hai-text-secondary);
+    line-height: 1.4;
+  }
+  .kpi-foot .up { color: var(--hai-status-ok-600); font-weight: 700; }
+  .kpi-foot .down { color: var(--hai-status-ok-600); font-weight: 700; }
+  .kpi-foot .crit { color: var(--hai-status-crit-600); font-weight: 700; }
+  .kpi-foot b { color: var(--hai-text-primary); font-weight: 700; }
 
   /* ============================================================
      TAB 1 — PRODUCTION
      ============================================================ */
-  .grid-prod {
-    height: 100%;
+  .prod-grid {
+    flex: 1; min-height: 0;
     display: grid;
-    grid-template-columns: 280px 1fr;
-    grid-template-rows: 1fr 1fr auto auto;
+    grid-template-columns: 1fr 1.5fr;
+    grid-template-rows: 1fr 1fr;
     gap: 12px;
-    grid-template-areas:
-      "prod-card  prod-chart"
-      "cost-card  cost-chart"
-      "ai-bar     ai-bar"
-      "kpis       kpis";
   }
-  .hero-card, .chart-card, .ai-bar, .kpi-card {
-    background:
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
-      var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
-    border-radius: var(--hai-radius-xl);
-    box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(8px) saturate(140%);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
-    position: relative; overflow: hidden;
-  }
-  .hero-card:hover, .chart-card:hover, .kpi-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--hai-surface-border-strong);
-    box-shadow: var(--hai-shadow-deep);
-  }
-  .hero-card { padding: 14px 16px 12px; display: flex; flex-direction: column; }
-  .hero-card.production { grid-area: prod-card; }
-  .hero-card.cost { grid-area: cost-card; }
-  .hero-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
-  .hero-card.production::before { background: linear-gradient(90deg, var(--hai-money), var(--hai-status-ok-600)); }
-  .hero-card.cost::before { background: linear-gradient(90deg, var(--hai-status-info-600), var(--hai-status-ok-600)); }
-  .hero-eyebrow { font-size: 10px; color: var(--hai-text-tertiary); text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700; }
-  .hero-label { font-size: 13px; color: var(--hai-text-primary); font-weight: 600; margin-top: 3px; }
-  .now-block { margin-top: 8px; }
-  .now-lbl, .pred-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; }
-  .now-lbl { color: var(--hai-text-tertiary); }
-  .pred-lbl { display: flex; align-items: center; gap: 6px; color: var(--hai-status-info-600); }
-  .production .pred-lbl { color: var(--hai-money); }
-  .pred-lbl::before {
-    content: ""; width: 6px; height: 6px; border-radius: 50%;
-    background: currentColor; animation: pulse 1.6s ease-in-out infinite;
-  }
-  .now-val, .pred-val { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
-  .now-val .num-big { font-size: 32px; font-weight: 800; color: var(--hai-text-primary); line-height: 1; letter-spacing: -0.02em; }
-  .pred-val .num-big { font-size: 26px; font-weight: 800; color: var(--hai-status-ok-600); line-height: 1; letter-spacing: -0.02em; }
-  .unit { font-size: 11px; color: var(--hai-text-tertiary); font-weight: 500; }
-  .arrow { font-size: 14px; color: var(--hai-status-ok-600); font-weight: 700; }
-  .pred-divider { height: 1px; background: var(--hai-surface-border); margin: 10px 0 8px; }
-  .savings-pill {
-    margin-top: 8px; padding: 7px 11px;
-    background: var(--hai-status-ok-100);
-    border: 1px solid rgba(46,158,106,0.30);
-    border-radius: 8px;
-    display: flex; justify-content: space-between; align-items: baseline;
-  }
-  html:not(.dark) .savings-pill { border-color: rgba(21,128,74,0.30); }
-  .savings-pill .lbl { font-size: 9px; color: var(--hai-status-ok-600); text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; }
-  .savings-pill .val { font-size: 13px; font-weight: 700; color: var(--hai-text-primary); }
-  .chart-card { padding: 12px 14px 8px; display: flex; flex-direction: column; min-height: 0; }
-  .chart-card.prod-chart { grid-area: prod-chart; }
-  .chart-card.cost-chart { grid-area: cost-chart; }
-  .chart-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
-  .chart-title { font-size: 13px; font-weight: 700; color: var(--hai-text-primary); }
-  .chart-sub { font-size: 10px; color: var(--hai-text-tertiary); margin-top: 2px; }
-  .chart-legend { display: flex; gap: 12px; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--hai-text-secondary); }
-  .legend-swatch { width: 14px; height: 3px; border-radius: 2px; }
-  .legend-swatch.actual-cost { background: var(--hai-status-info-600); }
-  .legend-swatch.actual-prod { background: var(--hai-money); }
-  .legend-swatch.predicted {
-    background-image: linear-gradient(90deg, var(--hai-status-ok-600) 50%, transparent 50%);
-    background-size: 5px 100%; background-repeat: repeat-x; height: 3px;
-  }
-  .chart-svg-wrap { flex: 1; position: relative; min-height: 0; }
-  .chart-svg { width: 100%; height: 100%; display: block; }
-  .now-pill {
-    position: absolute; transform: translate(-50%, -100%);
-    color: var(--hai-surface-canvas);
-    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-    padding: 2px 7px; border-radius: 4px;
-    text-transform: uppercase; pointer-events: none; margin-top: -4px;
-  }
-  .now-pill.cost { background: var(--hai-status-info-600); box-shadow: 0 4px 8px rgba(62,130,216,0.4); }
-  .now-pill.prod { background: var(--hai-money); box-shadow: 0 4px 8px rgba(240,181,79,0.4); }
-  .chart-footer {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-top: 4px;
-    font-size: 9px; color: var(--hai-text-disabled);
-    letter-spacing: 0.05em; text-transform: uppercase;
-  }
-  .ai-bar {
-    grid-area: ai-bar;
-    border: 1px solid var(--hai-surface-border-strong);
-    border-radius: var(--hai-radius-lg);
-    padding: 10px 14px;
+
+  /* Real-time list */
+  .rt-list { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .rt-row {
     display: flex; align-items: center; gap: 12px;
-  }
-  .ai-bar::before {
-    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-    background: linear-gradient(180deg, var(--hai-status-info-600), var(--hai-status-ok-600));
-  }
-  .ai-bar::after {
-    content: ""; position: absolute;
-    top: -50%; bottom: -50%; left: -25%; width: 25%;
-    background: linear-gradient(90deg, transparent 0%, rgba(34,211,238,0.10) 50%, transparent 100%);
-    transform: skewX(-15deg);
-    animation: shimmer 6s linear infinite;
-    pointer-events: none;
-  }
-  html:not(.dark) .ai-bar::after {
-    background: linear-gradient(90deg, transparent 0%, rgba(30,95,181,0.10) 50%, transparent 100%);
-  }
-  @keyframes shimmer { 0% { left: -25%; } 100% { left: 130%; } }
-  .ai-bar-icon {
-    width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
-    background: linear-gradient(135deg, var(--hai-status-info-600), #0369a1);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; box-shadow: 0 0 12px rgba(62,130,216,0.35);
-    position: relative; z-index: 1;
-  }
-  .ai-bar-icon svg { width: 16px; height: 16px; }
-  .ai-bar-text { flex: 1; min-width: 0; position: relative; z-index: 1; }
-  .ai-bar-eyebrow {
-    font-size: 10px; color: var(--hai-status-info-600);
-    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700;
-    margin-bottom: 2px;
-  }
-  .ai-bar-msg { font-size: 12px; color: var(--hai-text-primary); font-weight: 500; line-height: 1.4; }
-  .ai-bar-msg b { color: var(--hai-status-ok-600); font-weight: 700; }
-  .ai-bar-msg .gold { color: var(--hai-money); font-weight: 700; }
-  .ai-bar-msg .hi { color: var(--hai-future); font-weight: 600; }
-  .ai-bar-cta {
-    flex-shrink: 0;
-    padding: 7px 12px;
-    background: var(--hai-status-info-600);
-    color: #fff;
-    border-radius: 8px;
-    font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.1em;
-    cursor: pointer; border: none;
-    transition: all .2s ease;
-    position: relative; z-index: 1;
-  }
-  .ai-bar-cta:hover { transform: translateY(-1px); filter: brightness(1.1); }
-  .kpis { grid-area: kpis; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  .kpi-card { padding: 10px 12px; display: flex; flex-direction: column; }
-  .kpi-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
-  .kpi-name { font-size: 10px; color: var(--hai-text-tertiary); text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600; }
-  .kpi-status { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.1em; }
-  .kpi-status.good { background: var(--hai-status-ok-100); color: var(--hai-status-ok-600); }
-  .kpi-status.warn { background: var(--hai-status-warn-100); color: var(--hai-status-warn-600); }
-  .kpi-value { display: flex; align-items: baseline; gap: 5px; }
-  .kpi-value .num-mid { font-size: 20px; font-weight: 800; color: var(--hai-text-primary); line-height: 1; letter-spacing: -0.02em; }
-  .kpi-msg { font-size: 10px; color: var(--hai-text-tertiary); margin-top: 4px; line-height: 1.4; }
-  .kpi-msg b { color: var(--hai-text-secondary); font-weight: 600; }
-
-  /* ============================================================
-     TAB 2 — PdM (fleet table)
-     ============================================================ */
-  .grid-pdm {
-    height: 100%;
-    display: grid;
-    grid-template-rows: 1fr auto;
-    gap: 14px;
-    grid-template-areas: "fleet" "insight";
-  }
-
-  .fleet-card {
-    grid-area: fleet;
-    border-radius: var(--hai-radius-xl);
-    padding: 18px 22px 16px;
-    background:
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
-      var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
-    box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(8px) saturate(140%);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    display: flex; flex-direction: column;
-    position: relative; overflow: hidden;
-    transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
-  }
-  .fleet-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--hai-surface-border-strong);
-    box-shadow: var(--hai-shadow-deep);
-  }
-  .fleet-card::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--hai-status-warn-600), var(--accent));
-  }
-
-  .fleet-counts {
-    display: flex; gap: 8px; flex-shrink: 0;
-  }
-  .fleet-counts .count {
-    font-size: 10px; font-weight: 800;
-    padding: 5px 11px; border-radius: 999px;
-    text-transform: uppercase; letter-spacing: 0.12em;
-    line-height: 1;
-    display: inline-flex; align-items: center; gap: 6px;
-  }
-  .fleet-counts .count::before {
-    content: ""; width: 6px; height: 6px; border-radius: 50%;
-    background: currentColor;
-    box-shadow: 0 0 6px currentColor;
-  }
-  .fleet-counts .count.good { background: var(--hai-status-ok-100); color: var(--hai-status-ok-600); border: 1px solid rgba(46,158,106,0.30); }
-  .fleet-counts .count.warn { background: var(--hai-status-warn-100); color: var(--hai-status-warn-600); border: 1px solid rgba(217,141,23,0.40); }
-  .fleet-counts .count.crit { background: var(--hai-status-crit-100); color: var(--hai-status-crit-600); border: 1px solid rgba(222,73,69,0.45); }
-  html:not(.dark) .fleet-counts .count.good { border-color: rgba(21,128,74,0.30); }
-
-  .fleet-table-wrap { flex: 1; overflow: hidden; min-height: 0; }
-  .fleet-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-  }
-  .fleet-table thead th {
-    text-align: left;
-    font-size: 9px; font-weight: 800;
-    color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.18em;
-    padding: 10px 12px 12px;
-    border-bottom: 1px solid var(--hai-surface-border-strong);
-    background: var(--hai-glass-1);
-  }
-  .fleet-table thead th:first-child { padding-left: 16px; border-top-left-radius: 10px; }
-  .fleet-table thead th:last-child { padding-right: 16px; border-top-right-radius: 10px; }
-  .fleet-table tbody td {
-    padding: 14px 12px;
-    border-bottom: 1px solid var(--hai-surface-border);
-    vertical-align: middle;
-    font-size: 13px;
-    color: var(--hai-text-primary);
-  }
-  .fleet-table tbody td:first-child { padding-left: 16px; }
-  .fleet-table tbody td:last-child { padding-right: 16px; }
-  .fleet-table tbody tr {
-    transition: background-color .2s ease;
-    position: relative;
-  }
-  .fleet-table tbody tr:hover {
-    background: var(--hai-glass-1);
-  }
-  .fleet-table tbody tr:last-child td { border-bottom: none; }
-
-  /* row left accent */
-  .fleet-table tbody tr.warn td:first-child { box-shadow: inset 3px 0 0 var(--hai-status-warn-600); }
-  .fleet-table tbody tr.crit td:first-child { box-shadow: inset 3px 0 0 var(--hai-status-crit-600); }
-  .fleet-table tbody tr.good td:first-child { box-shadow: inset 3px 0 0 var(--hai-status-ok-600); }
-
-  /* equipment column */
-  .eq-cell .eq-name {
-    font-size: 15px; font-weight: 800;
-    color: var(--hai-text-primary);
-    letter-spacing: 0.01em;
-    line-height: 1;
-  }
-  .eq-cell .eq-asset {
-    font-size: 10px;
-    color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
-    margin-top: 4px;
-  }
-
-  /* status pill in cell */
-  .st-pill {
-    display: inline-flex; align-items: center; gap: 7px;
-    font-size: 10px; font-weight: 800;
-    padding: 5px 11px; border-radius: 999px;
-    text-transform: uppercase; letter-spacing: 0.12em;
-    line-height: 1;
-  }
-  .st-pill::before {
-    content: ""; width: 6px; height: 6px; border-radius: 50%;
-    background: currentColor;
-    box-shadow: 0 0 6px currentColor;
-  }
-  .st-pill.good { background: var(--hai-status-ok-100); color: var(--hai-status-ok-600); border: 1px solid rgba(46,158,106,0.30); }
-  .st-pill.warn { background: var(--hai-status-warn-100); color: var(--hai-status-warn-600); border: 1px solid rgba(217,141,23,0.40); animation: pillPulse 2s ease-in-out infinite; }
-  .st-pill.crit { background: var(--hai-status-crit-100); color: var(--hai-status-crit-600); border: 1px solid rgba(222,73,69,0.45); animation: pillPulse 1.4s ease-in-out infinite; }
-  html:not(.dark) .st-pill.good { border-color: rgba(21,128,74,0.30); }
-  @keyframes pillPulse { 0%,100% { box-shadow: 0 0 0 transparent; } 50% { box-shadow: 0 0 12px currentColor; } }
-
-  .reading-cell {
-    font-size: 13px; font-weight: 700;
-    color: var(--hai-text-primary);
-    font-variant-numeric: tabular-nums;
-  }
-  .reading-cell .sub {
-    color: var(--hai-text-tertiary);
-    font-weight: 500;
-    margin-left: 4px;
-    font-size: 11px;
-  }
-  .reading-cell.warn-r { color: var(--hai-status-warn-600); }
-  .reading-cell.warn-r .sub { color: var(--hai-status-warn-600); opacity: 0.85; }
-  .reading-cell .delta {
-    color: var(--hai-status-ok-600);
-    font-weight: 700;
-    margin-left: 6px;
-    font-size: 11px;
-  }
-  .reading-cell .delta.down { color: var(--hai-status-warn-600); }
-  .reading-cell .delta.up { color: var(--hai-status-warn-600); }
-
-  .next-cell {
-    font-size: 12px; font-weight: 700;
-    color: var(--hai-text-secondary);
-  }
-  .next-cell.warn-n { color: var(--hai-status-warn-600); }
-  .next-cell .date {
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-  }
-  .next-cell.muted { color: var(--hai-text-tertiary); font-weight: 500; }
-
-  .issue-cell {
-    font-size: 12px;
-    color: var(--hai-text-secondary);
-    font-weight: 500;
-    line-height: 1.4;
-  }
-  .issue-cell.warn-i { color: var(--hai-text-primary); }
-  .issue-cell.muted { color: var(--hai-text-tertiary); }
-
-  /* AI Insight card (below fleet) */
-  .insight-card {
-    grid-area: insight;
-    border-radius: var(--hai-radius-xl);
-    padding: 14px 18px;
-    background:
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
-      var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border-strong);
-    box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(8px) saturate(140%);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    display: flex; align-items: center; gap: 14px;
-    position: relative; overflow: hidden;
-    transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
-  }
-  .insight-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--hai-surface-border-strong);
-    box-shadow: var(--hai-shadow-deep);
-  }
-  .insight-card::before {
-    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-    background: linear-gradient(180deg, var(--hai-status-info-600), var(--hai-status-warn-600));
-  }
-  .insight-card::after {
-    content: ""; position: absolute;
-    top: -50%; bottom: -50%; left: -25%; width: 25%;
-    background: linear-gradient(90deg, transparent 0%, rgba(34,211,238,0.10) 50%, transparent 100%);
-    transform: skewX(-15deg);
-    animation: shimmer 6s linear infinite;
-    pointer-events: none;
-  }
-  html:not(.dark) .insight-card::after { background: linear-gradient(90deg, transparent 0%, rgba(30,95,181,0.10) 50%, transparent 100%); }
-  .insight-icon {
-    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
-    background: linear-gradient(135deg, var(--hai-status-info-600), #0369a1);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff;
-    box-shadow: 0 0 14px rgba(62,130,216,0.40);
-    position: relative; z-index: 1;
-  }
-  .insight-icon svg { width: 20px; height: 20px; }
-  .insight-text {
-    flex: 1; min-width: 0;
-    position: relative; z-index: 1;
-  }
-  .insight-eyebrow {
-    font-size: 10px; color: var(--hai-status-info-600);
-    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 800;
-    margin-bottom: 4px;
-    display: inline-flex; align-items: center; gap: 8px;
-  }
-  .insight-eyebrow::before {
-    content: "AI"; font-size: 9px;
-    background: var(--hai-status-info-600);
-    color: #fff; padding: 2px 6px; border-radius: 4px;
-    letter-spacing: 0.12em;
-  }
-  .insight-msg {
-    font-size: 13px; color: var(--hai-text-primary);
-    font-weight: 500; line-height: 1.55;
-  }
-  .insight-msg b { color: var(--hai-text-primary); font-weight: 800; }
-  .insight-msg b.gold { color: var(--hai-money); }
-  .insight-msg b.warn { color: var(--hai-status-warn-600); }
-  .insight-btn {
-    flex-shrink: 0;
-    padding: 9px 16px;
-    background: var(--hai-status-info-600);
-    color: #fff;
-    border-radius: 10px;
-    font-family: inherit;
-    font-size: 11px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.10em;
-    cursor: pointer; border: none;
-    transition: all .2s ease;
-    position: relative; z-index: 1;
-  }
-  .insight-btn:hover { transform: translateY(-1px); filter: brightness(1.1); box-shadow: 0 0 18px rgba(62,130,216,0.50); }
-
-  /* ============================================================
-     TAB 3 — YIELD (full picture)
-     ============================================================ */
-  .grid-yield {
-    height: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 0.95fr 1.05fr 0.85fr;
-    gap: 14px;
-    grid-template-areas:
-      "production  inputs"
-      "suggestions suggestions"
-      "expected    expected";
-  }
-
-  /* metric card (production + inputs) */
-  .metric-card {
-    border-radius: var(--hai-radius-xl);
-    padding: 18px 22px 16px;
-    background:
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
-      var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
-    box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(8px) saturate(140%);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    display: flex; flex-direction: column;
-    gap: 10px;
-    position: relative; overflow: hidden;
-    transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
-  }
-  .metric-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--hai-surface-border-strong);
-    box-shadow: var(--hai-shadow-deep);
-  }
-  .metric-card.production { grid-area: production; }
-  .metric-card.inputs { grid-area: inputs; }
-  .metric-card.production::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--hai-money), var(--hai-status-ok-600));
-  }
-  .metric-card.inputs::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--hai-data-5), var(--accent));
-  }
-
-  .metric-grid {
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px 18px;
-    align-content: center;
-  }
-  .metric-card.inputs .metric-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px 14px;
-  }
-  .metric {
-    display: flex; flex-direction: column; gap: 4px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    background: var(--hai-glass-1);
-    border: 1px solid var(--hai-glass-border);
-    transition: background-color .2s ease, border-color .2s ease;
-  }
-  .metric:hover {
-    background: var(--hai-glass-2);
-    border-color: var(--hai-surface-border);
-  }
-  .metric.warn {
-    background: rgba(217,141,23,0.06);
-    border-color: rgba(217,141,23,0.25);
-  }
-  html:not(.dark) .metric.warn { background: rgba(179,106,0,0.06); border-color: rgba(179,106,0,0.25); }
-  .metric .lbl {
-    font-size: 9px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 800;
-  }
-  .metric .val {
-    font-size: 22px; font-weight: 800;
-    color: var(--hai-text-primary);
-    line-height: 1; letter-spacing: -0.02em;
-    font-variant-numeric: tabular-nums;
-    display: flex; align-items: baseline; gap: 4px;
-  }
-  .metric.warn .val { color: var(--hai-status-warn-600); }
-  .metric .val .u {
-    font-size: 11px; font-weight: 600;
-    color: var(--hai-text-tertiary);
-    letter-spacing: 0.04em;
-  }
-  .metric.warn .val .u { color: var(--hai-status-warn-600); opacity: 0.8; }
-  .metric .val .status-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    margin-left: 4px;
-    background: var(--hai-status-ok-600);
-    box-shadow: 0 0 6px var(--hai-status-ok-600);
-    align-self: center;
-  }
-  .metric .val .status-dot.warn { background: var(--hai-status-warn-600); box-shadow: 0 0 6px var(--hai-status-warn-600); }
-  .metric .val.text { font-size: 16px; }
-  .metric .val.text .status-dot { margin-left: 8px; }
-
-  /* SUGGESTIONS */
-  .suggestions-card {
-    grid-area: suggestions;
-    border-radius: var(--hai-radius-xl);
-    padding: 16px 22px 16px;
-    background:
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
-      var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
-    box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(8px) saturate(140%);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    display: flex; flex-direction: column;
-    gap: 10px;
-    position: relative; overflow: hidden;
-    transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
-  }
-  .suggestions-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--hai-surface-border-strong);
-    box-shadow: var(--hai-shadow-deep);
-  }
-  .suggestions-card::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--hai-status-info-600), var(--hai-status-ok-600));
-  }
-  .suggestion-list {
-    flex: 1;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-  .suggestion {
-    display: flex; flex-direction: column; gap: 6px;
     padding: 12px 14px;
     border-radius: 12px;
     background: var(--hai-glass-1);
     border: 1px solid var(--hai-glass-border);
-    transition: transform .2s ease, border-color .2s ease, background-color .2s ease;
-    position: relative;
   }
-  .suggestion:hover {
-    transform: translateY(-1px);
-    background: var(--hai-glass-2);
-    border-color: var(--hai-surface-border-strong);
-  }
-  .suggestion .s-num {
-    position: absolute; top: -10px; left: 12px;
-    width: 24px; height: 24px;
-    background: var(--hai-status-info-600);
-    color: #fff;
-    border-radius: 50%;
+  .rt-icon {
+    width: 36px; height: 36px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 800;
-    box-shadow: 0 0 12px rgba(62,130,216,0.40);
-    border: 2px solid var(--hai-surface-100);
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent-2), #0369a1);
+    color: #fff;
   }
-  .suggestion .s-title {
-    font-size: 14px; font-weight: 800;
-    color: var(--hai-text-primary);
-    line-height: 1.3;
-    margin-top: 4px;
-  }
-  .suggestion .s-title b { font-weight: 800; }
-  .suggestion .s-detail {
-    font-size: 11.5px; color: var(--hai-text-secondary);
-    line-height: 1.5;
-    flex: 1;
-  }
-  .suggestion .s-detail b { color: var(--hai-text-primary); font-weight: 700; }
-  .suggestion .s-detail b.ok { color: var(--hai-status-ok-600); }
-  .suggestion .s-detail b.warn { color: var(--hai-status-warn-600); }
-  .suggestion .s-detail b.gold { color: var(--hai-money); }
-  .suggestion .s-btn {
-    align-self: flex-start;
-    margin-top: 4px;
-    padding: 7px 12px;
-    background: var(--hai-status-ok-600);
-    color: #fff; border: none; border-radius: 8px;
-    font-family: inherit;
-    font-size: 10px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.10em;
-    cursor: pointer;
-    transition: all .2s ease;
-    box-shadow: 0 0 10px rgba(46,158,106,0.30);
-  }
-  .suggestion .s-btn:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 16px rgba(46,158,106,0.45); }
-  .suggestion .s-btn.alt {
-    background: transparent;
-    color: var(--hai-text-secondary);
-    border: 1px solid var(--hai-surface-border-strong);
-    box-shadow: none;
-  }
-  .suggestion .s-btn.alt:hover { color: var(--hai-text-primary); border-color: var(--hai-text-tertiary); }
+  .rt-icon.gold { background: linear-gradient(135deg, var(--hai-money), #d99b3a); color: var(--hai-surface-canvas); }
+  .rt-icon.amber { background: linear-gradient(135deg, var(--hai-status-warn-600), #c2670d); color: #fff; }
+  .rt-icon.ok { background: linear-gradient(135deg, var(--hai-status-ok-600), #0a8a5f); color: #fff; }
+  .rt-icon svg { width: 18px; height: 18px; }
+  .rt-text { flex: 1; }
+  .rt-label { font-size: 10.5px; color: var(--hai-text-tertiary); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; }
+  .rt-val { display: flex; align-items: baseline; gap: 5px; margin-top: 2px; }
+  .rt-val .num-mid { font-size: 20px; font-weight: 800; color: var(--hai-text-primary); letter-spacing: -0.02em; }
+  .rt-val .unit { font-size: 11px; color: var(--hai-text-tertiary); font-weight: 500; }
 
-  /* EXPECTED card */
-  .expected-card {
-    grid-area: expected;
-    border-radius: var(--hai-radius-xl);
-    padding: 16px 22px;
-    background:
-      linear-gradient(135deg, rgba(240,181,79,0.08) 0%, transparent 60%),
-      linear-gradient(180deg, var(--hai-glass-1) 0%, transparent 65%),
-      var(--hai-surface-100);
-    border: 1px solid rgba(240,181,79,0.30);
-    box-shadow: var(--hai-shadow-rest);
-    backdrop-filter: blur(8px) saturate(140%);
-    -webkit-backdrop-filter: blur(8px) saturate(140%);
-    display: flex; flex-direction: column;
-    gap: 10px;
-    position: relative; overflow: hidden;
-    transition: transform .28s cubic-bezier(.2,.7,.2,1), border-color .28s ease, box-shadow .35s ease;
+  /* Forecast chart card */
+  .chart-svg-wrap { flex: 1; position: relative; min-height: 0; }
+  .chart-svg { width: 100%; height: 100%; display: block; }
+  .chart-legend { display: flex; gap: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--hai-text-secondary); }
+  .legend-swatch { width: 16px; height: 3px; border-radius: 2px; }
+  .legend-swatch.actual { background: var(--accent-2); }
+  .legend-swatch.forecast {
+    background-image: linear-gradient(90deg, var(--hai-status-ok-600) 50%, transparent 50%);
+    background-size: 6px 100%; background-repeat: repeat-x; height: 3px;
   }
-  html:not(.dark) .expected-card { border-color: rgba(185,121,0,0.30); }
-  .expected-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(240,181,79,0.55);
-    box-shadow: var(--hai-shadow-deep);
-  }
-  html:not(.dark) .expected-card:hover { border-color: rgba(185,121,0,0.55); }
-  .expected-card::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--hai-money), var(--hai-status-ok-600));
-  }
-  .expected-row {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1.2fr auto;
-    gap: 16px;
-    align-items: center;
-  }
-  .ex-cell {
-    display: flex; flex-direction: column; gap: 4px;
-    padding: 8px 14px;
-    border-left: 2px solid var(--hai-surface-border);
-  }
-  .ex-cell:first-child { border-left: none; padding-left: 0; }
-  .ex-cell .lbl {
-    font-size: 9px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 800;
-  }
-  .ex-flow {
-    display: flex; align-items: baseline; gap: 6px;
-    font-variant-numeric: tabular-nums;
-  }
-  .ex-flow .from {
-    font-size: 18px; font-weight: 700;
-    color: var(--hai-text-secondary);
-    line-height: 1; letter-spacing: -0.01em;
-  }
-  .ex-flow .ar {
-    font-size: 16px; font-weight: 800;
-    color: var(--hai-status-ok-600);
-  }
-  .ex-flow .to {
-    font-size: 22px; font-weight: 800;
-    color: var(--hai-text-primary);
-    line-height: 1; letter-spacing: -0.02em;
-  }
-  .ex-flow .to.ok {
-    color: var(--hai-status-ok-600);
-    text-shadow: 0 0 14px rgba(46,158,106,0.30);
-  }
-  .ex-flow .to.gold {
-    color: var(--hai-money);
-    text-shadow: 0 0 16px var(--hai-money-glow);
-  }
-  .ex-cell .delta {
-    font-size: 11px; font-weight: 700;
-    color: var(--hai-status-ok-600);
+  .legend-swatch.line-blue { background: var(--hai-data-1); }
+  .legend-swatch.line-green { background: var(--hai-status-ok-600); }
+  .legend-swatch.line-orange { background: var(--hai-status-warn-600); }
+
+  .chart-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 6px;
+    font-size: 9.5px; color: var(--hai-text-disabled);
     letter-spacing: 0.04em;
   }
-  .ex-cell.savings {
-    background: linear-gradient(135deg, rgba(240,181,79,0.12), rgba(240,181,79,0.02));
+  .now-pill {
+    position: absolute; transform: translate(-50%, -100%);
+    color: #fff; font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 2px 7px; border-radius: 4px;
+    text-transform: uppercase;
+    pointer-events: none;
+    margin-top: -4px;
+  }
+  .now-pill.cyan { background: var(--accent-2); box-shadow: 0 4px 8px rgba(14,165,233,0.4); }
+  .now-pill.amber { background: var(--hai-status-warn-600); box-shadow: 0 4px 8px rgba(245,158,11,0.4); }
+
+  /* Energy submeters */
+  .submeter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex: 1; }
+  .submeter-card {
+    background: var(--hai-glass-1);
+    border: 1px solid var(--hai-glass-border);
     border-radius: 12px;
-    border-left: none;
-    border: 1px solid rgba(240,181,79,0.40);
-    padding: 10px 16px;
+    padding: 12px 14px;
+    display: flex; flex-direction: column;
   }
-  html:not(.dark) .ex-cell.savings { border-color: rgba(185,121,0,0.40); }
-  .ex-cell.savings .lbl { color: var(--hai-money); }
-  .ex-cell.savings .ex-flow .to { color: var(--hai-money); text-shadow: 0 0 18px var(--hai-money-glow); font-size: 24px; }
-  .ex-cell.savings .delta { color: var(--hai-money); opacity: 0.85; }
-  .expected-btn {
-    align-self: center;
-    padding: 12px 20px;
+  .submeter-name {
+    font-size: 11px; color: var(--accent); font-weight: 800;
+    letter-spacing: 0.15em; margin-bottom: 6px;
+  }
+  .submeter-value { display: flex; align-items: baseline; gap: 4px; }
+  .submeter-value .num { font-size: 22px; font-weight: 800; color: var(--hai-text-primary); letter-spacing: -0.02em; }
+  .submeter-value .unit { font-size: 10px; color: var(--hai-text-tertiary); font-weight: 600; }
+  .submeter-pf { font-size: 10px; color: var(--hai-text-secondary); margin-top: 6px; }
+  .submeter-pf b { color: var(--hai-text-primary); }
+  .submeter-status {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 8px;
+    font-size: 10px; color: var(--hai-status-ok-600); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .submeter-status .dot {
+    width: 7px; height: 7px; border-radius: 50%;
     background: var(--hai-status-ok-600);
-    color: #fff;
-    border: none; border-radius: 12px;
-    font-family: inherit;
-    font-size: 12px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.12em;
-    cursor: pointer;
-    box-shadow: 0 0 22px rgba(46,158,106,0.40);
-    transition: all .2s ease;
-    white-space: nowrap;
-  }
-  .expected-btn:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.08);
-    box-shadow: 0 0 30px rgba(46,158,106,0.55);
+    box-shadow: 0 0 6px currentColor;
   }
 
-  /* mockup tag */
+  /* Totalizers */
+  .totalizer-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    flex: 1;
+  }
+  .totalizer-block {
+    border-radius: 14px;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--hai-glass-1), transparent);
+    border: 1px solid var(--hai-glass-border);
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .totalizer-block.flour { border-left: 3px solid var(--hai-money); }
+  .totalizer-block.bran { border-left: 3px solid var(--hai-status-warn-600); }
+  .totalizer-label {
+    font-size: 11px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700;
+  }
+  .totalizer-value {
+    display: flex; align-items: baseline; gap: 8px;
+    margin-top: 8px;
+  }
+  .totalizer-value .num-big {
+    font-size: 38px; font-weight: 800;
+    line-height: 1; letter-spacing: -0.02em;
+  }
+  .totalizer-block.flour .num-big { color: var(--hai-money); }
+  .totalizer-block.bran .num-big { color: var(--hai-status-warn-600); }
+  .totalizer-value .unit { font-size: 13px; color: var(--hai-text-secondary); font-weight: 600; }
+  .totalizer-foot { margin-top: 8px; font-size: 10.5px; color: var(--hai-text-secondary); }
+
+  /* ============================================================
+     TAB 2 — PdM
+     ============================================================ */
+  .pdm-flow-card { flex: 0 0 auto; }
+  .pdm-bottom-grid {
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 12px;
+  }
+  .pdm-anomalies { flex: 0 0 auto; }
+
+  /* Process flow */
+  .flow-stages {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 22px;
+    align-items: stretch;
+  }
+  .flow-stage {
+    display: flex; flex-direction: column;
+    position: relative;
+    padding: 8px 10px 8px;
+    border-radius: 12px;
+    background: var(--hai-glass-1);
+    border: 1px solid var(--hai-glass-border);
+  }
+  .flow-stage::after {
+    content: "›";
+    position: absolute; right: -16px; top: 50%; transform: translateY(-50%);
+    font-size: 26px; font-weight: 700;
+    color: var(--accent);
+    text-shadow: 0 0 6px rgba(34,211,238,0.45);
+    line-height: 1;
+  }
+  .flow-stage:last-child::after { display: none; }
+  .flow-stage-label {
+    font-size: 10px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 800;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .equipment-row {
+    display: flex; gap: 6px; flex-wrap: nowrap; justify-content: center;
+  }
+  .equipment {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+    padding: 6px 2px 6px;
+    position: relative;
+  }
+  .equipment-shape {
+    position: relative;
+    width: 52px; height: 44px;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  /* Hopper triangle */
+  .eq-hopper {
+    width: 0; height: 0;
+    border-left: 22px solid transparent;
+    border-right: 22px solid transparent;
+    border-top: 28px solid var(--hai-text-secondary);
+    margin-top: 6px;
+  }
+  /* Bin */
+  .eq-bin {
+    width: 36px; height: 38px;
+    background: linear-gradient(180deg, var(--hai-text-secondary), var(--hai-text-tertiary));
+    border-radius: 18px 18px 4px 4px;
+    border: 1px solid var(--hai-text-tertiary);
+  }
+  /* Mill */
+  .eq-mill {
+    width: 38px; height: 40px;
+    background: linear-gradient(180deg, var(--hai-text-secondary), var(--hai-text-tertiary));
+    border-radius: 8px 8px 3px 3px;
+    border: 1px solid var(--hai-text-tertiary);
+    position: relative;
+  }
+  .eq-mill::before {
+    content: ""; position: absolute;
+    top: 6px; left: 50%; transform: translateX(-50%);
+    width: 22px; height: 4px;
+    background: var(--hai-surface-canvas);
+    border-radius: 2px;
+  }
+  /* Sifter */
+  .eq-sifter {
+    width: 42px; height: 32px;
+    background: linear-gradient(180deg, var(--hai-text-secondary), var(--hai-text-tertiary));
+    border-radius: 6px;
+    border: 1px solid var(--hai-text-tertiary);
+    position: relative;
+  }
+  .eq-sifter::before {
+    content: ""; position: absolute;
+    top: 6px; left: 4px; right: 4px; height: 2px;
+    background: var(--hai-surface-canvas);
+    box-shadow: 0 6px 0 var(--hai-surface-canvas), 0 12px 0 var(--hai-surface-canvas);
+  }
+  /* Packer */
+  .eq-pack {
+    width: 42px; height: 36px;
+    background: linear-gradient(180deg, var(--hai-text-secondary), var(--hai-text-tertiary));
+    border-radius: 4px 12px 4px 4px;
+    border: 1px solid var(--hai-text-tertiary);
+    position: relative;
+  }
+  .eq-pack::before {
+    content: ""; position: absolute;
+    bottom: 4px; left: 50%; transform: translateX(-50%);
+    width: 18px; height: 6px;
+    background: var(--hai-surface-canvas);
+    border-radius: 2px;
+  }
+
+  /* Status colors override the shape backgrounds */
+  .equipment.normal .eq-bin,
+  .equipment.normal .eq-mill,
+  .equipment.normal .eq-sifter,
+  .equipment.normal .eq-pack {
+    background: linear-gradient(180deg, #14d391, var(--hai-status-ok-600));
+    border-color: var(--hai-status-ok-600);
+  }
+  .equipment.normal .eq-hopper { border-top-color: var(--hai-status-ok-600); }
+
+  .equipment.monitor .eq-bin,
+  .equipment.monitor .eq-mill,
+  .equipment.monitor .eq-sifter,
+  .equipment.monitor .eq-pack {
+    background: linear-gradient(180deg, #fbb949, var(--hai-status-warn-600));
+    border-color: var(--hai-status-warn-600);
+  }
+  .equipment.monitor .eq-hopper { border-top-color: var(--hai-status-warn-600); }
+
+  .equipment.critical .eq-bin,
+  .equipment.critical .eq-mill,
+  .equipment.critical .eq-sifter,
+  .equipment.critical .eq-pack {
+    background: linear-gradient(180deg, #f87171, var(--hai-status-crit-600));
+    border-color: var(--hai-status-crit-600);
+  }
+  .equipment.critical .eq-hopper { border-top-color: var(--hai-status-crit-600); }
+
+  .equipment-name {
+    font-size: 10px; color: var(--hai-text-secondary); font-weight: 600;
+    text-align: center; line-height: 1.2;
+  }
+  .equipment-dot {
+    position: absolute; top: 4px; right: 4px;
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 2px solid var(--hai-surface-100);
+  }
+  .equipment.normal .equipment-dot { background: var(--hai-status-ok-600); box-shadow: 0 0 6px var(--hai-status-ok-600); }
+  .equipment.monitor .equipment-dot { background: var(--hai-status-warn-600); box-shadow: 0 0 6px var(--hai-status-warn-600); animation: pulse 1.6s ease-in-out infinite; }
+  .equipment.critical .equipment-dot { background: var(--hai-status-crit-600); box-shadow: 0 0 8px var(--hai-status-crit-600); animation: pulse 1.2s ease-in-out infinite; }
+
+  .flow-legend {
+    display: flex; gap: 18px; justify-content: center; align-items: center;
+    margin-top: 12px;
+    font-size: 10.5px; color: var(--hai-text-secondary);
+  }
+  .flow-legend-item { display: flex; align-items: center; gap: 6px; }
+  .flow-legend-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .flow-legend-dot.ok { background: var(--hai-status-ok-600); box-shadow: 0 0 6px var(--hai-status-ok-600); }
+  .flow-legend-dot.warn { background: var(--hai-status-warn-600); box-shadow: 0 0 6px var(--hai-status-warn-600); }
+  .flow-legend-dot.crit { background: var(--hai-status-crit-600); box-shadow: 0 0 6px var(--hai-status-crit-600); }
+  .flow-legend-dot.idle { background: var(--hai-status-idle-600); }
+
+  /* Equipment health table */
+  .eq-table { width: 100%; border-collapse: collapse; flex: 1; }
+  .eq-table th {
+    text-align: left;
+    font-size: 9.5px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--hai-surface-border);
+  }
+  .eq-table td {
+    padding: 8px;
+    font-size: 12px; color: var(--hai-text-primary);
+    border-bottom: 1px solid var(--hai-glass-border);
+  }
+  .eq-table tr:last-child td { border-bottom: none; }
+  .health-bar {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .health-bar-track {
+    flex: 1; height: 6px; border-radius: 3px;
+    background: var(--hai-glass-2);
+    overflow: hidden;
+  }
+  .health-bar-fill { height: 100%; border-radius: 3px; }
+  .health-num { font-weight: 800; font-size: 12px; min-width: 36px; text-align: right; }
+  .health-num.crit { color: var(--hai-status-crit-600); }
+  .health-num.warn { color: var(--hai-status-warn-600); }
+  .health-num.ok { color: var(--hai-status-ok-600); }
+  .status-pill {
+    display: inline-block;
+    font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .status-pill.crit { background: var(--hai-status-crit-100); color: var(--hai-status-crit-600); }
+  .status-pill.warn { background: var(--hai-status-warn-100); color: var(--hai-status-warn-600); }
+  .status-pill.ok { background: var(--hai-status-ok-100); color: var(--hai-status-ok-600); }
+
+  /* Anomaly cards */
+  .anomaly-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+  }
+  .anomaly-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    background: var(--hai-glass-1);
+    border: 1px solid var(--hai-glass-border);
+    border-radius: 12px;
+    border-left: 3px solid var(--hai-status-crit-600);
+  }
+  .anomaly-card.warn { border-left-color: var(--hai-status-warn-600); }
+  .anomaly-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--hai-status-crit-600);
+    box-shadow: 0 0 8px var(--hai-status-crit-600);
+    flex-shrink: 0;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .anomaly-card.warn .anomaly-dot { background: var(--hai-status-warn-600); box-shadow: 0 0 8px var(--hai-status-warn-600); }
+  .anomaly-text { flex: 1; min-width: 0; }
+  .anomaly-title { font-size: 12.5px; font-weight: 700; color: var(--hai-text-primary); }
+  .anomaly-meta { font-size: 10.5px; color: var(--hai-text-tertiary); margin-top: 2px; }
+  .anomaly-meta .ago { color: var(--hai-text-secondary); }
+
+  /* ============================================================
+     TAB 3 — Yield Optimization
+     ============================================================ */
+  .yield-top-row {
+    display: grid; grid-template-columns: 1fr 1fr 1.4fr;
+    gap: 12px;
+    flex: 0 0 auto;
+  }
+  .yield-bottom-row {
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1.6fr 1fr;
+    gap: 12px;
+  }
+
+  /* Big yield ring card */
+  .yield-ring-card {
+    align-items: center;
+    text-align: center;
+  }
+  .ring-wrap {
+    position: relative;
+    width: 160px; height: 160px;
+    margin: 4px auto 10px;
+  }
+  .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--hai-glass-2); stroke-width: 14; }
+  .ring-fg { fill: none; stroke-width: 14; stroke-linecap: round; }
+  .ring-fg.cyan { stroke: var(--accent); }
+  .ring-fg.green { stroke: var(--hai-status-ok-600); }
+  .ring-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .ring-num {
+    font-size: 34px; font-weight: 800;
+    line-height: 1; letter-spacing: -0.02em;
+  }
+  .ring-num.cyan { color: var(--accent); }
+  .ring-num.green { color: var(--hai-status-ok-600); }
+  .ring-sub {
+    font-size: 11px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+    margin-top: 4px;
+  }
+  .yield-detail-list {
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 11.5px; color: var(--hai-text-secondary);
+    text-align: center;
+  }
+  .yield-detail-list b { color: var(--hai-text-primary); font-weight: 700; }
+  .yield-improvement {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--hai-status-ok-100);
+    border: 1px solid rgba(16,185,129,0.30);
+    border-radius: 8px;
+    font-size: 12px; color: var(--hai-status-ok-600); font-weight: 700;
+    text-align: center;
+  }
+
+  /* Top recommendation card */
+  .reco-card {
+    background: linear-gradient(135deg, rgba(16,185,129,0.10), rgba(34,211,238,0.04));
+    border: 1px solid rgba(16,185,129,0.25);
+  }
+  .reco-eyebrow {
+    font-size: 10px; color: var(--hai-status-ok-600);
+    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .reco-title { font-size: 18px; font-weight: 800; color: var(--hai-text-primary); letter-spacing: -0.01em; }
+  .reco-sub { font-size: 12px; color: var(--hai-text-secondary); margin-top: 4px; }
+  .reco-impact {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-top: 10px;
+  }
+  .reco-impact-cell {
+    background: var(--hai-glass-1);
+    border: 1px solid var(--hai-glass-border);
+    border-radius: 10px;
+    padding: 8px 10px;
+  }
+  .reco-impact-label {
+    font-size: 9px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+  }
+  .reco-impact-value {
+    font-size: 18px; font-weight: 800; margin-top: 2px;
+    color: var(--hai-status-ok-600);
+    letter-spacing: -0.02em;
+  }
+  .reco-impact-value.gold { color: var(--hai-money); }
+  .reco-actions {
+    display: flex; gap: 8px; margin-top: 10px;
+  }
+  .reco-actions .btn-pill { flex: 1; text-align: center; }
+
+  /* Process inputs / flow rates list */
+  .input-list { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .input-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--hai-glass-1);
+  }
+  .input-label { font-size: 11.5px; color: var(--hai-text-secondary); }
+  .input-value { display: flex; align-items: baseline; gap: 4px; }
+  .input-value .num { font-size: 15px; font-weight: 700; color: var(--hai-text-primary); letter-spacing: -0.01em; }
+  .input-value .unit { font-size: 10px; color: var(--hai-text-tertiary); font-weight: 600; }
+
+  /* Recipe table */
+  .recipe-table { width: 100%; border-collapse: collapse; flex: 1; }
+  .recipe-table th {
+    text-align: left; font-size: 9.5px; color: var(--hai-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--hai-surface-border);
+  }
+  .recipe-table th:nth-child(2), .recipe-table th:nth-child(3) { text-align: right; }
+  .recipe-table th:last-child { text-align: center; }
+  .recipe-table td {
+    padding: 9px 8px;
+    font-size: 12px; color: var(--hai-text-primary);
+    border-bottom: 1px solid var(--hai-glass-border);
+  }
+  .recipe-table td:nth-child(2), .recipe-table td:nth-child(3) { text-align: right; font-weight: 700; }
+  .recipe-table td:last-child { text-align: center; }
+  .recipe-table tr:last-child td { border-bottom: none; }
+  .recipe-name { display: flex; flex-direction: column; }
+  .recipe-name .id { font-weight: 700; font-size: 12px; }
+  .recipe-name .desc { font-size: 10px; color: var(--hai-text-tertiary); margin-top: 2px; }
+  .sparkline { display: inline-block; vertical-align: middle; }
+
+  /* Footer mockup tag */
   .mockup-tag {
-    position: fixed; bottom: 8px; right: 14px; z-index: 40;
+    position: fixed; bottom: 8px; right: 14px;
+    z-index: 40;
     font-size: 9px; color: var(--hai-text-tertiary);
     text-transform: uppercase; letter-spacing: 0.25em;
     background: var(--hai-surface-100);
     border: 1px solid var(--hai-surface-border);
     padding: 4px 10px; border-radius: 4px;
     pointer-events: none;
-  }
-
-  @media (max-width: 1280px) {
-    .grid-prod { grid-template-columns: 240px 1fr; }
-    .now-val .num-big { font-size: 28px; }
-    .pred-val .num-big { font-size: 22px; }
-    .metric .val { font-size: 18px; }
-    .ex-flow .to { font-size: 18px; }
-    .ex-flow .from { font-size: 14px; }
-    .fleet-table thead th { font-size: 8px; padding: 8px 10px 10px; }
-    .fleet-table tbody td { font-size: 12px; padding: 12px 10px; }
-    .eq-cell .eq-name { font-size: 14px; }
   }
 </style>
 </head>
@@ -1231,7 +1041,7 @@
   <div class="live-pill">
     <span class="dot"></span>
     <span class="live-text">LIVE</span>
-    <span class="page-name" id="page-name-pill">Hercules Atlas · Production</span>
+    <span class="page-name">Hercules Atlas</span>
   </div>
 
   <div class="topbar-right">
@@ -1250,426 +1060,740 @@
 <!-- ============================== SIDEBAR ============================== -->
 <aside class="sidebar">
   <div class="nav-section-label">Workspace</div>
-  <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Builder</span></a>
-  <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><span>Digital Twin</span></a>
-  <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>Dashboards</span></a>
-  <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/><line x1="15" y1="9" x2="15" y2="21"/></svg><span>Table Reports</span></a>
-  <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span>Distribution</span></a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <span>Builder</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    <span>Digital Twin</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span>Dashboards</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/><line x1="15" y1="9" x2="15" y2="21"/></svg>
+    <span>Table Reports</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+    <span>Job Logs</span>
+  </a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    <span>Distribution</span>
+  </a>
 
   <div class="nav-section-label" style="margin-top:14px;">Intelligence</div>
-  <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v1.5M12 19.5V21M3 12h1.5M19.5 12H21M5.6 5.6l1 1M17.4 17.4l1 1M5.6 18.4l1-1M17.4 6.6l1-1"/><circle cx="12" cy="12" r="4"/></svg><span>Hercules AI</span></a>
-  <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg><span>Hercules Atlas</span><span class="badge-new">NEW</span></a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v1.5M12 19.5V21M3 12h1.5M19.5 12H21M5.6 5.6l1 1M17.4 17.4l1 1M5.6 18.4l1-1M17.4 6.6l1-1"/><circle cx="12" cy="12" r="4"/></svg>
+    <span>Hercules AI</span>
+  </a>
+  <a class="nav-item active" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+    <span>Hercules Atlas</span>
+    <span class="badge-new">NEW</span>
+  </a>
 
   <div class="nav-section-label" style="margin-top:14px;">System</div>
-  <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 1 1 4.27 16.9l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.27l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Engineering</span></a>
+  <a class="nav-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 1 1 4.27 16.9l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.27l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>Engineering</span>
+  </a>
 
-  <div class="sidebar-footer"><span class="v">v1.0.664</span> · Salalah Mill B</div>
+  <div class="sidebar-footer">
+    <span class="v">v1.0.665</span> · Salalah Mill B
+  </div>
 </aside>
 
-<!-- ============================== CONTENT ============================== -->
+<!-- ============================== CONTENT (Atlas) ============================== -->
 <main class="content">
-  <div class="ambient-bg" aria-hidden="true"></div>
-  <div class="ambient-grid" aria-hidden="true"></div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="prod"><span class="tdot" style="color:var(--hai-money);"></span><span>Production</span></button>
-    <button class="tab" data-tab="pdm"><span class="tdot" style="color:var(--hai-status-warn-600);"></span><span>PdM</span></button>
-    <button class="tab" data-tab="yield"><span class="tdot" style="color:var(--hai-status-ok-600);"></span><span>Yield</span></button>
-    <div class="breadcrumb">Mill B · <b>SHIFT A</b> · 14:32</div>
+  <!-- Tab bar -->
+  <div class="tab-bar" id="tab-bar">
+    <button class="tab-btn active" data-tab="production">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Production</span>
+    </button>
+    <button class="tab-btn" data-tab="pdm">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      <span>Predictive Maintenance</span>
+      <span class="pill-badge">3</span>
+    </button>
+    <button class="tab-btn" data-tab="yield">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span>Yield Optimization</span>
+    </button>
   </div>
 
-  <div class="panes">
+  <!-- =========================================================
+       TAB 1 — PRODUCTION
+       ========================================================= -->
+  <section class="tab-panel active" id="panel-production">
 
-    <!-- =================== PANE 1: PRODUCTION =================== -->
-    <section class="pane active" data-pane="prod">
-      <div class="grid-prod">
-        <div class="hero-card production">
-          <div class="hero-eyebrow">Today · headline</div>
-          <div class="hero-label">Production output · flour</div>
-          <div class="now-block">
-            <div class="now-lbl">So far today</div>
-            <div class="now-val"><span class="num-big num" id="prod-now">68.4</span><span class="unit">tons</span></div>
-          </div>
-          <div class="pred-divider"></div>
-          <div class="pred-lbl">AI forecast · end of day</div>
-          <div class="pred-val"><span class="num-big num">108</span><span class="unit">tons</span><span class="arrow">↑</span></div>
-          <div class="savings-pill"><span class="lbl">vs plan (102 t)</span><span class="val num">+6 tons</span></div>
+    <!-- AI Insight bar -->
+    <div class="ai-insight">
+      <div class="ai-insight-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div class="ai-insight-text">
+        <div class="ai-insight-eyebrow">Hercules AI · Production Insight</div>
+        <div class="ai-insight-msg">
+          On track to reach <span class="gold">108 tons</span> of flour by end of day. Energy cost per ton expected to improve to <b>1.31 OMR / ton</b> by EOD.
         </div>
+      </div>
+      <div class="ai-insight-actions">
+        <button class="btn-pill">Why?</button>
+      </div>
+    </div>
 
-        <div class="chart-card prod-chart">
-          <div class="chart-head">
-            <div>
-              <div class="chart-title">Production output today (cumulative)</div>
-              <div class="chart-sub">Tons of flour. Solid = actual. Dashed = AI forecast.</div>
-            </div>
-            <div class="chart-legend">
-              <div class="legend-item"><span class="legend-swatch actual-prod"></span>Actual</div>
-              <div class="legend-item"><span class="legend-swatch predicted"></span>AI forecast</div>
-            </div>
-          </div>
-          <div class="chart-svg-wrap">
-            <svg class="chart-svg" id="prod-chart" viewBox="0 0 800 200" preserveAspectRatio="none"></svg>
-            <div id="prod-now-pill" class="now-pill prod">NOW</div>
-          </div>
-          <div class="chart-footer">
-            <span>00:00</span><span>06:00</span><span>12:00</span>
-            <span style="color:var(--hai-money);">14:32</span>
-            <span>18:00</span><span>24:00</span>
-          </div>
+    <!-- KPI strip -->
+    <div class="kpi-strip">
+      <div class="kpi-card production">
+        <div class="kpi-name">Production</div>
+        <div class="kpi-value-row">
+          <span class="kpi-num gold num">108</span>
+          <span class="kpi-unit">tons (EOD forecast)</span>
         </div>
-
-        <div class="hero-card cost">
-          <div class="hero-eyebrow">Today · efficiency</div>
-          <div class="hero-label">Energy cost per ton</div>
-          <div class="now-block">
-            <div class="now-lbl">Right now</div>
-            <div class="now-val"><span class="num-big num">1.42</span><span class="unit">OMR / ton</span></div>
-          </div>
-          <div class="pred-divider"></div>
-          <div class="pred-lbl">AI forecast · next shift</div>
-          <div class="pred-val"><span class="num-big num">1.31</span><span class="unit">OMR / ton</span><span class="arrow">↓</span></div>
-          <div class="savings-pill"><span class="lbl">Estimated savings</span><span class="val num">12 OMR / 8h</span></div>
+        <div class="kpi-foot">On track <span class="up">↑6 vs plan</span></div>
+      </div>
+      <div class="kpi-card energy">
+        <div class="kpi-name">Energy Cost</div>
+        <div class="kpi-value-row">
+          <span class="kpi-num num">1.31</span>
+          <span class="kpi-unit">OMR / ton (forecast)</span>
         </div>
-
-        <div class="chart-card cost-chart">
-          <div class="chart-head">
-            <div>
-              <div class="chart-title">Energy cost per ton — last 24h & forecast</div>
-              <div class="chart-sub">Submeter kWh × tariff (0.025 OMR/kWh) ÷ flour produced.</div>
-            </div>
-            <div class="chart-legend">
-              <div class="legend-item"><span class="legend-swatch actual-cost"></span>Actual</div>
-              <div class="legend-item"><span class="legend-swatch predicted"></span>AI forecast</div>
-            </div>
-          </div>
-          <div class="chart-svg-wrap">
-            <svg class="chart-svg" id="cost-chart" viewBox="0 0 800 200" preserveAspectRatio="none"></svg>
-            <div id="cost-now-pill" class="now-pill cost">NOW</div>
-          </div>
-          <div class="chart-footer">
-            <span>−24h</span><span>−12h</span>
-            <span style="color:var(--hai-status-info-600);">Now</span>
-            <span>+6h</span><span>+12h</span>
-          </div>
+        <div class="kpi-foot"><span class="down">↓7.7%</span> vs yesterday</div>
+      </div>
+      <div class="kpi-card risk">
+        <div class="kpi-name">Downtime Risk</div>
+        <div class="kpi-value-row">
+          <span class="kpi-num green num">Low</span>
         </div>
+        <div class="kpi-foot">No critical alerts in next 24h</div>
+      </div>
+      <div class="kpi-card savings">
+        <div class="kpi-name">Monthly Savings</div>
+        <div class="kpi-value-row">
+          <span class="kpi-num gold num">2,461</span>
+          <span class="kpi-unit">OMR (accumulated)</span>
+        </div>
+        <div class="kpi-foot">Yield + energy + uptime gains</div>
+      </div>
+    </div>
 
-        <div class="ai-bar">
-          <div class="ai-bar-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/></svg>
-          </div>
-          <div class="ai-bar-text">
-            <div class="ai-bar-eyebrow">Hercules AI · in plain words</div>
-            <div class="ai-bar-msg">
-              On track for <span class="gold">108 tons</span> of flour today — <b>6 tons above plan</b>.
-              Energy cost per ton will ease <b>0.11 OMR ↓</b> overnight as ambient temperature drops.
-              <span class="hi">2 things to watch:</span> M31 plansifter motor and P50 dampener pump — see PdM tab.
+    <div class="prod-grid">
+
+      <!-- Real-time production list -->
+      <div class="card">
+        <div class="card-title">Real-Time Production</div>
+        <div class="rt-list">
+          <div class="rt-row">
+            <div class="rt-icon gold">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>
+            </div>
+            <div class="rt-text">
+              <div class="rt-label">Flour Output</div>
+              <div class="rt-val"><span class="num-mid num">6.64</span><span class="unit">t / h</span></div>
             </div>
           </div>
-          <button class="ai-bar-cta">Why?</button>
-        </div>
-
-        <div class="kpis">
-          <div class="kpi-card">
-            <div class="kpi-head"><div class="kpi-name">Pace</div><div class="kpi-status good">On track</div></div>
-            <div class="kpi-value"><span class="num-mid num" id="kpi-pace">6.66</span><span class="unit">tons/hour</span></div>
-            <div class="kpi-msg">Plan <b>6.30</b>. Ahead by <b>5.7%</b>.</div>
+          <div class="rt-row">
+            <div class="rt-icon amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </div>
+            <div class="rt-text">
+              <div class="rt-label">Bran Output</div>
+              <div class="rt-val"><span class="num-mid num">1.57</span><span class="unit">t / h</span></div>
+            </div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-head"><div class="kpi-name">Yield</div><div class="kpi-status good">Excellent</div></div>
-            <div class="kpi-value"><span class="num-mid num">79.1</span><span class="unit">% extraction</span></div>
-            <div class="kpi-msg">Best recent: <b>79.8%</b>. Within 1 point.</div>
+          <div class="rt-row">
+            <div class="rt-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+            <div class="rt-text">
+              <div class="rt-label">Total Input</div>
+              <div class="rt-val"><span class="num-mid num">8.40</span><span class="unit">t / h</span></div>
+            </div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-head"><div class="kpi-name">Energy</div><div class="kpi-status warn">Slightly high</div></div>
-            <div class="kpi-value"><span class="num-mid num">376</span><span class="unit">kW</span></div>
-            <div class="kpi-msg">SEC <b>56.7 kWh/t</b> — 2.6% below 7-day avg.</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-head"><div class="kpi-name">Maintenance</div><div class="kpi-status warn">2 watch</div></div>
-            <div class="kpi-value"><span class="num-mid num">96</span><span class="unit">% healthy</span></div>
-            <div class="kpi-msg">M31 motor &amp; P50 pump — schedule check.</div>
+          <div class="rt-row">
+            <div class="rt-icon ok">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="rt-text">
+              <div class="rt-label">Extraction Rate</div>
+              <div class="rt-val"><span class="num-mid num">79.1</span><span class="unit">%</span></div>
+            </div>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- =================== PANE 2: PdM (fleet table) =================== -->
-    <section class="pane" data-pane="pdm">
-      <div class="grid-pdm">
-
-        <!-- Fleet table -->
-        <div class="fleet-card">
-          <div class="card-head">
-            <div>
-              <div class="card-eyebrow now"><span class="num">FLEET</span><span>Equipment health · all machines</span></div>
-              <div class="card-title">Fleet status</div>
-              <div class="card-sub">Live readings from PLC submeters. Sorted by attention priority.</div>
-            </div>
-            <div class="fleet-counts">
-              <span class="count warn">2 watch</span>
-              <span class="count good">6 healthy</span>
-            </div>
-          </div>
-
-          <div class="fleet-table-wrap">
-            <table class="fleet-table">
-              <thead>
-                <tr>
-                  <th style="width:18%;">Equipment</th>
-                  <th style="width:13%;">Status</th>
-                  <th style="width:18%;">Current draw</th>
-                  <th style="width:14%;">Power factor</th>
-                  <th style="width:16%;">Next maintenance</th>
-                  <th style="width:21%;">Predicted issue</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr class="warn">
-                  <td class="eq-cell"><div class="eq-name">M31</div><div class="eq-asset">Plansifter A · motor</div></td>
-                  <td><span class="st-pill warn">Watch</span></td>
-                  <td class="reading-cell warn-r">45 A <span class="sub">(L2 +12%)</span></td>
-                  <td class="reading-cell">0.91 <span class="delta down">↓ from 0.94</span></td>
-                  <td class="next-cell warn-n">~17 days · <span class="date">May 19</span></td>
-                  <td class="issue-cell warn-i">Phase imbalance — possible loose connection</td>
-                </tr>
-                <tr class="warn">
-                  <td class="eq-cell"><div class="eq-name">P50</div><div class="eq-asset">Dampener pump</div></td>
-                  <td><span class="st-pill warn">Watch</span></td>
-                  <td class="reading-cell">8.4 A <span class="sub">balanced</span></td>
-                  <td class="reading-cell">0.93</td>
-                  <td class="next-cell warn-n">~30 days · <span class="date">Jun 1</span></td>
-                  <td class="issue-cell warn-i">Bearing vibration trend rising</td>
-                </tr>
-                <tr class="good">
-                  <td class="eq-cell"><div class="eq-name">M30</div><div class="eq-asset">Pre-cleaner · motor</div></td>
-                  <td><span class="st-pill good">Healthy</span></td>
-                  <td class="reading-cell">42 A <span class="sub">balanced</span></td>
-                  <td class="reading-cell">0.95</td>
-                  <td class="next-cell muted">No action needed</td>
-                  <td class="issue-cell muted">—</td>
-                </tr>
-                <tr class="good">
-                  <td class="eq-cell"><div class="eq-name">M32</div><div class="eq-asset">Plansifter B · motor</div></td>
-                  <td><span class="st-pill good">Healthy</span></td>
-                  <td class="reading-cell">44 A <span class="sub">balanced</span></td>
-                  <td class="reading-cell">0.94</td>
-                  <td class="next-cell muted">No action needed</td>
-                  <td class="issue-cell muted">—</td>
-                </tr>
-                <tr class="good">
-                  <td class="eq-cell"><div class="eq-name">C32</div><div class="eq-asset">Roller stand RS-3</div></td>
-                  <td><span class="st-pill good">Healthy</span></td>
-                  <td class="reading-cell">38 A <span class="sub">balanced</span></td>
-                  <td class="reading-cell">0.93</td>
-                  <td class="next-cell muted">No action needed</td>
-                  <td class="issue-cell muted">—</td>
-                </tr>
-                <tr class="good">
-                  <td class="eq-cell"><div class="eq-name">C33</div><div class="eq-asset">Conveyor drive</div></td>
-                  <td><span class="st-pill good">Healthy</span></td>
-                  <td class="reading-cell">22 A <span class="sub">balanced</span></td>
-                  <td class="reading-cell">0.92</td>
-                  <td class="next-cell muted">No action needed</td>
-                  <td class="issue-cell muted">—</td>
-                </tr>
-                <tr class="good">
-                  <td class="eq-cell"><div class="eq-name">F40</div><div class="eq-asset">Aspiration fan</div></td>
-                  <td><span class="st-pill good">Healthy</span></td>
-                  <td class="reading-cell">31 A <span class="sub">balanced</span></td>
-                  <td class="reading-cell">0.94</td>
-                  <td class="next-cell muted">No action needed</td>
-                  <td class="issue-cell muted">—</td>
-                </tr>
-                <tr class="good">
-                  <td class="eq-cell"><div class="eq-name">P51</div><div class="eq-asset">Vitamin feed pump</div></td>
-                  <td><span class="st-pill good">Healthy</span></td>
-                  <td class="reading-cell">3.2 A <span class="sub">balanced</span></td>
-                  <td class="reading-cell">0.96</td>
-                  <td class="next-cell muted">No action needed</td>
-                  <td class="issue-cell muted">—</td>
-                </tr>
-              </tbody>
-            </table>
+      <!-- Production forecast chart -->
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title">Production Forecast — Cumulative Tons Today</div>
+          <div class="chart-legend">
+            <div class="legend-item"><span class="legend-swatch actual"></span>Actual</div>
+            <div class="legend-item"><span class="legend-swatch forecast"></span>AI forecast</div>
           </div>
         </div>
-
-        <!-- AI Insight (most important finding) -->
-        <div class="insight-card">
-          <div class="insight-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/></svg>
-          </div>
-          <div class="insight-text">
-            <div class="insight-eyebrow">Most important finding</div>
-            <div class="insight-msg">
-              <b>M31</b> phase imbalance grew from 4% to 12% over 14 days. At <b class="warn">0.3% / day</b>, it will cross the 10% threshold in <b>~17 days</b>. Inspect winding connections in the May 19–21 window. Fixing early saves <b class="gold">340 OMR</b> vs an emergency repair.
-            </div>
-          </div>
-          <button class="insight-btn">Schedule inspection</button>
+        <div class="chart-svg-wrap">
+          <svg class="chart-svg" id="prod-forecast-chart" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+          <div id="prod-now-pill" class="now-pill amber">NOW</div>
         </div>
-
+        <div class="chart-footer">
+          <span>00:00</span><span>06:00</span><span>12:00</span>
+          <span style="color:var(--hai-money);">14:32</span>
+          <span>18:00</span><span>24:00</span>
+        </div>
       </div>
-    </section>
 
-    <!-- =================== PANE 3: YIELD (full picture) =================== -->
-    <section class="pane" data-pane="yield">
-      <div class="grid-yield">
+      <!-- Energy submeters -->
+      <div class="card">
+        <div class="card-title">Energy Submeters</div>
+        <div class="submeter-grid">
+          <div class="submeter-card">
+            <div class="submeter-name">M30</div>
+            <div class="submeter-value"><span class="num">142</span><span class="unit">kW</span></div>
+            <div class="submeter-pf">PF <b>0.96</b></div>
+            <div class="submeter-status"><span class="dot"></span>Normal</div>
+          </div>
+          <div class="submeter-card">
+            <div class="submeter-name">M31</div>
+            <div class="submeter-value"><span class="num">188</span><span class="unit">kW</span></div>
+            <div class="submeter-pf">PF <b>0.95</b></div>
+            <div class="submeter-status"><span class="dot"></span>Normal</div>
+          </div>
+          <div class="submeter-card">
+            <div class="submeter-name">C32</div>
+            <div class="submeter-value"><span class="num">315</span><span class="unit">kW</span></div>
+            <div class="submeter-pf">PF <b>0.94</b></div>
+            <div class="submeter-status"><span class="dot"></span>Normal</div>
+          </div>
+        </div>
+      </div>
 
-        <!-- Current Production -->
-        <div class="metric-card production">
-          <div class="card-eyebrow now"><span class="num">01</span><span>Current production</span></div>
-          <div class="card-title">What's coming out right now</div>
-          <div class="metric-grid">
-            <div class="metric">
-              <div class="lbl">Production rate</div>
-              <div class="val num">8.40<span class="u">t/h</span></div>
-            </div>
-            <div class="metric">
-              <div class="lbl">Flour output</div>
-              <div class="val num">6.64<span class="u">t/h</span></div>
-            </div>
-            <div class="metric">
-              <div class="lbl">Extraction</div>
-              <div class="val num">79.1<span class="u">%</span></div>
-            </div>
-            <div class="metric">
-              <div class="lbl">Recipe</div>
-              <div class="val text">Blend-7</div>
+      <!-- Production totalizers today -->
+      <div class="card">
+        <div class="card-title">Production Totalizers Today</div>
+        <div class="totalizer-row">
+          <div class="totalizer-block flour">
+            <div class="totalizer-label">Flour</div>
+            <div class="totalizer-value"><span class="num-big num">68.4</span><span class="unit">tons</span></div>
+            <div class="totalizer-foot">63% of EOD forecast</div>
+          </div>
+          <div class="totalizer-block bran">
+            <div class="totalizer-label">Bran</div>
+            <div class="totalizer-value"><span class="num-big num">2.3</span><span class="unit">tons</span></div>
+            <div class="totalizer-foot">On track for 18.5 t EOD</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =========================================================
+       TAB 2 — PREDICTIVE MAINTENANCE
+       ========================================================= -->
+  <section class="tab-panel" id="panel-pdm">
+
+    <!-- AI Insight bar (amber) -->
+    <div class="ai-insight amber">
+      <div class="ai-insight-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="ai-insight-text">
+        <div class="ai-insight-eyebrow">Hercules AI · Predictive Maintenance</div>
+        <div class="ai-insight-msg">
+          <span class="crit">1 Critical</span>, <b>2 Monitor</b> alerts. <b>RM3</b> shows vibration increase. <b>Phase imbalance</b> detected on M31.
+        </div>
+      </div>
+      <div class="ai-insight-actions">
+        <button class="btn-pill amber">View All Alerts (3)</button>
+        <button class="btn-pill">View Full Insight</button>
+      </div>
+    </div>
+
+    <!-- Process Flow -->
+    <div class="card pdm-flow-card">
+      <div class="card-title">Process Flow</div>
+      <div class="flow-stages">
+
+        <div class="flow-stage">
+          <div class="flow-stage-label">Intake</div>
+          <div class="equipment-row">
+            <div class="equipment normal">
+              <div class="equipment-shape"><div class="eq-hopper"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Intake<br/>Hopper</div>
             </div>
           </div>
         </div>
 
-        <!-- Current Inputs -->
-        <div class="metric-card inputs">
-          <div class="card-eyebrow in"><span class="num">02</span><span>Current inputs</span></div>
-          <div class="card-title">What's going into the process</div>
-          <div class="metric-grid">
-            <div class="metric">
-              <div class="lbl">Wheat feed</div>
-              <div class="val num">8.40<span class="u">t/h</span></div>
+        <div class="flow-stage">
+          <div class="flow-stage-label">Cleaning</div>
+          <div class="equipment-row">
+            <div class="equipment normal">
+              <div class="equipment-shape"><div class="eq-mill"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Pre<br/>Cleaner</div>
             </div>
-            <div class="metric">
-              <div class="lbl">Dampening</div>
-              <div class="val num">14.5<span class="u">%</span><span class="status-dot"></span></div>
+            <div class="equipment normal">
+              <div class="equipment-shape"><div class="eq-mill"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Destoner</div>
             </div>
-            <div class="metric">
-              <div class="lbl">Sifters 1–2</div>
-              <div class="val text">Normal<span class="status-dot"></span></div>
-            </div>
-            <div class="metric warn">
-              <div class="lbl">Sifter 3</div>
-              <div class="val num">+3<span class="u">%</span><span class="status-dot warn"></span></div>
-            </div>
-            <div class="metric">
-              <div class="lbl">Vitamin feed</div>
-              <div class="val num">220<span class="u">g/t</span></div>
-            </div>
-            <div class="metric">
-              <div class="lbl">Ambient</div>
-              <div class="val text">28 °C / 42% RH</div>
+            <div class="equipment normal">
+              <div class="equipment-shape"><div class="eq-mill"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Scourer</div>
             </div>
           </div>
         </div>
 
-        <!-- AI Suggestions -->
-        <div class="suggestions-card">
-          <div class="card-head">
-            <div>
-              <div class="card-eyebrow act"><span class="num">03</span><span>AI suggestions</span></div>
-              <div class="card-title">Three changes to consider</div>
+        <div class="flow-stage">
+          <div class="flow-stage-label">Grinding</div>
+          <div class="equipment-row">
+            <div class="equipment normal">
+              <div class="equipment-shape"><div class="eq-mill"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Roller<br/>Mill 1</div>
             </div>
-          </div>
-          <div class="suggestion-list">
-            <div class="suggestion">
-              <div class="s-num">1</div>
-              <div class="s-title">Reduce feed rate <b>8.4 → 7.8 t/h</b></div>
-              <div class="s-detail">Extraction improves to <b class="ok">80.2%</b> (+1.1 pp). Saves <b class="gold">~12 OMR / hour</b>.</div>
-              <button class="s-btn">Apply</button>
+            <div class="equipment normal">
+              <div class="equipment-shape"><div class="eq-mill"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Roller<br/>Mill 2</div>
             </div>
-            <div class="suggestion">
-              <div class="s-num">2</div>
-              <div class="s-title">Check sifter 3 feed rate</div>
-              <div class="s-detail">Bran split is <b class="warn">0.7% above</b> normal. Most likely sifter 3 over-feeding endosperm into the bran stream.</div>
-              <button class="s-btn alt">Open detail</button>
-            </div>
-            <div class="suggestion">
-              <div class="s-num">3</div>
-              <div class="s-title">Increase dampening <b>14.5 → 15.0%</b></div>
-              <div class="s-detail">Best historical Blend-7 runs were dampened slightly higher. Expected: <b class="ok">+0.2 pp</b> extraction.</div>
-              <button class="s-btn">Apply</button>
+            <div class="equipment critical">
+              <div class="equipment-shape"><div class="eq-mill"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Roller<br/>Mill 3</div>
             </div>
           </div>
         </div>
 
-        <!-- Expected after optimization -->
-        <div class="expected-card">
-          <div class="card-eyebrow fin"><span class="num">04</span><span>Expected after optimization</span></div>
-          <div class="expected-row">
-            <div class="ex-cell">
-              <div class="lbl">Extraction</div>
-              <div class="ex-flow"><span class="from">79.1%</span><span class="ar">→</span><span class="to ok">80.2%</span></div>
-              <div class="delta">+1.1 pp</div>
+        <div class="flow-stage">
+          <div class="flow-stage-label">Sifting</div>
+          <div class="equipment-row">
+            <div class="equipment monitor">
+              <div class="equipment-shape"><div class="eq-sifter"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Plansifter 1</div>
             </div>
-            <div class="ex-cell">
-              <div class="lbl">Flour output</div>
-              <div class="ex-flow"><span class="from">6.64 t/h</span><span class="ar">→</span><span class="to ok">6.74 t/h</span></div>
-              <div class="delta">+100 kg / hour</div>
+            <div class="equipment normal">
+              <div class="equipment-shape"><div class="eq-sifter"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Plansifter 2</div>
             </div>
-            <div class="ex-cell savings">
-              <div class="lbl">Estimated savings</div>
-              <div class="ex-flow"><span class="to gold">+12 OMR / hour</span></div>
-              <div class="delta">≈ 86 OMR / shift · 2,600 OMR / month</div>
+          </div>
+        </div>
+
+        <div class="flow-stage">
+          <div class="flow-stage-label">Blending · Packing</div>
+          <div class="equipment-row">
+            <div class="equipment normal">
+              <div class="equipment-shape"><div class="eq-bin"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Blending<br/>Bin</div>
             </div>
-            <button class="expected-btn">Apply all</button>
+            <div class="equipment normal">
+              <div class="equipment-shape"><div class="eq-pack"></div></div>
+              <div class="equipment-dot"></div>
+              <div class="equipment-name">Packing<br/>Line</div>
+            </div>
           </div>
         </div>
 
       </div>
-    </section>
+      <div class="flow-legend">
+        <div class="flow-legend-item"><span class="flow-legend-dot ok"></span>Normal</div>
+        <div class="flow-legend-item"><span class="flow-legend-dot warn"></span>Monitor</div>
+        <div class="flow-legend-item"><span class="flow-legend-dot warn" style="opacity:.7;"></span>At Risk</div>
+        <div class="flow-legend-item"><span class="flow-legend-dot crit"></span>Critical</div>
+        <div class="flow-legend-item"><span class="flow-legend-dot idle"></span>Offline</div>
+      </div>
+    </div>
 
-  </div>
+    <div class="pdm-bottom-grid">
+
+      <!-- Trends & Predictions chart -->
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title">Trends &amp; Predictions (24H)</div>
+          <div class="chart-legend">
+            <div class="legend-item"><span class="legend-swatch line-blue"></span>Throughput (t/h)</div>
+            <div class="legend-item"><span class="legend-swatch line-green"></span>Yield (%)</div>
+            <div class="legend-item"><span class="legend-swatch line-orange"></span>Temperature (°C)</div>
+          </div>
+        </div>
+        <div class="chart-svg-wrap">
+          <svg class="chart-svg" id="pdm-trends-chart" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="chart-footer">
+          <span>10:00</span><span>14:00</span><span>18:00</span>
+          <span style="color:var(--accent);">22:00 · Now</span>
+          <span>02:00</span><span>06:00</span><span>10:00</span>
+        </div>
+      </div>
+
+      <!-- Equipment Health table -->
+      <div class="card">
+        <div class="card-title">Equipment Health</div>
+        <table class="eq-table">
+          <thead>
+            <tr>
+              <th>Equipment</th><th>Health</th><th>Status</th><th>Predicted Failure</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Roller Mill 3</td>
+              <td>
+                <div class="health-bar">
+                  <div class="health-bar-track"><div class="health-bar-fill" style="width:42%; background:var(--hai-status-crit-600);"></div></div>
+                  <span class="health-num crit num">42%</span>
+                </div>
+              </td>
+              <td><span class="status-pill crit">Critical</span></td>
+              <td>May 26, 2026</td>
+            </tr>
+            <tr>
+              <td>Plansifter 1</td>
+              <td>
+                <div class="health-bar">
+                  <div class="health-bar-track"><div class="health-bar-fill" style="width:65%; background:var(--hai-status-warn-600);"></div></div>
+                  <span class="health-num warn num">65%</span>
+                </div>
+              </td>
+              <td><span class="status-pill warn">Monitor</span></td>
+              <td>May 30, 2026</td>
+            </tr>
+            <tr>
+              <td>M31 Submeter</td>
+              <td>
+                <div class="health-bar">
+                  <div class="health-bar-track"><div class="health-bar-fill" style="width:71%; background:var(--hai-status-warn-600);"></div></div>
+                  <span class="health-num warn num">71%</span>
+                </div>
+              </td>
+              <td><span class="status-pill warn">Monitor</span></td>
+              <td>Jun 02, 2026</td>
+            </tr>
+            <tr>
+              <td>Roller Mill 1</td>
+              <td>
+                <div class="health-bar">
+                  <div class="health-bar-track"><div class="health-bar-fill" style="width:85%; background:var(--hai-status-ok-600);"></div></div>
+                  <span class="health-num ok num">85</span>
+                </div>
+              </td>
+              <td><span class="status-pill ok">Normal</span></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Blending Bin</td>
+              <td>
+                <div class="health-bar">
+                  <div class="health-bar-track"><div class="health-bar-fill" style="width:92%; background:var(--hai-status-ok-600);"></div></div>
+                  <span class="health-num ok num">92</span>
+                </div>
+              </td>
+              <td><span class="status-pill ok">Normal</span></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Packing Line</td>
+              <td>
+                <div class="health-bar">
+                  <div class="health-bar-track"><div class="health-bar-fill" style="width:96%; background:var(--hai-status-ok-600);"></div></div>
+                  <span class="health-num ok num">96</span>
+                </div>
+              </td>
+              <td><span class="status-pill ok">Normal</span></td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Latest anomalies strip -->
+    <div class="card pdm-anomalies">
+      <div class="card-title">Latest Anomalies</div>
+      <div class="anomaly-strip">
+        <div class="anomaly-card">
+          <span class="anomaly-dot"></span>
+          <div class="anomaly-text">
+            <div class="anomaly-title">Phase Imbalance</div>
+            <div class="anomaly-meta">M31 Submeter · <span class="ago">2 min ago</span></div>
+          </div>
+        </div>
+        <div class="anomaly-card">
+          <span class="anomaly-dot"></span>
+          <div class="anomaly-text">
+            <div class="anomaly-title">High Vibration</div>
+            <div class="anomaly-meta">Roller Mill 3 · <span class="ago">5 min ago</span></div>
+          </div>
+        </div>
+        <div class="anomaly-card warn">
+          <span class="anomaly-dot"></span>
+          <div class="anomaly-text">
+            <div class="anomaly-title">Stuck Totalizer</div>
+            <div class="anomaly-meta">Bran Totalizer · <span class="ago">18 min ago</span></div>
+          </div>
+        </div>
+        <button class="btn-pill primary">View All Anomalies</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- =========================================================
+       TAB 3 — YIELD OPTIMIZATION
+       ========================================================= -->
+  <section class="tab-panel" id="panel-yield">
+
+    <!-- AI Insight bar (green) -->
+    <div class="ai-insight green">
+      <div class="ai-insight-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      </div>
+      <div class="ai-insight-text">
+        <div class="ai-insight-eyebrow">Hercules AI · Yield Optimization</div>
+        <div class="ai-insight-msg">
+          Optimizing <b>Roll Gap on RM3</b> can increase yield by up to <b>1.8%</b>. Potential additional <span class="gold">2.46 tons</span> of flour by EOD.
+        </div>
+      </div>
+      <div class="ai-insight-actions">
+        <button class="btn-pill green">Apply Recommendation</button>
+      </div>
+    </div>
+
+    <div class="yield-top-row">
+
+      <!-- Current Yield -->
+      <div class="card yield-ring-card">
+        <div class="card-title">Current Yield</div>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="42"/>
+            <circle class="ring-fg cyan" cx="50" cy="50" r="42"
+              stroke-dasharray="263.89" stroke-dashoffset="69.7"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-num cyan num">73.6<span style="font-size:18px;">%</span></div>
+            <div class="ring-sub">Now</div>
+          </div>
+        </div>
+        <div class="yield-detail-list">
+          <div>Flour Extraction: <b>79.1%</b></div>
+          <div>Bran Split: <b>20.9%</b></div>
+        </div>
+      </div>
+
+      <!-- AI Optimized Yield -->
+      <div class="card yield-ring-card">
+        <div class="card-title">AI Optimized Yield</div>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="42"/>
+            <circle class="ring-fg green" cx="50" cy="50" r="42"
+              stroke-dasharray="263.89" stroke-dashoffset="64.95"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-num green num">75.4<span style="font-size:18px;">%</span></div>
+            <div class="ring-sub">Target</div>
+          </div>
+        </div>
+        <div class="yield-improvement">▲ 1.8% Potential Improvement</div>
+      </div>
+
+      <!-- Top Recommendation -->
+      <div class="card reco-card">
+        <div class="reco-eyebrow">Top Recommendation</div>
+        <div class="reco-title">Adjust Roll Gap on RM3</div>
+        <div class="reco-sub">Increase roll gap by 0.15 mm</div>
+        <div class="reco-impact">
+          <div class="reco-impact-cell">
+            <div class="reco-impact-label">Expected Yield</div>
+            <div class="reco-impact-value">+1.8%</div>
+          </div>
+          <div class="reco-impact-cell">
+            <div class="reco-impact-label">Additional Flour by EOD</div>
+            <div class="reco-impact-value gold">+2.46 t</div>
+          </div>
+        </div>
+        <div class="reco-actions">
+          <button class="btn-pill">Simulate Scenario</button>
+          <button class="btn-pill green">Apply Recommendation</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="yield-bottom-row">
+
+      <!-- Current Process Inputs -->
+      <div class="card">
+        <div class="card-title">Current Process Inputs</div>
+        <div class="input-list">
+          <div class="input-row">
+            <span class="input-label">Feed Rate</span>
+            <span class="input-value"><span class="num">8.40</span><span class="unit">t / h</span></span>
+          </div>
+          <div class="input-row">
+            <span class="input-label">Moisture Content</span>
+            <span class="input-value"><span class="num">13.2</span><span class="unit">%</span></span>
+          </div>
+          <div class="input-row">
+            <span class="input-label">Inlet Temperature</span>
+            <span class="input-value"><span class="num">28.4</span><span class="unit">°C</span></span>
+          </div>
+          <div class="input-row">
+            <span class="input-label">Outlet Temperature</span>
+            <span class="input-value"><span class="num">42.1</span><span class="unit">°C</span></span>
+          </div>
+          <div class="input-row">
+            <span class="input-label">Energy / Ton</span>
+            <span class="input-value"><span class="num">1.42</span><span class="unit">OMR / t</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Per-Recipe Performance -->
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title">Per-Recipe Performance (30 Days)</div>
+          <a class="card-link" href="#">View All Recipes →</a>
+        </div>
+        <table class="recipe-table">
+          <thead>
+            <tr>
+              <th>Recipe / Blend ID</th>
+              <th>Avg Yield (%)</th>
+              <th>Energy / Ton (OMR)</th>
+              <th>Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="recipe-name"><span class="id">RCP-001</span><span class="desc">APF Baseline</span></div></td>
+              <td><span class="num">73.6</span></td>
+              <td><span class="num">1.42</span></td>
+              <td>
+                <svg class="sparkline" width="80" height="22" viewBox="0 0 80 22">
+                  <polyline points="2,14 14,12 26,15 38,11 50,13 62,10 74,9" fill="none" stroke="var(--hai-status-ok-600)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </td>
+            </tr>
+            <tr>
+              <td><div class="recipe-name"><span class="id">RCP-002</span><span class="desc">High Extraction</span></div></td>
+              <td><span class="num">74.8</span></td>
+              <td><span class="num">1.51</span></td>
+              <td>
+                <svg class="sparkline" width="80" height="22" viewBox="0 0 80 22">
+                  <polyline points="2,16 14,13 26,11 38,12 50,9 62,8 74,6" fill="none" stroke="var(--hai-status-ok-600)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </td>
+            </tr>
+            <tr>
+              <td><div class="recipe-name"><span class="id">RCP-003</span><span class="desc">Premium</span></div></td>
+              <td><span class="num">75.4</span></td>
+              <td><span class="num">1.48</span></td>
+              <td>
+                <svg class="sparkline" width="80" height="22" viewBox="0 0 80 22">
+                  <polyline points="2,12 14,10 26,11 38,8 50,9 62,7 74,5" fill="none" stroke="var(--hai-status-ok-600)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </td>
+            </tr>
+            <tr>
+              <td><div class="recipe-name"><span class="id">RCP-004</span><span class="desc">Cost Optimized</span></div></td>
+              <td><span class="num">72.9</span></td>
+              <td><span class="num">1.36</span></td>
+              <td>
+                <svg class="sparkline" width="80" height="22" viewBox="0 0 80 22">
+                  <polyline points="2,10 14,12 26,11 38,13 50,12 62,14 74,13" fill="none" stroke="var(--hai-status-warn-600)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Flow Rates -->
+      <div class="card">
+        <div class="card-title">Flow Rates</div>
+        <div class="input-list">
+          <div class="input-row">
+            <span class="input-label">Intake Flow</span>
+            <span class="input-value"><span class="num">8.40</span><span class="unit">t / h</span></span>
+          </div>
+          <div class="input-row">
+            <span class="input-label">Mill Discharge</span>
+            <span class="input-value"><span class="num">6.64</span><span class="unit">t / h</span></span>
+          </div>
+          <div class="input-row">
+            <span class="input-label">Bran Flow</span>
+            <span class="input-value"><span class="num">1.57</span><span class="unit">t / h</span></span>
+          </div>
+          <div class="input-row">
+            <span class="input-label">Recycle Flow</span>
+            <span class="input-value"><span class="num">0.19</span><span class="unit">t / h</span></span>
+          </div>
+          <div class="input-row">
+            <span class="input-label">Air Flow</span>
+            <span class="input-value"><span class="num">12,450</span><span class="unit">m³ / h</span></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
 </main>
 
-<div class="mockup-tag">Atlas · 3 tabs · click <svg style="display:inline;width:11px;height:11px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/></svg> to flip theme</div>
+<div class="mockup-tag">Hercules Atlas · Demo Mockup · 1920×1080</div>
 
 <script>
   // ============== Theme toggle ==============
   const root = document.documentElement;
-  const moonIcon = document.getElementById('moon-icon');
-  const sunIcon = document.getElementById('sun-icon');
+  const moon = document.getElementById('moon-icon');
+  const sun = document.getElementById('sun-icon');
   function setTheme(theme) {
     if (theme === 'light') {
       root.classList.remove('dark');
       root.setAttribute('data-theme', 'light');
-      moonIcon.style.display = 'none';
-      sunIcon.style.display = 'block';
+      moon.style.display = 'none';
+      sun.style.display = 'block';
     } else {
       root.classList.add('dark');
       root.setAttribute('data-theme', 'dark');
-      moonIcon.style.display = 'block';
-      sunIcon.style.display = 'none';
+      moon.style.display = 'block';
+      sun.style.display = 'none';
     }
-    setTimeout(() => { drawProdChart(); drawCostChart(); placeProdPills(); }, 30);
+    setTimeout(() => { drawAllCharts(); placePills(); }, 30);
   }
   document.getElementById('theme-toggle').addEventListener('click', () => {
     setTheme(root.classList.contains('dark') ? 'light' : 'dark');
   });
 
-  // ============== TABS ==============
-  const tabButtons = document.querySelectorAll('.tab');
-  const panes = document.querySelectorAll('.pane');
-  const pageNamePill = document.getElementById('page-name-pill');
-  const labels = { prod: 'Production', pdm: 'PdM', yield: 'Yield' };
-  tabButtons.forEach(t => t.addEventListener('click', () => {
-    const id = t.dataset.tab;
-    tabButtons.forEach(x => x.classList.toggle('active', x === t));
-    panes.forEach(p => p.classList.toggle('active', p.dataset.pane === id));
-    pageNamePill.textContent = 'Hercules Atlas · ' + labels[id];
-    requestAnimationFrame(placeProdPills);
-  }));
+  // ============== Tab switching ==============
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tab-panel').forEach(p => {
+        p.classList.toggle('active', p.id === 'panel-' + target);
+      });
+      setTimeout(() => { drawAllCharts(); placePills(); }, 30);
+    });
+  });
 
-  // ============== SVG helpers ==============
+  // ============== SVG helper ==============
   const NS = 'http://www.w3.org/2000/svg';
-  function svgEl(tag, attrs){
+  function el(tag, attrs){
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
     return e;
@@ -1678,18 +1802,20 @@
     return getComputedStyle(root).getPropertyValue(name).trim() || '#888';
   }
 
-  // ============== PRODUCTION CHART ==============
-  function drawProdChart() {
-    const svg = document.getElementById('prod-chart');
+  // ============== PRODUCTION FORECAST CHART ==============
+  function drawProdForecast() {
+    const svg = document.getElementById('prod-forecast-chart');
+    if (!svg) return;
     svg.innerHTML = '';
-    const W = 800, H = 200;
-    const padL = 44, padR = 14, padT = 12, padB = 22;
+    const W = 800, H = 220;
+    const padL = 44, padR = 14, padT = 10, padB = 22;
     const innerW = W - padL - padR;
     const innerH = H - padT - padB;
     const HOURS = 24;
     const NOW_H = 14.53;
 
-    const cum = []; let total = 0;
+    const cum = [];
+    let total = 0;
     for (let h = 0; h <= HOURS; h++) {
       let rate = 0;
       if (h >= 6 && h < 11) rate = 6.5;
@@ -1716,182 +1842,193 @@
     const xAt = h => padL + (h / HOURS) * innerW;
     const yAt = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
 
-    const muted = tokColor('--hai-text-disabled');
     const tertiary = tokColor('--hai-text-tertiary');
     const gridStroke = tokColor('--hai-surface-border');
 
     [0, 30, 60, 90, 120].forEach(v => {
-      const y = yAt(v);
-      svg.appendChild(svgEl('line', { x1: padL, x2: W - padR, y1: y, y2: y,
-        stroke: gridStroke, 'stroke-width': 1, 'shape-rendering': 'crispEdges', opacity: 0.6 }));
-      const lbl = svgEl('text', { x: padL - 6, y: y + 3, 'text-anchor': 'end',
-        'font-size': 9, fill: muted, 'font-variant-numeric': 'tabular-nums' });
+      svg.appendChild(el('line', {
+        x1: padL, x2: W - padR, y1: yAt(v), y2: yAt(v),
+        stroke: gridStroke, 'stroke-width': '1', 'stroke-dasharray': '3,4', opacity: 0.6
+      }));
+      const lbl = el('text', {
+        x: padL - 6, y: yAt(v) + 3,
+        'text-anchor': 'end', 'font-size': '9.5', fill: tertiary
+      });
       lbl.textContent = v;
       svg.appendChild(lbl);
     });
 
-    const yT = svgEl('text', { x: padL - 30, y: padT + innerH/2, 'text-anchor': 'middle',
-      'font-size': 9, fill: tertiary, 'letter-spacing': '0.1em',
-      transform: `rotate(-90 ${padL - 30} ${padT + innerH/2})` });
-    yT.textContent = 'TONS';
-    svg.appendChild(yT);
+    // Forecast band fill
+    const bandPts = ['M ' + xAt(NOW_H) + ' ' + yAt(0)];
+    fcPts.forEach(p => bandPts.push('L ' + xAt(p.h) + ' ' + yAt(p.t)));
+    bandPts.push('L ' + xAt(HOURS) + ' ' + yAt(0) + ' Z');
+    svg.appendChild(el('path', {
+      d: bandPts.join(' '),
+      fill: tokColor('--hai-status-ok-600'),
+      opacity: 0.10
+    }));
 
-    const nowX = xAt(NOW_H);
-    const moneyClr = tokColor('--hai-money');
-    const okClr = tokColor('--hai-status-ok-600');
-    const bandClr = tokColor('--hai-forecast-band');
+    // Actual line (teal)
+    const actualPath = actualPts.map((p, i) => (i === 0 ? 'M ' : 'L ') + xAt(p.h) + ' ' + yAt(p.t)).join(' ');
+    svg.appendChild(el('path', {
+      d: actualPath,
+      fill: 'none',
+      stroke: tokColor('--accent-2'),
+      'stroke-width': '2.5',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
+    }));
 
-    svg.appendChild(svgEl('line', { x1: nowX, x2: nowX, y1: padT, y2: padT + innerH,
-      stroke: moneyClr, 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0.5 }));
+    // Forecast dashed (green)
+    const fcPath = fcPts.map((p, i) => (i === 0 ? 'M ' : 'L ') + xAt(p.h) + ' ' + yAt(p.t)).join(' ');
+    svg.appendChild(el('path', {
+      d: fcPath,
+      fill: 'none',
+      stroke: tokColor('--hai-status-ok-600'),
+      'stroke-width': '2.5',
+      'stroke-dasharray': '6,5',
+      'stroke-linecap': 'round'
+    }));
 
-    let bandTop = '', bandBot = '';
-    fcPts.forEach((p, i) => {
-      bandTop += (i === 0 ? 'M ' : ' L ') + xAt(p.h) + ' ' + yAt(p.t * (1 + 0.015 * (p.h - NOW_H)) + 1);
+    // Now marker dot
+    svg.appendChild(el('circle', {
+      cx: xAt(NOW_H), cy: yAt(nowT), r: 5,
+      fill: tokColor('--hai-money'),
+      stroke: tokColor('--hai-surface-100'),
+      'stroke-width': 2
+    }));
+
+    // EOD marker
+    const eod = fcPts[fcPts.length - 1];
+    svg.appendChild(el('circle', {
+      cx: xAt(eod.h), cy: yAt(eod.t), r: 5,
+      fill: tokColor('--hai-status-ok-600'),
+      stroke: tokColor('--hai-surface-100'),
+      'stroke-width': 2
+    }));
+    const eodLabel = el('text', {
+      x: xAt(eod.h) - 4, y: yAt(eod.t) - 8,
+      'text-anchor': 'end', 'font-size': '11', 'font-weight': '700',
+      fill: tokColor('--hai-status-ok-600')
     });
-    for (let i = fcPts.length - 1; i >= 0; i--) {
-      const p = fcPts[i];
-      bandBot += ' L ' + xAt(p.h) + ' ' + yAt(p.t * (1 - 0.015 * (p.h - NOW_H)) - 1);
-    }
-    svg.appendChild(svgEl('path', { d: bandTop + bandBot + ' Z',
-      fill: bandClr, stroke: okClr, 'stroke-width': 0.5, 'stroke-opacity': 0.25 }));
-
-    const actualD = actualPts.map((p, i) => (i === 0 ? 'M ' : ' L ') + xAt(p.h) + ' ' + yAt(p.t)).join('');
-    svg.appendChild(svgEl('path', { d: actualD, fill: 'none',
-      stroke: moneyClr, 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-
-    const fcD = fcPts.map((p, i) => (i === 0 ? 'M ' : ' L ') + xAt(p.h) + ' ' + yAt(p.t)).join('');
-    svg.appendChild(svgEl('path', { d: fcD, fill: 'none',
-      stroke: okClr, 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
-      'stroke-dasharray': '6 5' }));
-
-    const endP = fcPts[fcPts.length - 1];
-    const endX = xAt(endP.h), endY = yAt(endP.t);
-    svg.appendChild(svgEl('circle', { cx: endX, cy: endY, r: 4.5, fill: okClr,
-      stroke: tokColor('--hai-surface-100'), 'stroke-width': 2 }));
-    const endLbl = svgEl('text', { x: endX - 8, y: endY - 8, 'text-anchor': 'end',
-      'font-size': 11, 'font-weight': 700, fill: okClr, 'font-variant-numeric': 'tabular-nums' });
-    endLbl.textContent = '108 t';
-    svg.appendChild(endLbl);
-
-    svg.appendChild(svgEl('circle', { cx: nowX, cy: yAt(nowT), r: 4.5,
-      fill: moneyClr, stroke: tokColor('--hai-surface-100'), 'stroke-width': 2 }));
+    eodLabel.textContent = '108 t';
+    svg.appendChild(eodLabel);
   }
 
-  function drawCostChart() {
-    const svg = document.getElementById('cost-chart');
+  // ============== PdM TRENDS CHART ==============
+  function drawPdmTrends() {
+    const svg = document.getElementById('pdm-trends-chart');
+    if (!svg) return;
     svg.innerHTML = '';
-    const W = 800, H = 200;
-    const padL = 44, padR = 14, padT = 12, padB = 22;
+    const W = 800, H = 220;
+    const padL = 36, padR = 14, padT = 10, padB = 22;
     const innerW = W - padL - padR;
     const innerH = H - padT - padB;
+    const N = 25;
+    const NOW = 16; // index of "Now"
 
-    const NOW = 23, TOTAL = 36;
-    const actual = [
-      1.45,1.44,1.43,1.42,1.41,1.40,
-      1.41,1.43,1.48,1.52,1.55,1.53,
-      1.50,1.48,1.46,1.45,1.44,1.43,
-      1.42,1.41,1.40,1.41,1.42,1.42
-    ];
-    const fc = [1.41,1.39,1.37,1.34,1.32,1.31,1.30,1.30,1.31,1.32,1.34,1.36];
-    const band = fc.map((_, i) => 0.02 + i * 0.004);
-
-    const yMin = 1.20, yMax = 1.65;
-    const xAt = i => padL + (i / (TOTAL - 1)) * innerW;
-    const yAt = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
-
-    const muted = tokColor('--hai-text-disabled');
-    const tertiary = tokColor('--hai-text-tertiary');
     const gridStroke = tokColor('--hai-surface-border');
 
-    [1.25,1.35,1.45,1.55,1.65].forEach(v => {
-      const y = yAt(v);
-      svg.appendChild(svgEl('line', { x1: padL, x2: W - padR, y1: y, y2: y,
-        stroke: gridStroke, 'stroke-width': 1, 'shape-rendering': 'crispEdges', opacity: 0.6 }));
-      const lbl = svgEl('text', { x: padL - 6, y: y + 3, 'text-anchor': 'end',
-        'font-size': 9, fill: muted, 'font-variant-numeric': 'tabular-nums' });
-      lbl.textContent = v.toFixed(2);
-      svg.appendChild(lbl);
+    // grid
+    [0, 25, 50, 75, 100].forEach(v => {
+      const y = padT + (1 - v / 100) * innerH;
+      svg.appendChild(el('line', {
+        x1: padL, x2: W - padR, y1: y, y2: y,
+        stroke: gridStroke, 'stroke-width': '1', 'stroke-dasharray': '3,4', opacity: 0.5
+      }));
     });
 
-    const yT = svgEl('text', { x: padL - 30, y: padT + innerH/2, 'text-anchor': 'middle',
-      'font-size': 9, fill: tertiary, 'letter-spacing': '0.1em',
-      transform: `rotate(-90 ${padL - 30} ${padT + innerH/2})` });
-    yT.textContent = 'OMR / TON';
-    svg.appendChild(yT);
+    const xAt = i => padL + (i / (N - 1)) * innerW;
 
-    const nowX = xAt(NOW);
-    const infoClr = tokColor('--hai-status-info-600');
-    const okClr = tokColor('--hai-status-ok-600');
-    const bandClr = tokColor('--hai-forecast-band');
+    // Forecast band (right side from NOW)
+    svg.appendChild(el('rect', {
+      x: xAt(NOW), y: padT,
+      width: xAt(N - 1) - xAt(NOW), height: innerH,
+      fill: tokColor('--hai-status-info-600'), opacity: 0.06
+    }));
 
-    svg.appendChild(svgEl('line', { x1: nowX, x2: nowX, y1: padT, y2: padT + innerH,
-      stroke: infoClr, 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0.5 }));
+    const throughputData = [6.2,6.4,6.5,6.8,7.0,7.1,6.9,6.8,6.6,6.7,6.8,6.9,7.0,6.8,6.7,6.65,6.6, 6.6,6.7,6.8,6.9,7.0,7.1,7.2,7.3];
+    const yieldData      = [72.0,72.5,72.8,73.0,73.3,73.6,73.4,73.2,73.5,73.8,74.0,73.9,73.7,73.6,73.5,73.6,73.6, 73.7,73.8,73.9,74.0,74.1,74.2,74.3,74.4];
+    const tempData       = [38, 39, 40, 42, 44, 45, 44, 43, 43, 44, 45, 46, 47, 47, 46, 46, 45, 45, 45, 45, 45, 45, 44, 44, 44];
 
-    let bandTop = `M ${xAt(NOW)} ${yAt(actual[NOW])}`;
-    fc.forEach((v, i) => { bandTop += ` L ${xAt(NOW + 1 + i)} ${yAt(v + band[i])}`; });
-    let bandBot = '';
-    for (let i = fc.length - 1; i >= 0; i--) {
-      bandBot += ` L ${xAt(NOW + 1 + i)} ${yAt(fc[i] - band[i])}`;
+    function drawLine(data, color) {
+      const min = Math.min(...data), max = Math.max(...data);
+      const yAt = v => padT + (1 - (v - min) / (max - min)) * innerH;
+      const actual = data.slice(0, NOW + 1).map((v, i) => (i === 0 ? 'M ' : 'L ') + xAt(i) + ' ' + yAt(v)).join(' ');
+      svg.appendChild(el('path', {
+        d: actual,
+        fill: 'none', stroke: color,
+        'stroke-width': '2.2',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round'
+      }));
+      const fc = data.slice(NOW).map((v, i) => (i === 0 ? 'M ' : 'L ') + xAt(NOW + i) + ' ' + yAt(v)).join(' ');
+      svg.appendChild(el('path', {
+        d: fc,
+        fill: 'none', stroke: color,
+        'stroke-width': '2.2',
+        'stroke-dasharray': '5,4',
+        opacity: 0.65,
+        'stroke-linecap': 'round'
+      }));
     }
-    bandBot += ` L ${xAt(NOW)} ${yAt(actual[NOW])} Z`;
-    svg.appendChild(svgEl('path', { d: bandTop + bandBot,
-      fill: bandClr, stroke: okClr, 'stroke-width': 0.5, 'stroke-opacity': 0.25 }));
 
-    let actD = '';
-    actual.forEach((v, i) => { actD += (i === 0 ? 'M ' : ' L ') + xAt(i) + ' ' + yAt(v); });
-    svg.appendChild(svgEl('path', { d: actD, fill: 'none',
-      stroke: infoClr, 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+    drawLine(throughputData, tokColor('--hai-data-1'));
+    drawLine(yieldData, tokColor('--hai-status-ok-600'));
+    drawLine(tempData, tokColor('--hai-status-warn-600'));
 
-    let fcD = `M ${nowX} ${yAt(actual[NOW])}`;
-    fc.forEach((v, i) => { fcD += ` L ${xAt(NOW + 1 + i)} ${yAt(v)}`; });
-    svg.appendChild(svgEl('path', { d: fcD, fill: 'none',
-      stroke: okClr, 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
-      'stroke-dasharray': '6 5' }));
+    // NOW vertical line
+    svg.appendChild(el('line', {
+      x1: xAt(NOW), x2: xAt(NOW), y1: padT, y2: padT + innerH,
+      stroke: tokColor('--accent'), 'stroke-width': '2', 'stroke-dasharray': '4,4'
+    }));
+    const nowLbl = el('text', {
+      x: xAt(NOW) + 4, y: padT + 12,
+      'font-size': '10', 'font-weight': '700',
+      fill: tokColor('--accent')
+    });
+    nowLbl.textContent = 'NOW';
+    svg.appendChild(nowLbl);
 
-    const endX = xAt(TOTAL - 1);
-    const endY = yAt(fc[fc.length - 1]);
-    svg.appendChild(svgEl('circle', { cx: endX, cy: endY, r: 4.5, fill: okClr,
-      stroke: tokColor('--hai-surface-100'), 'stroke-width': 2 }));
-    const endLbl = svgEl('text', { x: endX - 8, y: endY - 8, 'text-anchor': 'end',
-      'font-size': 11, 'font-weight': 700, fill: okClr, 'font-variant-numeric': 'tabular-nums' });
-    endLbl.textContent = '1.31 OMR';
-    svg.appendChild(endLbl);
-
-    svg.appendChild(svgEl('circle', { cx: nowX, cy: yAt(actual[NOW]), r: 4.5,
-      fill: infoClr, stroke: tokColor('--hai-surface-100'), 'stroke-width': 2 }));
+    const fcLbl = el('text', {
+      x: xAt(NOW + (N - NOW) / 2), y: padT + 12,
+      'text-anchor': 'middle',
+      'font-size': '9.5', 'font-weight': '700',
+      fill: tokColor('--hai-status-info-600'),
+      opacity: 0.7
+    });
+    fcLbl.textContent = 'PREDICTION';
+    svg.appendChild(fcLbl);
   }
 
-  function placeProdPills() {
-    const place = (svgId, pillId) => {
-      const svg = document.getElementById(svgId);
-      if (!svg) return;
-      const wrap = svg.parentElement;
-      const rect = wrap.getBoundingClientRect();
-      if (rect.width === 0) return;
-      const pill = document.getElementById(pillId);
-      const xPct = svgId === 'cost-chart' ? (44 + 23/35 * (800-44-14)) / 800 : (44 + 14.53/24 * (800-44-14)) / 800;
-      pill.style.left = (xPct * rect.width) + 'px';
-      pill.style.top = (12 / 200 * rect.height) + 'px';
-    };
-    place('prod-chart', 'prod-now-pill');
-    place('cost-chart', 'cost-now-pill');
+  // ============== Position the NOW pill on prod chart ==============
+  function placePills() {
+    const wrap = document.querySelector('#panel-production .chart-svg-wrap');
+    const pill = document.getElementById('prod-now-pill');
+    if (!wrap || !pill) return;
+    const rect = wrap.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const HOURS = 24, NOW_H = 14.53;
+    const padL = 44, padR = 14;
+    const x = padL + (NOW_H / HOURS) * (800 - padL - padR);
+    const xRatio = x / 800;
+    pill.style.left = (xRatio * rect.width) + 'px';
+    const yMin = 0, yMax = 120;
+    const padT = 10, innerH = 220 - 10 - 22;
+    const nowT = 75;
+    const y = padT + (1 - (nowT - yMin) / (yMax - yMin)) * innerH;
+    const yRatio = y / 220;
+    pill.style.top = (yRatio * rect.height) + 'px';
   }
 
-  // Init
-  drawProdChart();
-  drawCostChart();
-  placeProdPills();
-  window.addEventListener('resize', placeProdPills);
-
-  // tiny live ticker
-  function flashUpdate(el, newText) {
-    if (!el || el.textContent === newText) return;
-    el.textContent = newText;
+  function drawAllCharts() {
+    drawProdForecast();
+    drawPdmTrends();
   }
-  setInterval(() => {
-    flashUpdate(document.getElementById('prod-now'), (68.2 + Math.random() * 0.5).toFixed(1));
-    flashUpdate(document.getElementById('kpi-pace'), (6.5 + Math.random() * 0.4).toFixed(2));
-  }, 2400);
+
+  drawAllCharts();
+  placePills();
+  window.addEventListener('resize', () => { drawAllCharts(); placePills(); });
 </script>
 
 </body>
