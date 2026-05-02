@@ -3,120 +3,48 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=1920, initial-scale=1.0" />
-<title>Hercules Atlas — Full Demo Mockup</title>
+<title>Hercules Atlas — PdM Demo</title>
 <style>
   /* ============================================================
-     TOKENS — copied from Frontend/src/Pages/HerculesAI/tokens.css
+     TOKENS
      ============================================================ */
-  [data-theme='dark'].dark {
-    --hai-surface-canvas: #0a0f1a;
-    --hai-surface-100: #111827;
-    --hai-surface-200: #0d1422;
-    --hai-surface-300: #1e293b;
-    --hai-surface-border: #1e293b;
-    --hai-surface-border-strong: #334155;
-
-    --hai-text-primary: #f0f4f8;
-    --hai-text-secondary: #8899ab;
-    --hai-text-tertiary: #556677;
-    --hai-text-disabled: #334155;
-
-    --hai-status-ok-600: #10b981;
-    --hai-status-ok-100: #0F2A1E;
-    --hai-status-warn-600: #f59e0b;
-    --hai-status-warn-100: #2B1E08;
-    --hai-status-crit-600: #ef4444;
-    --hai-status-crit-100: #2D1513;
-    --hai-status-info-600: #0ea5e9;
-    --hai-status-info-100: #0F1E30;
-    --hai-status-idle-600: #7C818C;
-
-    --hai-data-1: #7CA9F5;
-    --hai-data-2: #E6A35A;
-    --hai-data-3: #8FCB9C;
-    --hai-data-4: #D48DB5;
-    --hai-data-5: #7BC4C9;
-
-    --hai-money:        #f0b54f;
-    --hai-money-glow:   rgba(240, 181, 79, 0.22);
-    --hai-glass-1:      rgba(255, 255, 255, 0.04);
-    --hai-glass-2:      rgba(255, 255, 255, 0.07);
-    --hai-glass-border: rgba(255, 255, 255, 0.10);
-    --hai-glass-highlight: rgba(255, 255, 255, 0.18);
-    --hai-shadow-rest:  0 8px 16px -8px rgba(0, 0, 0, 0.40);
-    --hai-shadow-deep:  0 24px 48px -12px rgba(0, 0, 0, 0.55);
-    --hai-future:       #8b9ff7;
-
-    --shell-topbar-bg: #111827;
-    --shell-sidebar-bg: #0d1422;
-    --shell-sidebar-active-bg: rgba(34,211,238,0.10);
-    --shell-sidebar-active-fg: #22d3ee;
-    --shell-hover: #1a2233;
-    --accent: #22d3ee;
-    --accent-2: #0ea5e9;
-
-    --tab-bar-bg: rgba(255,255,255,0.03);
-    --tab-active-bg: linear-gradient(135deg, rgba(14,165,233,0.18), rgba(34,211,238,0.10));
-    --tab-active-glow: 0 0 24px rgba(34,211,238,0.35), inset 0 0 0 1px rgba(34,211,238,0.45);
-    --grid-line: rgba(34,211,238,0.04);
-  }
-
-  :root,
-  [data-theme='light']:not(.dark) {
-    --hai-surface-canvas: #f1f5f9;
-    --hai-surface-100: #ffffff;
-    --hai-surface-200: #f8fafc;
-    --hai-surface-300: #f1f5f9;
-    --hai-surface-border: #e2e8f0;
-    --hai-surface-border-strong: #cbd5e1;
-
-    --hai-text-primary: #0f172a;
-    --hai-text-secondary: #475569;
-    --hai-text-tertiary: #64748b;
-    --hai-text-disabled: #94a3b8;
-
-    --hai-status-ok-600: #15804A;
-    --hai-status-ok-100: #DCF3E6;
-    --hai-status-warn-600: #B36A00;
-    --hai-status-warn-100: #FCEBCA;
-    --hai-status-crit-600: #B8312D;
-    --hai-status-crit-100: #FADDDB;
-    --hai-status-info-600: #1E5FB5;
-    --hai-status-info-100: #DDE9F8;
-    --hai-status-idle-600: #6B6E77;
-
-    --hai-data-1: #2E5FBF;
-    --hai-data-3: #3A8D56;
-    --hai-data-5: #2C7A82;
-
-    --hai-money:        #b97900;
-    --hai-money-glow:   rgba(185, 121, 0, 0.18);
-    --hai-glass-1:      rgba(15, 23, 42, 0.04);
-    --hai-glass-2:      rgba(15, 23, 42, 0.07);
-    --hai-glass-border: rgba(15, 23, 42, 0.10);
-    --hai-glass-highlight: rgba(15, 23, 42, 0.05);
-    --hai-shadow-rest:  0 8px 16px -8px rgba(15, 23, 42, 0.10);
-    --hai-shadow-deep:  0 24px 48px -12px rgba(15, 23, 42, 0.18);
-    --hai-future:       #6b73c5;
-
-    --shell-topbar-bg: #ffffff;
-    --shell-sidebar-bg: #f8fafc;
-    --shell-sidebar-active-bg: rgba(30,95,181,0.10);
-    --shell-sidebar-active-fg: #1E5FB5;
-    --shell-hover: #f1f5f9;
-    --accent: #1E5FB5;
-    --accent-2: #0ea5e9;
-
-    --tab-bar-bg: rgba(15,23,42,0.04);
-    --tab-active-bg: linear-gradient(135deg, rgba(30,95,181,0.10), rgba(14,165,233,0.06));
-    --tab-active-glow: 0 4px 12px -4px rgba(30,95,181,0.30), inset 0 0 0 1px rgba(30,95,181,0.30);
-    --grid-line: rgba(15,23,42,0.025);
-  }
-
   :root {
-    --hai-radius-md: 10px; --hai-radius-lg: 14px; --hai-radius-xl: 18px;
-    --hai-font-sans: 'Inter Tight', 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
-    --hai-num-features: 'tnum' 1, 'lnum' 1, 'ss02' 1;
+    --bg-canvas: #080c14;
+    --bg-card: #111827;
+    --bg-card-2: #0d1422;
+    --border: #1e293b;
+    --border-strong: #334155;
+
+    --text-primary: #f0f4f8;
+    --text-secondary: #8899ab;
+    --text-tertiary: #556677;
+    --text-disabled: #334155;
+
+    --ok: #10b981;
+    --ok-bg: rgba(16,185,129,0.10);
+    --warn: #f59e0b;
+    --warn-bg: rgba(245,158,11,0.10);
+    --crit: #ef4444;
+    --crit-bg: rgba(239,68,68,0.10);
+
+    --teal: #22d3ee;
+    --teal-2: #0ea5e9;
+    --teal-glow: rgba(34,211,238,0.40);
+
+    --money: #f0b54f;
+
+    --glass-1: rgba(255,255,255,0.04);
+    --glass-2: rgba(255,255,255,0.07);
+    --glass-border: rgba(255,255,255,0.10);
+
+    --shadow-rest: 0 8px 16px -8px rgba(0,0,0,0.50);
+    --shadow-glow-amber: 0 0 18px rgba(245,158,11,0.20);
+    --shadow-glow-teal: 0 0 22px rgba(34,211,238,0.18);
+
+    --grid-line: rgba(34,211,238,0.04);
+
+    --font-sans: 'Inter Tight', 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+    --num-features: 'tnum' 1, 'lnum' 1, 'ss02' 1;
     --topbar-h: 72px;
     --sidebar-w: 232px;
   }
@@ -124,15 +52,15 @@
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0; height: 100%; overflow: hidden;
-    font-family: var(--hai-font-sans);
-    background: var(--hai-surface-canvas);
-    color: var(--hai-text-primary);
+    font-family: var(--font-sans);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
-    transition: background-color .25s ease, color .25s ease;
   }
-  .num { font-feature-settings: var(--hai-num-features); font-variant-numeric: tabular-nums lining-nums; }
+  .num { font-feature-settings: var(--num-features); font-variant-numeric: tabular-nums lining-nums; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 
-  /* Subtle scan-line ambient grid */
+  /* Subtle ambient grid */
   body::before {
     content: ""; position: fixed; inset: 0;
     pointer-events: none; z-index: 1;
@@ -140,8 +68,8 @@
       linear-gradient(var(--grid-line) 1px, transparent 1px),
       linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
     background-size: 48px 48px;
-    -webkit-mask-image: radial-gradient(circle at 50% 40%, black 30%, transparent 80%);
-            mask-image: radial-gradient(circle at 50% 40%, black 30%, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at 60% 35%, black 35%, transparent 80%);
+            mask-image: radial-gradient(circle at 60% 35%, black 35%, transparent 80%);
   }
 
   /* ============================================================
@@ -149,59 +77,49 @@
      ============================================================ */
   .topbar {
     position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h);
-    background: var(--shell-topbar-bg);
-    border-bottom: 1px solid var(--hai-surface-border);
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
     z-index: 30;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 20px;
-    transition: background-color .25s ease, border-color .25s ease;
   }
   .topbar-left { display: flex; align-items: center; gap: 12px; }
   .topbar-right { display: flex; align-items: center; gap: 12px; }
   .icon-btn {
     width: 36px; height: 36px; border-radius: 8px;
     display: inline-flex; align-items: center; justify-content: center;
-    color: var(--hai-text-secondary);
+    color: var(--text-secondary);
     background: transparent; border: none; cursor: pointer;
-    transition: all .2s ease;
   }
-  .icon-btn:hover { background: var(--shell-hover); color: var(--hai-text-primary); }
+  .icon-btn:hover { background: var(--glass-1); color: var(--text-primary); }
   .icon-btn svg { width: 20px; height: 20px; }
 
   .brand-logo { display: flex; align-items: center; gap: 10px; margin-left: 4px; }
   .brand-mark {
     width: 38px; height: 38px; border-radius: 9px;
-    background: linear-gradient(135deg, var(--accent), #0369a1);
+    background: linear-gradient(135deg, var(--teal), #0369a1);
     display: flex; align-items: center; justify-content: center;
-    font-weight: 800; color: var(--hai-surface-canvas); font-size: 19px;
-    box-shadow: 0 0 14px rgba(34,211,238,0.4);
+    font-weight: 800; color: var(--bg-canvas); font-size: 19px;
+    box-shadow: 0 0 14px var(--teal-glow);
   }
   .brand-text-block { line-height: 1.1; }
-  .brand-text-block .brand-name {
-    font-size: 14px; font-weight: 800; color: var(--hai-text-primary);
-    letter-spacing: 0.04em;
-  }
-  .brand-text-block .brand-sub {
-    font-size: 9px; color: var(--hai-text-tertiary);
-    letter-spacing: 0.2em; text-transform: uppercase; margin-top: 2px;
-  }
+  .brand-name { font-size: 14px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.04em; }
+  .brand-sub { font-size: 9px; color: var(--text-tertiary); letter-spacing: 0.2em; text-transform: uppercase; margin-top: 2px; }
+
   .live-pill {
     display: flex; align-items: center; gap: 10px;
     padding: 6px 16px; border-radius: 999px;
     background: rgba(16,185,129,0.06);
-    color: var(--hai-status-ok-600);
+    color: var(--ok);
     border: 1px solid rgba(16,185,129,0.25);
   }
-  html:not(.dark) .live-pill { background: var(--hai-status-ok-100); border-color: rgba(21,128,74,0.30); }
   .live-pill .dot {
     width: 8px; height: 8px; border-radius: 50%;
-    background: var(--hai-status-ok-600);
-    box-shadow: 0 0 6px currentColor;
+    background: var(--ok); box-shadow: 0 0 6px currentColor;
     animation: pulse 1.6s ease-in-out infinite;
   }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
   .live-pill .live-text { font-size: 11px; font-weight: 800; letter-spacing: 0.18em; }
-  .live-pill .page-name { font-size: 11px; color: var(--hai-text-tertiary); font-weight: 500; letter-spacing: 0.04em; }
+  .live-pill .page-name { font-size: 11px; color: var(--text-tertiary); font-weight: 500; letter-spacing: 0.04em; }
 
   .client-logo {
     height: 40px; padding: 4px 10px; border-radius: 8px;
@@ -211,82 +129,76 @@
     box-shadow: 0 1px 2px rgba(0,0,0,0.08);
     letter-spacing: 0.05em;
   }
-  .topbar-divider { width: 1px; height: 28px; background: var(--hai-surface-border); margin: 0 4px; }
+  .topbar-divider { width: 1px; height: 28px; background: var(--border); margin: 0 4px; }
   .lang-btn {
     min-width: 36px; height: 32px; padding: 0 10px;
     border-radius: 8px; border: none; cursor: pointer;
-    background: transparent; color: var(--hai-text-secondary);
+    background: transparent; color: var(--text-secondary);
     font-size: 12px; font-weight: 700; letter-spacing: 0.05em;
-    transition: all .2s ease;
   }
-  .lang-btn:hover { background: var(--shell-hover); color: var(--hai-text-primary); }
+  .lang-btn:hover { background: var(--glass-1); color: var(--text-primary); }
   .user-avatar {
     width: 32px; height: 32px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--hai-data-1), var(--hai-status-info-600));
+    background: linear-gradient(135deg, #7CA9F5, #1E5FB5);
     display: flex; align-items: center; justify-content: center;
     color: #fff; font-weight: 700; font-size: 12px;
-    cursor: pointer;
   }
 
   /* ============================================================
-     APP SHELL — sidebar
+     SIDEBAR
      ============================================================ */
   .sidebar {
     position: fixed; top: var(--topbar-h); bottom: 0; left: 0;
     width: var(--sidebar-w);
-    background: var(--shell-sidebar-bg);
-    border-right: 1px solid var(--hai-surface-border);
+    background: var(--bg-card-2);
+    border-right: 1px solid var(--border);
     z-index: 20;
     display: flex; flex-direction: column;
     padding: 16px 12px;
     overflow-y: auto;
-    transition: background-color .25s ease, border-color .25s ease;
   }
   .nav-section-label {
-    font-size: 9px; color: var(--hai-text-tertiary);
+    font-size: 9px; color: var(--text-tertiary);
     letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700;
     padding: 8px 12px 6px;
   }
   .nav-item {
     display: flex; align-items: center; gap: 12px;
     padding: 10px 12px; border-radius: 8px;
-    color: var(--hai-text-secondary);
+    color: var(--text-secondary);
     font-size: 13px; font-weight: 500;
     cursor: pointer;
-    transition: all .15s ease;
     margin-bottom: 2px;
     text-decoration: none;
     position: relative;
   }
-  .nav-item:hover { background: var(--shell-hover); color: var(--hai-text-primary); }
+  .nav-item:hover { background: var(--glass-1); color: var(--text-primary); }
   .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
   .nav-item.active {
-    background: var(--shell-sidebar-active-bg);
-    color: var(--shell-sidebar-active-fg);
+    background: rgba(34,211,238,0.10);
+    color: var(--teal);
     font-weight: 600;
   }
   .nav-item.active::before {
     content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
-    background: var(--shell-sidebar-active-fg);
+    background: var(--teal);
     border-radius: 0 3px 3px 0;
   }
   .nav-item .badge-new {
     margin-left: auto;
     font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
     padding: 2px 6px; border-radius: 4px;
-    background: var(--shell-sidebar-active-fg);
-    color: var(--hai-surface-canvas);
+    background: var(--teal); color: var(--bg-canvas);
   }
   .sidebar-footer {
     margin-top: auto; padding: 12px;
-    border-top: 1px solid var(--hai-surface-border);
-    font-size: 10px; color: var(--hai-text-tertiary);
-    letter-spacing: 0.05em;
+    border-top: 1px solid var(--border);
+    font-size: 10px; color: var(--text-tertiary);
   }
-  .sidebar-footer .v { color: var(--hai-text-secondary); font-weight: 600; }
+  .sidebar-footer .v { color: var(--text-secondary); font-weight: 600; }
 
   /* ============================================================
-     PAGE CONTENT (Atlas)
+     CONTENT
      ============================================================ */
   .content {
     position: fixed;
@@ -296,726 +208,793 @@
     right: 0;
     padding: 14px 18px 12px;
     overflow: hidden;
-    background: var(--hai-surface-canvas);
-    transition: background-color .25s ease;
+    background: var(--bg-canvas);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     z-index: 2;
   }
 
-  /* ===== Tab bar ===== */
+  /* Tab bar */
   .tab-bar {
     display: inline-flex;
     align-self: flex-start;
     gap: 6px;
     padding: 5px;
     border-radius: 999px;
-    background: var(--tab-bar-bg);
-    border: 1px solid var(--hai-glass-border);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--glass-border);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
   .tab-btn {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 9px 22px;
+    padding: 8px 22px;
     border-radius: 999px;
     border: none; cursor: pointer;
     background: transparent;
-    color: var(--hai-text-secondary);
+    color: var(--text-secondary);
     font-size: 12.5px; font-weight: 600; letter-spacing: 0.04em;
     font-family: inherit;
     transition: all .25s ease;
   }
-  .tab-btn:hover { color: var(--hai-text-primary); background: var(--hai-glass-1); }
+  .tab-btn:hover { color: var(--text-primary); background: var(--glass-1); }
   .tab-btn.active {
-    background: var(--tab-active-bg);
-    color: var(--accent);
-    box-shadow: var(--tab-active-glow);
+    background: linear-gradient(135deg, rgba(14,165,233,0.20), rgba(34,211,238,0.10));
+    color: var(--teal);
+    box-shadow: 0 0 24px rgba(34,211,238,0.30), inset 0 0 0 1px rgba(34,211,238,0.45);
   }
   .tab-btn svg { width: 14px; height: 14px; }
   .tab-btn .pill-badge {
     font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
     padding: 2px 6px; border-radius: 999px;
-    background: var(--hai-status-crit-600); color: #fff;
+    background: var(--crit); color: #fff;
   }
 
-  /* ===== AI Insight bar ===== */
-  .ai-insight {
-    display: flex; align-items: center; gap: 14px;
-    padding: 12px 18px;
-    border-radius: var(--hai-radius-lg);
-    background: var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border-strong);
-    box-shadow: var(--hai-shadow-rest);
-    position: relative;
-    overflow: hidden;
-  }
-  .ai-insight::before {
-    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-    background: linear-gradient(180deg, var(--accent-2), var(--accent));
-  }
-  .ai-insight.amber::before { background: linear-gradient(180deg, var(--hai-status-warn-600), #c2670d); }
-  .ai-insight.green::before { background: linear-gradient(180deg, var(--hai-status-ok-600), #0a8a5f); }
-  .ai-insight-icon {
-    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-    background: linear-gradient(135deg, var(--accent-2), #0369a1);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff;
-    box-shadow: 0 0 16px rgba(14,165,233,0.40);
-  }
-  .ai-insight.amber .ai-insight-icon {
-    background: linear-gradient(135deg, var(--hai-status-warn-600), #c2670d);
-    box-shadow: 0 0 16px rgba(245,158,11,0.40);
-  }
-  .ai-insight.green .ai-insight-icon {
-    background: linear-gradient(135deg, var(--hai-status-ok-600), #0a8a5f);
-    box-shadow: 0 0 16px rgba(16,185,129,0.40);
-  }
-  .ai-insight-icon svg { width: 18px; height: 18px; }
-  .ai-insight-text { flex: 1; min-width: 0; }
-  .ai-insight-eyebrow {
-    font-size: 9.5px; color: var(--accent-2);
-    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
-    margin-bottom: 3px;
-  }
-  .ai-insight.amber .ai-insight-eyebrow { color: var(--hai-status-warn-600); }
-  .ai-insight.green .ai-insight-eyebrow { color: var(--hai-status-ok-600); }
-  .ai-insight-msg {
-    font-size: 13px; color: var(--hai-text-primary); font-weight: 500;
-    line-height: 1.45;
-  }
-  .ai-insight-msg b { color: var(--accent); font-weight: 700; }
-  .ai-insight.amber .ai-insight-msg b { color: var(--hai-status-warn-600); }
-  .ai-insight.green .ai-insight-msg b { color: var(--hai-status-ok-600); }
-  .ai-insight-msg .gold { color: var(--hai-money); font-weight: 700; }
-  .ai-insight-msg .crit { color: var(--hai-status-crit-600); font-weight: 700; }
-  .ai-insight-actions { display: flex; gap: 8px; flex-shrink: 0; }
-  .btn-pill {
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-size: 11px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.08em;
-    cursor: pointer;
-    border: 1px solid var(--hai-glass-border);
-    background: var(--hai-glass-1);
-    color: var(--hai-text-primary);
-    transition: all .2s ease;
-    font-family: inherit;
-  }
-  .btn-pill:hover { background: var(--hai-glass-2); transform: translateY(-1px); }
-  .btn-pill.primary {
-    background: var(--accent-2);
-    color: #fff;
-    border-color: var(--accent-2);
-  }
-  .btn-pill.primary:hover { filter: brightness(1.1); }
-  .btn-pill.green { background: var(--hai-status-ok-600); border-color: var(--hai-status-ok-600); color: #fff; }
-  .btn-pill.amber { background: var(--hai-status-warn-600); border-color: var(--hai-status-warn-600); color: #fff; }
-
-  /* ===== Tab panels ===== */
-  .tab-panel {
-    flex: 1;
-    min-height: 0;
-    display: none;
-    flex-direction: column;
-    gap: 12px;
-    animation: fadeIn .35s ease;
-  }
+  .tab-panel { flex: 1; min-height: 0; display: none; flex-direction: column; gap: 10px; }
   .tab-panel.active { display: flex; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-  /* ===== Cards / panels ===== */
+  .placeholder-card {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-card);
+    border: 1px dashed var(--border-strong);
+    border-radius: 18px;
+    color: var(--text-tertiary);
+    font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  /* ============================================================
+     PdM GRID
+     ============================================================ */
+  .pdm-grid {
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: 1.05fr 1.25fr 1.05fr;
+    grid-template-rows: 0.95fr 1.25fr 1fr auto;
+    gap: 10px;
+  }
+
   .card {
-    background: var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
-    border-radius: var(--hai-radius-xl);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
     padding: 14px 16px;
-    box-shadow: var(--hai-shadow-rest);
+    box-shadow: var(--shadow-rest);
     position: relative;
     overflow: hidden;
     display: flex; flex-direction: column;
-    transition: background-color .25s ease, border-color .25s ease;
+    min-height: 0;
+  }
+  .card.amber-border {
+    border-color: rgba(245,158,11,0.45);
+    box-shadow: var(--shadow-rest), var(--shadow-glow-amber);
+  }
+  .card.teal-border {
+    border-color: rgba(34,211,238,0.30);
+    box-shadow: var(--shadow-rest), var(--shadow-glow-teal);
+  }
+
+  .card-eyebrow {
+    font-size: 10px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
+    margin-bottom: 4px;
   }
   .card-title {
-    font-size: 11px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700;
-    margin-bottom: 10px;
+    font-size: 14px; font-weight: 700; color: var(--text-primary);
+    letter-spacing: -0.01em;
   }
   .card-title-row {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 10px;
-  }
-  .card-title-row .card-title { margin-bottom: 0; }
-  .card-link {
-    font-size: 10px; color: var(--accent);
-    text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;
-    text-decoration: none;
-  }
-  .card-link:hover { text-decoration: underline; }
-
-  /* ===== KPI strip ===== */
-  .kpi-strip {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    display: flex; justify-content: space-between; align-items: flex-start;
     gap: 12px;
   }
-  .kpi-card {
-    background: var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
-    border-radius: var(--hai-radius-xl);
-    padding: 14px 16px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--hai-shadow-rest);
-  }
-  .kpi-card::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  }
-  .kpi-card.production::before { background: linear-gradient(90deg, var(--hai-money), var(--hai-status-ok-600)); }
-  .kpi-card.energy::before { background: linear-gradient(90deg, var(--accent-2), var(--hai-status-ok-600)); }
-  .kpi-card.risk::before { background: linear-gradient(90deg, var(--hai-status-ok-600), #14b89a); }
-  .kpi-card.savings::before { background: linear-gradient(90deg, var(--hai-money), #d99b3a); }
-
-  .kpi-name {
-    font-size: 10px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700;
-    margin-bottom: 6px;
-  }
-  .kpi-value-row {
-    display: flex; align-items: baseline; gap: 6px;
-  }
-  .kpi-num {
-    font-size: 30px; font-weight: 800;
-    color: var(--hai-text-primary);
-    line-height: 1; letter-spacing: -0.02em;
-  }
-  .kpi-num.gold { color: var(--hai-money); }
-  .kpi-num.green { color: var(--hai-status-ok-600); }
-  .kpi-num.amber { color: var(--hai-status-warn-600); }
-  .kpi-unit { font-size: 12px; color: var(--hai-text-tertiary); font-weight: 500; }
-  .kpi-foot {
-    margin-top: 8px;
-    font-size: 10.5px; color: var(--hai-text-secondary);
-    line-height: 1.4;
-  }
-  .kpi-foot .up { color: var(--hai-status-ok-600); font-weight: 700; }
-  .kpi-foot .down { color: var(--hai-status-ok-600); font-weight: 700; }
-  .kpi-foot .crit { color: var(--hai-status-crit-600); font-weight: 700; }
-  .kpi-foot b { color: var(--hai-text-primary); font-weight: 700; }
 
   /* ============================================================
-     TAB 1 — PRODUCTION
+     TOP ROW — Health Ring, Next Maintenance, Why Atlas
      ============================================================ */
-  .prod-grid {
-    flex: 1; min-height: 0;
-    display: grid;
-    grid-template-columns: 1fr 1.5fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 12px;
-  }
-
-  /* Real-time list */
-  .rt-list { display: flex; flex-direction: column; gap: 8px; flex: 1; }
-  .rt-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    background: var(--hai-glass-1);
-    border: 1px solid var(--hai-glass-border);
-  }
-  .rt-icon {
-    width: 36px; height: 36px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    background: linear-gradient(135deg, var(--accent-2), #0369a1);
-    color: #fff;
-  }
-  .rt-icon.gold { background: linear-gradient(135deg, var(--hai-money), #d99b3a); color: var(--hai-surface-canvas); }
-  .rt-icon.amber { background: linear-gradient(135deg, var(--hai-status-warn-600), #c2670d); color: #fff; }
-  .rt-icon.ok { background: linear-gradient(135deg, var(--hai-status-ok-600), #0a8a5f); color: #fff; }
-  .rt-icon svg { width: 18px; height: 18px; }
-  .rt-text { flex: 1; }
-  .rt-label { font-size: 10.5px; color: var(--hai-text-tertiary); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; }
-  .rt-val { display: flex; align-items: baseline; gap: 5px; margin-top: 2px; }
-  .rt-val .num-mid { font-size: 20px; font-weight: 800; color: var(--hai-text-primary); letter-spacing: -0.02em; }
-  .rt-val .unit { font-size: 11px; color: var(--hai-text-tertiary); font-weight: 500; }
-
-  /* Forecast chart card */
-  .chart-svg-wrap { flex: 1; position: relative; min-height: 0; }
-  .chart-svg { width: 100%; height: 100%; display: block; }
-  .chart-legend { display: flex; gap: 14px; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--hai-text-secondary); }
-  .legend-swatch { width: 16px; height: 3px; border-radius: 2px; }
-  .legend-swatch.actual { background: var(--accent-2); }
-  .legend-swatch.forecast {
-    background-image: linear-gradient(90deg, var(--hai-status-ok-600) 50%, transparent 50%);
-    background-size: 6px 100%; background-repeat: repeat-x; height: 3px;
-  }
-  .legend-swatch.line-blue { background: var(--hai-data-1); }
-  .legend-swatch.line-green { background: var(--hai-status-ok-600); }
-  .legend-swatch.line-orange { background: var(--hai-status-warn-600); }
-
-  .chart-footer {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-top: 6px;
-    font-size: 9.5px; color: var(--hai-text-disabled);
-    letter-spacing: 0.04em;
-  }
-  .now-pill {
-    position: absolute; transform: translate(-50%, -100%);
-    color: #fff; font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-    padding: 2px 7px; border-radius: 4px;
-    text-transform: uppercase;
-    pointer-events: none;
-    margin-top: -4px;
-  }
-  .now-pill.cyan { background: var(--accent-2); box-shadow: 0 4px 8px rgba(14,165,233,0.4); }
-  .now-pill.amber { background: var(--hai-status-warn-600); box-shadow: 0 4px 8px rgba(245,158,11,0.4); }
-
-  /* Energy submeters */
-  .submeter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex: 1; }
-  .submeter-card {
-    background: var(--hai-glass-1);
-    border: 1px solid var(--hai-glass-border);
-    border-radius: 12px;
-    padding: 12px 14px;
-    display: flex; flex-direction: column;
-  }
-  .submeter-name {
-    font-size: 11px; color: var(--accent); font-weight: 800;
-    letter-spacing: 0.15em; margin-bottom: 6px;
-  }
-  .submeter-value { display: flex; align-items: baseline; gap: 4px; }
-  .submeter-value .num { font-size: 22px; font-weight: 800; color: var(--hai-text-primary); letter-spacing: -0.02em; }
-  .submeter-value .unit { font-size: 10px; color: var(--hai-text-tertiary); font-weight: 600; }
-  .submeter-pf { font-size: 10px; color: var(--hai-text-secondary); margin-top: 6px; }
-  .submeter-pf b { color: var(--hai-text-primary); }
-  .submeter-status {
-    display: flex; align-items: center; gap: 6px;
-    margin-top: 8px;
-    font-size: 10px; color: var(--hai-status-ok-600); font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.1em;
-  }
-  .submeter-status .dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--hai-status-ok-600);
-    box-shadow: 0 0 6px currentColor;
-  }
-
-  /* Totalizers */
-  .totalizer-row {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
-    flex: 1;
-  }
-  .totalizer-block {
-    border-radius: 14px;
-    padding: 16px;
-    background: linear-gradient(135deg, var(--hai-glass-1), transparent);
-    border: 1px solid var(--hai-glass-border);
-    display: flex; flex-direction: column; justify-content: center;
-  }
-  .totalizer-block.flour { border-left: 3px solid var(--hai-money); }
-  .totalizer-block.bran { border-left: 3px solid var(--hai-status-warn-600); }
-  .totalizer-label {
-    font-size: 11px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700;
-  }
-  .totalizer-value {
-    display: flex; align-items: baseline; gap: 8px;
-    margin-top: 8px;
-  }
-  .totalizer-value .num-big {
-    font-size: 38px; font-weight: 800;
-    line-height: 1; letter-spacing: -0.02em;
-  }
-  .totalizer-block.flour .num-big { color: var(--hai-money); }
-  .totalizer-block.bran .num-big { color: var(--hai-status-warn-600); }
-  .totalizer-value .unit { font-size: 13px; color: var(--hai-text-secondary); font-weight: 600; }
-  .totalizer-foot { margin-top: 8px; font-size: 10.5px; color: var(--hai-text-secondary); }
-
-  /* ============================================================
-     TAB 2 — PdM
-     ============================================================ */
-  .pdm-flow-card { flex: 0 0 auto; }
-  .pdm-bottom-grid {
-    flex: 1; min-height: 0;
-    display: grid;
-    grid-template-columns: 1.1fr 1fr;
-    gap: 12px;
-  }
-  .pdm-anomalies { flex: 0 0 auto; }
-
-  /* Process flow */
-  .flow-stages {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 22px;
-    align-items: stretch;
-  }
-  .flow-stage {
-    display: flex; flex-direction: column;
-    position: relative;
-    padding: 8px 10px 8px;
-    border-radius: 12px;
-    background: var(--hai-glass-1);
-    border: 1px solid var(--hai-glass-border);
-  }
-  .flow-stage::after {
-    content: "›";
-    position: absolute; right: -16px; top: 50%; transform: translateY(-50%);
-    font-size: 26px; font-weight: 700;
-    color: var(--accent);
-    text-shadow: 0 0 6px rgba(34,211,238,0.45);
-    line-height: 1;
-  }
-  .flow-stage:last-child::after { display: none; }
-  .flow-stage-label {
-    font-size: 10px; color: var(--accent);
-    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 800;
-    margin-bottom: 8px;
-    text-align: center;
-  }
-  .equipment-row {
-    display: flex; gap: 6px; flex-wrap: nowrap; justify-content: center;
-  }
-  .equipment {
-    flex: 1 1 0;
-    min-width: 0;
-    display: flex; flex-direction: column; align-items: center;
-    gap: 4px;
-    padding: 6px 2px 6px;
-    position: relative;
-  }
-  .equipment-shape {
-    position: relative;
-    width: 52px; height: 44px;
-    display: flex; align-items: flex-end; justify-content: center;
-  }
-  /* Hopper triangle */
-  .eq-hopper {
-    width: 0; height: 0;
-    border-left: 22px solid transparent;
-    border-right: 22px solid transparent;
-    border-top: 28px solid var(--hai-text-secondary);
-    margin-top: 6px;
-  }
-  /* Bin */
-  .eq-bin {
-    width: 36px; height: 38px;
-    background: linear-gradient(180deg, var(--hai-text-secondary), var(--hai-text-tertiary));
-    border-radius: 18px 18px 4px 4px;
-    border: 1px solid var(--hai-text-tertiary);
-  }
-  /* Mill */
-  .eq-mill {
-    width: 38px; height: 40px;
-    background: linear-gradient(180deg, var(--hai-text-secondary), var(--hai-text-tertiary));
-    border-radius: 8px 8px 3px 3px;
-    border: 1px solid var(--hai-text-tertiary);
-    position: relative;
-  }
-  .eq-mill::before {
-    content: ""; position: absolute;
-    top: 6px; left: 50%; transform: translateX(-50%);
-    width: 22px; height: 4px;
-    background: var(--hai-surface-canvas);
-    border-radius: 2px;
-  }
-  /* Sifter */
-  .eq-sifter {
-    width: 42px; height: 32px;
-    background: linear-gradient(180deg, var(--hai-text-secondary), var(--hai-text-tertiary));
-    border-radius: 6px;
-    border: 1px solid var(--hai-text-tertiary);
-    position: relative;
-  }
-  .eq-sifter::before {
-    content: ""; position: absolute;
-    top: 6px; left: 4px; right: 4px; height: 2px;
-    background: var(--hai-surface-canvas);
-    box-shadow: 0 6px 0 var(--hai-surface-canvas), 0 12px 0 var(--hai-surface-canvas);
-  }
-  /* Packer */
-  .eq-pack {
-    width: 42px; height: 36px;
-    background: linear-gradient(180deg, var(--hai-text-secondary), var(--hai-text-tertiary));
-    border-radius: 4px 12px 4px 4px;
-    border: 1px solid var(--hai-text-tertiary);
-    position: relative;
-  }
-  .eq-pack::before {
-    content: ""; position: absolute;
-    bottom: 4px; left: 50%; transform: translateX(-50%);
-    width: 18px; height: 6px;
-    background: var(--hai-surface-canvas);
-    border-radius: 2px;
-  }
-
-  /* Status colors override the shape backgrounds */
-  .equipment.normal .eq-bin,
-  .equipment.normal .eq-mill,
-  .equipment.normal .eq-sifter,
-  .equipment.normal .eq-pack {
-    background: linear-gradient(180deg, #14d391, var(--hai-status-ok-600));
-    border-color: var(--hai-status-ok-600);
-  }
-  .equipment.normal .eq-hopper { border-top-color: var(--hai-status-ok-600); }
-
-  .equipment.monitor .eq-bin,
-  .equipment.monitor .eq-mill,
-  .equipment.monitor .eq-sifter,
-  .equipment.monitor .eq-pack {
-    background: linear-gradient(180deg, #fbb949, var(--hai-status-warn-600));
-    border-color: var(--hai-status-warn-600);
-  }
-  .equipment.monitor .eq-hopper { border-top-color: var(--hai-status-warn-600); }
-
-  .equipment.critical .eq-bin,
-  .equipment.critical .eq-mill,
-  .equipment.critical .eq-sifter,
-  .equipment.critical .eq-pack {
-    background: linear-gradient(180deg, #f87171, var(--hai-status-crit-600));
-    border-color: var(--hai-status-crit-600);
-  }
-  .equipment.critical .eq-hopper { border-top-color: var(--hai-status-crit-600); }
-
-  .equipment-name {
-    font-size: 10px; color: var(--hai-text-secondary); font-weight: 600;
-    text-align: center; line-height: 1.2;
-  }
-  .equipment-dot {
-    position: absolute; top: 4px; right: 4px;
-    width: 10px; height: 10px; border-radius: 50%;
-    border: 2px solid var(--hai-surface-100);
-  }
-  .equipment.normal .equipment-dot { background: var(--hai-status-ok-600); box-shadow: 0 0 6px var(--hai-status-ok-600); }
-  .equipment.monitor .equipment-dot { background: var(--hai-status-warn-600); box-shadow: 0 0 6px var(--hai-status-warn-600); animation: pulse 1.6s ease-in-out infinite; }
-  .equipment.critical .equipment-dot { background: var(--hai-status-crit-600); box-shadow: 0 0 8px var(--hai-status-crit-600); animation: pulse 1.2s ease-in-out infinite; }
-
-  .flow-legend {
-    display: flex; gap: 18px; justify-content: center; align-items: center;
-    margin-top: 12px;
-    font-size: 10.5px; color: var(--hai-text-secondary);
-  }
-  .flow-legend-item { display: flex; align-items: center; gap: 6px; }
-  .flow-legend-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-  }
-  .flow-legend-dot.ok { background: var(--hai-status-ok-600); box-shadow: 0 0 6px var(--hai-status-ok-600); }
-  .flow-legend-dot.warn { background: var(--hai-status-warn-600); box-shadow: 0 0 6px var(--hai-status-warn-600); }
-  .flow-legend-dot.crit { background: var(--hai-status-crit-600); box-shadow: 0 0 6px var(--hai-status-crit-600); }
-  .flow-legend-dot.idle { background: var(--hai-status-idle-600); }
-
-  /* Equipment health table */
-  .eq-table { width: 100%; border-collapse: collapse; flex: 1; }
-  .eq-table th {
-    text-align: left;
-    font-size: 9.5px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
-    padding: 6px 8px;
-    border-bottom: 1px solid var(--hai-surface-border);
-  }
-  .eq-table td {
-    padding: 8px;
-    font-size: 12px; color: var(--hai-text-primary);
-    border-bottom: 1px solid var(--hai-glass-border);
-  }
-  .eq-table tr:last-child td { border-bottom: none; }
-  .health-bar {
-    display: flex; align-items: center; gap: 8px;
-  }
-  .health-bar-track {
-    flex: 1; height: 6px; border-radius: 3px;
-    background: var(--hai-glass-2);
-    overflow: hidden;
-  }
-  .health-bar-fill { height: 100%; border-radius: 3px; }
-  .health-num { font-weight: 800; font-size: 12px; min-width: 36px; text-align: right; }
-  .health-num.crit { color: var(--hai-status-crit-600); }
-  .health-num.warn { color: var(--hai-status-warn-600); }
-  .health-num.ok { color: var(--hai-status-ok-600); }
-  .status-pill {
-    display: inline-block;
-    font-size: 10px; font-weight: 700;
-    padding: 3px 8px; border-radius: 999px;
-    text-transform: uppercase; letter-spacing: 0.08em;
-  }
-  .status-pill.crit { background: var(--hai-status-crit-100); color: var(--hai-status-crit-600); }
-  .status-pill.warn { background: var(--hai-status-warn-100); color: var(--hai-status-warn-600); }
-  .status-pill.ok { background: var(--hai-status-ok-100); color: var(--hai-status-ok-600); }
-
-  /* Anomaly cards */
-  .anomaly-strip {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr) auto;
-    gap: 10px;
-    align-items: center;
-  }
-  .anomaly-card {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 14px;
-    background: var(--hai-glass-1);
-    border: 1px solid var(--hai-glass-border);
-    border-radius: 12px;
-    border-left: 3px solid var(--hai-status-crit-600);
-  }
-  .anomaly-card.warn { border-left-color: var(--hai-status-warn-600); }
-  .anomaly-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: var(--hai-status-crit-600);
-    box-shadow: 0 0 8px var(--hai-status-crit-600);
-    flex-shrink: 0;
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-  .anomaly-card.warn .anomaly-dot { background: var(--hai-status-warn-600); box-shadow: 0 0 8px var(--hai-status-warn-600); }
-  .anomaly-text { flex: 1; min-width: 0; }
-  .anomaly-title { font-size: 12.5px; font-weight: 700; color: var(--hai-text-primary); }
-  .anomaly-meta { font-size: 10.5px; color: var(--hai-text-tertiary); margin-top: 2px; }
-  .anomaly-meta .ago { color: var(--hai-text-secondary); }
-
-  /* ============================================================
-     TAB 3 — Yield Optimization
-     ============================================================ */
-  .yield-top-row {
-    display: grid; grid-template-columns: 1fr 1fr 1.4fr;
-    gap: 12px;
-    flex: 0 0 auto;
-  }
-  .yield-bottom-row {
-    flex: 1; min-height: 0;
-    display: grid;
-    grid-template-columns: 1fr 1.6fr 1fr;
-    gap: 12px;
-  }
-
-  /* Big yield ring card */
-  .yield-ring-card {
+  .ring-card {
     align-items: center;
     text-align: center;
+    padding-top: 16px;
   }
   .ring-wrap {
     position: relative;
-    width: 160px; height: 160px;
-    margin: 4px auto 10px;
+    width: 132px; height: 132px;
+    margin: 6px auto 8px;
   }
   .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-  .ring-bg { fill: none; stroke: var(--hai-glass-2); stroke-width: 14; }
-  .ring-fg { fill: none; stroke-width: 14; stroke-linecap: round; }
-  .ring-fg.cyan { stroke: var(--accent); }
-  .ring-fg.green { stroke: var(--hai-status-ok-600); }
+  .ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 11; }
+  .ring-fg { fill: none; stroke-width: 11; stroke-linecap: round; }
+  .ring-fg.amber { stroke: var(--warn); filter: drop-shadow(0 0 6px rgba(245,158,11,0.45)); }
+  .ring-fg.teal { stroke: var(--teal); filter: drop-shadow(0 0 6px rgba(34,211,238,0.45)); }
   .ring-center {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
-  .ring-num {
-    font-size: 34px; font-weight: 800;
-    line-height: 1; letter-spacing: -0.02em;
-  }
-  .ring-num.cyan { color: var(--accent); }
-  .ring-num.green { color: var(--hai-status-ok-600); }
-  .ring-sub {
-    font-size: 11px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+  .ring-num { font-size: 38px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+  .ring-num.amber { color: var(--warn); }
+  .ring-num.teal { color: var(--teal); }
+  .ring-sub { font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700; margin-top: 6px; }
+
+  .ring-status {
+    font-size: 12.5px; font-weight: 700; color: var(--text-primary);
     margin-top: 4px;
   }
-  .yield-detail-list {
-    display: flex; flex-direction: column; gap: 4px;
-    font-size: 11.5px; color: var(--hai-text-secondary);
-    text-align: center;
+  .ring-status.amber { color: var(--warn); }
+  .ring-detail {
+    font-size: 11px; color: var(--text-secondary); margin-top: 4px;
+    line-height: 1.4;
+    padding: 0 8px;
   }
-  .yield-detail-list b { color: var(--hai-text-primary); font-weight: 700; }
-  .yield-improvement {
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: var(--hai-status-ok-100);
-    border: 1px solid rgba(16,185,129,0.30);
-    border-radius: 8px;
-    font-size: 12px; color: var(--hai-status-ok-600); font-weight: 700;
-    text-align: center;
+  .scale-bar {
+    margin-top: 12px;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--ok) 0%, var(--ok) 33%, var(--warn) 33%, var(--warn) 66%, var(--crit) 66%);
+    position: relative;
+  }
+  .scale-bar::after {
+    content: "▼";
+    position: absolute; left: 50%; transform: translateX(-50%);
+    top: -10px;
+    font-size: 9px; color: var(--warn);
+  }
+  .scale-bar.early::after { left: 18%; }
+  .scale-bar.mid::after { left: 50%; }
+  .scale-labels {
+    display: flex; justify-content: space-between;
+    margin-top: 6px;
+    font-size: 9px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.10em; font-weight: 600;
   }
 
-  /* Top recommendation card */
-  .reco-card {
-    background: linear-gradient(135deg, rgba(16,185,129,0.10), rgba(34,211,238,0.04));
-    border: 1px solid rgba(16,185,129,0.25);
+  .next-num {
+    font-size: 28px; font-weight: 800;
+    color: var(--warn);
+    letter-spacing: -0.02em;
+    margin-top: 4px;
   }
-  .reco-eyebrow {
-    font-size: 10px; color: var(--hai-status-ok-600);
-    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 800;
-    margin-bottom: 6px;
+  .next-date {
+    font-size: 12.5px; color: var(--text-secondary);
+    margin-top: 2px;
   }
-  .reco-title { font-size: 18px; font-weight: 800; color: var(--hai-text-primary); letter-spacing: -0.01em; }
-  .reco-sub { font-size: 12px; color: var(--hai-text-secondary); margin-top: 4px; }
-  .reco-impact {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 10px; margin-top: 10px;
+
+  /* Why Atlas card */
+  .why-card .card-title { color: var(--warn); }
+  .why-icon-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .why-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--warn), #c2670d);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    box-shadow: 0 0 14px rgba(245,158,11,0.40);
   }
-  .reco-impact-cell {
-    background: var(--hai-glass-1);
-    border: 1px solid var(--hai-glass-border);
+  .why-icon svg { width: 18px; height: 18px; }
+  .why-msg {
+    font-size: 14px; color: var(--text-primary);
+    line-height: 1.5;
+    margin-top: 8px;
+  }
+  .why-msg b { color: var(--warn); font-weight: 700; }
+  .why-tag {
+    margin-top: 10px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px;
+    background: var(--warn-bg);
+    border: 1px solid rgba(245,158,11,0.30);
+    border-radius: 999px;
+    font-size: 10.5px; color: var(--warn); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    align-self: flex-start;
+  }
+  .why-tag::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--warn); box-shadow: 0 0 6px var(--warn);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* ============================================================
+     MIDDLE LEFT — Asset Focus M31 (holographic motor)
+     ============================================================ */
+  .asset-card .card-title-row { margin-bottom: 8px; }
+  .asset-tag {
+    font-size: 10px; font-weight: 700; color: var(--teal);
+    background: rgba(34,211,238,0.10);
+    border: 1px solid rgba(34,211,238,0.30);
+    border-radius: 999px;
+    padding: 3px 10px;
+    text-transform: uppercase; letter-spacing: 0.14em;
+  }
+
+  .motor-stage {
+    flex: 1;
+    position: relative;
+    margin-top: 6px;
+    border-radius: 12px;
+    background:
+      radial-gradient(ellipse at 50% 80%, rgba(34,211,238,0.12), transparent 60%),
+      linear-gradient(180deg, #0a0f1a 0%, #060a13 100%);
+    border: 1px solid rgba(34,211,238,0.18);
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 0;
+  }
+  /* Grid floor (perspective) */
+  .motor-floor {
+    position: absolute;
+    bottom: 0; left: -10%; right: -10%;
+    height: 50%;
+    background-image:
+      linear-gradient(rgba(34,211,238,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,211,238,0.10) 1px, transparent 1px);
+    background-size: 40px 24px;
+    transform: perspective(420px) rotateX(60deg);
+    transform-origin: top center;
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+            mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+    pointer-events: none;
+  }
+  .motor-glow {
+    position: absolute;
+    bottom: 18%;
+    left: 50%; transform: translateX(-50%);
+    width: 220px; height: 60px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(34,211,238,0.40), transparent 70%);
+    filter: blur(14px);
+  }
+  /* Motor body */
+  .motor-body {
+    position: relative;
+    z-index: 2;
+    display: flex; align-items: center;
+  }
+  .motor-shaft-l, .motor-shaft-r {
+    width: 18px; height: 14px;
+    background: linear-gradient(180deg, #1e3a5f, #0a1422);
+    border: 1px solid rgba(34,211,238,0.45);
+    box-shadow: inset 0 0 8px rgba(34,211,238,0.20);
+  }
+  .motor-shaft-l { border-radius: 3px 0 0 3px; }
+  .motor-shaft-r { border-radius: 0 3px 3px 0; }
+  .motor-housing {
+    width: 168px; height: 96px;
+    border-radius: 16px;
+    background:
+      linear-gradient(180deg, rgba(34,211,238,0.05), transparent 30%),
+      linear-gradient(180deg, #0f1d33, #050a14);
+    border: 1.5px solid rgba(34,211,238,0.55);
+    box-shadow:
+      0 0 24px rgba(34,211,238,0.30),
+      inset 0 0 22px rgba(34,211,238,0.18);
+    position: relative;
+    overflow: hidden;
+  }
+  /* Cooling fins */
+  .motor-housing::before {
+    content: "";
+    position: absolute;
+    top: 12%; bottom: 12%; left: 16px; right: 16px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgba(34,211,238,0.30) 0,
+      rgba(34,211,238,0.30) 1px,
+      transparent 1px,
+      transparent 9px
+    );
+    opacity: 0.7;
+  }
+  /* Junction box */
+  .motor-housing::after {
+    content: "";
+    position: absolute;
+    top: -10px; left: 50%; transform: translateX(-50%);
+    width: 60px; height: 18px;
+    background: linear-gradient(180deg, #0f1d33, #060a14);
+    border: 1.5px solid rgba(34,211,238,0.55);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    box-shadow: 0 0 14px rgba(34,211,238,0.30);
+  }
+  .motor-mount {
+    position: absolute;
+    bottom: 22%;
+    left: 50%; transform: translateX(-50%);
+    z-index: 1;
+    width: 200px; height: 18px;
+    background: linear-gradient(180deg, #0c1a30, #050a14);
+    border: 1px solid rgba(34,211,238,0.40);
+    border-radius: 4px;
+    box-shadow: 0 0 12px rgba(34,211,238,0.20);
+  }
+
+  .motor-stats {
+    position: absolute;
+    top: 12px; left: 14px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 4;
+  }
+  .motor-stat-pill {
+    background: rgba(8,12,20,0.65);
+    border: 1px solid rgba(34,211,238,0.35);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 11px; color: var(--text-secondary);
+    backdrop-filter: blur(6px);
+  }
+  .motor-stat-pill .num {
+    font-size: 14px; font-weight: 800; color: var(--teal);
+    letter-spacing: -0.01em;
+  }
+
+  .motor-callout {
+    position: absolute;
+    bottom: 12px; right: 12px;
+    max-width: 60%;
+    background: rgba(245,158,11,0.10);
+    border: 1px solid rgba(245,158,11,0.40);
     border-radius: 10px;
     padding: 8px 10px;
+    font-size: 11.5px; color: var(--warn);
+    line-height: 1.4;
+    backdrop-filter: blur(6px);
+    z-index: 4;
+    display: flex; align-items: flex-start; gap: 8px;
   }
-  .reco-impact-label {
-    font-size: 9px; color: var(--hai-text-tertiary);
-    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+  .motor-callout svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ============================================================
+     MIDDLE CENTER — 3-phase chart
+     ============================================================ */
+  .phase-card .card-title { margin-bottom: 6px; }
+  .phase-sub { font-size: 11px; color: var(--text-tertiary); margin-bottom: 8px; }
+  .phase-chart-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    margin-top: 6px;
   }
-  .reco-impact-value {
-    font-size: 18px; font-weight: 800; margin-top: 2px;
-    color: var(--hai-status-ok-600);
+  .phase-chart {
+    width: 100%; height: 100%;
+    display: flex; align-items: flex-end; justify-content: space-around;
+    gap: 24px;
+    padding: 0 18px 30px;
+    position: relative;
+  }
+  .phase-chart::before {
+    content: ""; position: absolute;
+    left: 8px; right: 8px; bottom: 28px;
+    height: 1px;
+    background: var(--border-strong);
+  }
+  .phase-grid-line {
+    position: absolute;
+    left: 8px; right: 8px;
+    height: 1px;
+    background: var(--border);
+    opacity: 0.5;
+  }
+  .phase-bar-col {
+    position: relative;
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .phase-bar {
+    width: 100%;
+    max-width: 90px;
+    border-radius: 8px 8px 0 0;
+    position: relative;
+    transition: height .8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .phase-bar.l1 { background: linear-gradient(180deg, var(--teal), #0e7490); height: 58%; box-shadow: 0 -2px 16px rgba(34,211,238,0.30); }
+  .phase-bar.l2 { background: linear-gradient(180deg, var(--warn), #b45309); height: 72%; box-shadow: 0 -2px 16px rgba(245,158,11,0.40); }
+  .phase-bar.l3 { background: linear-gradient(180deg, var(--teal), #0e7490); height: 58%; box-shadow: 0 -2px 16px rgba(34,211,238,0.30); }
+
+  .phase-val {
+    position: absolute;
+    top: -28px;
+    font-size: 16px; font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .phase-bar.l1 .phase-val, .phase-bar.l3 .phase-val { color: var(--teal); }
+  .phase-bar.l2 .phase-val { color: var(--warn); }
+  .phase-label {
+    position: absolute;
+    bottom: -22px;
+    font-size: 11px; font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.14em;
+  }
+  .phase-yaxis {
+    position: absolute;
+    left: 0; top: 0; bottom: 28px;
+    width: 30px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    font-size: 9px; color: var(--text-tertiary);
+    text-align: right;
+    padding-right: 4px;
+  }
+
+  .phase-banner {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(245,158,11,0.10);
+    border: 1px solid rgba(245,158,11,0.30);
+    border-radius: 10px;
+    font-size: 12.5px; color: var(--warn); font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .phase-banner svg { width: 16px; height: 16px; }
+  .phase-banner b { color: var(--warn); font-weight: 800; font-size: 14px; }
+
+  /* ============================================================
+     MIDDLE RIGHT — stacked summaries
+     ============================================================ */
+  .stacked-card {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .stacked-section {
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .stacked-label {
+    font-size: 10px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700;
+    margin-bottom: 8px;
+  }
+  /* What is happening now */
+  .now-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .now-cell {
+    text-align: center;
+    padding: 8px 6px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--glass-border);
+  }
+  .now-cell.warn { border-color: rgba(245,158,11,0.40); background: rgba(245,158,11,0.06); }
+  .now-cell.ok { border-color: rgba(16,185,129,0.30); }
+  .now-cell-name { font-size: 11px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.10em; }
+  .now-cell-status { font-size: 10px; margin-top: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.10em; }
+  .now-cell.warn .now-cell-status { color: var(--warn); }
+  .now-cell.ok .now-cell-status { color: var(--ok); }
+
+  /* When to act */
+  .timeline {
+    position: relative;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--ok) 0%, var(--ok) 30%, var(--warn) 30%, var(--warn) 70%, var(--crit) 70%);
+    margin: 8px 4px 6px;
+  }
+  .timeline-pin {
+    position: absolute;
+    top: -16px;
+    transform: translateX(-50%);
+    color: var(--warn);
+    font-size: 9px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.10em;
+    white-space: nowrap;
+  }
+  .timeline-pin::after {
+    content: "▼";
+    display: block;
+    text-align: center;
+    font-size: 10px;
+    margin-top: 2px;
+  }
+  .timeline-labels {
+    display: flex; justify-content: space-between;
+    font-size: 9px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.10em; font-weight: 600;
+    padding: 0 4px;
+  }
+
+  /* Why */
+  .why-trend-wrap {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 4px;
+  }
+  .why-trend-wrap svg { width: 100%; height: 36px; flex: 1; }
+  .why-trend-pct {
+    font-size: 18px; font-weight: 800; color: var(--warn);
+    letter-spacing: -0.01em;
+    min-width: 48px; text-align: right;
+  }
+
+  /* ============================================================
+     BOTTOM LEFT — Anomalies 30 days bar chart
+     ============================================================ */
+  .anom-card { gap: 6px; }
+  .anom-totals {
+    display: flex; align-items: baseline; gap: 8px;
+    margin-bottom: 4px;
+  }
+  .anom-total-num {
+    font-size: 26px; font-weight: 800; color: var(--text-primary);
     letter-spacing: -0.02em;
   }
-  .reco-impact-value.gold { color: var(--hai-money); }
-  .reco-actions {
-    display: flex; gap: 8px; margin-top: 10px;
-  }
-  .reco-actions .btn-pill { flex: 1; text-align: center; }
-
-  /* Process inputs / flow rates list */
-  .input-list { display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  .input-row {
-    display: flex; justify-content: space-between; align-items: baseline;
-    padding: 8px 12px;
-    border-radius: 8px;
-    background: var(--hai-glass-1);
-  }
-  .input-label { font-size: 11.5px; color: var(--hai-text-secondary); }
-  .input-value { display: flex; align-items: baseline; gap: 4px; }
-  .input-value .num { font-size: 15px; font-weight: 700; color: var(--hai-text-primary); letter-spacing: -0.01em; }
-  .input-value .unit { font-size: 10px; color: var(--hai-text-tertiary); font-weight: 600; }
-
-  /* Recipe table */
-  .recipe-table { width: 100%; border-collapse: collapse; flex: 1; }
-  .recipe-table th {
-    text-align: left; font-size: 9.5px; color: var(--hai-text-tertiary);
+  .anom-total-lbl {
+    font-size: 11px; color: var(--text-tertiary);
     text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
-    padding: 6px 8px;
-    border-bottom: 1px solid var(--hai-surface-border);
   }
-  .recipe-table th:nth-child(2), .recipe-table th:nth-child(3) { text-align: right; }
-  .recipe-table th:last-child { text-align: center; }
-  .recipe-table td {
-    padding: 9px 8px;
-    font-size: 12px; color: var(--hai-text-primary);
-    border-bottom: 1px solid var(--hai-glass-border);
-  }
-  .recipe-table td:nth-child(2), .recipe-table td:nth-child(3) { text-align: right; font-weight: 700; }
-  .recipe-table td:last-child { text-align: center; }
-  .recipe-table tr:last-child td { border-bottom: none; }
-  .recipe-name { display: flex; flex-direction: column; }
-  .recipe-name .id { font-weight: 700; font-size: 12px; }
-  .recipe-name .desc { font-size: 10px; color: var(--hai-text-tertiary); margin-top: 2px; }
-  .sparkline { display: inline-block; vertical-align: middle; }
 
-  /* Footer mockup tag */
+  .anom-cat-list { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .anom-cat {
+    display: grid;
+    grid-template-columns: 90px 1fr 28px;
+    align-items: center;
+    gap: 10px;
+  }
+  .anom-cat-label {
+    font-size: 11.5px; color: var(--text-secondary);
+  }
+  .anom-cat-bar-wrap {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--glass-1);
+    overflow: hidden;
+  }
+  .anom-cat-bar {
+    height: 100%;
+    border-radius: 6px;
+  }
+  .anom-cat-bar.crit { background: linear-gradient(90deg, var(--crit), #b91c1c); box-shadow: inset 0 0 6px rgba(0,0,0,0.30); }
+  .anom-cat-bar.warn { background: linear-gradient(90deg, var(--warn), #b45309); }
+  .anom-cat-bar.info { background: linear-gradient(90deg, var(--teal), #0e7490); }
+  .anom-cat-num {
+    font-size: 13px; font-weight: 800; color: var(--text-primary);
+    letter-spacing: -0.01em;
+    text-align: right;
+  }
+
+  /* Mini sparkline below */
+  .anom-spark-row {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--glass-border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .anom-spark-lbl {
+    font-size: 10px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.10em; font-weight: 700;
+  }
+
+  /* ============================================================
+     BOTTOM CENTER — Recent anomaly events table
+     ============================================================ */
+  .ev-table { width: 100%; border-collapse: collapse; flex: 1; }
+  .ev-table th {
+    text-align: left;
+    font-size: 9.5px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ev-table td {
+    padding: 9px 8px;
+    font-size: 12px; color: var(--text-primary);
+    border-bottom: 1px solid var(--glass-border);
+  }
+  .ev-table tr:last-child td { border-bottom: none; }
+  .ev-asset {
+    display: inline-block;
+    font-size: 10px; font-weight: 800;
+    padding: 2px 8px; border-radius: 999px;
+    background: rgba(34,211,238,0.10);
+    color: var(--teal);
+    letter-spacing: 0.10em;
+  }
+  .ev-severity {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700;
+  }
+  .ev-severity .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .ev-severity.crit { color: var(--crit); }
+  .ev-severity.crit .dot { background: var(--crit); box-shadow: 0 0 6px var(--crit); }
+  .ev-severity.warn { color: var(--warn); }
+  .ev-severity.warn .dot { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+  .ev-severity.info { color: var(--teal); }
+  .ev-severity.info .dot { background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+  .ev-time { color: var(--text-tertiary); font-size: 11px; }
+
+  /* ============================================================
+     BOTTOM RIGHT — Process flow
+     ============================================================ */
+  .flow-card { gap: 6px; }
+  .flow-stages {
+    display: flex; align-items: stretch;
+    gap: 6px;
+    flex: 1;
+    overflow: hidden;
+  }
+  .flow-stage {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 4px 6px;
+    border-radius: 10px;
+    background: var(--glass-1);
+    border: 1px solid var(--glass-border);
+    position: relative;
+    min-width: 0;
+  }
+  .flow-stage.warn { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.40); box-shadow: inset 0 0 14px rgba(245,158,11,0.08); }
+  .flow-stage.ok { border-color: rgba(16,185,129,0.20); }
+  .flow-arrow {
+    align-self: center;
+    color: var(--teal);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    text-shadow: 0 0 6px rgba(34,211,238,0.45);
+    flex-shrink: 0;
+  }
+  .flow-stage-label {
+    font-size: 9px; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .flow-stage.warn .flow-stage-label { color: var(--warn); }
+  .flow-eq-shape {
+    width: 36px; height: 36px;
+    display: flex; align-items: flex-end; justify-content: center;
+    margin-bottom: 4px;
+  }
+  .flow-eq-shape > * {
+    background: linear-gradient(180deg, #14d391, var(--ok));
+    border: 1px solid var(--ok);
+  }
+  .flow-stage.warn .flow-eq-shape > * {
+    background: linear-gradient(180deg, #fbb949, var(--warn));
+    border-color: var(--warn);
+  }
+  .eq-mill {
+    width: 30px; height: 30px;
+    border-radius: 6px 6px 2px 2px;
+    position: relative;
+  }
+  .eq-mill::before {
+    content: ""; position: absolute;
+    top: 5px; left: 50%; transform: translateX(-50%);
+    width: 18px; height: 3px;
+    background: var(--bg-card);
+    border-radius: 2px;
+  }
+  .eq-hopper {
+    background: transparent !important;
+    border: none !important;
+    width: 0 !important; height: 0 !important;
+    border-left: 16px solid transparent !important;
+    border-right: 16px solid transparent !important;
+    border-top: 22px solid var(--ok) !important;
+    margin-top: 8px;
+  }
+  .flow-stage.warn .eq-hopper { border-top-color: var(--warn) !important; }
+  .eq-bin {
+    width: 28px; height: 30px;
+    border-radius: 14px 14px 3px 3px;
+  }
+  .eq-pack {
+    width: 30px; height: 28px;
+    border-radius: 3px 9px 3px 3px;
+  }
+  .eq-sifter {
+    width: 32px; height: 24px;
+    border-radius: 4px;
+    position: relative;
+  }
+  .eq-sifter::before {
+    content: ""; position: absolute;
+    top: 4px; left: 3px; right: 3px; height: 1px;
+    background: var(--bg-card);
+    box-shadow: 0 4px 0 var(--bg-card), 0 8px 0 var(--bg-card);
+  }
+  .flow-eq-name {
+    font-size: 9.5px; color: var(--text-secondary);
+    text-align: center; line-height: 1.2;
+    font-weight: 600;
+  }
+  .flow-tag-list {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    margin-top: 4px;
+    font-size: 9px;
+    color: var(--text-tertiary);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .flow-tag-list .tag-warn { color: var(--warn); }
+  .flow-tag-list .tag-ok { color: var(--ok); }
+
+  /* ============================================================
+     BOTTOM AI INSIGHT BAR
+     ============================================================ */
+  .ai-bar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(34,211,238,0.06), rgba(14,165,233,0.04));
+    border: 1px solid rgba(34,211,238,0.30);
+    box-shadow: 0 0 24px rgba(34,211,238,0.10), inset 0 1px 0 rgba(255,255,255,0.04);
+    position: relative;
+    overflow: hidden;
+  }
+  .ai-bar::before {
+    content: "";
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--teal-2), var(--teal));
+  }
+  .ai-bar-icon {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--teal-2), #0369a1);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    box-shadow: 0 0 18px var(--teal-glow);
+  }
+  .ai-bar-icon svg { width: 20px; height: 20px; }
+  .ai-bar-text { flex: 1; min-width: 0; }
+  .ai-bar-eyebrow {
+    font-size: 10px; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 800;
+    margin-bottom: 3px;
+  }
+  .ai-bar-msg {
+    font-size: 13.5px; color: var(--text-primary);
+    line-height: 1.45;
+  }
+  .ai-bar-msg b { color: var(--warn); font-weight: 700; }
+  .ai-bar-cta {
+    flex-shrink: 0;
+    padding: 10px 18px;
+    background: var(--teal-2);
+    color: #fff;
+    border: none; border-radius: 10px;
+    font-size: 12px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.10em;
+    cursor: pointer;
+    box-shadow: 0 0 16px rgba(14,165,233,0.30);
+    font-family: inherit;
+  }
+  .ai-bar-cta:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+  /* Mockup tag */
   .mockup-tag {
     position: fixed; bottom: 8px; right: 14px;
     z-index: 40;
-    font-size: 9px; color: var(--hai-text-tertiary);
+    font-size: 9px; color: var(--text-tertiary);
     text-transform: uppercase; letter-spacing: 0.25em;
-    background: var(--hai-surface-100);
-    border: 1px solid var(--hai-surface-border);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     padding: 4px 10px; border-radius: 4px;
     pointer-events: none;
   }
@@ -1041,19 +1020,18 @@
   <div class="live-pill">
     <span class="dot"></span>
     <span class="live-text">LIVE</span>
-    <span class="page-name">Hercules Atlas</span>
+    <span class="page-name">Hercules Atlas · Predictive Maintenance</span>
   </div>
 
   <div class="topbar-right">
     <div class="client-logo">SFM</div>
     <div class="client-logo">ASM</div>
     <div class="topbar-divider"></div>
-    <button class="lang-btn" title="Switch language">EN</button>
-    <button class="icon-btn" id="theme-toggle" title="Toggle theme">
-      <svg id="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      <svg id="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <button class="lang-btn">EN</button>
+    <button class="icon-btn" title="Theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
-    <div class="user-avatar" title="Sam">SH</div>
+    <div class="user-avatar">SH</div>
   </div>
 </header>
 
@@ -1075,10 +1053,6 @@
   <a class="nav-item" href="#">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/><line x1="15" y1="9" x2="15" y2="21"/></svg>
     <span>Table Reports</span>
-  </a>
-  <a class="nav-item" href="#">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-    <span>Job Logs</span>
   </a>
   <a class="nav-item" href="#">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -1107,16 +1081,16 @@
   </div>
 </aside>
 
-<!-- ============================== CONTENT (Atlas) ============================== -->
+<!-- ============================== CONTENT ============================== -->
 <main class="content">
 
   <!-- Tab bar -->
-  <div class="tab-bar" id="tab-bar">
-    <button class="tab-btn active" data-tab="production">
+  <div class="tab-bar">
+    <button class="tab-btn" data-tab="production">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       <span>Production</span>
     </button>
-    <button class="tab-btn" data-tab="pdm">
+    <button class="tab-btn active" data-tab="pdm">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
       <span>Predictive Maintenance</span>
       <span class="pill-badge">3</span>
@@ -1127,659 +1101,371 @@
     </button>
   </div>
 
-  <!-- =========================================================
-       TAB 1 — PRODUCTION
-       ========================================================= -->
-  <section class="tab-panel active" id="panel-production">
-
-    <!-- AI Insight bar -->
-    <div class="ai-insight">
-      <div class="ai-insight-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/></svg>
-      </div>
-      <div class="ai-insight-text">
-        <div class="ai-insight-eyebrow">Hercules AI · Production Insight</div>
-        <div class="ai-insight-msg">
-          On track to reach <span class="gold">108 tons</span> of flour by end of day. Energy cost per ton expected to improve to <b>1.31 OMR / ton</b> by EOD.
-        </div>
-      </div>
-      <div class="ai-insight-actions">
-        <button class="btn-pill">Why?</button>
-      </div>
-    </div>
-
-    <!-- KPI strip -->
-    <div class="kpi-strip">
-      <div class="kpi-card production">
-        <div class="kpi-name">Production</div>
-        <div class="kpi-value-row">
-          <span class="kpi-num gold num">108</span>
-          <span class="kpi-unit">tons (EOD forecast)</span>
-        </div>
-        <div class="kpi-foot">On track <span class="up">↑6 vs plan</span></div>
-      </div>
-      <div class="kpi-card energy">
-        <div class="kpi-name">Energy Cost</div>
-        <div class="kpi-value-row">
-          <span class="kpi-num num">1.31</span>
-          <span class="kpi-unit">OMR / ton (forecast)</span>
-        </div>
-        <div class="kpi-foot"><span class="down">↓7.7%</span> vs yesterday</div>
-      </div>
-      <div class="kpi-card risk">
-        <div class="kpi-name">Downtime Risk</div>
-        <div class="kpi-value-row">
-          <span class="kpi-num green num">Low</span>
-        </div>
-        <div class="kpi-foot">No critical alerts in next 24h</div>
-      </div>
-      <div class="kpi-card savings">
-        <div class="kpi-name">Monthly Savings</div>
-        <div class="kpi-value-row">
-          <span class="kpi-num gold num">2,461</span>
-          <span class="kpi-unit">OMR (accumulated)</span>
-        </div>
-        <div class="kpi-foot">Yield + energy + uptime gains</div>
-      </div>
-    </div>
-
-    <div class="prod-grid">
-
-      <!-- Real-time production list -->
-      <div class="card">
-        <div class="card-title">Real-Time Production</div>
-        <div class="rt-list">
-          <div class="rt-row">
-            <div class="rt-icon gold">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>
-            </div>
-            <div class="rt-text">
-              <div class="rt-label">Flour Output</div>
-              <div class="rt-val"><span class="num-mid num">6.64</span><span class="unit">t / h</span></div>
-            </div>
-          </div>
-          <div class="rt-row">
-            <div class="rt-icon amber">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-            </div>
-            <div class="rt-text">
-              <div class="rt-label">Bran Output</div>
-              <div class="rt-val"><span class="num-mid num">1.57</span><span class="unit">t / h</span></div>
-            </div>
-          </div>
-          <div class="rt-row">
-            <div class="rt-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="10"/></svg>
-            </div>
-            <div class="rt-text">
-              <div class="rt-label">Total Input</div>
-              <div class="rt-val"><span class="num-mid num">8.40</span><span class="unit">t / h</span></div>
-            </div>
-          </div>
-          <div class="rt-row">
-            <div class="rt-icon ok">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </div>
-            <div class="rt-text">
-              <div class="rt-label">Extraction Rate</div>
-              <div class="rt-val"><span class="num-mid num">79.1</span><span class="unit">%</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Production forecast chart -->
-      <div class="card">
-        <div class="card-title-row">
-          <div class="card-title">Production Forecast — Cumulative Tons Today</div>
-          <div class="chart-legend">
-            <div class="legend-item"><span class="legend-swatch actual"></span>Actual</div>
-            <div class="legend-item"><span class="legend-swatch forecast"></span>AI forecast</div>
-          </div>
-        </div>
-        <div class="chart-svg-wrap">
-          <svg class="chart-svg" id="prod-forecast-chart" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
-          <div id="prod-now-pill" class="now-pill amber">NOW</div>
-        </div>
-        <div class="chart-footer">
-          <span>00:00</span><span>06:00</span><span>12:00</span>
-          <span style="color:var(--hai-money);">14:32</span>
-          <span>18:00</span><span>24:00</span>
-        </div>
-      </div>
-
-      <!-- Energy submeters -->
-      <div class="card">
-        <div class="card-title">Energy Submeters</div>
-        <div class="submeter-grid">
-          <div class="submeter-card">
-            <div class="submeter-name">M30</div>
-            <div class="submeter-value"><span class="num">142</span><span class="unit">kW</span></div>
-            <div class="submeter-pf">PF <b>0.96</b></div>
-            <div class="submeter-status"><span class="dot"></span>Normal</div>
-          </div>
-          <div class="submeter-card">
-            <div class="submeter-name">M31</div>
-            <div class="submeter-value"><span class="num">188</span><span class="unit">kW</span></div>
-            <div class="submeter-pf">PF <b>0.95</b></div>
-            <div class="submeter-status"><span class="dot"></span>Normal</div>
-          </div>
-          <div class="submeter-card">
-            <div class="submeter-name">C32</div>
-            <div class="submeter-value"><span class="num">315</span><span class="unit">kW</span></div>
-            <div class="submeter-pf">PF <b>0.94</b></div>
-            <div class="submeter-status"><span class="dot"></span>Normal</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Production totalizers today -->
-      <div class="card">
-        <div class="card-title">Production Totalizers Today</div>
-        <div class="totalizer-row">
-          <div class="totalizer-block flour">
-            <div class="totalizer-label">Flour</div>
-            <div class="totalizer-value"><span class="num-big num">68.4</span><span class="unit">tons</span></div>
-            <div class="totalizer-foot">63% of EOD forecast</div>
-          </div>
-          <div class="totalizer-block bran">
-            <div class="totalizer-label">Bran</div>
-            <div class="totalizer-value"><span class="num-big num">2.3</span><span class="unit">tons</span></div>
-            <div class="totalizer-foot">On track for 18.5 t EOD</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
+  <!-- Production placeholder -->
+  <section class="tab-panel" id="panel-production">
+    <div class="placeholder-card">Production tab — coming soon</div>
   </section>
 
   <!-- =========================================================
-       TAB 2 — PREDICTIVE MAINTENANCE
+       TAB — PREDICTIVE MAINTENANCE
        ========================================================= -->
-  <section class="tab-panel" id="panel-pdm">
+  <section class="tab-panel active" id="panel-pdm">
+    <div class="pdm-grid">
 
-    <!-- AI Insight bar (amber) -->
-    <div class="ai-insight amber">
-      <div class="ai-insight-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      </div>
-      <div class="ai-insight-text">
-        <div class="ai-insight-eyebrow">Hercules AI · Predictive Maintenance</div>
-        <div class="ai-insight-msg">
-          <span class="crit">1 Critical</span>, <b>2 Monitor</b> alerts. <b>RM3</b> shows vibration increase. <b>Phase imbalance</b> detected on M31.
-        </div>
-      </div>
-      <div class="ai-insight-actions">
-        <button class="btn-pill amber">View All Alerts (3)</button>
-        <button class="btn-pill">View Full Insight</button>
-      </div>
-    </div>
-
-    <!-- Process Flow -->
-    <div class="card pdm-flow-card">
-      <div class="card-title">Process Flow</div>
-      <div class="flow-stages">
-
-        <div class="flow-stage">
-          <div class="flow-stage-label">Intake</div>
-          <div class="equipment-row">
-            <div class="equipment normal">
-              <div class="equipment-shape"><div class="eq-hopper"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Intake<br/>Hopper</div>
-            </div>
+      <!-- ============== TOP ROW ============== -->
+      <!-- Health Score ring -->
+      <div class="card ring-card">
+        <div class="card-eyebrow">Plant-Wide</div>
+        <div class="card-title">Health Score</div>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="42"/>
+            <circle class="ring-fg amber" cx="50" cy="50" r="42"
+              stroke-dasharray="263.89" stroke-dashoffset="100.28"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-num amber num">62</div>
+            <div class="ring-sub">/ 100</div>
           </div>
         </div>
-
-        <div class="flow-stage">
-          <div class="flow-stage-label">Cleaning</div>
-          <div class="equipment-row">
-            <div class="equipment normal">
-              <div class="equipment-shape"><div class="eq-mill"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Pre<br/>Cleaner</div>
-            </div>
-            <div class="equipment normal">
-              <div class="equipment-shape"><div class="eq-mill"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Destoner</div>
-            </div>
-            <div class="equipment normal">
-              <div class="equipment-shape"><div class="eq-mill"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Scourer</div>
-            </div>
-          </div>
+        <div class="ring-status amber">One area needs attention</div>
+        <div class="ring-detail">M31 grinding section shows rising imbalance.</div>
+        <div class="scale-bar mid"></div>
+        <div class="scale-labels">
+          <span>Healthy</span><span>Attention</span><span>Critical</span>
         </div>
-
-        <div class="flow-stage">
-          <div class="flow-stage-label">Grinding</div>
-          <div class="equipment-row">
-            <div class="equipment normal">
-              <div class="equipment-shape"><div class="eq-mill"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Roller<br/>Mill 1</div>
-            </div>
-            <div class="equipment normal">
-              <div class="equipment-shape"><div class="eq-mill"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Roller<br/>Mill 2</div>
-            </div>
-            <div class="equipment critical">
-              <div class="equipment-shape"><div class="eq-mill"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Roller<br/>Mill 3</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="flow-stage">
-          <div class="flow-stage-label">Sifting</div>
-          <div class="equipment-row">
-            <div class="equipment monitor">
-              <div class="equipment-shape"><div class="eq-sifter"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Plansifter 1</div>
-            </div>
-            <div class="equipment normal">
-              <div class="equipment-shape"><div class="eq-sifter"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Plansifter 2</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="flow-stage">
-          <div class="flow-stage-label">Blending · Packing</div>
-          <div class="equipment-row">
-            <div class="equipment normal">
-              <div class="equipment-shape"><div class="eq-bin"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Blending<br/>Bin</div>
-            </div>
-            <div class="equipment normal">
-              <div class="equipment-shape"><div class="eq-pack"></div></div>
-              <div class="equipment-dot"></div>
-              <div class="equipment-name">Packing<br/>Line</div>
-            </div>
-          </div>
-        </div>
-
       </div>
-      <div class="flow-legend">
-        <div class="flow-legend-item"><span class="flow-legend-dot ok"></span>Normal</div>
-        <div class="flow-legend-item"><span class="flow-legend-dot warn"></span>Monitor</div>
-        <div class="flow-legend-item"><span class="flow-legend-dot warn" style="opacity:.7;"></span>At Risk</div>
-        <div class="flow-legend-item"><span class="flow-legend-dot crit"></span>Critical</div>
-        <div class="flow-legend-item"><span class="flow-legend-dot idle"></span>Offline</div>
+
+      <!-- Next Maintenance -->
+      <div class="card ring-card">
+        <div class="card-eyebrow">Predicted</div>
+        <div class="card-title">Next Maintenance</div>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="42"/>
+            <circle class="ring-fg amber" cx="50" cy="50" r="42"
+              stroke-dasharray="263.89" stroke-dashoffset="118.75"/>
+          </svg>
+          <div class="ring-center">
+            <div class="next-num num">~17</div>
+            <div class="ring-sub">days away</div>
+          </div>
+        </div>
+        <div class="ring-status amber">Schedule before May 31</div>
+        <div class="ring-detail">M31 RM3 service window opens.</div>
+        <div class="scale-bar early" style="background: linear-gradient(90deg, var(--ok) 0%, var(--ok) 50%, var(--warn) 50%, var(--warn) 80%, var(--crit) 80%);"></div>
+        <div class="scale-labels">
+          <span>Plenty of time</span><span>Soon</span><span>Overdue</span>
+        </div>
       </div>
-    </div>
 
-    <div class="pdm-bottom-grid">
+      <!-- Why Atlas is Concerned -->
+      <div class="card amber-border why-card">
+        <div class="why-icon-row">
+          <div class="why-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div>
+            <div class="card-eyebrow">Hercules AI</div>
+            <div class="card-title">Why Atlas is Concerned</div>
+          </div>
+        </div>
+        <div class="why-msg">
+          Phase 2 current in <b>M31</b> is <b>12% higher</b> than L1 and L3, and has been <b>rising for 14 days</b>. This pattern usually precedes mechanical wear in the grinding section.
+        </div>
+        <div class="why-tag">Anomaly detected · 14 days</div>
+      </div>
 
-      <!-- Trends & Predictions chart -->
-      <div class="card">
+      <!-- ============== MIDDLE ROW ============== -->
+      <!-- Asset Focus M31 (motor) -->
+      <div class="card asset-card">
         <div class="card-title-row">
-          <div class="card-title">Trends &amp; Predictions (24H)</div>
-          <div class="chart-legend">
-            <div class="legend-item"><span class="legend-swatch line-blue"></span>Throughput (t/h)</div>
-            <div class="legend-item"><span class="legend-swatch line-green"></span>Yield (%)</div>
-            <div class="legend-item"><span class="legend-swatch line-orange"></span>Temperature (°C)</div>
+          <div>
+            <div class="card-eyebrow">Asset Focus</div>
+            <div class="card-title">M31 — Roller Mill 3 Motor</div>
           </div>
+          <span class="asset-tag">Live · Monitor</span>
         </div>
-        <div class="chart-svg-wrap">
-          <svg class="chart-svg" id="pdm-trends-chart" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
-        </div>
-        <div class="chart-footer">
-          <span>10:00</span><span>14:00</span><span>18:00</span>
-          <span style="color:var(--accent);">22:00 · Now</span>
-          <span>02:00</span><span>06:00</span><span>10:00</span>
+
+        <div class="motor-stage">
+          <div class="motor-floor"></div>
+          <div class="motor-glow"></div>
+
+          <div class="motor-mount"></div>
+
+          <div class="motor-body">
+            <div class="motor-shaft-l"></div>
+            <div class="motor-housing"></div>
+            <div class="motor-shaft-r"></div>
+          </div>
+
+          <div class="motor-stats">
+            <div class="motor-stat-pill">
+              <div class="num num-p">188 kW</div>
+              <div style="font-size:9px; letter-spacing:0.10em; text-transform:uppercase; color:var(--text-tertiary); margin-top:2px;">Power</div>
+            </div>
+            <div class="motor-stat-pill">
+              <div class="num num-p">PF 0.95</div>
+              <div style="font-size:9px; letter-spacing:0.10em; text-transform:uppercase; color:var(--text-tertiary); margin-top:2px;">Power factor</div>
+            </div>
+          </div>
+
+          <div class="motor-callout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Phase 2 draws <b>12% higher</b> than L1 and L3.</span>
+          </div>
         </div>
       </div>
 
-      <!-- Equipment Health table -->
+      <!-- 3-phase chart -->
+      <div class="card phase-card">
+        <div class="card-eyebrow">M31 — Last 60 seconds</div>
+        <div class="card-title">3-Phase Current</div>
+        <div class="phase-sub">Phase 2 is 12% higher than L1 and L3.</div>
+
+        <div class="phase-chart-wrap">
+          <div class="phase-yaxis">
+            <span>140</span><span>105</span><span>70</span><span>35</span><span>0</span>
+          </div>
+          <div class="phase-chart">
+            <div class="phase-grid-line" style="bottom: 25%;"></div>
+            <div class="phase-grid-line" style="bottom: 50%;"></div>
+            <div class="phase-grid-line" style="bottom: 75%;"></div>
+
+            <div class="phase-bar-col">
+              <div class="phase-bar l1">
+                <span class="phase-val num">112 A</span>
+                <span class="phase-label">L1</span>
+              </div>
+            </div>
+            <div class="phase-bar-col">
+              <div class="phase-bar l2">
+                <span class="phase-val num">126 A</span>
+                <span class="phase-label">L2</span>
+              </div>
+            </div>
+            <div class="phase-bar-col">
+              <div class="phase-bar l3">
+                <span class="phase-val num">112 A</span>
+                <span class="phase-label">L3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phase-banner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Phase 2 is <b>12%</b> higher
+        </div>
+      </div>
+
+      <!-- Stacked summaries -->
+      <div class="card stacked-card">
+        <div class="stacked-section">
+          <div class="stacked-label">What is happening now?</div>
+          <div class="now-row">
+            <div class="now-cell warn">
+              <div class="now-cell-name">M31</div>
+              <div class="now-cell-status">Warning</div>
+            </div>
+            <div class="now-cell ok">
+              <div class="now-cell-name">M30</div>
+              <div class="now-cell-status">Healthy</div>
+            </div>
+            <div class="now-cell ok">
+              <div class="now-cell-name">C32</div>
+              <div class="now-cell-status">Healthy</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stacked-section">
+          <div class="stacked-label">When to act?</div>
+          <div class="timeline">
+            <span class="timeline-pin" style="left: 56%;">17 days</span>
+          </div>
+          <div class="timeline-labels">
+            <span>Today</span><span>30 d</span><span>60 d</span>
+          </div>
+        </div>
+
+        <div class="stacked-section">
+          <div class="stacked-label">Why?</div>
+          <div class="why-trend-wrap">
+            <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="trendGrad" x1="0" x2="1">
+                  <stop offset="0" stop-color="var(--text-tertiary)"/>
+                  <stop offset="1" stop-color="var(--warn)"/>
+                </linearGradient>
+              </defs>
+              <polyline points="0,28 14,27 28,26 42,26 56,25 70,24 84,23 98,22 112,20 126,19 140,17 154,15 168,12 182,9 196,6"
+                fill="none" stroke="url(#trendGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="196" cy="6" r="3.2" fill="var(--warn)" stroke="var(--bg-card)" stroke-width="1"/>
+            </svg>
+            <div class="why-trend-pct num">+12%</div>
+          </div>
+          <div style="font-size:10.5px; color:var(--text-tertiary); margin-top:4px;">14-day rising trend on Phase 2 current</div>
+        </div>
+      </div>
+
+      <!-- ============== BOTTOM ROW ============== -->
+      <!-- Anomalies 30 days -->
+      <div class="card anom-card">
+        <div class="card-eyebrow">Last 30 Days</div>
+        <div class="card-title">Anomalies</div>
+        <div class="anom-totals">
+          <span class="anom-total-num num">13</span>
+          <span class="anom-total-lbl">events</span>
+        </div>
+        <div class="anom-cat-list">
+          <div class="anom-cat">
+            <div class="anom-cat-label">PF Drops</div>
+            <div class="anom-cat-bar-wrap"><div class="anom-cat-bar warn" style="width: 100%;"></div></div>
+            <div class="anom-cat-num num">8</div>
+          </div>
+          <div class="anom-cat">
+            <div class="anom-cat-label">Stuck Tags</div>
+            <div class="anom-cat-bar-wrap"><div class="anom-cat-bar info" style="width: 62%;"></div></div>
+            <div class="anom-cat-num num">5</div>
+          </div>
+          <div class="anom-cat">
+            <div class="anom-cat-label">Phase Imbalance</div>
+            <div class="anom-cat-bar-wrap"><div class="anom-cat-bar crit" style="width: 38%;"></div></div>
+            <div class="anom-cat-num num">3</div>
+          </div>
+          <div class="anom-cat">
+            <div class="anom-cat-label">High Vibration</div>
+            <div class="anom-cat-bar-wrap"><div class="anom-cat-bar crit" style="width: 25%;"></div></div>
+            <div class="anom-cat-num num">2</div>
+          </div>
+        </div>
+        <div class="anom-spark-row">
+          <span class="anom-spark-lbl">Trend</span>
+          <svg width="100%" height="22" viewBox="0 0 200 22" preserveAspectRatio="none" style="flex:1;">
+            <polyline points="0,16 20,15 40,17 60,14 80,15 100,12 120,11 140,9 160,7 180,5 200,3"
+              fill="none" stroke="var(--warn)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span style="font-size:11px; color:var(--warn); font-weight:800;">↑ Rising</span>
+        </div>
+      </div>
+
+      <!-- Recent events table -->
       <div class="card">
-        <div class="card-title">Equipment Health</div>
-        <table class="eq-table">
+        <div class="card-eyebrow">Anomaly Log</div>
+        <div class="card-title" style="margin-bottom:8px;">Recent Anomaly Events</div>
+        <table class="ev-table">
           <thead>
-            <tr>
-              <th>Equipment</th><th>Health</th><th>Status</th><th>Predicted Failure</th>
-            </tr>
+            <tr><th>Time</th><th>Asset</th><th>Type</th><th>Severity</th></tr>
           </thead>
           <tbody>
             <tr>
-              <td>Roller Mill 3</td>
-              <td>
-                <div class="health-bar">
-                  <div class="health-bar-track"><div class="health-bar-fill" style="width:42%; background:var(--hai-status-crit-600);"></div></div>
-                  <span class="health-num crit num">42%</span>
-                </div>
-              </td>
-              <td><span class="status-pill crit">Critical</span></td>
-              <td>May 26, 2026</td>
+              <td><span class="ev-time">2 min ago</span></td>
+              <td><span class="ev-asset">M31</span></td>
+              <td>Phase Imbalance</td>
+              <td><span class="ev-severity crit"><span class="dot"></span>Critical</span></td>
             </tr>
             <tr>
-              <td>Plansifter 1</td>
-              <td>
-                <div class="health-bar">
-                  <div class="health-bar-track"><div class="health-bar-fill" style="width:65%; background:var(--hai-status-warn-600);"></div></div>
-                  <span class="health-num warn num">65%</span>
-                </div>
-              </td>
-              <td><span class="status-pill warn">Monitor</span></td>
-              <td>May 30, 2026</td>
+              <td><span class="ev-time">5 min ago</span></td>
+              <td><span class="ev-asset">M31</span></td>
+              <td>High Vibration</td>
+              <td><span class="ev-severity crit"><span class="dot"></span>Critical</span></td>
             </tr>
             <tr>
-              <td>M31 Submeter</td>
-              <td>
-                <div class="health-bar">
-                  <div class="health-bar-track"><div class="health-bar-fill" style="width:71%; background:var(--hai-status-warn-600);"></div></div>
-                  <span class="health-num warn num">71%</span>
-                </div>
-              </td>
-              <td><span class="status-pill warn">Monitor</span></td>
-              <td>Jun 02, 2026</td>
+              <td><span class="ev-time">18 min ago</span></td>
+              <td><span class="ev-asset">Bran Tot.</span></td>
+              <td>Stuck Totalizer</td>
+              <td><span class="ev-severity warn"><span class="dot"></span>Warning</span></td>
             </tr>
             <tr>
-              <td>Roller Mill 1</td>
-              <td>
-                <div class="health-bar">
-                  <div class="health-bar-track"><div class="health-bar-fill" style="width:85%; background:var(--hai-status-ok-600);"></div></div>
-                  <span class="health-num ok num">85</span>
-                </div>
-              </td>
-              <td><span class="status-pill ok">Normal</span></td>
-              <td>—</td>
+              <td><span class="ev-time">1 h ago</span></td>
+              <td><span class="ev-asset">M31</span></td>
+              <td>PF Drop</td>
+              <td><span class="ev-severity warn"><span class="dot"></span>Warning</span></td>
             </tr>
             <tr>
-              <td>Blending Bin</td>
-              <td>
-                <div class="health-bar">
-                  <div class="health-bar-track"><div class="health-bar-fill" style="width:92%; background:var(--hai-status-ok-600);"></div></div>
-                  <span class="health-num ok num">92</span>
-                </div>
-              </td>
-              <td><span class="status-pill ok">Normal</span></td>
-              <td>—</td>
-            </tr>
-            <tr>
-              <td>Packing Line</td>
-              <td>
-                <div class="health-bar">
-                  <div class="health-bar-track"><div class="health-bar-fill" style="width:96%; background:var(--hai-status-ok-600);"></div></div>
-                  <span class="health-num ok num">96</span>
-                </div>
-              </td>
-              <td><span class="status-pill ok">Normal</span></td>
-              <td>—</td>
+              <td><span class="ev-time">3 h ago</span></td>
+              <td><span class="ev-asset">C32</span></td>
+              <td>PF Drop</td>
+              <td><span class="ev-severity info"><span class="dot"></span>Info</span></td>
             </tr>
           </tbody>
         </table>
       </div>
 
-    </div>
-
-    <!-- Latest anomalies strip -->
-    <div class="card pdm-anomalies">
-      <div class="card-title">Latest Anomalies</div>
-      <div class="anomaly-strip">
-        <div class="anomaly-card">
-          <span class="anomaly-dot"></span>
-          <div class="anomaly-text">
-            <div class="anomaly-title">Phase Imbalance</div>
-            <div class="anomaly-meta">M31 Submeter · <span class="ago">2 min ago</span></div>
+      <!-- Process flow context -->
+      <div class="card flow-card">
+        <div class="card-eyebrow">Where on the line</div>
+        <div class="card-title" style="margin-bottom:8px;">Process Context</div>
+        <div class="flow-stages">
+          <div class="flow-stage ok">
+            <div class="flow-stage-label">Intake</div>
+            <div class="flow-eq-shape"><div class="eq-hopper"></div></div>
+            <div class="flow-eq-name">Hopper</div>
+            <div class="flow-tag-list"><span class="tag-ok">M30 ✓</span></div>
+          </div>
+          <span class="flow-arrow">›</span>
+          <div class="flow-stage ok">
+            <div class="flow-stage-label">Cleaning</div>
+            <div class="flow-eq-shape"><div class="eq-mill"></div></div>
+            <div class="flow-eq-name">Cleaner</div>
+          </div>
+          <span class="flow-arrow">›</span>
+          <div class="flow-stage warn">
+            <div class="flow-stage-label">Grinding</div>
+            <div class="flow-eq-shape"><div class="eq-mill"></div></div>
+            <div class="flow-eq-name">RM3 / M31</div>
+            <div class="flow-tag-list"><span class="tag-warn">M31 ⚠</span></div>
+          </div>
+          <span class="flow-arrow">›</span>
+          <div class="flow-stage ok">
+            <div class="flow-stage-label">Sifting</div>
+            <div class="flow-eq-shape"><div class="eq-sifter"></div></div>
+            <div class="flow-eq-name">Plansifter</div>
+          </div>
+          <span class="flow-arrow">›</span>
+          <div class="flow-stage ok">
+            <div class="flow-stage-label">Blending</div>
+            <div class="flow-eq-shape"><div class="eq-bin"></div></div>
+            <div class="flow-eq-name">Bin</div>
+          </div>
+          <span class="flow-arrow">›</span>
+          <div class="flow-stage ok">
+            <div class="flow-stage-label">Packing</div>
+            <div class="flow-eq-shape"><div class="eq-pack"></div></div>
+            <div class="flow-eq-name">Line</div>
+            <div class="flow-tag-list"><span class="tag-ok">C32 ✓</span></div>
           </div>
         </div>
-        <div class="anomaly-card">
-          <span class="anomaly-dot"></span>
-          <div class="anomaly-text">
-            <div class="anomaly-title">High Vibration</div>
-            <div class="anomaly-meta">Roller Mill 3 · <span class="ago">5 min ago</span></div>
-          </div>
-        </div>
-        <div class="anomaly-card warn">
-          <span class="anomaly-dot"></span>
-          <div class="anomaly-text">
-            <div class="anomaly-title">Stuck Totalizer</div>
-            <div class="anomaly-meta">Bran Totalizer · <span class="ago">18 min ago</span></div>
-          </div>
-        </div>
-        <button class="btn-pill primary">View All Anomalies</button>
       </div>
-    </div>
 
+      <!-- ============== AI INSIGHT BAR ============== -->
+      <div class="ai-bar">
+        <div class="ai-bar-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div class="ai-bar-text">
+          <div class="ai-bar-eyebrow">Atlas AI Insight</div>
+          <div class="ai-bar-msg">
+            The <b>M31 imbalance</b> is consistent with increasing mechanical load on the grinding section. Inspecting the bearing and roll-gap geometry within the next <b>2&ndash;3 weeks</b> will avoid an unplanned stop and protect end-of-month yield.
+          </div>
+        </div>
+        <button class="ai-bar-cta">View AI Recommendations →</button>
+      </div>
+
+    </div>
   </section>
 
-  <!-- =========================================================
-       TAB 3 — YIELD OPTIMIZATION
-       ========================================================= -->
+  <!-- Yield placeholder -->
   <section class="tab-panel" id="panel-yield">
-
-    <!-- AI Insight bar (green) -->
-    <div class="ai-insight green">
-      <div class="ai-insight-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-      </div>
-      <div class="ai-insight-text">
-        <div class="ai-insight-eyebrow">Hercules AI · Yield Optimization</div>
-        <div class="ai-insight-msg">
-          Optimizing <b>Roll Gap on RM3</b> can increase yield by up to <b>1.8%</b>. Potential additional <span class="gold">2.46 tons</span> of flour by EOD.
-        </div>
-      </div>
-      <div class="ai-insight-actions">
-        <button class="btn-pill green">Apply Recommendation</button>
-      </div>
-    </div>
-
-    <div class="yield-top-row">
-
-      <!-- Current Yield -->
-      <div class="card yield-ring-card">
-        <div class="card-title">Current Yield</div>
-        <div class="ring-wrap">
-          <svg viewBox="0 0 100 100">
-            <circle class="ring-bg" cx="50" cy="50" r="42"/>
-            <circle class="ring-fg cyan" cx="50" cy="50" r="42"
-              stroke-dasharray="263.89" stroke-dashoffset="69.7"/>
-          </svg>
-          <div class="ring-center">
-            <div class="ring-num cyan num">73.6<span style="font-size:18px;">%</span></div>
-            <div class="ring-sub">Now</div>
-          </div>
-        </div>
-        <div class="yield-detail-list">
-          <div>Flour Extraction: <b>79.1%</b></div>
-          <div>Bran Split: <b>20.9%</b></div>
-        </div>
-      </div>
-
-      <!-- AI Optimized Yield -->
-      <div class="card yield-ring-card">
-        <div class="card-title">AI Optimized Yield</div>
-        <div class="ring-wrap">
-          <svg viewBox="0 0 100 100">
-            <circle class="ring-bg" cx="50" cy="50" r="42"/>
-            <circle class="ring-fg green" cx="50" cy="50" r="42"
-              stroke-dasharray="263.89" stroke-dashoffset="64.95"/>
-          </svg>
-          <div class="ring-center">
-            <div class="ring-num green num">75.4<span style="font-size:18px;">%</span></div>
-            <div class="ring-sub">Target</div>
-          </div>
-        </div>
-        <div class="yield-improvement">▲ 1.8% Potential Improvement</div>
-      </div>
-
-      <!-- Top Recommendation -->
-      <div class="card reco-card">
-        <div class="reco-eyebrow">Top Recommendation</div>
-        <div class="reco-title">Adjust Roll Gap on RM3</div>
-        <div class="reco-sub">Increase roll gap by 0.15 mm</div>
-        <div class="reco-impact">
-          <div class="reco-impact-cell">
-            <div class="reco-impact-label">Expected Yield</div>
-            <div class="reco-impact-value">+1.8%</div>
-          </div>
-          <div class="reco-impact-cell">
-            <div class="reco-impact-label">Additional Flour by EOD</div>
-            <div class="reco-impact-value gold">+2.46 t</div>
-          </div>
-        </div>
-        <div class="reco-actions">
-          <button class="btn-pill">Simulate Scenario</button>
-          <button class="btn-pill green">Apply Recommendation</button>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="yield-bottom-row">
-
-      <!-- Current Process Inputs -->
-      <div class="card">
-        <div class="card-title">Current Process Inputs</div>
-        <div class="input-list">
-          <div class="input-row">
-            <span class="input-label">Feed Rate</span>
-            <span class="input-value"><span class="num">8.40</span><span class="unit">t / h</span></span>
-          </div>
-          <div class="input-row">
-            <span class="input-label">Moisture Content</span>
-            <span class="input-value"><span class="num">13.2</span><span class="unit">%</span></span>
-          </div>
-          <div class="input-row">
-            <span class="input-label">Inlet Temperature</span>
-            <span class="input-value"><span class="num">28.4</span><span class="unit">°C</span></span>
-          </div>
-          <div class="input-row">
-            <span class="input-label">Outlet Temperature</span>
-            <span class="input-value"><span class="num">42.1</span><span class="unit">°C</span></span>
-          </div>
-          <div class="input-row">
-            <span class="input-label">Energy / Ton</span>
-            <span class="input-value"><span class="num">1.42</span><span class="unit">OMR / t</span></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Per-Recipe Performance -->
-      <div class="card">
-        <div class="card-title-row">
-          <div class="card-title">Per-Recipe Performance (30 Days)</div>
-          <a class="card-link" href="#">View All Recipes →</a>
-        </div>
-        <table class="recipe-table">
-          <thead>
-            <tr>
-              <th>Recipe / Blend ID</th>
-              <th>Avg Yield (%)</th>
-              <th>Energy / Ton (OMR)</th>
-              <th>Trend</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><div class="recipe-name"><span class="id">RCP-001</span><span class="desc">APF Baseline</span></div></td>
-              <td><span class="num">73.6</span></td>
-              <td><span class="num">1.42</span></td>
-              <td>
-                <svg class="sparkline" width="80" height="22" viewBox="0 0 80 22">
-                  <polyline points="2,14 14,12 26,15 38,11 50,13 62,10 74,9" fill="none" stroke="var(--hai-status-ok-600)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="recipe-name"><span class="id">RCP-002</span><span class="desc">High Extraction</span></div></td>
-              <td><span class="num">74.8</span></td>
-              <td><span class="num">1.51</span></td>
-              <td>
-                <svg class="sparkline" width="80" height="22" viewBox="0 0 80 22">
-                  <polyline points="2,16 14,13 26,11 38,12 50,9 62,8 74,6" fill="none" stroke="var(--hai-status-ok-600)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="recipe-name"><span class="id">RCP-003</span><span class="desc">Premium</span></div></td>
-              <td><span class="num">75.4</span></td>
-              <td><span class="num">1.48</span></td>
-              <td>
-                <svg class="sparkline" width="80" height="22" viewBox="0 0 80 22">
-                  <polyline points="2,12 14,10 26,11 38,8 50,9 62,7 74,5" fill="none" stroke="var(--hai-status-ok-600)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="recipe-name"><span class="id">RCP-004</span><span class="desc">Cost Optimized</span></div></td>
-              <td><span class="num">72.9</span></td>
-              <td><span class="num">1.36</span></td>
-              <td>
-                <svg class="sparkline" width="80" height="22" viewBox="0 0 80 22">
-                  <polyline points="2,10 14,12 26,11 38,13 50,12 62,14 74,13" fill="none" stroke="var(--hai-status-warn-600)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Flow Rates -->
-      <div class="card">
-        <div class="card-title">Flow Rates</div>
-        <div class="input-list">
-          <div class="input-row">
-            <span class="input-label">Intake Flow</span>
-            <span class="input-value"><span class="num">8.40</span><span class="unit">t / h</span></span>
-          </div>
-          <div class="input-row">
-            <span class="input-label">Mill Discharge</span>
-            <span class="input-value"><span class="num">6.64</span><span class="unit">t / h</span></span>
-          </div>
-          <div class="input-row">
-            <span class="input-label">Bran Flow</span>
-            <span class="input-value"><span class="num">1.57</span><span class="unit">t / h</span></span>
-          </div>
-          <div class="input-row">
-            <span class="input-label">Recycle Flow</span>
-            <span class="input-value"><span class="num">0.19</span><span class="unit">t / h</span></span>
-          </div>
-          <div class="input-row">
-            <span class="input-label">Air Flow</span>
-            <span class="input-value"><span class="num">12,450</span><span class="unit">m³ / h</span></span>
-          </div>
-        </div>
-      </div>
-
-    </div>
+    <div class="placeholder-card">Yield Optimization tab — coming soon</div>
   </section>
 
 </main>
 
-<div class="mockup-tag">Hercules Atlas · Demo Mockup · 1920×1080</div>
+<div class="mockup-tag">Hercules Atlas · PdM Demo · 1920×1080</div>
 
 <script>
-  // ============== Theme toggle ==============
-  const root = document.documentElement;
-  const moon = document.getElementById('moon-icon');
-  const sun = document.getElementById('sun-icon');
-  function setTheme(theme) {
-    if (theme === 'light') {
-      root.classList.remove('dark');
-      root.setAttribute('data-theme', 'light');
-      moon.style.display = 'none';
-      sun.style.display = 'block';
-    } else {
-      root.classList.add('dark');
-      root.setAttribute('data-theme', 'dark');
-      moon.style.display = 'block';
-      sun.style.display = 'none';
-    }
-    setTimeout(() => { drawAllCharts(); placePills(); }, 30);
-  }
-  document.getElementById('theme-toggle').addEventListener('click', () => {
-    setTheme(root.classList.contains('dark') ? 'light' : 'dark');
-  });
-
-  // ============== Tab switching ==============
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const target = btn.dataset.tab;
@@ -1787,248 +1473,8 @@
       document.querySelectorAll('.tab-panel').forEach(p => {
         p.classList.toggle('active', p.id === 'panel-' + target);
       });
-      setTimeout(() => { drawAllCharts(); placePills(); }, 30);
     });
   });
-
-  // ============== SVG helper ==============
-  const NS = 'http://www.w3.org/2000/svg';
-  function el(tag, attrs){
-    const e = document.createElementNS(NS, tag);
-    for (const k in attrs) e.setAttribute(k, attrs[k]);
-    return e;
-  }
-  function tokColor(name){
-    return getComputedStyle(root).getPropertyValue(name).trim() || '#888';
-  }
-
-  // ============== PRODUCTION FORECAST CHART ==============
-  function drawProdForecast() {
-    const svg = document.getElementById('prod-forecast-chart');
-    if (!svg) return;
-    svg.innerHTML = '';
-    const W = 800, H = 220;
-    const padL = 44, padR = 14, padT = 10, padB = 22;
-    const innerW = W - padL - padR;
-    const innerH = H - padT - padB;
-    const HOURS = 24;
-    const NOW_H = 14.53;
-
-    const cum = [];
-    let total = 0;
-    for (let h = 0; h <= HOURS; h++) {
-      let rate = 0;
-      if (h >= 6 && h < 11) rate = 6.5;
-      else if (h >= 11 && h < 12) rate = 3.2;
-      else if (h >= 12 && h < 14.5) rate = 7.0;
-      total += rate;
-      cum.push({ h, t: total });
-    }
-    const actualPts = cum.filter(p => p.h <= Math.floor(NOW_H));
-    const before = cum[Math.floor(NOW_H)];
-    const after = cum[Math.floor(NOW_H) + 1];
-    const nowT = before.t + (after.t - before.t) * (NOW_H - Math.floor(NOW_H));
-    actualPts.push({ h: NOW_H, t: nowT });
-
-    const fcPts = [{ h: NOW_H, t: nowT }];
-    for (let h = Math.ceil(NOW_H); h <= HOURS; h++) {
-      let rate = 0;
-      if (h <= 22) rate = 6.6;
-      const last = fcPts[fcPts.length - 1];
-      fcPts.push({ h, t: last.t + rate * (h - last.h) });
-    }
-
-    const yMin = 0, yMax = 120;
-    const xAt = h => padL + (h / HOURS) * innerW;
-    const yAt = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
-
-    const tertiary = tokColor('--hai-text-tertiary');
-    const gridStroke = tokColor('--hai-surface-border');
-
-    [0, 30, 60, 90, 120].forEach(v => {
-      svg.appendChild(el('line', {
-        x1: padL, x2: W - padR, y1: yAt(v), y2: yAt(v),
-        stroke: gridStroke, 'stroke-width': '1', 'stroke-dasharray': '3,4', opacity: 0.6
-      }));
-      const lbl = el('text', {
-        x: padL - 6, y: yAt(v) + 3,
-        'text-anchor': 'end', 'font-size': '9.5', fill: tertiary
-      });
-      lbl.textContent = v;
-      svg.appendChild(lbl);
-    });
-
-    // Forecast band fill
-    const bandPts = ['M ' + xAt(NOW_H) + ' ' + yAt(0)];
-    fcPts.forEach(p => bandPts.push('L ' + xAt(p.h) + ' ' + yAt(p.t)));
-    bandPts.push('L ' + xAt(HOURS) + ' ' + yAt(0) + ' Z');
-    svg.appendChild(el('path', {
-      d: bandPts.join(' '),
-      fill: tokColor('--hai-status-ok-600'),
-      opacity: 0.10
-    }));
-
-    // Actual line (teal)
-    const actualPath = actualPts.map((p, i) => (i === 0 ? 'M ' : 'L ') + xAt(p.h) + ' ' + yAt(p.t)).join(' ');
-    svg.appendChild(el('path', {
-      d: actualPath,
-      fill: 'none',
-      stroke: tokColor('--accent-2'),
-      'stroke-width': '2.5',
-      'stroke-linecap': 'round',
-      'stroke-linejoin': 'round'
-    }));
-
-    // Forecast dashed (green)
-    const fcPath = fcPts.map((p, i) => (i === 0 ? 'M ' : 'L ') + xAt(p.h) + ' ' + yAt(p.t)).join(' ');
-    svg.appendChild(el('path', {
-      d: fcPath,
-      fill: 'none',
-      stroke: tokColor('--hai-status-ok-600'),
-      'stroke-width': '2.5',
-      'stroke-dasharray': '6,5',
-      'stroke-linecap': 'round'
-    }));
-
-    // Now marker dot
-    svg.appendChild(el('circle', {
-      cx: xAt(NOW_H), cy: yAt(nowT), r: 5,
-      fill: tokColor('--hai-money'),
-      stroke: tokColor('--hai-surface-100'),
-      'stroke-width': 2
-    }));
-
-    // EOD marker
-    const eod = fcPts[fcPts.length - 1];
-    svg.appendChild(el('circle', {
-      cx: xAt(eod.h), cy: yAt(eod.t), r: 5,
-      fill: tokColor('--hai-status-ok-600'),
-      stroke: tokColor('--hai-surface-100'),
-      'stroke-width': 2
-    }));
-    const eodLabel = el('text', {
-      x: xAt(eod.h) - 4, y: yAt(eod.t) - 8,
-      'text-anchor': 'end', 'font-size': '11', 'font-weight': '700',
-      fill: tokColor('--hai-status-ok-600')
-    });
-    eodLabel.textContent = '108 t';
-    svg.appendChild(eodLabel);
-  }
-
-  // ============== PdM TRENDS CHART ==============
-  function drawPdmTrends() {
-    const svg = document.getElementById('pdm-trends-chart');
-    if (!svg) return;
-    svg.innerHTML = '';
-    const W = 800, H = 220;
-    const padL = 36, padR = 14, padT = 10, padB = 22;
-    const innerW = W - padL - padR;
-    const innerH = H - padT - padB;
-    const N = 25;
-    const NOW = 16; // index of "Now"
-
-    const gridStroke = tokColor('--hai-surface-border');
-
-    // grid
-    [0, 25, 50, 75, 100].forEach(v => {
-      const y = padT + (1 - v / 100) * innerH;
-      svg.appendChild(el('line', {
-        x1: padL, x2: W - padR, y1: y, y2: y,
-        stroke: gridStroke, 'stroke-width': '1', 'stroke-dasharray': '3,4', opacity: 0.5
-      }));
-    });
-
-    const xAt = i => padL + (i / (N - 1)) * innerW;
-
-    // Forecast band (right side from NOW)
-    svg.appendChild(el('rect', {
-      x: xAt(NOW), y: padT,
-      width: xAt(N - 1) - xAt(NOW), height: innerH,
-      fill: tokColor('--hai-status-info-600'), opacity: 0.06
-    }));
-
-    const throughputData = [6.2,6.4,6.5,6.8,7.0,7.1,6.9,6.8,6.6,6.7,6.8,6.9,7.0,6.8,6.7,6.65,6.6, 6.6,6.7,6.8,6.9,7.0,7.1,7.2,7.3];
-    const yieldData      = [72.0,72.5,72.8,73.0,73.3,73.6,73.4,73.2,73.5,73.8,74.0,73.9,73.7,73.6,73.5,73.6,73.6, 73.7,73.8,73.9,74.0,74.1,74.2,74.3,74.4];
-    const tempData       = [38, 39, 40, 42, 44, 45, 44, 43, 43, 44, 45, 46, 47, 47, 46, 46, 45, 45, 45, 45, 45, 45, 44, 44, 44];
-
-    function drawLine(data, color) {
-      const min = Math.min(...data), max = Math.max(...data);
-      const yAt = v => padT + (1 - (v - min) / (max - min)) * innerH;
-      const actual = data.slice(0, NOW + 1).map((v, i) => (i === 0 ? 'M ' : 'L ') + xAt(i) + ' ' + yAt(v)).join(' ');
-      svg.appendChild(el('path', {
-        d: actual,
-        fill: 'none', stroke: color,
-        'stroke-width': '2.2',
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round'
-      }));
-      const fc = data.slice(NOW).map((v, i) => (i === 0 ? 'M ' : 'L ') + xAt(NOW + i) + ' ' + yAt(v)).join(' ');
-      svg.appendChild(el('path', {
-        d: fc,
-        fill: 'none', stroke: color,
-        'stroke-width': '2.2',
-        'stroke-dasharray': '5,4',
-        opacity: 0.65,
-        'stroke-linecap': 'round'
-      }));
-    }
-
-    drawLine(throughputData, tokColor('--hai-data-1'));
-    drawLine(yieldData, tokColor('--hai-status-ok-600'));
-    drawLine(tempData, tokColor('--hai-status-warn-600'));
-
-    // NOW vertical line
-    svg.appendChild(el('line', {
-      x1: xAt(NOW), x2: xAt(NOW), y1: padT, y2: padT + innerH,
-      stroke: tokColor('--accent'), 'stroke-width': '2', 'stroke-dasharray': '4,4'
-    }));
-    const nowLbl = el('text', {
-      x: xAt(NOW) + 4, y: padT + 12,
-      'font-size': '10', 'font-weight': '700',
-      fill: tokColor('--accent')
-    });
-    nowLbl.textContent = 'NOW';
-    svg.appendChild(nowLbl);
-
-    const fcLbl = el('text', {
-      x: xAt(NOW + (N - NOW) / 2), y: padT + 12,
-      'text-anchor': 'middle',
-      'font-size': '9.5', 'font-weight': '700',
-      fill: tokColor('--hai-status-info-600'),
-      opacity: 0.7
-    });
-    fcLbl.textContent = 'PREDICTION';
-    svg.appendChild(fcLbl);
-  }
-
-  // ============== Position the NOW pill on prod chart ==============
-  function placePills() {
-    const wrap = document.querySelector('#panel-production .chart-svg-wrap');
-    const pill = document.getElementById('prod-now-pill');
-    if (!wrap || !pill) return;
-    const rect = wrap.getBoundingClientRect();
-    if (rect.width === 0) return;
-    const HOURS = 24, NOW_H = 14.53;
-    const padL = 44, padR = 14;
-    const x = padL + (NOW_H / HOURS) * (800 - padL - padR);
-    const xRatio = x / 800;
-    pill.style.left = (xRatio * rect.width) + 'px';
-    const yMin = 0, yMax = 120;
-    const padT = 10, innerH = 220 - 10 - 22;
-    const nowT = 75;
-    const y = padT + (1 - (nowT - yMin) / (yMax - yMin)) * innerH;
-    const yRatio = y / 220;
-    pill.style.top = (yRatio * rect.height) + 'px';
-  }
-
-  function drawAllCharts() {
-    drawProdForecast();
-    drawPdmTrends();
-  }
-
-  drawAllCharts();
-  placePills();
-  window.addEventListener('resize', () => { drawAllCharts(); placePills(); });
 </script>
 
 </body>
