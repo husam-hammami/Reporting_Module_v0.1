@@ -6,20 +6,17 @@ import PdMTab from './tabs/PdMTab';
 import YieldTab from './tabs/YieldTab';
 
 const TABS = [
-  { key: 'production', label: 'Production', context: 'Production · Mill B', icon: <path d="M3 12h4l3-9 4 18 3-9h4" /> },
-  { key: 'pdm', label: 'Predictive Maintenance', context: 'Predictive Maintenance · M31', icon: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" /></> },
-  { key: 'yield', label: 'Yield Optimization', context: 'Yield Optimization · Mill B', icon: <><path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" /><path d="M4 7l8 5 8-5M12 22V12" /></> },
+  { key: 'production', label: 'Production', icon: <path d="M3 12h4l3-9 4 18 3-9h4" /> },
+  { key: 'pdm', label: 'Predictive Maintenance', icon: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" /></> },
+  { key: 'yield', label: 'Yield Optimization', icon: <><path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" /><path d="M4 7l8 5 8-5M12 22V12" /></> },
 ];
 
 export default function AtlasAIPage() {
   const [active, setActive] = useState('production');
   const [clock, setClock] = useState(() => formatClock(new Date()));
-  const [askValue, setAskValue] = useState('');
-  const [askPlaceholder, setAskPlaceholder] = useState("Ask Atlas about today's production, forecast, or how to improve…");
 
   const tabsRef = useRef(null);
   const indicatorRef = useRef(null);
-  const askInputRef = useRef(null);
 
   // Live clock
   useEffect(() => {
@@ -44,35 +41,6 @@ export default function AtlasAIPage() {
     window.addEventListener('resize', move);
     return () => window.removeEventListener('resize', move);
   }, [active]);
-
-  // Global '/' shortcut to focus Ask Atlas input
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
-        e.preventDefault();
-        askInputRef.current?.focus();
-      }
-    }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, []);
-
-  const askContext = TABS.find((t) => t.key === active)?.context ?? '';
-
-  function handleAskSubmit(e) {
-    if (e.key !== 'Enter') return;
-    if (!askValue.trim()) return;
-    setAskPlaceholder('Atlas is thinking…');
-    setAskValue('');
-    setTimeout(() => {
-      setAskPlaceholder("Ask Atlas about today's production, forecast, or how to improve…");
-    }, 1800);
-  }
-
-  function handleChip(text) {
-    setAskValue(text);
-    askInputRef.current?.focus();
-  }
 
   return (
     <div className="atlas-ai-root">
@@ -155,61 +123,12 @@ export default function AtlasAIPage() {
               <FeedItem type="ok" text="Energy 1.42 OMR/t · trending down" />
             </div>
           </div>
-          <div className="ns-divider"></div>
-          <div className="ns-action">
-            <button type="button" className="ns-cta" onClick={() => askInputRef.current?.focus()}>
-              <span className="ns-cta-text">Ask Atlas</span>
-              <span className="ns-cta-key mono">/</span>
-            </button>
-          </div>
         </div>
 
         <div className="content">
           {active === 'production' && <ProductionTab />}
           {active === 'pdm' && <PdMTab />}
           {active === 'yield' && <YieldTab />}
-        </div>
-
-        <div className="ask-atlas">
-          <div className="aa-orb">
-            <div className="aa-orb-inner">
-              <div className="aa-orb-core"></div>
-            </div>
-          </div>
-          <div className="aa-content">
-            <div className="aa-eyebrow mono">
-              <span className="aa-dot"></span>ATLAS · ASK
-              <span className="aa-sep">·</span>
-              <span className="aa-context">{askContext}</span>
-            </div>
-            <div className="aa-input-wrap">
-              <input
-                ref={askInputRef}
-                type="text"
-                className="aa-input"
-                placeholder={askPlaceholder}
-                value={askValue}
-                onChange={(e) => setAskValue(e.target.value)}
-                onKeyDown={handleAskSubmit}
-              />
-              <button type="button" className="aa-send" aria-label="Send">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                  strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </button>
-            </div>
-            <div className="aa-chips">
-              <button type="button" className="aa-chip" onClick={() => handleChip('Why is L2 high?')}>Why is L2 high?</button>
-              <button type="button" className="aa-chip" onClick={() => handleChip('How to hit 110t?')}>How to hit 110t?</button>
-              <button type="button" className="aa-chip" onClick={() => handleChip('Cut energy cost')}>Cut energy cost</button>
-              <button type="button" className="aa-chip" onClick={() => handleChip('Show sifter delta')}>Show sifter delta</button>
-            </div>
-          </div>
-          <div className="aa-meta mono">
-            <div className="aa-meta-row"><span>Latency</span><span>312ms</span></div>
-            <div className="aa-meta-row"><span>Tokens</span><span>1.2K</span></div>
-          </div>
         </div>
       </main>
     </div>
