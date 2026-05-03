@@ -1,8 +1,16 @@
 /* ===== ATLAS v2 — 3D scenes (Motor + Milling) =====
- * Extracted byte-for-byte from prototypes/hercules_atlas_final.html
- * (the merged Claude Design source). Do NOT simplify or reimagine —
- * geometries, materials, colors, lighting and animations must match
- * the approved design exactly.
+ * EXACT byte-for-byte port from prototypes/hercules_atlas_final.html
+ * (the merged Claude Design source). The only adaptations from the
+ * original are mechanical:
+ *   - take the canvas as a function argument instead of getElementById
+ *   - import THREE from npm instead of relying on window.THREE
+ *   - return a cleanup function for React useEffect, with
+ *     forceContextLoss + dispose so StrictMode re-mounts get a fresh
+ *     WebGL context
+ * Geometries, materials, colors, lighting, particle counts/colors/sizes,
+ * speeds and animation tuning are preserved verbatim. Do NOT introduce
+ * additional meshes (halos, piles, ghosts, etc.) — those are added in
+ * the surrounding HTML overlay layer.
  */
 
 import * as THREE from 'three';
@@ -21,16 +29,12 @@ export function initMotorScene(canvas) {
 
   function size() {
     const r = canvas.getBoundingClientRect();
-    const w = Math.max(r.width, 1);
-    const h = Math.max(r.height, 1);
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
+    renderer.setSize(r.width, r.height, false);
+    camera.aspect = r.width / Math.max(r.height, 1);
     camera.updateProjectionMatrix();
   }
   size();
   window.addEventListener('resize', size);
-  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(size) : null;
-  if (ro && canvas.parentElement) ro.observe(canvas.parentElement);
 
   // Lights
   scene.add(new THREE.AmbientLight(0x88bbdd, 0.4));
@@ -206,7 +210,6 @@ export function initMotorScene(canvas) {
   return () => {
     cancelAnimationFrame(raf);
     window.removeEventListener('resize', size);
-    if (ro) ro.disconnect();
     canvas.removeEventListener('pointerdown', onDown);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointermove', onMove);
@@ -241,18 +244,12 @@ export function initMillingScene(canvas) {
 
   function size() {
     const r = canvas.getBoundingClientRect();
-    const w = Math.max(r.width, 1);
-    const h = Math.max(r.height, 1);
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
+    renderer.setSize(r.width, r.height, false);
+    camera.aspect = r.width / Math.max(r.height, 1);
     camera.updateProjectionMatrix();
   }
   size();
   window.addEventListener('resize', size);
-  // Container can resize without firing window resize (tab switch, sidebar
-  // collapse, etc.) — keep the renderer in lockstep with its parent.
-  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(size) : null;
-  if (ro && canvas.parentElement) ro.observe(canvas.parentElement);
 
   // ---------- LIGHTING — three-point + soft hemi for industrial photography feel ----------
   const hemi = new THREE.HemisphereLight(0xb8d4f0, 0x1a1d28, 0.55);
@@ -514,93 +511,18 @@ export function initMillingScene(canvas) {
   liftHoriz.position.set(1.15, 2.2, 0);
   scene.add(liftHoriz);
 
-  // ============ WARNING HALOS — pulsing rings that highlight the optimization opportunity ============
-  // (1) The break-roller halo (where the problem manifests upstream)
-  const rollerHalo = new THREE.Mesh(
-    new THREE.TorusGeometry(1.15, 0.022, 8, 64),
-    new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.9 })
+  // ============ WARNING HALO on the issue roller ============
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(1.15, 0.018, 8, 64),
+    new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.85 })
   );
-  rollerHalo.rotation.x = Math.PI / 2;
-  rollerHalo.position.set(-0.2, -0.95, 0);
-  scene.add(rollerHalo);
+  halo.rotation.x = Math.PI / 2;
+  halo.position.set(-0.2, -0.95, 0);
+  scene.add(halo);
 
-  // (2) The SIFTER halo — the optimization opportunity glow Sam asked for
-  // Multi-ring stack so it reads as a glowing zone, not just a thin circle
-  const sifterHaloGroup = new THREE.Group();
-  sifterHaloGroup.position.set(2.4, 0.0, 0);
-  scene.add(sifterHaloGroup);
-  const sifterHaloRings = [];
-  for (let i = 0; i < 3; i++) {
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(1.55 + i * 0.08, 0.04 - i * 0.008, 10, 80),
-      new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.55 - i * 0.12 })
-    );
-    ring.rotation.x = Math.PI / 2;
-    sifterHaloGroup.add(ring);
-    sifterHaloRings.push(ring);
-  }
-  // A faint amber dome over the sifter to make the highlight read from any angle
-  const sifterDome = new THREE.Mesh(
-    new THREE.SphereGeometry(1.45, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.07, side: THREE.BackSide })
-  );
-  sifterDome.position.set(2.4, 0.4, 0);
-  scene.add(sifterDome);
-
-  // ============ OUTPUT PILES — physical evidence of what the line produced ============
-  // Flour pile (cream / white) at the right end of the line
-  const flourPile = new THREE.Mesh(
-    new THREE.ConeGeometry(0.55, 0.55, 24),
-    new THREE.MeshStandardMaterial({ color: 0xfaf2dc, metalness: 0.05, roughness: 0.9, emissive: 0xfaf2dc, emissiveIntensity: 0.04 })
-  );
-  flourPile.position.set(3.5, -1.32, 1.0);
-  scene.add(flourPile);
-  // Subtle bag-stack base under the flour pile so it reads as collected output
-  const flourBase = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.55, 0.6, 0.08, 24),
-    new THREE.MeshStandardMaterial({ color: 0xd9c9a8, metalness: 0.1, roughness: 0.9 })
-  );
-  flourBase.position.set(3.5, -1.56, 1.0);
-  scene.add(flourBase);
-
-  // Bran pile (warm brown) on the back-right
-  const branPile = new THREE.Mesh(
-    new THREE.ConeGeometry(0.32, 0.32, 24),
-    new THREE.MeshStandardMaterial({ color: 0x9b6a3a, metalness: 0.1, roughness: 0.95, emissive: 0x4a2e16, emissiveIntensity: 0.08 })
-  );
-  branPile.position.set(3.5, -1.42, -1.05);
-  scene.add(branPile);
-  const branBase = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.32, 0.36, 0.06, 24),
-    new THREE.MeshStandardMaterial({ color: 0x6e4a2a, metalness: 0.1, roughness: 0.95 })
-  );
-  branBase.position.set(3.5, -1.56, -1.05);
-  scene.add(branBase);
-
-  // FORECAST GHOST PILES — wireframe cones showing AFTER-OPTIMIZATION targets:
-  //   flour 6.64 → 6.73 t/h (+1.1pp)  ⇒ slightly LARGER cone
-  //   bran  1.57 → 1.51 t/h (−0.7pp)  ⇒ slightly SMALLER cone
-  // Rendered with a green wireframe so they read clearly as "AI target".
-  const flourGhost = new THREE.Mesh(
-    new THREE.ConeGeometry(0.61, 0.62, 24),
-    new THREE.MeshBasicMaterial({ color: 0x6ee7b7, transparent: true, opacity: 0.55, wireframe: true })
-  );
-  flourGhost.position.set(3.5, -1.30, 1.0);
-  scene.add(flourGhost);
-  const branGhost = new THREE.Mesh(
-    new THREE.ConeGeometry(0.27, 0.27, 24),
-    new THREE.MeshBasicMaterial({ color: 0x6ee7b7, transparent: true, opacity: 0.45, wireframe: true })
-  );
-  branGhost.position.set(3.5, -1.44, -1.05);
-  scene.add(branGhost);
-
-  // ============ FLOW PARTICLES — boosted for visibility ============
-  // Boosted vs. the original mockup: ~2× particle counts, ~1.5× sizes, ~3×
-  // base speed, and full opacity so motion is unambiguously visible even on
-  // small embeds. Each makeFlow randomises speed within a small band so the
-  // streams don't move in lockstep.
+  // ============ FLOW PARTICLES ============
   const flowGroups = [];
-  function makeFlow(color, count, ptSize, getPath, opacity = 1.0, speedRange = [0.014, 0.020]) {
+  function makeFlow(color, count, ptSize, getPath, opacity = 0.9) {
     const positions = new Float32Array(count * 3);
     const phases = new Float32Array(count);
     for (let i = 0; i < count; i++) {
@@ -616,12 +538,11 @@ export function initMillingScene(canvas) {
     });
     const points = new THREE.Points(geo, mat);
     scene.add(points);
-    const speed = speedRange[0] + Math.random() * (speedRange[1] - speedRange[0]);
-    flowGroups.push({ points, phases, getPath, count, speed });
+    flowGroups.push({ points, phases, getPath, count, speed: 0.005 + Math.random()*0.002 });
   }
 
   // Wheat: silo → break roller 1 (diagonal drop)
-  makeFlow(0xfde68a, 180, 0.075, (ph, i) => {
+  makeFlow(0xe8c889, 90, 0.05, (ph, i) => {
     const jx = (i * 0.137) % 1 - 0.5;
     return {
       x: -4.4 + ph * 2.4,
@@ -630,13 +551,13 @@ export function initMillingScene(canvas) {
     };
   });
   // Through break rollers: -2.0 to -0.2 (horizontal at low level)
-  makeFlow(0xfde68a, 140, 0.07, (ph, i) => ({
+  makeFlow(0xe8c889, 70, 0.045, (ph, i) => ({
     x: -2.0 + ph * 1.8,
     y: -1.0 + Math.sin(ph * 8) * 0.04,
     z: ((i * 0.211) % 1 - 0.5) * 0.1
   }));
   // Pneumatic lift: from highlighted roller UP and OVER to sifter top
-  makeFlow(0xfde68a, 130, 0.062, (ph, i) => {
+  makeFlow(0xe8c889, 60, 0.04, (ph, i) => {
     const jx = ((i * 0.183) % 1 - 0.5) * 0.05;
     if (ph < 0.45) {
       return { x: -0.2 + jx, y: -0.5 + (ph / 0.45) * 2.7, z: jx };
@@ -647,30 +568,30 @@ export function initMillingScene(canvas) {
       return { x: 2.4, y: 2.2 - (ph - 0.95) * 4 * 0.6, z: jx };
     }
   });
-  // Inside sifter — particles cascading through decks (slightly slower so they read as separation)
-  makeFlow(0xfde68a, 110, 0.06, (ph, i) => ({
+  // Inside sifter — particles cascading through decks
+  makeFlow(0xe8c889, 50, 0.04, (ph, i) => ({
     x: 2.4 + ((i*0.31)%1 - 0.5) * 1.4,
     y: 1.4 - ph * 2.0,
     z: ((i*0.27)%1 - 0.5) * 1.4
-  }), 0.85, [0.010, 0.014]);
-  // Flour output → flour pile at far right (heavier, brighter cream)
-  makeFlow(0xfff7e0, 150, 0.085, (ph) => ({
-    x: 1.9 + ph * 1.6,
-    y: -0.6 - ph * 0.75,
-    z: 0.8 + ph * 0.2
+  }), 0.7);
+  // Flour output (cream, brighter): out of sifter flour chute, to right
+  makeFlow(0xfff4d8, 70, 0.06, (ph, i) => ({
+    x: 1.9 - ph * 0.0 + ph * (-0.5),
+    y: -0.6 - ph * 0.6,
+    z: 0.8 + ph * 1.2
   }));
   // simpler flour chute path
-  makeFlow(0xfff7e0, 110, 0.08, (ph, i) => ({
-    x: 1.9 + ph * 1.6,
-    y: -0.7 - ph * 0.85,
-    z: 0.85 + ((i*0.19)%1 - 0.5)*0.12
+  makeFlow(0xfff4d8, 50, 0.055, (ph, i) => ({
+    x: 1.9 + ph * 0.6,
+    y: -0.7 - ph * 0.7,
+    z: 0.85 + ((i*0.19)%1 - 0.5)*0.1
   }));
-  // Bran output (warm amber) → bran pile, slightly slower / fewer particles
-  makeFlow(0xd2904a, 80, 0.075, (ph, i) => ({
-    x: 2.95 + ph * 0.55,
-    y: -0.65 - ph * 0.75,
-    z: -0.85 - ((i*0.23)%1) * 0.25
-  }), 1.0, [0.012, 0.016]);
+  // Bran output (amber): out of sifter bran chute, to right-back
+  makeFlow(0xc8954a, 35, 0.05, (ph, i) => ({
+    x: 2.95 + ph * 0.4,
+    y: -0.65 - ph * 0.65,
+    z: -0.85 - ((i*0.23)%1) * 0.3
+  }));
 
   // ============ ANIMATE ============
   let t = 0;
@@ -689,41 +610,20 @@ export function initMillingScene(canvas) {
       g.points.geometry.attributes.position.needsUpdate = true;
     });
 
-    // spin rollers — faster so motion is unambiguous in small embeds
+    // spin rollers
     rollerStands.forEach(s => {
-      s.rollerL.rotation.y += 0.32;
-      s.rollerR.rotation.y -= 0.32;
+      s.rollerL.rotation.y += 0.18;
+      s.rollerR.rotation.y -= 0.18;
     });
 
-    // sifter wobble — bigger amplitude + faster freq so the gyratory motion
-    // is obviously visible (plansifters wobble visibly in real life too)
-    const wobbleA = 0.05;
-    const wobbleW = 9.5;
-    sifter.position.x = 2.4 + Math.cos(t * wobbleW) * wobbleA;
-    sifter.position.z = Math.sin(t * wobbleW) * wobbleA;
-    // Sifter halo group follows the sifter's wobble so the highlight stays glued to the unit
-    sifterHaloGroup.position.x = sifter.position.x;
-    sifterHaloGroup.position.z = sifter.position.z;
-    sifterDome.position.x = sifter.position.x;
-    sifterDome.position.z = sifter.position.z;
+    // sifter wobble (plansifters use gyratory motion)
+    sifter.position.x = 2.4 + Math.cos(t * 6) * 0.025;
+    sifter.position.z = Math.sin(t * 6) * 0.025;
 
-    // Pulsing warning halos — roller ring + sifter rings + dome
-    const pulse = (Math.sin(t * 3.4) + 1) / 2;
-    rollerHalo.material.opacity = 0.5 + pulse * 0.5;
-    rollerHalo.scale.setScalar(1 + pulse * 0.08);
-    sifterHaloRings.forEach((r, idx) => {
-      r.material.opacity = (0.5 - idx * 0.12) + pulse * 0.4;
-      r.scale.setScalar(1 + pulse * (0.05 + idx * 0.02));
-      r.rotation.z += 0.004 * (idx + 1);
-    });
-    sifterDome.material.opacity = 0.05 + pulse * 0.08;
-
-    // Forecast ghost piles — gentle scale shimmer so they read as projected, not built
-    const ghostShimmer = 1 + Math.sin(t * 1.4) * 0.025;
-    flourGhost.scale.set(ghostShimmer, ghostShimmer, ghostShimmer);
-    branGhost.scale.set(ghostShimmer, ghostShimmer, ghostShimmer);
-    flourGhost.material.opacity = 0.45 + pulse * 0.18;
-    branGhost.material.opacity = 0.35 + pulse * 0.18;
+    // pulsing warning halo
+    const pulse = (Math.sin(t * 3) + 1) / 2;
+    halo.material.opacity = 0.45 + pulse * 0.45;
+    halo.scale.setScalar(1 + pulse * 0.06);
 
     // accent point light pulse
     accent.intensity = 0.45 + Math.sin(t * 1.2) * 0.1;
@@ -741,7 +641,6 @@ export function initMillingScene(canvas) {
   return () => {
     cancelAnimationFrame(raf);
     window.removeEventListener('resize', size);
-    if (ro) ro.disconnect();
     scene.traverse((obj) => {
       if (obj.geometry) obj.geometry.dispose?.();
       if (obj.material) {
@@ -749,8 +648,6 @@ export function initMillingScene(canvas) {
         else obj.material.dispose?.();
       }
     });
-    // forceContextLoss releases the WebGL context so a re-mount on the same
-    // canvas (StrictMode in dev, tab-switch round-trip) gets a fresh context.
     renderer.forceContextLoss?.();
     renderer.dispose();
   };

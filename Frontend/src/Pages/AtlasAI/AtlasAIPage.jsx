@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './AtlasAI.css';
 
+import { DarkModeContext } from '../../Context/DarkModeProvider';
 import ProductionTab from './tabs/ProductionTab';
 import PdMTab from './tabs/PdMTab';
 import YieldTab from './tabs/YieldTab';
@@ -14,6 +15,8 @@ const TABS = [
 export default function AtlasAIPage() {
   const [active, setActive] = useState('production');
   const [clock, setClock] = useState(() => formatClock(new Date()));
+  const { mode } = useContext(DarkModeContext) ?? {};
+  const dataTheme = mode === 'light' ? 'light' : 'dark';
 
   const tabsRef = useRef(null);
   const indicatorRef = useRef(null);
@@ -43,7 +46,7 @@ export default function AtlasAIPage() {
   }, [active]);
 
   return (
-    <div className="atlas-ai-root">
+    <div className="atlas-ai-root" data-theme={dataTheme}>
       <div className="ambient">
         <div className="ambient-grid"></div>
         <div className="ambient-noise"></div>
