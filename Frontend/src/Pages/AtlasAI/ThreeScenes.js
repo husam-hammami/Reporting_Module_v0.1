@@ -264,6 +264,7 @@ export function initMotorScene(canvas) {
   const shimmer = new THREE.Points(shimGeo, shimMat);
   motor.add(shimmer);
 
+  motor.position.set(-0.3, 0.25, 0);
   scene.add(motor);
   motor.rotation.y = -0.3;
 
