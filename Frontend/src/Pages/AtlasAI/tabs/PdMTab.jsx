@@ -13,7 +13,7 @@ function MotorCanvas() {
 
 export default function PdMTab() {
   return (
-    <section className="tab-pane active">
+    <section className="tab-pane active pdm">
       <div className="row row-pdm-1">
         <article className="card health-card">
           <div className="card-eyebrow"><span className="ce-dot warn"></span>Asset health · plant-wide</div>
@@ -255,27 +255,6 @@ export default function PdMTab() {
           </table>
         </article>
 
-        <article className="card flow-card">
-          <div className="card-eyebrow"><span className="ce-dot info"></span>Process context · grinding focus</div>
-          <div className="flow">
-            <div className="flow-stage">Intake</div>
-            <span className="flow-arrow">›</span>
-            <div className="flow-stage">Cleaning</div>
-            <span className="flow-arrow">›</span>
-            <div className="flow-stage active"><span className="fs-pulse"></span>Grinding</div>
-            <span className="flow-arrow">›</span>
-            <div className="flow-stage">Sifting</div>
-            <span className="flow-arrow">›</span>
-            <div className="flow-stage">Blending</div>
-            <span className="flow-arrow">›</span>
-            <div className="flow-stage">Packing</div>
-          </div>
-          <div className="flow-meters">
-            <div className="fm-cell"><div className="fm-id mono">M30</div><div className="fm-name">Intake</div><div className="fm-status ok mono">HEALTHY</div></div>
-            <div className="fm-cell active"><div className="fm-id mono">M31</div><div className="fm-name">Grinding</div><div className="fm-status warn mono">ATTENTION</div></div>
-            <div className="fm-cell"><div className="fm-id mono">C32</div><div className="fm-name">Sift/Pack</div><div className="fm-status ok mono">HEALTHY</div></div>
-          </div>
-        </article>
       </div>
     </section>
   );

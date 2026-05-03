@@ -30,26 +30,50 @@ export default function YieldTab() {
           <div className="mill-stage">
             <MillingCanvas />
 
-            <div className="mill-annots">
-              <div className="mann" data-anchor="intake">
-                <div className="mann-key mono">01 · INTAKE</div>
-                <div className="mann-val">Australian Hard Red <span className="mann-rate mono">8.40 t/h</span></div>
+            {/* Equipment-stage labels — sit ABOVE each piece of kit in the scene */}
+            <div className="mill-stagelabels">
+              <div className="ms-label" data-pos="rollers">
+                <div className="msl-eyebrow mono">02 · GRINDING ROLLERS</div>
+                <div className="msl-line">4-pair break + reduction</div>
               </div>
-              <div className="mann warn" data-anchor="sifter">
-                <div className="mann-key mono">
-                  <span className="mann-pulse"></span>
-                  C2 PLANSIFTER
+              <div className="ms-label warn" data-pos="sifter">
+                <div className="msl-eyebrow mono">
+                  <span className="msl-pulse"></span>
+                  03 · SIFTER / SEPARATION
                 </div>
-                <div className="mann-val">
-                  Bran split <b className="amber mono">18.7%</b>
-                  <span className="mann-tag amber mono">+0.7pp</span>
+                <div className="msl-line">Plansifter · 8 deck</div>
+              </div>
+            </div>
+
+            {/* Process-flow data callouts — wheat in / flour out / bran out */}
+            <div className="mill-flowlabels">
+              <div className="mfl-tag intake" data-pos="intake">
+                <div className="mfl-key mono">WHEAT IN</div>
+                <div className="mfl-val mono"><b>8.40</b><span className="mfu">t/h</span></div>
+                <div className="mfl-meta">Aus. Hard Red</div>
+              </div>
+              <div className="mfl-tag flour" data-pos="flour">
+                <div className="mfl-key mono">FLOUR OUT</div>
+                <div className="mfl-val mono cyan"><b>6.64</b><span className="mfu">t/h</span> <span className="mfl-pct">79.1%</span></div>
+                <div className="mfl-meta">to T7–T9</div>
+              </div>
+              <div className="mfl-tag bran" data-pos="bran">
+                <div className="mfl-key mono">BRAN OUT</div>
+                <div className="mfl-val mono amber"><b>1.57</b><span className="mfu">t/h</span> <span className="mfl-pct">18.7%</span></div>
+                <div className="mfl-meta">to feed bins</div>
+              </div>
+            </div>
+
+            {/* Diagnostic warning callout — pinned to the sifter */}
+            <div className="mill-warning-callout">
+              <div className="mwc-row">
+                <span className="mwc-icon">⚠</span>
+                <div className="mwc-text">
+                  <div className="mwc-headline">
+                    Bran split <b>0.7%</b> high
+                  </div>
+                  <div className="mwc-sub">SIFTER SCREEN WEAR OR LOOSE FEED-RATE</div>
                 </div>
-              </div>
-              <div className="mann ok" data-anchor="flour">
-                <div className="mann-key mono">FLOUR · 6.64 t/h</div>
-              </div>
-              <div className="mann" data-anchor="bran">
-                <div className="mann-key mono">BRAN · 1.57 t/h</div>
               </div>
             </div>
 

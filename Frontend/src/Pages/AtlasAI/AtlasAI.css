@@ -63,7 +63,13 @@
   font-size: 12.5px;
   line-height: 1.5;
   font-feature-settings: 'cv11', 'ss01', 'tnum';
-  min-height: calc(100vh - 72px);
+  /* Fill the outer Hercules scroll container exactly (Home.jsx mounts the
+     page inside a div with height: calc(100vh - 72px) overflow:auto). Using
+     a strict height + overflow:hidden prevents the page from spilling into
+     the outer scroll container and exposing the lighter body background
+     beneath as a "white glitch" stripe. */
+  height: calc(100vh - 72px);
+  overflow: hidden;
   position: relative;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -154,7 +160,10 @@
   position: relative;
   z-index: 1;
   display: flex; flex-direction: column;
-  min-height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-0);
 }
 
 /* ============ MILL BAR (mini topbar inside the page) ============ */
@@ -353,17 +362,23 @@
 .atlas-ai-root .ns-event.warn { color: var(--amber-light); }
 /* ============ CONTENT ============ */
 .atlas-ai-root .content {
-  padding: 16px 22px 28px;
+  padding: 12px 18px 14px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
   position: relative;
+  background: var(--bg-0);
 }
 
-.atlas-ai-root .tab-pane { display: none; flex-direction: column; gap: 14px; }
+.atlas-ai-root .tab-pane { display: none; flex-direction: column; gap: 10px; }
 .atlas-ai-root .tab-pane.active {
   display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   animation: atlas-paneIn 0.42s cubic-bezier(0.2, 0.8, 0.3, 1.05);
 }
 @keyframes atlas-paneIn {
@@ -373,21 +388,33 @@
 
 .atlas-ai-root .row {
   display: grid;
-  gap: 14px;
+  gap: 10px;
+  min-height: 0;
 }
-.atlas-ai-root .row-prod-hero { grid-template-columns: 1.4fr 1.2fr 0.95fr; }
-.atlas-ai-root .row-prod-strip { grid-template-columns: repeat(6, 1fr); gap: 11px; }
-.atlas-ai-root .row-prod-bottom { grid-template-columns: 1fr 1.15fr 1fr; }
+.atlas-ai-root .row-prod-hero { grid-template-columns: 1fr 1.7fr 0.9fr; }
+.atlas-ai-root .row-prod-strip { grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.atlas-ai-root .row-prod-bottom { grid-template-columns: 1fr 1.15fr; }
 .atlas-ai-root .row-pdm-1 { grid-template-columns: 1fr 1fr 1fr; }
 .atlas-ai-root .row-pdm-2 { grid-template-columns: 1.45fr 0.85fr 1.1fr; }
-.atlas-ai-root .row-pdm-3 { grid-template-columns: 1fr 1.05fr 1fr; }
+.atlas-ai-root .row-pdm-3 { grid-template-columns: 1fr 1fr; }
+
+/* Per-tab proportional row heights so each tab fits the viewport without scroll */
+.atlas-ai-root .tab-pane.production .row-prod-hero  { flex: 1.55 1 0; min-height: 0; }
+.atlas-ai-root .tab-pane.production .row-prod-strip { flex: 0.5  1 0; min-height: 0; }
+.atlas-ai-root .tab-pane.production .row-prod-bottom { flex: 1   1 0; min-height: 0; }
+.atlas-ai-root .tab-pane.pdm .row-pdm-1 { flex: 0.7 1 0; min-height: 0; }
+.atlas-ai-root .tab-pane.pdm .row-pdm-2 { flex: 1.55 1 0; min-height: 0; }
+.atlas-ai-root .tab-pane.pdm .row-pdm-3 { flex: 0.95 1 0; min-height: 0; }
+/* Card defaults inside flex rows must clip rather than push the row taller */
+.atlas-ai-root .tab-pane .row > .card,
+.atlas-ai-root .tab-pane .row > .stack-col { min-height: 0; overflow: hidden; }
 
 /* ============ CARD ============ */
 .atlas-ai-root .card {
   background: var(--bg-card);
   border: 1px solid var(--b-w-1);
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: 12px;
+  padding: 10px 12px;
   position: relative;
   backdrop-filter: blur(12px);
   transition: border-color 0.2s, transform 0.2s;
@@ -1196,9 +1223,9 @@
 .atlas-ai-root .yield-pane {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  height: calc(100vh - 220px);
-  min-height: 540px;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
   margin: 0;
   padding: 0;
 }
@@ -1306,63 +1333,144 @@
 }
 .atlas-ai-root .mill-leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
-.atlas-ai-root .mill-annots { position: absolute; inset: 0; pointer-events: none; }
-.atlas-ai-root .mann {
+/* ============ MILLING SCENE OVERLAY LABELS ============
+ * Three layers stacked above the Three.js canvas, all with pointer-events: none
+ * so they never steal interaction from the 3D drag rotation:
+ *  1) .mill-stagelabels — equipment headings ("GRINDING ROLLERS", "SIFTER")
+ *  2) .mill-flowlabels  — process data callouts (Wheat in / Flour out / Bran)
+ *  3) .mill-warning-callout — pinned diagnostic ("Bran split 0.7% high…")
+ */
+
+/* --- Equipment heading labels (above each piece of kit) --- */
+.atlas-ai-root .mill-stagelabels { position: absolute; inset: 0; pointer-events: none; }
+.atlas-ai-root .ms-label {
   position: absolute;
-  pointer-events: auto;
-  background: rgba(10, 16, 26, 0.78);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(125, 249, 255, 0.18);
-  border-radius: 6px;
-  padding: 7px 10px;
-  min-width: 180px;
-  font-size: 11.5px;
-  line-height: 1.35;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-mono);
+  background: rgba(8, 12, 20, 0.55);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(125, 249, 255, 0.2);
+  border-radius: 4px;
+  padding: 5px 9px;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
-.atlas-ai-root .mann .mann-key {
-  font-size: 9.5px;
+.atlas-ai-root .ms-label .msl-eyebrow {
+  font-size: 9px;
   letter-spacing: 0.1em;
-  color: rgba(125, 249, 255, 0.75);
+  color: rgba(125, 249, 255, 0.85);
   display: flex; align-items: center; gap: 6px;
-  margin-bottom: 3px;
+  font-weight: 600;
 }
-.atlas-ai-root .mann .mann-val { color: var(--fg-1); font-size: 12px; }
-.atlas-ai-root .mann .mann-rate { color: #7df9ff; }
-.atlas-ai-root .mann .mann-meta { color: var(--fg-3); font-size: 11px; }
-.atlas-ai-root .mann .mann-tag {
-  display: inline-block;
-  margin-left: 6px;
-  font-size: 9.5px;
-  letter-spacing: 0.06em;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-.atlas-ai-root .mann.warn {
-  border-color: rgba(245, 158, 11, 0.45);
-  background: rgba(40, 22, 8, 0.85);
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15), 0 6px 18px rgba(0, 0, 0, 0.45);
-}
-.atlas-ai-root .mann.warn .mann-key { color: #f59e0b; }
-.atlas-ai-root .mann.ok { border-color: rgba(52, 211, 153, 0.35); }
-.atlas-ai-root .mann.ok .mann-key { color: #34d399; }
-.atlas-ai-root .mann .amber { color: #f59e0b; }
-.atlas-ai-root .mann-pulse {
-  width: 7px; height: 7px; border-radius: 50%;
+.atlas-ai-root .ms-label .msl-line { font-size: 9.5px; color: var(--fg-3); margin-top: 1px; letter-spacing: 0.02em; }
+.atlas-ai-root .ms-label.warn { border-color: rgba(245, 158, 11, 0.5); }
+.atlas-ai-root .ms-label.warn .msl-eyebrow { color: #f59e0b; }
+.atlas-ai-root .ms-label[data-pos="rollers"] { top: 14px; left: 50%; transform: translateX(-50%); }
+.atlas-ai-root .ms-label[data-pos="sifter"]  { top: 14px; right: 16%; transform: translateX(50%); }
+.atlas-ai-root .msl-pulse {
+  width: 6px; height: 6px; border-radius: 50%;
   background: #f59e0b;
   box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
   animation: atlas-mann-pulse 1.6s ease-out infinite;
 }
 @keyframes atlas-mann-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+  0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.65); }
   100% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
 }
-.atlas-ai-root .mann[data-anchor="intake"] { top: 18px; left: 18px; }
-.atlas-ai-root .mann[data-anchor="sifter"] { top: 18px; right: 18px; }
-.atlas-ai-root .mann[data-anchor="flour"] { bottom: 18px; right: 18px; }
-.atlas-ai-root .mann[data-anchor="bran"] { bottom: 18px; left: 18px; }
+
+/* --- Process flow data callouts (Wheat in / Flour out / Bran) --- */
+.atlas-ai-root .mill-flowlabels { position: absolute; inset: 0; pointer-events: none; }
+.atlas-ai-root .mfl-tag {
+  position: absolute;
+  background: rgba(8, 12, 20, 0.78);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(125, 249, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 11px;
+  min-width: 130px;
+  font-size: 11px;
+  line-height: 1.3;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+}
+.atlas-ai-root .mfl-tag .mfl-key {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: rgba(125, 249, 255, 0.75);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.atlas-ai-root .mfl-tag .mfl-val {
+  font-size: 18px;
+  letter-spacing: -0.015em;
+  color: var(--fg-1);
+  display: flex; align-items: baseline; gap: 4px;
+  font-weight: 500;
+}
+.atlas-ai-root .mfl-tag .mfl-val b { font-weight: 600; }
+.atlas-ai-root .mfl-tag .mfl-val.cyan  { color: #7df9ff; }
+.atlas-ai-root .mfl-tag .mfl-val.amber { color: #f59e0b; }
+.atlas-ai-root .mfl-tag .mfu { font-size: 10px; color: var(--fg-3); font-weight: 400; }
+.atlas-ai-root .mfl-tag .mfl-pct {
+  font-size: 10px;
+  color: var(--fg-4);
+  margin-left: 4px;
+  letter-spacing: 0.04em;
+}
+.atlas-ai-root .mfl-tag .mfl-meta {
+  font-size: 9.5px;
+  color: var(--fg-3);
+  letter-spacing: 0.04em;
+  margin-top: 3px;
+}
+.atlas-ai-root .mfl-tag.intake { top: 50%; left: 16px; transform: translateY(-50%); border-color: rgba(232, 200, 137, 0.35); }
+.atlas-ai-root .mfl-tag.intake .mfl-key { color: #e8c889; }
+.atlas-ai-root .mfl-tag.flour  { top: 36%; right: 16px; border-color: rgba(125, 249, 255, 0.35); }
+.atlas-ai-root .mfl-tag.flour  .mfl-key { color: #7df9ff; }
+.atlas-ai-root .mfl-tag.bran   { bottom: 22px; right: 16px; border-color: rgba(245, 158, 11, 0.35); }
+.atlas-ai-root .mfl-tag.bran   .mfl-key { color: #f59e0b; }
+
+/* --- Sifter diagnostic warning callout --- */
+.atlas-ai-root .mill-warning-callout {
+  position: absolute;
+  top: 56px;
+  right: 20%;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(60, 36, 12, 0.92), rgba(40, 24, 8, 0.92));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  border-radius: 10px;
+  padding: 10px 13px;
+  max-width: 270px;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15), 0 8px 22px rgba(0, 0, 0, 0.55), 0 0 18px rgba(245, 158, 11, 0.15);
+  animation: atlas-warn-pulse 2.6s ease-in-out infinite;
+}
+@keyframes atlas-warn-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15), 0 8px 22px rgba(0, 0, 0, 0.55), 0 0 18px rgba(245, 158, 11, 0.15); }
+  50%      { box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.30), 0 8px 22px rgba(0, 0, 0, 0.55), 0 0 28px rgba(245, 158, 11, 0.35); }
+}
+.atlas-ai-root .mwc-row { display: flex; gap: 10px; align-items: flex-start; }
+.atlas-ai-root .mwc-icon {
+  font-size: 18px;
+  line-height: 1;
+  color: #fbbf24;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+}
+.atlas-ai-root .mwc-text { display: flex; flex-direction: column; gap: 2px; }
+.atlas-ai-root .mwc-headline {
+  font-size: 12px;
+  color: var(--fg-1);
+  letter-spacing: -0.005em;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.atlas-ai-root .mwc-headline b { color: #f59e0b; font-weight: 600; }
+.atlas-ai-root .mwc-sub {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  color: rgba(245, 158, 11, 0.85);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-transform: uppercase;
+}
 
 .atlas-ai-root .mill-tick { position: absolute; width: 12px; height: 12px; border: 1px solid rgba(125, 249, 255, 0.35); pointer-events: none; }
 .atlas-ai-root .mill-tick.tl { top: 8px; left: 8px; border-right: none; border-bottom: none; }
@@ -1486,10 +1594,11 @@
   .atlas-ai-root .row-pdm-1, .atlas-ai-root .row-pdm-3 { grid-template-columns: 1fr; }
 }
 @media (max-width: 1180px) {
-  .atlas-ai-root .yield-pane .mill-stage { min-height: 360px; }
-  .atlas-ai-root .mann[data-anchor="sifter"] { top: 18px; right: 14px; }
+  .atlas-ai-root .yield-pane .mill-stage { min-height: 320px; }
 }
 @media (max-width: 760px) {
-  .atlas-ai-root .mill-annots { display: none; }
-  .atlas-ai-root .yield-pane .mill-stage { min-height: 280px; }
+  .atlas-ai-root .mill-stagelabels,
+  .atlas-ai-root .mill-flowlabels,
+  .atlas-ai-root .mill-warning-callout { display: none; }
+  .atlas-ai-root .yield-pane .mill-stage { min-height: 240px; }
 }

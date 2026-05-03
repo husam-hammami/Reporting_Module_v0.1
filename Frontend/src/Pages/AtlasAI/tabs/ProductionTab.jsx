@@ -3,7 +3,7 @@ import EnergyChart from '../charts/EnergyChart';
 
 export default function ProductionTab() {
   return (
-    <section className="tab-pane active">
+    <section className="tab-pane active production">
       <div className="row row-prod-hero">
         <article className="card hero-card">
           <div className="hero-bg-orb"></div>
@@ -263,16 +263,6 @@ export default function ProductionTab() {
           </div>
         </article>
 
-        <article className="card enabler-card">
-          <div className="card-eyebrow"><span className="ce-dot ok"></span>What's helping production · top enablers</div>
-          <div className="enabler-list">
-            <EnablerRow status="ok" name="Stable wheat feed" desc="Input variation σ < 2% in last 4h" pill="GOOD" />
-            <EnablerRow status="ok" name="Strong extraction" desc="79.1% — above 78.5% target" pill="GOOD" />
-            <EnablerRow status="ok" name="Dampening online" desc="Moisture set 16% · holding steady" pill="ON" />
-            <EnablerRow status="ok" name="Vitamin feeder" desc="Dosing on schedule · 12g/t" pill="ON" />
-            <EnablerRow status="warn" name="Energy efficiency" desc="Slightly above benchmark · watch peak window 14–16h" pill="WATCH" />
-          </div>
-        </article>
       </div>
     </section>
   );
@@ -298,15 +288,3 @@ function MetricCard({ color, trend, trendVal, label, value, unit, spark, sparkCo
   );
 }
 
-function EnablerRow({ status, name, desc, pill }) {
-  return (
-    <div className="enabler-row">
-      <span className={`er-rail ${status}`}></span>
-      <div className="er-info">
-        <div className="er-name">{name}</div>
-        <div className="er-desc">{desc}</div>
-      </div>
-      <span className={`er-pill ${status}`}><span className="dot"></span>{pill}</span>
-    </div>
-  );
-}
