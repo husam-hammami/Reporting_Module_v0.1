@@ -21,12 +21,16 @@ export function initMotorScene(canvas) {
 
   function size() {
     const r = canvas.getBoundingClientRect();
-    renderer.setSize(r.width, r.height, false);
-    camera.aspect = r.width / Math.max(r.height, 1);
+    const w = Math.max(r.width, 1);
+    const h = Math.max(r.height, 1);
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
   size();
   window.addEventListener('resize', size);
+  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(size) : null;
+  if (ro && canvas.parentElement) ro.observe(canvas.parentElement);
 
   // Lights
   scene.add(new THREE.AmbientLight(0x88bbdd, 0.4));
@@ -202,12 +206,12 @@ export function initMotorScene(canvas) {
   return () => {
     cancelAnimationFrame(raf);
     window.removeEventListener('resize', size);
+    if (ro) ro.disconnect();
     canvas.removeEventListener('pointerdown', onDown);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointermove', onMove);
     canvas.removeEventListener('pointerenter', onEnter);
     canvas.removeEventListener('pointerleave', onLeave);
-    renderer.dispose();
     scene.traverse((obj) => {
       if (obj.geometry) obj.geometry.dispose?.();
       if (obj.material) {
@@ -215,6 +219,8 @@ export function initMotorScene(canvas) {
         else obj.material.dispose?.();
       }
     });
+    renderer.forceContextLoss?.();
+    renderer.dispose();
   };
 }
 
@@ -235,12 +241,18 @@ export function initMillingScene(canvas) {
 
   function size() {
     const r = canvas.getBoundingClientRect();
-    renderer.setSize(r.width, r.height, false);
-    camera.aspect = r.width / Math.max(r.height, 1);
+    const w = Math.max(r.width, 1);
+    const h = Math.max(r.height, 1);
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
   size();
   window.addEventListener('resize', size);
+  // Container can resize without firing window resize (tab switch, sidebar
+  // collapse, etc.) — keep the renderer in lockstep with its parent.
+  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(size) : null;
+  if (ro && canvas.parentElement) ro.observe(canvas.parentElement);
 
   // ---------- LIGHTING — three-point + soft hemi for industrial photography feel ----------
   const hemi = new THREE.HemisphereLight(0xb8d4f0, 0x1a1d28, 0.55);
@@ -632,7 +644,7 @@ export function initMillingScene(canvas) {
   return () => {
     cancelAnimationFrame(raf);
     window.removeEventListener('resize', size);
-    renderer.dispose();
+    if (ro) ro.disconnect();
     scene.traverse((obj) => {
       if (obj.geometry) obj.geometry.dispose?.();
       if (obj.material) {
@@ -640,5 +652,9 @@ export function initMillingScene(canvas) {
         else obj.material.dispose?.();
       }
     });
+    // forceContextLoss releases the WebGL context so a re-mount on the same
+    // canvas (StrictMode in dev, tab-switch round-trip) gets a fresh context.
+    renderer.forceContextLoss?.();
+    renderer.dispose();
   };
 }
