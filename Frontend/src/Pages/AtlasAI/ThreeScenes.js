@@ -357,10 +357,9 @@ export function initMillingScene(canvas) {
   renderer.toneMappingExposure = 1.05;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
-  // Front-of-line camera so the scene reads left-to-right: hopper → rollers → sifter → piles
-  camera.position.set(0.5, 3.4, 11.5);
-  camera.lookAt(0.5, 0.4, 0);
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 200);
+  camera.position.set(8.6, 4.4, 11.0);
+  camera.lookAt(0, 0.3, 0);
 
   function size() {
     const r = canvas.getBoundingClientRect();
@@ -401,24 +400,14 @@ export function initMillingScene(canvas) {
   const matGlass    = new THREE.MeshStandardMaterial({ color: 0x88b8d4, metalness: 0.2,  roughness: 0.15, transparent: true, opacity: 0.35 });
 
   // ============ FLOOR + GRID ============
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(26, 14), matFloor);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(22, 14), matFloor);
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -1.6;
   scene.add(floor);
-  const grid = new THREE.GridHelper(26, 26, 0x22d3ee, 0x0e1628);
+  const grid = new THREE.GridHelper(22, 22, 0x22d3ee, 0x0e1628);
   grid.material.opacity = 0.18; grid.material.transparent = true;
   grid.position.y = -1.59;
   scene.add(grid);
-
-  // ============ STAGE ANCHORS (3D positions used for HTML overlay labels) ============
-  // Stages flow left → right: hopper (-5.5) → roller A (-2.8) → roller B/issue (-0.7) → sifter (1.6) → piles (4.0)
-  const ANCHOR = {
-    intake:  new THREE.Vector3(-5.5, 1.7, 0),
-    rollers: new THREE.Vector3(-1.7, 1.0, 0),
-    sifter:  new THREE.Vector3(1.6, 1.6, 0),
-    flour:   new THREE.Vector3(4.0, -0.8, 1.0),
-    bran:    new THREE.Vector3(4.0, -0.8, -1.0),
-  };
 
   // ============ STRUCTURAL FRAME (steel beams forming the mill skeleton) ============
   const frame = new THREE.Group();
@@ -429,28 +418,34 @@ export function initMillingScene(canvas) {
     frame.add(m);
     return m;
   }
-  // Vertical columns spanning the full line
-  const colXs = [-4.6, -2.0, 0.4, 2.8, 5.0];
+  // Four vertical columns
+  const colXs = [-3.6, -1.0, 1.6, 4.2];
   const colZs = [-1.1, 1.1];
-  colXs.forEach(cx => colZs.forEach(cz => beam(cx, 0.2, cz, 0.16, 3.4, 0.16)));
+  colXs.forEach(cx => colZs.forEach(cz => beam(cx, 0.2, cz, 0.18, 3.4, 0.18)));
   // horizontal floor beams (cross-bracing) at three levels
   [-1.4, 0.0, 1.6].forEach(y => {
     // long beams along X
-    colZs.forEach(cz => beam(0.2, y, cz, 11.2, 0.08, 0.1));
+    colZs.forEach(cz => beam(0.3, y, cz, 8.2, 0.1, 0.12));
     // short beams along Z
-    colXs.forEach(cx => beam(cx, y, 0, 0.1, 0.08, 2.4));
+    colXs.forEach(cx => beam(cx, y, 0, 0.12, 0.1, 2.4));
   });
   // catwalk grating at mid-level (front side)
   const catwalk = new THREE.Mesh(
-    new THREE.BoxGeometry(11.2, 0.05, 0.6),
+    new THREE.BoxGeometry(8.4, 0.05, 0.6),
     new THREE.MeshStandardMaterial({ color: 0x2a3344, metalness: 0.7, roughness: 0.6 })
   );
-  catwalk.position.set(0.2, 0.05, 1.5);
+  catwalk.position.set(0.3, 0.05, 1.5);
   scene.add(catwalk);
+  // catwalk rails
+  for (let i = 0; i < 2; i++) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.04, 0.04), matSteel);
+    rail.position.set(0.3, 0.4 + i * 0.3, 1.78);
+    scene.add(rail);
+  }
 
   // ============ INTAKE TOWER (left, tall hopper feeding the line) ============
   const intake = new THREE.Group();
-  intake.position.set(-5.5, 0, 0);
+  intake.position.set(-4.4, 0, 0);
   scene.add(intake);
   // tall cylindrical silo body
   const silo = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 2.2, 24), matCream);
@@ -491,11 +486,11 @@ export function initMillingScene(canvas) {
 
   // duct from silo down into break-roller floor
   const intakeDuct = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.6, 0.35), matDuct);
-  intakeDuct.position.set(-5.05, -1.1, 0);
+  intakeDuct.position.set(-3.95, -1.1, 0);
   scene.add(intakeDuct);
-  // diagonal duct connecting silo to first break-roller
-  const xferDuct = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 2.5, 14), matDuct);
-  xferDuct.position.set(-3.95, -0.4, 0);
+  // diagonal duct connecting silo to break rolls
+  const xferDuct = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 1.6, 14), matDuct);
+  xferDuct.position.set(-3.45, -0.9, 0);
   xferDuct.rotation.z = Math.PI / 3;
   scene.add(xferDuct);
 
@@ -556,48 +551,23 @@ export function initMillingScene(canvas) {
     rollerR.rotation.x = Math.PI / 2;
     rollerR.position.set(0.22, 0.15, 0);
     g.add(rollerR);
-    // viewing window above rollers — glass with a subtle inner glow
+    // viewing window above rollers
     const window_ = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.25, 0.04), matGlass);
     window_.position.set(0, 0.3, 0.92);
     g.add(window_);
-    // inner glow for the inspection window (cyan for ok, amber for warn)
-    const innerGlowMat = new THREE.MeshBasicMaterial({
-      color: isWarn ? 0xf59e0b : 0x22d3ee, transparent: true, opacity: isWarn ? 0.45 : 0.25
-    });
-    const innerGlow = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.21, 0.005), innerGlowMat);
-    innerGlow.position.set(0, 0.3, 0.95);
-    g.add(innerGlow);
-    // top-mount drive motor (small cylinder on top with belt guard)
-    const driveMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.5, 18),
-      new THREE.MeshStandardMaterial({ color: 0x2c3650, metalness: 0.85, roughness: 0.4 }));
-    driveMotor.rotation.z = Math.PI / 2;
-    driveMotor.position.set(-0.2, 0.95, 0);
-    g.add(driveMotor);
-    const driveCap = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.06, 18), matSteelDark);
-    driveCap.rotation.z = Math.PI / 2;
-    driveCap.position.set(0.07, 0.95, 0);
-    g.add(driveCap);
-    // belt guard between drive motor and roller
-    const beltGuard = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.4, 0.08), matSteelDark);
-    beltGuard.position.set(0.05, 0.55, 0.55);
-    g.add(beltGuard);
     // discharge spout below
     const spout = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.5), matSteelDark);
     spout.position.y = -0.45;
     g.add(spout);
-    rollerStands.push({ group: g, rollerL, rollerR, isWarn, innerGlow });
+    rollerStands.push({ group: g, rollerL, rollerR, isWarn });
     return g;
   }
-  makeRollerStand(-2.8, false);
-  makeRollerStand(-0.7, true);   // the highlighted one with the issue
-  // short transfer chute between the two rollers
-  const rollerLink = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.18, 0.4), matDuct);
-  rollerLink.position.set(-1.75, -1.05, 0);
-  scene.add(rollerLink);
+  makeRollerStand(-2.0, false);
+  makeRollerStand(-0.2, true);   // the highlighted one with the issue
 
-  // ============ PLANSIFTER (tall cubic sifter, right of break rolls) ============
+  // ============ PLANSIFTER (tall cubic sifter on right side) ============
   const sifter = new THREE.Group();
-  sifter.position.set(1.6, 0.4, 0);
+  sifter.position.set(2.4, 0.4, 0);
   scene.add(sifter);
   // outer frame (suspended box)
   const sifterBody = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.8, 1.7),
@@ -626,99 +596,48 @@ export function initMillingScene(canvas) {
   motor.rotation.z = Math.PI / 2;
   motor.position.set(0, 1.25, 0);
   sifter.add(motor);
-  // outlet ducts at bottom — angled chutes for flour (front-right) and bran (back-right)
-  const flourChute = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.4, 14), matDuct);
-  flourChute.position.set(0.7, -1.4, 0.55);
-  flourChute.rotation.x = -Math.PI / 8;
-  flourChute.rotation.z = -Math.PI / 4;
+  // outlet ducts at bottom — angled chutes for flour and bran
+  const flourChute = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.8, 14), matDuct);
+  flourChute.position.set(-0.5, -1.1, 0.4);
+  flourChute.rotation.x = -Math.PI / 6;
+  flourChute.rotation.z = Math.PI / 5;
   sifter.add(flourChute);
-  const branChute = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 1.4, 14), matDuct);
-  branChute.position.set(0.7, -1.4, -0.55);
-  branChute.rotation.x = Math.PI / 8;
-  branChute.rotation.z = -Math.PI / 4;
+  const branChute = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.7, 14), matDuct);
+  branChute.position.set(0.55, -1.05, -0.4);
+  branChute.rotation.x = Math.PI / 6;
+  branChute.rotation.z = -Math.PI / 5;
   sifter.add(branChute);
 
-  // ============ FLOUR PILE + BRAN PILE (right end of the line) ============
-  const matFlour = new THREE.MeshStandardMaterial({
-    color: 0xfff1d6, metalness: 0.05, roughness: 0.9, emissive: 0x2a1a04, emissiveIntensity: 0.06
-  });
-  const matBran = new THREE.MeshStandardMaterial({
-    color: 0xa8763a, metalness: 0.1, roughness: 0.95
-  });
-  const flourPile = new THREE.Mesh(new THREE.ConeGeometry(0.85, 0.7, 32), matFlour);
-  flourPile.position.set(4.0, -1.25, 1.0);
-  scene.add(flourPile);
-  const flourPlate = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.04, 32), matSteelDark);
-  flourPlate.position.set(4.0, -1.59, 1.0);
-  scene.add(flourPlate);
-  const branPile = new THREE.Mesh(new THREE.ConeGeometry(0.7, 0.6, 32), matBran);
-  branPile.position.set(4.0, -1.3, -1.0);
-  scene.add(branPile);
-  const branPlate = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.04, 32), matSteelDark);
-  branPlate.position.set(4.0, -1.59, -1.0);
-  scene.add(branPlate);
-  // small "FLOUR" / "BRAN" tag plates in front of the piles
-  const flourTag = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.02),
-    new THREE.MeshStandardMaterial({ color: 0x12243a, metalness: 0.4, roughness: 0.5, emissive: 0x0c1a2a, emissiveIntensity: 0.4 }));
-  flourTag.position.set(4.0, -1.5, 1.85);
-  scene.add(flourTag);
-  const branTag = flourTag.clone();
-  branTag.position.set(4.0, -1.5, -1.85);
-  scene.add(branTag);
-
   // ============ HORIZONTAL TRANSFER PIPING (overhead manifolds) ============
-  // Run between rollers and sifter at high level (spans the whole line)
+  // Run between rollers and sifter at high level
   for (let i = 0; i < 3; i++) {
-    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 6.5, 12), matDuct);
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.5, 12), matDuct);
     pipe.rotation.z = Math.PI / 2;
-    pipe.position.set(-0.6, 1.8 + i * 0.12, -0.6 + i * 0.4);
+    pipe.position.set(0.5, 1.8 + i * 0.12, -0.6 + i * 0.4);
     scene.add(pipe);
   }
   // pneumatic-lift pipe rising from highlighted roller up to sifter top
   const liftPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 2.6, 14), matDuct);
-  liftPipe.position.set(-0.7, 0.95, 0);
+  liftPipe.position.set(-0.2, 0.95, 0);
   scene.add(liftPipe);
   // elbow
   const liftElbow = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10), matDuct);
-  liftElbow.position.set(-0.7, 2.2, 0);
+  liftElbow.position.set(-0.2, 2.2, 0);
   scene.add(liftElbow);
-  // horizontal run to sifter top
-  const liftHoriz = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 2.4, 14), matDuct);
+  // horizontal run to sifter
+  const liftHoriz = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 2.7, 14), matDuct);
   liftHoriz.rotation.z = Math.PI / 2;
-  liftHoriz.position.set(0.5, 2.2, 0);
+  liftHoriz.position.set(1.15, 2.2, 0);
   scene.add(liftHoriz);
-  // drop-down into sifter top
-  const liftDrop = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.6, 14), matDuct);
-  liftDrop.position.set(1.6, 1.9, 0);
-  scene.add(liftDrop);
 
-  // ============ WARNING BEACON ON THE SIFTER (story: this is where extraction is leaking) ============
+  // ============ WARNING HALO on the issue roller ============
   const halo = new THREE.Mesh(
-    new THREE.TorusGeometry(1.35, 0.022, 8, 64),
+    new THREE.TorusGeometry(1.15, 0.018, 8, 64),
     new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.85 })
   );
   halo.rotation.x = Math.PI / 2;
-  halo.position.set(1.6, -1.45, 0);
+  halo.position.set(-0.2, -0.95, 0);
   scene.add(halo);
-  // outer concentric ring (slower, wider pulse)
-  const haloOuter = new THREE.Mesh(
-    new THREE.TorusGeometry(1.65, 0.015, 8, 80),
-    new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.45 })
-  );
-  haloOuter.rotation.x = Math.PI / 2;
-  haloOuter.position.set(1.6, -1.45, 0);
-  scene.add(haloOuter);
-  // vertical scanning beam at the warning area (renamed: avoid collision with frame `beam()` helper)
-  const scanBeamMat = new THREE.MeshBasicMaterial({
-    color: 0xf59e0b, transparent: true, opacity: 0.18, side: THREE.DoubleSide
-  });
-  const scanBeam = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 3.0), scanBeamMat);
-  scanBeam.position.set(1.6, 0.2, 0);
-  scene.add(scanBeam);
-  // sifter body emissive overlay (glows amber when issue is acute)
-  const sifterGlow = new THREE.Mesh(new THREE.BoxGeometry(1.74, 1.84, 1.74),
-    new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.05 }));
-  sifter.add(sifterGlow);
   window.__millHalo = halo;
 
   // ============ FLOW PARTICLES ============
@@ -742,94 +661,57 @@ export function initMillingScene(canvas) {
     flowGroups.push({ points, phases, getPath, count, speed: 0.005 + Math.random()*0.002 });
   }
 
-  // 01 — Wheat: silo → first break roller (diagonal drop along xferDuct)
-  makeFlow(0xe8c889, 80, 0.05, (ph, i) => {
-    const jx = ((i * 0.137) % 1 - 0.5) * 0.06;
+  // Wheat: silo → break roller 1 (diagonal drop)
+  makeFlow(0xe8c889, 90, 0.05, (ph, i) => {
+    const jx = (i * 0.137) % 1 - 0.5;
     return {
-      x: -5.5 + ph * 2.7,
-      y: 0.6 - ph * 1.6,
-      z: jx
+      x: -4.4 + ph * 2.4,
+      y: 0.6 - ph * 1.7,
+      z: jx * 0.08
     };
   });
-  // 02 — Through break rollers (low level, left-to-right)
+  // Through break rollers: -2.0 to -0.2 (horizontal at low level)
   makeFlow(0xe8c889, 70, 0.045, (ph, i) => ({
-    x: -2.8 + ph * 2.1,
-    y: -1.05 + Math.sin(ph * 8) * 0.04,
+    x: -2.0 + ph * 1.8,
+    y: -1.0 + Math.sin(ph * 8) * 0.04,
     z: ((i * 0.211) % 1 - 0.5) * 0.1
   }));
-  // 03 — Pneumatic lift: ground from second roller UP and OVER to sifter top
-  makeFlow(0xe8c889, 70, 0.04, (ph, i) => {
+  // Pneumatic lift: from highlighted roller UP and OVER to sifter top
+  makeFlow(0xe8c889, 60, 0.04, (ph, i) => {
     const jx = ((i * 0.183) % 1 - 0.5) * 0.05;
-    if (ph < 0.4) {
-      // straight up from x=-0.7
-      return { x: -0.7 + jx, y: -0.5 + (ph / 0.4) * 2.7, z: jx };
-    } else if (ph < 0.85) {
-      const p2 = (ph - 0.4) / 0.45;
-      return { x: -0.7 + p2 * 2.3, y: 2.2 + jx, z: jx };
+    if (ph < 0.45) {
+      return { x: -0.2 + jx, y: -0.5 + (ph / 0.45) * 2.7, z: jx };
+    } else if (ph < 0.95) {
+      const p2 = (ph - 0.45) / 0.5;
+      return { x: -0.2 + p2 * 2.6, y: 2.2 + jx, z: jx };
     } else {
-      // drop into sifter top
-      return { x: 1.6 + jx, y: 2.2 - (ph - 0.85) / 0.15 * 0.6, z: jx };
+      return { x: 2.4, y: 2.2 - (ph - 0.95) * 4 * 0.6, z: jx };
     }
   });
-  // 04 — Inside sifter — particles cascading through decks
-  makeFlow(0xe8c889, 60, 0.04, (ph, i) => ({
-    x: 1.6 + ((i*0.31)%1 - 0.5) * 1.4,
+  // Inside sifter — particles cascading through decks
+  makeFlow(0xe8c889, 50, 0.04, (ph, i) => ({
+    x: 2.4 + ((i*0.31)%1 - 0.5) * 1.4,
     y: 1.4 - ph * 2.0,
     z: ((i*0.27)%1 - 0.5) * 1.4
   }), 0.7);
-  // 05 — Flour output: out of front chute → flour pile (front-right)
-  makeFlow(0xfff4d8, 90, 0.06, (ph, i) => {
-    const jx = ((i * 0.19) % 1 - 0.5) * 0.08;
-    return {
-      x: 2.0 + ph * 2.0,
-      y: -0.7 - ph * 0.55,
-      z: 0.7 + ph * 0.3 + jx
-    };
-  });
-  // 06 — Bran output (amber): out of back chute → bran pile (back-right)
-  makeFlow(0xc8954a, 60, 0.05, (ph, i) => {
-    const jx = ((i * 0.23) % 1 - 0.5) * 0.08;
-    return {
-      x: 2.0 + ph * 2.0,
-      y: -0.7 - ph * 0.55,
-      z: -0.7 - ph * 0.3 + jx
-    };
-  });
-
-  // ============ HTML LABEL OVERLAY positioning ============
-  // Project 3D anchor points to canvas pixels and align each .mann pill
-  const annotEls = {};
-  document.querySelectorAll('.mill-annots .mann').forEach(el => {
-    const k = el.getAttribute('data-anchor');
-    if (k && ANCHOR[k]) annotEls[k] = el;
-    // clear any old fixed anchor CSS so JS positioning takes over
-    el.style.left = ''; el.style.right = ''; el.style.top = ''; el.style.bottom = '';
-    el.style.transform = '';
-    el.style.position = 'absolute';
-  });
-  function positionAnnots() {
-    const r = canvas.getBoundingClientRect();
-    Object.entries(annotEls).forEach(([key, el]) => {
-      const v = ANCHOR[key].clone().project(camera);
-      const sx = (v.x * 0.5 + 0.5) * r.width;
-      const sy = (-v.y * 0.5 + 0.5) * r.height;
-      // bias each label so it doesn't sit on top of the geometry
-      const bias = {
-        intake:  { dx: 18,   dy: -28 },
-        rollers: { dx: -90,  dy: -100 },
-        sifter:  { dx: -100, dy: -110 },
-        flour:   { dx: -180, dy: 18 },
-        bran:    { dx: -180, dy: 18 },
-      }[key] || { dx: 0, dy: 0 };
-      // clamp so labels stay inside the stage with a 10px margin
-      const W = el.offsetWidth || 200;
-      const H = el.offsetHeight || 50;
-      const x = Math.max(8, Math.min(r.width - W - 8, sx + bias.dx));
-      const y = Math.max(8, Math.min(r.height - H - 8, sy + bias.dy));
-      el.style.left = x + 'px';
-      el.style.top  = y + 'px';
-    });
-  }
+  // Flour output (cream, brighter): out of sifter flour chute, to right
+  makeFlow(0xfff4d8, 70, 0.06, (ph, i) => ({
+    x: 1.9 - ph * 0.0 + ph * (-0.5),
+    y: -0.6 - ph * 0.6,
+    z: 0.8 + ph * 1.2
+  }));
+  // simpler flour chute path
+  makeFlow(0xfff4d8, 50, 0.055, (ph, i) => ({
+    x: 1.9 + ph * 0.6,
+    y: -0.7 - ph * 0.7,
+    z: 0.85 + ((i*0.19)%1 - 0.5)*0.1
+  }));
+  // Bran output (amber): out of sifter bran chute, to right-back
+  makeFlow(0xc8954a, 35, 0.05, (ph, i) => ({
+    x: 2.95 + ph * 0.4,
+    y: -0.65 - ph * 0.65,
+    z: -0.85 - ((i*0.23)%1) * 0.3
+  }));
 
   // ============ ANIMATE ============
   let t = 0;
@@ -855,37 +737,21 @@ export function initMillingScene(canvas) {
     });
 
     // sifter wobble (plansifters use gyratory motion)
-    sifter.position.x = 1.6 + Math.cos(t * 6) * 0.025;
+    sifter.position.x = 2.4 + Math.cos(t * 6) * 0.025;
     sifter.position.z = Math.sin(t * 6) * 0.025;
 
-    // pulsing warning halo on the sifter
+    // pulsing warning halo
     const pulse = (Math.sin(t * 3) + 1) / 2;
     halo.material.opacity = 0.45 + pulse * 0.45;
     halo.scale.setScalar(1 + pulse * 0.06);
-    haloOuter.material.opacity = 0.25 + Math.sin(t * 1.6 + 1.0) * 0.2;
-    haloOuter.scale.setScalar(1 + (Math.sin(t * 1.6) + 1) * 0.04);
-    sifterGlow.material.opacity = 0.04 + pulse * 0.06;
-
-    // sweeping scanning beam on the issue area
-    scanBeam.rotation.y = t * 0.6;
-    scanBeam.material.opacity = 0.12 + pulse * 0.18;
-
-    // inspection-window inner glow throbs (cyan stable, amber breathing on warn)
-    rollerStands.forEach(s => {
-      if (s.isWarn && s.innerGlow) {
-        s.innerGlow.material.opacity = 0.35 + pulse * 0.35;
-      }
-    });
 
     // accent point light pulse
     accent.intensity = 0.45 + Math.sin(t * 1.2) * 0.1;
 
-    // gentle camera sway (small — keep the line composition stable)
-    camera.position.x = 0.5 + Math.sin(t * 0.18) * 0.25;
-    camera.position.y = 3.4 + Math.sin(t * 0.22) * 0.15;
-    camera.lookAt(0.5, 0.4, 0);
-
-    positionAnnots();
+    // gentle camera sway
+    camera.position.x = 8.6 + Math.sin(t * 0.18) * 0.35;
+    camera.position.y = 4.4 + Math.sin(t * 0.22) * 0.2;
+    camera.lookAt(0, 0.3, 0);
 
     renderer.render(scene, camera);
     raf = requestAnimationFrame(animate);
