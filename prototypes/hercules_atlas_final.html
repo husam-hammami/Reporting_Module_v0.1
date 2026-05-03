@@ -3651,6 +3651,67 @@ input { font: inherit; color: inherit; background: none; border: none; outline: 
   --herc-green: #10b981;
   --herc-amber: #f59e0b;
   --herc-red: #ef4444;
+
+  /* Yield-tab token aliases — map legacy --fg-*/--card/--border names
+     used in the yield/mill section to the live design-system tokens.
+     Without these, rail-card text was unstyled and the .opp gradient
+     fell through to the body, causing color loss + apparent overlap. */
+  --fg-1: var(--t-0);
+  --fg-2: var(--t-1);
+  --fg-3: var(--t-2);
+  --fg-4: var(--t-3);
+  --card: var(--bg-card);
+  --border: var(--b-w-1);
+}
+
+/* Light-theme overrides for the yield section.
+   Activated when an ancestor (typically <body> or <html>) has
+   data-theme="light". Keeps the accent palette (cyan/green/amber)
+   but flips surfaces and text so the cards remain legible. */
+[data-theme="light"] {
+  --fg-1: #0f172a;
+  --fg-2: #1e293b;
+  --fg-3: #475569;
+  --fg-4: #94a3b8;
+  --card: #ffffff;
+  --border: rgba(15, 23, 42, 0.10);
+}
+[data-theme="light"] .yield-rail .rail-card,
+[data-theme="light"] .yield-diag .diag-card,
+[data-theme="light"] .mill-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+[data-theme="light"] .rail-card .rc-num.cyan,
+[data-theme="light"] .diag-num.cyan,
+[data-theme="light"] .diag-title .hl-cyan,
+[data-theme="light"] .diag-stats .ds-v.cyan,
+[data-theme="light"] .diag-impact .dim-v.cyan,
+[data-theme="light"] .fc-row .fc-v.cyan {
+  color: #0891b2;
+}
+[data-theme="light"] .diag-num.green,
+[data-theme="light"] .diag-impact .dim-v.green,
+[data-theme="light"] .fc-row .fc-v.green,
+[data-theme="light"] .fc-row .fc-d.up {
+  color: #059669;
+}
+[data-theme="light"] .rail-card.opp {
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(34, 211, 238, 0.10), transparent 60%),
+    #ffffff;
+}
+[data-theme="light"] .rail-card .rc-bar {
+  background: rgba(15, 23, 42, 0.06);
+}
+[data-theme="light"] .diag-impact .dim-cell {
+  background: rgba(15, 23, 42, 0.03);
+}
+[data-theme="light"] .fc-row {
+  border-bottom: 1px dashed rgba(15, 23, 42, 0.08);
 }
 
 /* ----- App grid: keep Hercules's narrower sidebar ----- */
