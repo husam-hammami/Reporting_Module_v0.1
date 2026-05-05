@@ -169,9 +169,9 @@ def _fetch_segment_tag_samples(cur, tag_id, from_dt, to_dt):
     cur.execute("""
         SELECT sub.ts, sub.val
         FROM (
-            SELECT h."timestamp" AS ts, h.value AS val,
-                LAG(h.value) OVER (ORDER BY h."timestamp") AS lv,
-                LEAD(h.value) OVER (ORDER BY h."timestamp") AS rv
+            SELECT h.id, h."timestamp" AS ts, h.value AS val,
+                LAG(h.value) OVER (ORDER BY h."timestamp" ASC, h.id ASC) AS lv,
+                LEAD(h.value) OVER (ORDER BY h."timestamp" ASC, h.id ASC) AS rv
             FROM tag_history h
             WHERE h.tag_id = %s
               AND h."timestamp" >= %s::timestamp
@@ -179,7 +179,7 @@ def _fetch_segment_tag_samples(cur, tag_id, from_dt, to_dt):
         ) sub
         WHERE sub.lv IS NULL OR sub.rv IS NULL
            OR sub.val IS DISTINCT FROM sub.lv OR sub.val IS DISTINCT FROM sub.rv
-        ORDER BY sub.ts ASC
+        ORDER BY sub.ts ASC, sub.id ASC
     """, (tag_id, from_dt, to_dt))
     rows = cur.fetchall()
 
@@ -190,9 +190,9 @@ def _fetch_segment_tag_samples(cur, tag_id, from_dt, to_dt):
     cur.execute("""
         SELECT sub.ts, sub.val
         FROM (
-            SELECT a.archive_hour AS ts, a.value AS val,
-                LAG(a.value) OVER (ORDER BY a.archive_hour) AS lv,
-                LEAD(a.value) OVER (ORDER BY a.archive_hour) AS rv
+            SELECT a.id, a.archive_hour AS ts, a.value AS val,
+                LAG(a.value) OVER (ORDER BY a.archive_hour ASC, a.id ASC) AS lv,
+                LEAD(a.value) OVER (ORDER BY a.archive_hour ASC, a.id ASC) AS rv
             FROM tag_history_archive a
             WHERE a.tag_id = %s
               AND a.archive_hour >= %s::timestamp
@@ -200,7 +200,7 @@ def _fetch_segment_tag_samples(cur, tag_id, from_dt, to_dt):
         ) sub
         WHERE sub.lv IS NULL OR sub.rv IS NULL
            OR sub.val IS DISTINCT FROM sub.lv OR sub.val IS DISTINCT FROM sub.rv
-        ORDER BY sub.ts ASC
+        ORDER BY sub.ts ASC, sub.id ASC
     """, (tag_id, from_dt, to_dt))
     rows = cur.fetchall()
     return [(row["ts"], row["val"]) for row in rows]

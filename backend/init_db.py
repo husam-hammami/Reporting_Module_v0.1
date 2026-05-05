@@ -63,6 +63,8 @@ MIGRATION_ORDER = [
     'create_ml_anomaly_events.sql',
     # Plan 6 hotfix — assets_view self-healing
     'recreate_assets_view_self_healing.sql',
+    # Historian: segment / by-tags scans by tag_id + time (no layout_id)
+    'add_tag_history_tag_id_timestamp_index.sql',
 ]
 
 

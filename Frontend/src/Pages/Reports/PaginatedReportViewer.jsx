@@ -138,58 +138,59 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
       const toISO = dateRange.to.toISOString();
 
       const aggEntries = Object.entries(tagAggGroups);
-      if (aggEntries.length === 0) {
-        // Fallback: fetch all tags with 'auto'
-        const res = await axios.get('/api/historian/by-tags', {
-          params: { tag_names: tagNames.join(','), from: fromISO, to: toISO, aggregation: 'auto' },
-          timeout: BY_TAGS_TIMEOUT_MS,
-        });
-        const data = res?.data?.tag_values || res?.data?.data || res?.data;
-        if (data && typeof data === 'object' && !Array.isArray(data)) setTagValues(data);
-      } else {
-        // Fire parallel requests per aggregation type
-        const results = await Promise.all(
-          aggEntries.map(([agg, tags]) =>
-            axios.get('/api/historian/by-tags', {
-              params: { tag_names: tags.join(','), from: fromISO, to: toISO, aggregation: agg },
-              timeout: BY_TAGS_TIMEOUT_MS,
-            }).then((res) => ({ agg, data: res?.data?.tag_values || res?.data?.data || res?.data || {} }))
-              .catch(() => ({ agg, data: {} }))
-          )
-        );
-        // Merge: default agg ('last') uses plain tagName, others use 'agg::tagName'
-        const merged = {};
-        for (const { agg, data } of results) {
-          if (!data || typeof data !== 'object') continue;
-          for (const [tagName, value] of Object.entries(data)) {
-            if (agg === 'last') {
-              merged[tagName] = value;
-            } else {
-              merged[`${agg}::${tagName}`] = value;
-              // Also set plain tagName if not already set (so tags with only 'first' still work)
-              if (!(tagName in merged)) merged[tagName] = value;
+      try {
+        if (aggEntries.length === 0) {
+          // Fallback: fetch all tags with 'auto'
+          const res = await axios.get('/api/historian/by-tags', {
+            params: { tag_names: tagNames.join(','), from: fromISO, to: toISO, aggregation: 'auto' },
+            timeout: BY_TAGS_TIMEOUT_MS,
+          });
+          const data = res?.data?.tag_values || res?.data?.data || res?.data;
+          if (data && typeof data === 'object' && !Array.isArray(data)) setTagValues(data);
+        } else {
+          // Fire parallel requests per aggregation type
+          const results = await Promise.all(
+            aggEntries.map(([agg, tags]) =>
+              axios.get('/api/historian/by-tags', {
+                params: { tag_names: tags.join(','), from: fromISO, to: toISO, aggregation: agg },
+                timeout: BY_TAGS_TIMEOUT_MS,
+              }).then((res) => ({ agg, data: res?.data?.tag_values || res?.data?.data || res?.data || {} }))
+                .catch(() => ({ agg, data: {} }))
+            )
+          );
+          // Merge: default agg ('last') uses plain tagName, others use 'agg::tagName'
+          const merged = {};
+          for (const { agg, data } of results) {
+            if (!data || typeof data !== 'object') continue;
+            for (const [tagName, value] of Object.entries(data)) {
+              if (agg === 'last') {
+                merged[tagName] = value;
+              } else {
+                merged[`${agg}::${tagName}`] = value;
+                // Also set plain tagName if not already set (so tags with only 'first' still work)
+                if (!(tagName in merged)) merged[tagName] = value;
+              }
             }
           }
+          setTagValues(merged);
         }
-        setTagValues(merged);
+      } catch (err) {
+        console.warn('Failed to fetch historical data for paginated report:', err);
+        try {
+          const res2 = await axios.get('/api/live-monitor/tags', {
+            params: { tags: tagNames.join(',') },
+            timeout: 10000,
+          });
+          const data2 = res2?.data?.tag_values || res2?.data?.data || res2?.data;
+          if (data2 && typeof data2 === 'object') setTagValues(data2);
+        } catch {
+          setFetchError('Could not load tag data');
+        }
       }
-    } catch (err) {
-      console.warn('Failed to fetch historical data for paginated report:', err);
-      try {
-        const res2 = await axios.get('/api/live-monitor/tags', {
-          params: { tags: tagNames.join(',') },
-          timeout: 10000,
-        });
-        const data2 = res2?.data?.tag_values || res2?.data?.data || res2?.data;
-        if (data2 && typeof data2 === 'object') setTagValues(data2);
-      } catch {
-        setFetchError('Could not load tag data');
-      }
-    }
 
-    // ── Segment fetch: call /api/historian/row-segments for silo_segments rows ──
-    if (segmentRowDefs.length > 0 && dateRange) {
-      try {
+      // ── Segment fetch: call /api/historian/row-segments for silo_segments rows ──
+      if (segmentRowDefs.length > 0 && dateRange) {
+        try {
         const fromISO = dateRange.from.toISOString();
         const toISO = dateRange.to.toISOString();
         const segRes = await axios.post('/api/historian/row-segments', {
@@ -262,12 +263,13 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
           ? 'Segment data timed out — try a shorter range or refresh.'
           : (segErr?.response?.data?.error || segErr?.message || 'Could not load segment rows for this range.');
         setFetchError(String(msg));
+        }
+      } else {
+        setExpandedRows({});
       }
-    } else {
-      setExpandedRows({});
+    } finally {
+      setFetchLoading(false);
     }
-
-    setFetchLoading(false);
   }, [isLive, tagNames, tagAggGroups, dateRange, segmentRowDefs, sections]);
 
   useEffect(() => {
