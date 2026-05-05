@@ -2201,15 +2201,20 @@ export function PaginatedReportPreview({
     if (!compact && pageBreaks.includes(idx) && currentPageSections.length > 0) {
       // End current page
       pagesOutput.push(
-        <div key={`page-${pageNum}`} className="paginated-page" style={{
-          minHeight: compact ? 'auto' : `${A4_PAGE_HEIGHT_PX}px`,
-          maxHeight: compact ? 'none' : `${A4_PAGE_HEIGHT_PX}px`,
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          <ReportLogoHeader clientLogo={clientLogo} />
-          {currentPageSections}
-          <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-[10px] text-[#94a3b8] print:text-[8pt]">
+        <div
+          key={`page-${pageNum}`}
+          className="paginated-page flex flex-col"
+          style={{
+            minHeight: compact ? 'auto' : `${A4_PAGE_HEIGHT_PX}px`,
+            maxHeight: compact ? 'none' : `${A4_PAGE_HEIGHT_PX}px`,
+            overflow: 'hidden',
+          }}
+        >
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <ReportLogoHeader clientLogo={clientLogo} />
+            {currentPageSections}
+          </div>
+          <div className="flex shrink-0 justify-between border-t border-[#e2e8f0] px-2 py-1 text-[10px] text-[#94a3b8] print:border-[#ccc] print:text-[8pt]">
             <span>Records: {totalRows}</span>
             <span>Page {pageNum}</span>
           </div>
@@ -2229,14 +2234,19 @@ export function PaginatedReportPreview({
   // Last page
   if (currentPageSections.length > 0) {
     pagesOutput.push(
-      <div key={`page-${pageNum}`} className="paginated-page" style={{
-        minHeight: compact ? 'auto' : `${A4_PAGE_HEIGHT_PX}px`,
-        position: 'relative',
-      }}>
-        <ReportLogoHeader clientLogo={clientLogo} />
-        {currentPageSections}
+      <div
+        key={`page-${pageNum}`}
+        className="paginated-page flex min-h-0 flex-col"
+        style={{
+          minHeight: compact ? 'auto' : `${A4_PAGE_HEIGHT_PX}px`,
+        }}
+      >
+        <div className="flex min-h-0 flex-1 flex-col">
+          <ReportLogoHeader clientLogo={clientLogo} />
+          {currentPageSections}
+        </div>
         {!compact && (
-          <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-[10px] text-[#94a3b8] print:text-[8pt]">
+          <div className="flex shrink-0 justify-between border-t border-[#e2e8f0] px-2 py-1 text-[10px] text-[#94a3b8] print:border-[#ccc] print:text-[8pt]">
             <span>{totalRows > 0 ? `Records: ${totalRows}` : ''}</span>
             <span>Page {pageNum}{pageBreaks.length > 0 ? ` of ${pageNum}` : ''}</span>
           </div>

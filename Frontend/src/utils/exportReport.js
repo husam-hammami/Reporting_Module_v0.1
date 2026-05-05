@@ -121,7 +121,7 @@ export async function exportAsPNG(element, filename = 'report') {
 
 const PDF_MARGIN_X = 12;
 const PDF_MARGIN_TOP = 10;
-const PDF_FOOTER_H = 8;
+const PDF_FOOTER_H = 12;
 
 function pdfLayoutDims(orientation, pageMode) {
   let orient = orientation || 'auto';
