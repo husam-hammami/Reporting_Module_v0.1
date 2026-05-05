@@ -156,34 +156,54 @@ def _query_tag_ids(cur, tag_names):
 
 def _fetch_segment_tag_samples(cur, tag_id, from_dt, to_dt):
     """
-    Fetch all (timestamp, value) samples for a single tag in time range.
-    Returns list of (datetime, raw_value) ordered ASC.
-    Falls back to tag_history_archive if tag_history is empty.
+    Fetch (timestamp, value) samples for a single tag in [from_dt, to_dt], ordered ASC.
+
+    For silo segmentation we only need **run boundaries**: first/last row of each
+    constant-value stretch plus every value change. Including every raw poll row
+    pulls millions of rows for month-long ranges and times out the UI.
+
+    Boundary rule (equivalent to full scan for `_build_runs`):
+      keep row i iff value differs from previous OR from next OR i is first/last
+    in the window. This preserves all transitions and run extents.
     """
     cur.execute("""
-        SELECT h."timestamp", h.value
-        FROM tag_history h
-        WHERE h.tag_id = %s
-          AND h."timestamp" >= %s::timestamp
-          AND h."timestamp" <= %s::timestamp
-        ORDER BY h."timestamp" ASC
+        SELECT sub.ts, sub.val
+        FROM (
+            SELECT h."timestamp" AS ts, h.value AS val,
+                LAG(h.value) OVER (ORDER BY h."timestamp") AS lv,
+                LEAD(h.value) OVER (ORDER BY h."timestamp") AS rv
+            FROM tag_history h
+            WHERE h.tag_id = %s
+              AND h."timestamp" >= %s::timestamp
+              AND h."timestamp" <= %s::timestamp
+        ) sub
+        WHERE sub.lv IS NULL OR sub.rv IS NULL
+           OR sub.val IS DISTINCT FROM sub.lv OR sub.val IS DISTINCT FROM sub.rv
+        ORDER BY sub.ts ASC
     """, (tag_id, from_dt, to_dt))
     rows = cur.fetchall()
 
     if rows:
-        return [(row["timestamp"], row["value"]) for row in rows]
+        return [(row["ts"], row["val"]) for row in rows]
 
-    # Archive fallback — hourly granularity
+    # Archive fallback — hourly granularity (same boundary dedup)
     cur.execute("""
-        SELECT a.archive_hour AS "timestamp", a.value
-        FROM tag_history_archive a
-        WHERE a.tag_id = %s
-          AND a.archive_hour >= %s::timestamp
-          AND a.archive_hour <= %s::timestamp
-        ORDER BY a.archive_hour ASC
+        SELECT sub.ts, sub.val
+        FROM (
+            SELECT a.archive_hour AS ts, a.value AS val,
+                LAG(a.value) OVER (ORDER BY a.archive_hour) AS lv,
+                LEAD(a.value) OVER (ORDER BY a.archive_hour) AS rv
+            FROM tag_history_archive a
+            WHERE a.tag_id = %s
+              AND a.archive_hour >= %s::timestamp
+              AND a.archive_hour <= %s::timestamp
+        ) sub
+        WHERE sub.lv IS NULL OR sub.rv IS NULL
+           OR sub.val IS DISTINCT FROM sub.lv OR sub.val IS DISTINCT FROM sub.rv
+        ORDER BY sub.ts ASC
     """, (tag_id, from_dt, to_dt))
     rows = cur.fetchall()
-    return [(row["timestamp"], row["value"]) for row in rows]
+    return [(row["ts"], row["val"]) for row in rows]
 
 
 def _fetch_companion_value(cur, tag_id, aggregation, t_start, t_end):

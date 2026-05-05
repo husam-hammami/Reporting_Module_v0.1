@@ -20,6 +20,10 @@ import axios from '../../API/axios';
 import { exportAsPDF as exportAsPDFUtil } from '../../utils/exportReport';
 import { downloadReportTemplateExcel } from '../../utils/downloadReportTemplateExcel';
 
+/** Historian calls for long custom ranges; backend may scan large windows. */
+const BY_TAGS_TIMEOUT_MS = 120000;
+const ROW_SEGMENTS_TIMEOUT_MS = 180000;
+
 /* ══════════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ══════════════════════════════════════════════════════════════════ */
@@ -138,7 +142,7 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
         // Fallback: fetch all tags with 'auto'
         const res = await axios.get('/api/historian/by-tags', {
           params: { tag_names: tagNames.join(','), from: fromISO, to: toISO, aggregation: 'auto' },
-          timeout: 15000,
+          timeout: BY_TAGS_TIMEOUT_MS,
         });
         const data = res?.data?.tag_values || res?.data?.data || res?.data;
         if (data && typeof data === 'object' && !Array.isArray(data)) setTagValues(data);
@@ -148,7 +152,7 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
           aggEntries.map(([agg, tags]) =>
             axios.get('/api/historian/by-tags', {
               params: { tag_names: tags.join(','), from: fromISO, to: toISO, aggregation: agg },
-              timeout: 15000,
+              timeout: BY_TAGS_TIMEOUT_MS,
             }).then((res) => ({ agg, data: res?.data?.tag_values || res?.data?.data || res?.data || {} }))
               .catch(() => ({ agg, data: {} }))
           )
@@ -199,7 +203,7 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
             companion_cells: def.companionCells,
             merge_duplicates: def.segCell.segmentMergeDuplicates !== false,
           })),
-        }, { timeout: 20000 });
+        }, { timeout: ROW_SEGMENTS_TIMEOUT_MS });
         const rawRows = segRes?.data?.rows || {};
         // Build expanded rows map: { rowId: [{ id, cells, _segTagValues }] }
         const expanded = {};
@@ -254,6 +258,10 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
       } catch (segErr) {
         console.warn('Failed to fetch segment data:', segErr);
         setExpandedRows({});
+        const msg = segErr?.code === 'ECONNABORTED' || segErr?.message?.includes?.('timeout')
+          ? 'Segment data timed out — try a shorter range or refresh.'
+          : (segErr?.response?.data?.error || segErr?.message || 'Could not load segment rows for this range.');
+        setFetchError(String(msg));
       }
     } else {
       setExpandedRows({});

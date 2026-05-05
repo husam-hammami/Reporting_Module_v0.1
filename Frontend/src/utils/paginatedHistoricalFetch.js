@@ -5,6 +5,10 @@
 import axios from '../API/axios';
 import { findSiloSegmentTableRows } from '../Pages/ReportBuilder/PaginatedReportBuilder';
 
+/** Match PaginatedReportViewer — long windows need more time than default axios. */
+const BY_TAGS_TIMEOUT_MS = 120000;
+const ROW_SEGMENTS_TIMEOUT_MS = 180000;
+
 /**
  * @param {object} params
  * @param {object[]} params.sections - layout_config.paginatedSections
@@ -32,7 +36,7 @@ export async function fetchPaginatedHistoricalData({
   if (aggEntries.length === 0) {
     const res = await axios.get('/api/historian/by-tags', {
       params: { tag_names: tagNames.join(','), from: fromISO, to: toISO, aggregation: 'auto' },
-      timeout: 15000,
+      timeout: BY_TAGS_TIMEOUT_MS,
     });
     const data = res?.data?.tag_values || res?.data?.data || res?.data;
     if (data && typeof data === 'object' && !Array.isArray(data)) Object.assign(tagValues, data);
@@ -41,7 +45,7 @@ export async function fetchPaginatedHistoricalData({
       aggEntries.map(([agg, tags]) =>
         axios.get('/api/historian/by-tags', {
           params: { tag_names: tags.join(','), from: fromISO, to: toISO, aggregation: agg },
-          timeout: 15000,
+          timeout: BY_TAGS_TIMEOUT_MS,
         }).then((res) => ({ agg, data: res?.data?.tag_values || res?.data?.data || res?.data || {} }))
           .catch(() => ({ agg, data: {} }))
       )
@@ -78,7 +82,7 @@ export async function fetchPaginatedHistoricalData({
           companion_cells: def.companionCells,
           merge_duplicates: def.segCell.segmentMergeDuplicates !== false,
         })),
-      }, { timeout: 20000 });
+      }, { timeout: ROW_SEGMENTS_TIMEOUT_MS });
       const rawRows = segRes?.data?.rows || {};
       segmentRowDefs.forEach((def) => {
         const segs = rawRows[def.rowId];
