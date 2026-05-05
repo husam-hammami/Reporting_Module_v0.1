@@ -333,8 +333,8 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
   const handleDownloadExcel = async () => {
     setExcelExporting(true);
     try {
-      const from = timePeriod?.from?.toISOString?.() || '';
-      const to = timePeriod?.to?.toISOString?.() || '';
+      const from = dateRange?.from?.toISOString?.() || '';
+      const to = dateRange?.to?.toISOString?.() || '';
       const safe = (template?.name || 'report').replace(/[^\w\-]/g, '_');
       await downloadReportTemplateExcel(reportId, {
         from,
@@ -465,6 +465,14 @@ export default function PaginatedReportView({ reportId, onBack, siblingReports, 
           bg  = 'bg-[#ecfdf5] dark:bg-[#0d2e1f] border-[#a7f3d0] dark:border-[#065f46]';
           dot = <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse flex-shrink-0" />;
           msg = <span className="text-[11px] font-medium text-[#059669]">{emulatorOn ? 'Live (Emulator)' : 'Live'} — {Object.keys(mergedTagValues).length} tags</span>;
+        } else if (!isLive && timePeriod.tab === 'custom' && !dateRange && (!timePeriod.customFrom || !timePeriod.customTo)) {
+          bg  = 'bg-[#fffbeb] dark:bg-[#1e1508] border-[#fcd34d]/40';
+          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#d97706] flex-shrink-0" />;
+          msg = <span className="text-[11px] font-medium text-[#b45309]">Choose start and end dates, then Apply.</span>;
+        } else if (!isLive && timePeriod.tab === 'custom' && !dateRange && timePeriod.customFrom && timePeriod.customTo) {
+          bg  = 'bg-[#fffbeb] dark:bg-[#1e1508] border-[#fcd34d]/40';
+          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#d97706] flex-shrink-0" />;
+          msg = <span className="text-[11px] font-medium text-[#b45309]">This date range is not valid. End must be after start.</span>;
         } else if (hasData) {
           bg  = 'bg-[#ecfdf5] dark:bg-[#0d2e1f] border-[#a7f3d0] dark:border-[#065f46]';
           dot = <span className="w-1.5 h-1.5 rounded-full bg-[#059669] flex-shrink-0" />;

@@ -9,7 +9,8 @@
  *   const { state, dateRange, actions } = useTimePeriod('live', VIEWER_TABS);
  *
  * `dateRange` — { from: Date, to: Date } | null
- *   null only in 'live' mode (caller fetches live data instead).
+ *   null in 'live' mode, incomplete custom, or invalid custom (end before start).
+ *   Custom: same local calendar day with both times at 00:00 → expanded to end of that day (23:59:59.999).
  *
  * `actions`
  *   setTab(id)               — switch active tab
@@ -23,6 +24,7 @@
  */
 
 import { useReducer, useMemo } from 'react';
+import { parseDatetimeLocal, sameLocalCalendarDay, isLocalStartOfDay } from '../utils/parseDatetimeLocal';
 
 /* ── Day boundary ────────────────────────────────────────────────── */
 
@@ -147,10 +149,21 @@ export default function useTimePeriod(initialTab = 'live', shiftsConfig = null) 
 
     if (tab === 'custom') {
       if (!customFrom || !customTo) return null;
-      const from = new Date(customFrom);
-      const to   = new Date(customTo);
-      if (isNaN(from) || isNaN(to) || from >= to) return null;
-      return { from, to };
+      const from = parseDatetimeLocal(customFrom);
+      const toRaw = parseDatetimeLocal(customTo);
+      if (!from || !toRaw) return null;
+      // Same calendar day + both at local midnight (common picker pattern) → full local day [00:00, 23:59:59.999]
+      if (
+        from >= toRaw
+        && sameLocalCalendarDay(from, toRaw)
+        && isLocalStartOfDay(from)
+        && isLocalStartOfDay(toRaw)
+      ) {
+        const to = new Date(from.getFullYear(), from.getMonth(), from.getDate(), 23, 59, 59, 999);
+        return { from, to };
+      }
+      if (from >= toRaw) return null;
+      return { from, to: toRaw };
     }
 
     if (tab === 'shift') {

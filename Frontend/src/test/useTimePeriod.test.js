@@ -261,12 +261,29 @@ describe('custom tab', () => {
     expect(result.current.dateRange).toBeNull();
   });
 
-  it('returns null when from >= to', () => {
+  it('same calendar day, both local midnight → full local day (to = 23:59:59.999)', () => {
+    const { result } = renderHook(() => useTimePeriod('live'));
+    act(() => {
+      result.current.actions.setTab('custom');
+      result.current.actions.setCustomFrom('2025-06-15T00:00');
+      result.current.actions.setCustomTo('2025-06-15T00:00');
+    });
+    const { from, to } = result.current.dateRange;
+    expect(from).toBeInstanceOf(Date);
+    expect(to).toBeInstanceOf(Date);
+    expect(from.getHours()).toBe(0);
+    expect(to.getHours()).toBe(23);
+    expect(to.getMinutes()).toBe(59);
+    expect(to.getSeconds()).toBe(59);
+    expect(from.getTime()).toBeLessThan(to.getTime());
+  });
+
+  it('returns null when same instant but not start-of-day', () => {
     const { result } = renderHook(() => useTimePeriod('live'));
     act(() => {
       result.current.actions.setTab('custom');
       result.current.actions.setCustomFrom('2025-06-15T10:00');
-      result.current.actions.setCustomTo('2025-06-15T10:00');  // equal
+      result.current.actions.setCustomTo('2025-06-15T10:00');
     });
     expect(result.current.dateRange).toBeNull();
   });

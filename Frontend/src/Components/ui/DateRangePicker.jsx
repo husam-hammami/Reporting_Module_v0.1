@@ -16,6 +16,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { parseDatetimeLocal } from '../../utils/parseDatetimeLocal';
 
 /* ── Constants ────────────────────────────────────────────────────── */
 
@@ -27,13 +28,9 @@ const MON_S   = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
 
 /* ── Pure helpers ─────────────────────────────────────────────────── */
 
-/** Parse 'YYYY-MM-DDTHH:mm' → Date in local time. */
+/** Parse 'YYYY-MM-DDTHH:mm' → Date in local time (shared with useTimePeriod). */
 function parse(str) {
-  if (!str) return null;
-  const [dp, tp = '00:00'] = str.split('T');
-  const [y, mo, d] = dp.split('-').map(Number);
-  const [h, min]   = tp.split(':').map(Number);
-  return new Date(y, mo - 1, d, h, min);
+  return parseDatetimeLocal(str);
 }
 
 /** Format Date + 'HH:mm' → 'YYYY-MM-DDTHH:mm'. */
@@ -169,7 +166,8 @@ export default function DateRangePicker({ from, to, onApply, onClose, shiftsConf
 
   // Time strings for the from/to boundaries
   const [fromTime, setFromTime] = useState(() => timeStr(initFrom));
-  const [toTime,   setToTime]   = useState(() => timeStr(initTo) || '23:59');
+  // Default end-of-day when no prior "to" — avoid 00:00–00:00 same instant (invalid in useTimePeriod)
+  const [toTime,   setToTime]   = useState(() => (initTo ? timeStr(initTo) : '23:59'));
 
   // Calendar view (left panel month)
   const [viewYear,  setViewYear]  = useState(() => (initFrom || today).getFullYear());
