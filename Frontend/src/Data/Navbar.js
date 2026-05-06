@@ -1,4 +1,4 @@
-import { LayoutGrid, BarChart2, Settings, Table2, Send, Sparkles, ClipboardList, Box, Compass, Brain } from 'lucide-react';
+import { LayoutGrid, BarChart2, Settings, Table2, Send, ClipboardList, Box, Brain } from 'lucide-react';
 import { Roles } from './Roles';
 
 export const getMenuItems = (t) => [
@@ -45,23 +45,6 @@ export const getMenuItems = (t) => [
     roles: [Roles.Admin, Roles.Manager],
   },
   {
-    name: t('nav.herculesAI'),
-    icon: Sparkles,
-    tooltip: t('nav.tooltip.herculesAI'),
-    link: '/hercules-ai',
-    roles: [Roles.Admin],
-    badgeEndpoint: '/api/hercules-ai/status',
-    badgeKey: 'unseen_reports_count',
-  },
-  {
-    name: t('nav.atlas'),
-    icon: Compass,
-    tooltip: t('nav.tooltip.atlas'),
-    link: '/atlas',
-    roles: [Roles.Admin, Roles.Manager, Roles.Operator],
-    badge: 'NEW',
-  },
-  {
     name: t('nav.atlasAI'),
     icon: Brain,
     tooltip: t('nav.tooltip.atlasAI'),
@@ -87,8 +70,6 @@ export const menuItems = getMenuItems((key) => {
     'nav.tableReports': 'Table Reports',
     'nav.jobLogs': 'Job Logs',
     'nav.distribution': 'Distribution',
-    'nav.herculesAI': 'Hercules AI',
-    'nav.atlas': 'Hercules Atlas',
     'nav.atlasAI': 'Atlas AI',
     'nav.engineering': 'Engineering',
     'nav.tooltip.builder': 'Design and build reports',
@@ -97,9 +78,7 @@ export const menuItems = getMenuItems((key) => {
     'nav.tooltip.tableReports': 'View released table reports',
     'nav.tooltip.jobLogs': 'Production order history',
     'nav.tooltip.distribution': 'Scheduled report delivery',
-    'nav.tooltip.herculesAI': 'AI-powered insights and summaries',
-    'nav.tooltip.atlas': 'Live production & cost forecast',
-    'nav.tooltip.atlasAI': 'AI tabs: Production · PdM · Yield',
+    'nav.tooltip.atlasAI': 'Forecast · Production · PdM · Yield',
     'nav.tooltip.engineering': 'Tags, groups, formulas, mappings',
   };
   return fallback[key] || key;

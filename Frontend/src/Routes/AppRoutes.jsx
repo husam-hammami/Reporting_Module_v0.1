@@ -33,10 +33,8 @@ import ProfilePage from '../Pages/Profile/ProfilePage';
 import MyAccount from '../Pages/Profile/MyAccount';
 import AppSettingsPage from '../Pages/AppSettings/AppSettingsPage';
 import SystemLogs from '../Pages/Settings/Logs/SystemLogs';
-import HerculesAISetup from '../Pages/HerculesAI/HerculesAISetup';
-import HerculesAISettingsPage from '../Pages/HerculesAI/SettingsPage';
-import AtlasPage from '../Pages/Atlas/AtlasPage';
 import AtlasAIPage from '../Pages/AtlasAI/AtlasAIPage';
+import AISettings from '../Pages/Settings/AI/AISettings';
 import JobLogsPage from '../Pages/JobLogs/JobLogsPage';
 import DigitalTwinPage from '../Pages/DigitalTwin/DigitalTwinPage';
 import { useContext } from 'react';
@@ -207,36 +205,7 @@ const AppRoutes = () => {
             }
           />
 
-          {/* Hercules AI */}
-          <Route
-            path="hercules-ai"
-            element={
-              <ProtectedRoute roles={[Roles.Admin]}>
-                <HerculesAISetup />
-              </ProtectedRoute>
-            }
-          />
-          {/* Hercules AI — Settings (Plan 6 §11 — dedicated route) */}
-          <Route
-            path="hercules-ai/settings"
-            element={
-              <ProtectedRoute roles={[Roles.Admin]}>
-                <HerculesAISettingsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Hercules Atlas — Production & cost forecast (Plan 17) */}
-          <Route
-            path="atlas"
-            element={
-              <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
-                <AtlasPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Atlas AI — Claude Design 3-tab experience (Production / PdM / Yield) */}
+          {/* Atlas AI — single AI page with 4 tabs (Forecast / Production / PdM / Yield) */}
           <Route
             path="atlas-ai"
             element={
@@ -245,6 +214,12 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* Legacy redirects — old standalone Hercules AI / Hercules Atlas pages were
+              consolidated into Atlas AI (forecast tab) and Settings → AI. */}
+          <Route path="atlas" element={<Navigate to="/atlas-ai" replace />} />
+          <Route path="hercules-ai" element={<Navigate to="/settings/ai" replace />} />
+          <Route path="hercules-ai/settings" element={<Navigate to="/settings/ai" replace />} />
 
           {/* Digital Twin — 3D plant view (Salalah Mill B) */}
           <Route
@@ -306,6 +281,7 @@ const AppRoutes = () => {
             <Route path="mappings" element={<MappingManager />} />
             <Route path="export-import" element={<ExportImport />} />
             <Route path="distribution" element={<ReportDistribution />} />
+            <Route path="ai" element={<AISettings />} />
             <Route path="shifts" element={<ShiftsSettings />} />
             <Route path="branding" element={<BrandingSettings />} />
           </Route>

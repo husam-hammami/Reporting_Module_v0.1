@@ -2,18 +2,20 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './AtlasAI.css';
 
 import { DarkModeContext } from '../../Context/DarkModeProvider';
+import ForecastTab from './tabs/ForecastTab';
 import ProductionTab from './tabs/ProductionTab';
 import PdMTab from './tabs/PdMTab';
 import YieldTab from './tabs/YieldTab';
 
 const TABS = [
+  { key: 'forecast', label: 'Forecast', icon: <><path d="M3 17l6-6 4 4 8-8" /><path d="M14 7h7v7" /></> },
   { key: 'production', label: 'Production', icon: <path d="M3 12h4l3-9 4 18 3-9h4" /> },
   { key: 'pdm', label: 'Predictive Maintenance', icon: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" /></> },
   { key: 'yield', label: 'Yield Optimization', icon: <><path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" /><path d="M4 7l8 5 8-5M12 22V12" /></> },
 ];
 
 export default function AtlasAIPage() {
-  const [active, setActive] = useState('production');
+  const [active, setActive] = useState('forecast');
   const [clock, setClock] = useState(() => formatClock(new Date()));
   const { mode } = useContext(DarkModeContext) ?? {};
   const dataTheme = mode === 'light' ? 'light' : 'dark';
@@ -129,6 +131,7 @@ export default function AtlasAIPage() {
         </div>
 
         <div className="content">
+          {active === 'forecast' && <ForecastTab />}
           {active === 'production' && <ProductionTab />}
           {active === 'pdm' && <PdMTab />}
           {active === 'yield' && <YieldTab />}

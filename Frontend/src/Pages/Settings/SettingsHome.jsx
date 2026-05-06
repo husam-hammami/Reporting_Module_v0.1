@@ -1,7 +1,7 @@
 import React, { useEffect, useContext } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useLenisScroll } from '../../Hooks/useLenisScroll';
-import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaSuperscript, FaEnvelope, FaClock, FaImage } from 'react-icons/fa';
+import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaSuperscript, FaEnvelope, FaClock, FaImage, FaRobot } from 'react-icons/fa';
 import { AuthContext } from '../../Context/AuthProvider';
 import { useLanguage } from '../../Hooks/useLanguage';
 import '../ReportBuilder/reportBuilderTheme.css';
@@ -19,6 +19,7 @@ const SettingsHome = () => {
     { name: t('settings.formulas'), icon: FaSuperscript, link: '/settings/formulas', description: t('settings.desc.formulas') },
     { name: t('settings.mappings'), icon: FaExchangeAlt, link: '/settings/mappings', description: t('settings.desc.mappings') },
     { name: t('settings.emailSmtp'), icon: FaEnvelope, link: '/settings/distribution', description: t('settings.desc.emailSmtp') },
+    { name: t('settings.ai'), icon: FaRobot, link: '/settings/ai', description: t('settings.desc.ai') },
     { name: t('settings.shifts'), icon: FaClock, link: '/settings/shifts', description: t('settings.desc.shifts') },
     { name: t('settings.exportImport'), icon: FaDownload, link: '/settings/export-import', description: t('settings.desc.exportImport') },
     { name: t('settings.branding'), icon: FaImage, link: '/settings/branding', description: t('settings.desc.branding') },

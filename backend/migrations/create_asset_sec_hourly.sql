@@ -1,5 +1,7 @@
--- Plan 5 §4.2 — Hourly SEC (Specific Energy Consumption) per asset, materialised hourly.
--- Computed by ai_money.sec.refresh_hour() called from dynamic_archive_worker.
+-- Hourly SEC (Specific Energy Consumption) per asset, materialised hourly.
+-- Table reserved for a future AI/analytics writer. The original computer
+-- (ai_money.sec) was removed in the AI cleanup; rows in this table are
+-- currently orphaned and safe to ignore until the new writer ships.
 
 CREATE TABLE IF NOT EXISTS asset_sec_hourly (
     asset_name      VARCHAR(64) NOT NULL,
