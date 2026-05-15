@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Mail, HardDrive, Layers, Save, Play, FolderOpen, ChevronRight, ArrowUp, Search, Check, ChevronDown } from 'lucide-react';
 import { reportBuilderApi } from '../../API/reportBuilderApi';
-import { herculesAIApi } from '../../API/herculesAIApi';
 import RecipientInput from '../Settings/ReportDistribution/RecipientInput';
 import { toast } from 'react-toastify';
 import { useLanguage } from '../../Hooks/useLanguage';
@@ -247,15 +246,11 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
   const [reports, setReports] = useState([]);
   const [saving, setSaving] = useState(false);
   const [browsing, setBrowsing] = useState(false);
-  const [aiSetupComplete, setAiSetupComplete] = useState(false);
 
   useEffect(() => {
     reportBuilderApi.list().then(res => {
       const list = res.data?.data || res.data || [];
       setReports(list.map(r => ({ id: r.id, name: r.name })));
-    }).catch(() => {});
-    herculesAIApi.getStatus().then(res => {
-      setAiSetupComplete(!!res.data?.setup_completed);
     }).catch(() => {});
   }, []);
 
@@ -266,16 +261,15 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
         ...rule,
         report_ids: rule.report_ids || (rule.report_id ? [rule.report_id] : []),
         recipients: rule.recipients || [],
+        // Email AI was removed; force legacy AI-mode rules back to report_only
+        // so the UI reflects what the backend will actually do.
+        include_ai_summary: false,
+        content_mode: 'report_only',
       });
     } else {
-      // New rule: default AI summary ON when setup is complete
-      setForm(f => ({
-        ...EMPTY_RULE,
-        include_ai_summary: aiSetupComplete,
-        content_mode: aiSetupComplete ? 'report_with_ai' : 'report_only',
-      }));
+      setForm({ ...EMPTY_RULE });
     }
-  }, [rule, aiSetupComplete]);
+  }, [rule]);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
@@ -374,7 +368,7 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
                 })}
               </div>
             </div>
-            <div className="w-40" style={{ opacity: form.content_mode === 'ai_only' ? 0.4 : 1 }}>
+            <div className="w-40">
               <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.format')}</div>
               <div className="flex rounded-lg overflow-hidden" style={{ border: `1.5px solid ${t.border}` }}>
                 {[
@@ -383,47 +377,17 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
                   { value: 'html', label: 'HTML' },
                 ].map(f => (
                   <button key={f.value}
-                    onClick={() => form.content_mode !== 'ai_only' && set('format', f.value)}
-                    disabled={form.content_mode === 'ai_only'}
+                    onClick={() => set('format', f.value)}
                     className="flex-1 py-2 text-xs font-bold transition-all"
                     style={{
                       background: form.format === f.value ? t.accent : 'transparent',
                       color: form.format === f.value ? t.btnText : t.textSecondary,
-                      cursor: form.content_mode === 'ai_only' ? 'not-allowed' : 'pointer',
+                      cursor: 'pointer',
                     }}>
                     {f.label}
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* Content Mode */}
-            <div className="flex-1 min-w-[160px]">
-              <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.contentMode', 'Email Content')}</div>
-              <select
-                className="w-full text-xs bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-white"
-                value={form.content_mode || 'report_only'}
-                onChange={e => {
-                  set('content_mode', e.target.value);
-                  // Derive include_ai_summary for backward compat
-                  set('include_ai_summary', e.target.value !== 'report_only');
-                  // ai_only forces email delivery
-                  if (e.target.value === 'ai_only' && form.delivery_method === 'disk') {
-                    set('delivery_method', 'email');
-                  }
-                }}
-              >
-                <option value="report_only">{tr('distribution.reportOnly', 'Reports Only')}</option>
-                <option value="report_with_ai">{tr('distribution.reportWithAi', 'Reports + AI Summary')}</option>
-                <option value="ai_only" disabled={!aiSetupComplete}>
-                  {tr('distribution.aiOnly', 'AI Insights Only')}
-                </option>
-              </select>
-              {form.content_mode === 'ai_only' && (
-                <p className="text-[9px] text-cyan-400 mt-1">
-                  {tr('distribution.aiOnlyHint', 'Email will contain AI analysis only, no report attachments')}
-                </p>
-              )}
             </div>
           </div>
 

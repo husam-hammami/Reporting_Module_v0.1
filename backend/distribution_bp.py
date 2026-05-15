@@ -184,21 +184,14 @@ def _validate_rule(data):
         'schedule_day_of_week': dow,
         'schedule_day_of_month': dom,
         'enabled': bool(data.get('enabled', True)),
-        'include_ai_summary': bool(data.get('include_ai_summary', False)),
-        'content_mode': data.get('content_mode', 'report_only'),
+        # AI summary fields are legacy schema columns. Email AI was removed in
+        # the consolidation; a new AI summary path will be built from scratch
+        # later. Force safe defaults so existing rows with legacy modes
+        # (report_with_ai, ai_only, cfo_briefing) silently downgrade to
+        # report_only on save instead of failing or running dead code.
+        'include_ai_summary': False,
+        'content_mode': 'report_only',
     }
-
-    # Validate content_mode (Plan 6 §11 adds 'cfo_briefing')
-    valid_modes = ('report_only', 'report_with_ai', 'ai_only', 'cfo_briefing')
-    if cleaned['content_mode'] not in valid_modes:
-        return None, f"content_mode must be one of: {', '.join(valid_modes)}"
-
-    # Derive include_ai_summary from content_mode for backward compatibility
-    cleaned['include_ai_summary'] = cleaned['content_mode'] in ('report_with_ai', 'ai_only', 'cfo_briefing')
-
-    # ai_only / cfo_briefing modes are email-only — disk doesn't make sense
-    if cleaned['content_mode'] in ('ai_only', 'cfo_briefing') and cleaned['delivery_method'] == 'disk':
-        return None, "AI-only and CFO briefing modes require email delivery"
 
     return cleaned, None
 

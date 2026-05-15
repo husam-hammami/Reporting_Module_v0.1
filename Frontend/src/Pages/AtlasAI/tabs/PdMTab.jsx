@@ -189,42 +189,6 @@ export default function PdMTab() {
             <span className="amber">L2 3.2%</span><span className="muted">·</span><span>L3 1.9%</span>
           </div>
         </article>
-
-        <div className="stack-col">
-          <article className="card mini-card">
-            <div className="mini-title">What is happening now</div>
-            <div className="mini-row">
-              <span className="mini-id mono">M31</span>
-              <span className="mini-name">Grinding</span>
-              <span className="mini-arrow">→</span>
-              <span className="status-pill warn"><span className="dot"></span>Warning</span>
-            </div>
-            <div className="mini-row">
-              <span className="mini-id mono">M30</span>
-              <span className="mini-name">Intake & Cleaning</span>
-              <span className="mini-arrow">→</span>
-              <span className="status-pill ok"><span className="dot"></span>Healthy</span>
-            </div>
-            <div className="mini-row">
-              <span className="mini-id mono">C32</span>
-              <span className="mini-name">Sifting & Packing</span>
-              <span className="mini-arrow">→</span>
-              <span className="status-pill ok"><span className="dot"></span>Healthy</span>
-            </div>
-          </article>
-
-          <article className="card mini-card">
-            <div className="mini-title">When to act</div>
-            <div className="timeline">
-              <div className="timeline-zones mono"><span className="ok">HEALTHY</span><span className="amber">ATTENTION</span><span className="red">CRITICAL</span></div>
-              <div className="timeline-bar">
-                <div className="timeline-pin" style={{ left: '55%' }}></div>
-                <div className="timeline-tooltip" style={{ left: '55%' }}>+17d · May 31</div>
-              </div>
-              <div className="timeline-dates mono"><span>MAY 15</span><span>JUN 15</span></div>
-            </div>
-          </article>
-        </div>
       </div>
 
       <div className="row row-pdm-3">

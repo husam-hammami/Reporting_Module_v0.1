@@ -1,9 +1,11 @@
 /**
- * Atlas — Phase 1 mock snapshot.
+ * Forecast tab mock snapshot.
  *
- * Shape mirrors Plan 17 §7.3 so the live wiring in Phase 2 is a swap, not a
+ * Shape mirrors Plan 17 §7.3 so live wiring in Phase 2 is a swap, not a
  * rewrite. Numbers are derived to be internally consistent: the chart series
  * lands on the hero values (today_tons, predicted_eod_tons, current_omr_per_t).
+ *
+ * Phase 2 will replace this with GET /api/hercules-ai/mill-b-snapshot.
  */
 
 const NOW_H = 14.53;
@@ -11,8 +13,6 @@ const NOW_TONS = 68.4;
 const PRED_EOD_TONS = 108;
 const PLAN_TONS = 102;
 
-// Operating window: 06:00 → 22:00, idle 22→06. Production ramp shows a brief
-// 11:00 slowdown then resumes.
 function buildHourlyTons() {
   const today = [];
   let total = 0;
@@ -29,8 +29,6 @@ function buildHourlyTons() {
   return today;
 }
 
-// Forecast: blend current pace with same-DoW EWMA so we hit PRED_EOD_TONS at
-// h=22 (end of operating window), then plateau.
 function buildForecastTons(actualNow) {
   const fc = [{ h: NOW_H, tons: actualNow, lo: actualNow, hi: actualNow }];
   const remainingTons = PRED_EOD_TONS - actualNow;
@@ -43,7 +41,7 @@ function buildForecastTons(actualNow) {
     const rate = h <= 22 ? fcRate : 0;
     total += rate * dh;
     const horizonH = h - NOW_H;
-    const bandFrac = 0.012 * horizonH; // band widens with horizon
+    const bandFrac = 0.012 * horizonH;
     fc.push({
       h,
       tons: Number(total.toFixed(2)),
@@ -55,15 +53,12 @@ function buildForecastTons(actualNow) {
 }
 
 const todayHourly = buildHourlyTons();
-// True NOW interpolation across the floor-bucket boundary
-const last = todayHourly[todayHourly.length - 1];
 const todayHourlyExt = [
   ...todayHourly,
   { h: NOW_H, tons: NOW_TONS },
 ];
 const forecastHourly = buildForecastTons(NOW_TONS);
 
-// 24h history + 12h forecast OMR/ton
 const costHistory24h = [
   1.45, 1.44, 1.43, 1.42, 1.41, 1.40,
   1.41, 1.43, 1.48, 1.52, 1.55, 1.53,
@@ -80,7 +75,7 @@ const costForecast12h = [
   return { t: horizon, v, lo: v - band, hi: v + band };
 });
 
-export const mockSnapshot = {
+export const forecastMock = {
   status: {
     online: true,
     plant_label: 'Salalah Mill B',

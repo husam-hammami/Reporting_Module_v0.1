@@ -1,5 +1,7 @@
--- Plan 5 §4.5 — Hourly extraction-yield drift tracking (Mill B specific, but keyed by asset).
--- Computed alongside asset_sec_hourly by ai_money.yield_drift.refresh_hour().
+-- Hourly extraction-yield drift tracking (Mill B specific, keyed by asset).
+-- Table reserved for a future AI/analytics writer. The original computer
+-- (ai_money.yield_drift) was removed in the AI cleanup; rows here are
+-- currently orphaned and safe to ignore until the new writer ships.
 
 CREATE TABLE IF NOT EXISTS asset_yield_hourly (
     asset_name             VARCHAR(64) NOT NULL,

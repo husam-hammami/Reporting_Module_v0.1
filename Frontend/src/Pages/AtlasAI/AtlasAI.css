@@ -395,21 +395,25 @@
 .atlas-ai-root .row-prod-strip { grid-template-columns: repeat(6, 1fr); gap: 8px; }
 .atlas-ai-root .row-prod-bottom { grid-template-columns: 1fr 1.15fr; }
 .atlas-ai-root .row-pdm-1 { grid-template-columns: 1fr 1fr 1fr; }
-.atlas-ai-root .row-pdm-2 { grid-template-columns: 1.45fr 0.85fr 1.1fr; }
+/* PdM row 2: asset-focus (motor + 4 stats below) | 3-phase current.
+   Was 3 columns including a redundant stack-col (mini status list +
+   timeline) that duplicated row-pdm-1 (Asset Health = same status mix,
+   Next Maintenance = same +17d countdown). */
+.atlas-ai-root .row-pdm-2 { grid-template-columns: 1.6fr 1fr; }
 .atlas-ai-root .row-pdm-3 { grid-template-columns: 1fr 1fr; }
 
 /* Per-tab proportional row heights so each tab fits the viewport without scroll */
 .atlas-ai-root .tab-pane.production .row-prod-hero  { flex: 1.55 1 0; min-height: 0; }
 .atlas-ai-root .tab-pane.production .row-prod-strip { flex: 0.5  1 0; min-height: 0; }
 .atlas-ai-root .tab-pane.production .row-prod-bottom { flex: 1   1 0; min-height: 0; }
-.atlas-ai-root .tab-pane.pdm .row-pdm-1 { flex: 0.7 1 0; min-height: 0; }
-/* Give the motor canvas row more vertical real estate so the 3D motor isn't cropped.
-   Compensated by trimming row-pdm-3 (anomalies) since it only holds compact 165px cards. */
-.atlas-ai-root .tab-pane.pdm .row-pdm-2 { flex: 2.0 1 0; min-height: 0; }
-.atlas-ai-root .tab-pane.pdm .row-pdm-3 { flex: 0.7 1 0; min-height: 0; }
+/* PdM split — give motor + chart enough room without clipping the
+   anomalies bars at the bottom. Was 0.7 / 2.0 / 0.7 which packed
+   anom-card to ~165px and clipped the bar tops. */
+.atlas-ai-root .tab-pane.pdm .row-pdm-1 { flex: 0.85 1 0; min-height: 0; }
+.atlas-ai-root .tab-pane.pdm .row-pdm-2 { flex: 1.7  1 0; min-height: 0; }
+.atlas-ai-root .tab-pane.pdm .row-pdm-3 { flex: 1.05 1 0; min-height: 0; }
 /* Card defaults inside flex rows must clip rather than push the row taller */
-.atlas-ai-root .tab-pane .row > .card,
-.atlas-ai-root .tab-pane .row > .stack-col { min-height: 0; overflow: hidden; }
+.atlas-ai-root .tab-pane .row > .card { min-height: 0; overflow: hidden; }
 
 /* ============ CARD ============ */
 .atlas-ai-root .card {
@@ -799,7 +803,7 @@
 .atlas-ai-root .er-pill.warn { color: var(--amber); background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); }
 
 /* ============ HEALTH CARD (PdM) ============ */
-.atlas-ai-root .health-card { display: flex; flex-direction: column; min-height: 175px; }
+.atlas-ai-root .health-card { display: flex; flex-direction: column; min-height: 0; }
 .atlas-ai-root .health-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex: 1; }
 .atlas-ai-root .health-text { flex: 1; }
 .atlas-ai-root .health-headline { font-size: 14px; font-weight: 600; color: var(--t-0); margin-bottom: 4px; }
@@ -845,7 +849,7 @@
 .atlas-ai-root .grad-labels { display: flex; justify-content: space-between; font-size: 8.5px; color: var(--t-4); letter-spacing: 0.12em; margin-top: 6px; }
 
 /* ============ NEXT CARD ============ */
-.atlas-ai-root .next-card { display: flex; flex-direction: column; min-height: 175px; }
+.atlas-ai-root .next-card { display: flex; flex-direction: column; min-height: 0; }
 .atlas-ai-root .next-big {
   font-family: var(--font-mono);
   font-size: 36px; font-weight: 700;
@@ -869,7 +873,7 @@
 .atlas-ai-root .nm-v.ok { color: var(--green-light); }
 
 /* ============ CONCERN CARD ============ */
-.atlas-ai-root .concern-card { display: flex; flex-direction: column; min-height: 175px; position: relative; }
+.atlas-ai-root .concern-card { display: flex; flex-direction: column; min-height: 0; position: relative; }
 .atlas-ai-root .concern-rail {
   position: absolute;
   left: 0; top: 12px; bottom: 12px;
@@ -893,14 +897,18 @@
 .atlas-ai-root .concern-trend { width: 100%; height: 28px; margin-top: auto; }
 
 /* ============ ASSET FOCUS (3D motor) ============ */
-.atlas-ai-root .asset-focus-card { display: flex; flex-direction: column; min-height: 380px; padding: 14px 16px; }
-.atlas-ai-root .af-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; }
+.atlas-ai-root .asset-focus-card { display: flex; flex-direction: column; min-height: 0; padding: 12px 14px; }
+.atlas-ai-root .af-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 10px; }
 .atlas-ai-root .af-title { font-size: 14.5px; font-weight: 600; color: var(--t-0); letter-spacing: -0.01em; margin-top: 2px; }
 .atlas-ai-root .af-title .muted { color: var(--t-3); font-weight: 400; }
+/* Motor on top (fills available height), 4-cell stats strip below.
+   Previous layout was a 1fr|130px grid that pushed stats to a narrow
+   right column where the 4th stat (Imbalance Σ) overflowed and got
+   clipped by the card's overflow:hidden. */
 .atlas-ai-root .af-body {
-  display: grid;
-  grid-template-columns: 1fr 130px;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   flex: 1;
   min-height: 0;
 }
@@ -913,7 +921,8 @@
     linear-gradient(180deg, #0a1426 0%, #050912 100%);
   border: 1px solid rgba(34, 211, 238, 0.12);
   display: flex;
-  min-height: 300px;
+  flex: 1;
+  min-height: 180px;
 }
 /* Pin the WebGL canvas to fill the stage regardless of how the .af-body
    grid sizes the column. With only `width:100%; height:100%` on a flex
@@ -973,12 +982,20 @@
 .atlas-ai-root .ml-id { font-size: 14px; font-weight: 700; color: var(--cyan-light); letter-spacing: -0.01em; text-shadow: 0 0 8px rgba(125, 249, 255, 0.5); }
 .atlas-ai-root .ml-name { font-size: 10px; color: var(--t-2); }
 
-.atlas-ai-root .af-stats { display: flex; flex-direction: column; gap: 8px; }
+/* 4-cell horizontal strip below the motor (was a vertical column on
+   the right that clipped the 4th stat). */
+.atlas-ai-root .af-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  flex-shrink: 0;
+}
 .atlas-ai-root .af-stat {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--b-w-1);
   border-radius: 8px;
-  padding: 7px 9px;
+  padding: 6px 9px;
+  min-width: 0;
 }
 .atlas-ai-root .af-stat.warn { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.04); }
 .atlas-ai-root .af-s-label { font-size: 9px; color: var(--t-3); text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--font-mono); }
@@ -1004,7 +1021,7 @@
 .atlas-ai-root .af-s-spark svg { width: 100%; height: 100%; }
 
 /* ============ PHASE CARD ============ */
-.atlas-ai-root .phase-card { display: flex; flex-direction: column; min-height: 320px; }
+.atlas-ai-root .phase-card { display: flex; flex-direction: column; min-height: 0; }
 .atlas-ai-root .phase-bars {
   flex: 1;
   display: flex;
@@ -1051,73 +1068,22 @@
 }
 .atlas-ai-root .phase-thd .amber { font-weight: 600; }
 
-/* ============ MINI CARDS / STACK ============ */
-.atlas-ai-root .stack-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.atlas-ai-root .mini-card { padding: 12px 14px; }
-.atlas-ai-root .mini-title { font-size: 11px; font-weight: 600; color: var(--t-1); margin-bottom: 8px; }
-.atlas-ai-root .mini-row {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  gap: 8px;
-  align-items: center;
-  padding: 5px 0;
-  font-size: 11px;
-  border-bottom: 1px solid var(--b-w-1);
-}
-.atlas-ai-root .mini-row:last-child { border-bottom: none; }
-.atlas-ai-root .mini-id { font-weight: 700; color: var(--t-0); font-size: 10.5px; }
-.atlas-ai-root .mini-name { color: var(--t-2); font-size: 10.5px; }
-.atlas-ai-root .mini-arrow { color: var(--t-4); font-size: 11px; }
-
-/* ============ TIMELINE ============ */
-.atlas-ai-root .timeline { padding: 4px 0; }
-.atlas-ai-root .timeline-zones {
-  display: flex; justify-content: space-between;
-  font-size: 8.5px; letter-spacing: 0.12em; margin-bottom: 6px;
-}
-.atlas-ai-root .timeline-zones .ok { color: var(--green-light); }
-.atlas-ai-root .timeline-zones .amber { color: var(--amber); }
-.atlas-ai-root .timeline-zones .red { color: var(--red-light); }
-.atlas-ai-root .timeline-bar {
-  height: 7px;
-  border-radius: 4px;
-  background: linear-gradient(90deg,
-    var(--green) 0%, var(--green) 35%,
-    var(--amber) 55%, var(--orange) 80%,
-    var(--red) 100%);
-  position: relative;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-.atlas-ai-root .timeline-pin {
-  position: absolute;
-  top: -5px;
-  width: 11px; height: 11px;
-  background: var(--amber);
-  border: 2px solid var(--bg-1);
-  border-radius: 50%;
-  transform: translateX(-50%);
-  box-shadow: 0 0 6px var(--amber), 0 0 12px rgba(245, 158, 11, 0.6);
-}
-.atlas-ai-root .timeline-tooltip {
-  position: absolute;
-  top: 14px;
-  transform: translateX(-50%);
-  font-size: 9.5px;
-  font-weight: 600;
-  color: var(--amber);
-  white-space: nowrap;
-  font-family: var(--font-mono);
-  letter-spacing: 0.04em;
-}
-.atlas-ai-root .timeline-dates {
-  display: flex; justify-content: space-between;
-  font-size: 8.5px; color: var(--t-3);
-  margin-top: 26px; letter-spacing: 0.1em;
-}
-
 /* ============ ANOMALY CHART ============ */
-.atlas-ai-root .anom-card { padding: 12px 14px; min-height: 145px; }
-.atlas-ai-root .anom-chart { width: 100%; height: 80px; }
+/* Flex column so the SVG bars grow into the row's allocated height
+   instead of being clipped at a fixed 80 px when the row gets compact. */
+.atlas-ai-root .anom-card {
+  padding: 12px 14px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.atlas-ai-root .anom-chart {
+  width: 100%;
+  flex: 1;
+  min-height: 60px;
+  display: block;
+}
 .atlas-ai-root .anom-x {
   display: flex; justify-content: space-between;
   font-size: 8.5px; color: var(--t-3); margin-top: 2px; letter-spacing: 0.1em;
@@ -1136,7 +1102,14 @@
 .atlas-ai-root .al-tot { margin-left: auto; font-size: 9.5px; color: var(--amber); letter-spacing: 0.1em; font-weight: 600; }
 
 /* ============ EVENTS TABLE ============ */
-.atlas-ai-root .events-card { padding: 12px 14px; min-height: 145px; }
+.atlas-ai-root .events-card {
+  padding: 12px 14px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.atlas-ai-root .events-card .events-table { flex: 1; }
 .atlas-ai-root .events-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
 .atlas-ai-root .events-table th {
   text-align: left;
@@ -1598,9 +1571,6 @@
   .atlas-ai-root .row-prod-hero .target-card { grid-column: span 2; }
   .atlas-ai-root .row-prod-bottom { grid-template-columns: 1fr 1fr; }
   .atlas-ai-root .row-prod-bottom .enabler-card { grid-column: span 2; }
-  .atlas-ai-root .row-pdm-2 { grid-template-columns: 1fr 1fr; }
-  .atlas-ai-root .row-pdm-2 .stack-col { grid-column: span 2; flex-direction: row; }
-  .atlas-ai-root .row-pdm-2 .stack-col > .card { flex: 1; }
   .atlas-ai-root .row-prod-strip { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 900px) {
@@ -1697,5 +1667,268 @@
 .atlas-ai-root[data-theme='light'] .af-stage {
   border-color: rgba(15, 23, 42, 0.08);
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+}
+
+/* ============================================================
+   FORECAST TAB
+   Verdict bar + production/cost heroes + charts + KPI strip.
+   Replaces the standalone Hercules Atlas page.
+   ============================================================ */
+.atlas-ai-root .row-fc-verdict { grid-template-columns: 1fr; }
+.atlas-ai-root .row-fc-heroes { grid-template-columns: 1fr 1fr; }
+.atlas-ai-root .row-fc-charts { grid-template-columns: 1fr 1fr; }
+.atlas-ai-root .row-fc-kpis { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+/* Verdict bar */
+.atlas-ai-root .fc-verdict-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background:
+    linear-gradient(90deg, rgba(125, 249, 255, 0.06), rgba(52, 211, 153, 0.04) 60%, transparent),
+    var(--bg-card);
+  border-color: var(--b-2);
+}
+.atlas-ai-root .fc-verdict-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  background: rgba(125, 249, 255, 0.08);
+  border: 1px solid rgba(125, 249, 255, 0.22);
+  color: var(--cyan-light);
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(125, 249, 255, 0.25));
+}
+.atlas-ai-root .fc-verdict-text { flex: 1; min-width: 0; }
+.atlas-ai-root .fc-verdict-eyebrow {
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  color: var(--t-3);
+  margin-bottom: 4px;
+}
+.atlas-ai-root .fc-verdict-msg {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--t-1);
+  font-weight: 500;
+}
+.atlas-ai-root .fc-vh-gold { color: var(--amber-light); font-weight: 700; }
+.atlas-ai-root .fc-vh-good { color: var(--green-light); font-weight: 700; }
+.atlas-ai-root .fc-vh-hi   { color: var(--cyan-light); font-weight: 700; }
+.atlas-ai-root .fc-vh-b    { color: var(--t-0); font-weight: 700; }
+
+/* Hero cards — NOW → forecast horizontal flow */
+.atlas-ai-root .fc-hero-card { display: flex; flex-direction: column; gap: 14px; min-height: 200px; }
+.atlas-ai-root .fc-hero-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.atlas-ai-root .fc-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.atlas-ai-root .fc-badge-good {
+  color: var(--green-light);
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+.atlas-ai-root .fc-badge-warn {
+  color: var(--amber);
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.atlas-ai-root .fc-badge-u {
+  font-size: 9.5px;
+  font-weight: 600;
+  margin-left: 2px;
+  opacity: 0.85;
+}
+.atlas-ai-root .fc-badge-sub {
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-left: 6px;
+  opacity: 0.7;
+}
+
+.atlas-ai-root .fc-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  flex: 1;
+}
+.atlas-ai-root .fc-flow-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.atlas-ai-root .fc-flow-block-pred { align-items: flex-end; text-align: right; }
+.atlas-ai-root .fc-flow-lbl {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--t-3);
+}
+.atlas-ai-root .fc-flow-num {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--t-0);
+  font-family: var(--font-display);
+}
+.atlas-ai-root .fc-flow-block-pred .fc-flow-num { color: var(--green-light); }
+.atlas-ai-root .fc-flow-unit {
+  font-size: 10px;
+  color: var(--t-2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.atlas-ai-root .fc-flow-arrow {
+  width: 80px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.atlas-ai-root .fc-flow-arrow svg { width: 100%; height: 100%; }
+.atlas-ai-root .fc-hero-foot {
+  display: flex;
+  gap: 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--t-3);
+  padding-top: 8px;
+  border-top: 1px dashed var(--b-1);
+}
+
+/* Chart cards */
+.atlas-ai-root .fc-chart-card { display: flex; flex-direction: column; min-height: 280px; }
+.atlas-ai-root .fc-chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.atlas-ai-root .fc-chart-sub {
+  font-size: 9px;
+  color: var(--t-3);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+.atlas-ai-root .fc-legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 9.5px;
+  color: var(--t-2);
+}
+.atlas-ai-root .fc-legend-item { display: inline-flex; align-items: center; gap: 5px; }
+.atlas-ai-root .fc-legend-swatch {
+  width: 16px; height: 3px; border-radius: 2px;
+  display: inline-block;
+}
+.atlas-ai-root .fc-sw-actual { background: var(--cyan-light); }
+.atlas-ai-root .fc-sw-forecast {
+  background: linear-gradient(90deg, var(--green-light) 60%, transparent 60%, transparent 80%, var(--green-light) 80%);
+}
+.atlas-ai-root .fc-sw-band { background: rgba(52, 211, 153, 0.25); height: 6px; border-radius: 3px; }
+.atlas-ai-root .fc-chart-canvas {
+  flex: 1;
+  width: 100%;
+  min-height: 200px;
+  position: relative;
+}
+
+/* KPI strip */
+.atlas-ai-root .fc-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+}
+.atlas-ai-root .fc-kpi-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.atlas-ai-root .fc-kpi-name {
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t-2);
+  font-weight: 600;
+}
+.atlas-ai-root .fc-kpi-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.atlas-ai-root .fc-kpi-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--t-0);
+  letter-spacing: -0.015em;
+  line-height: 1.05;
+}
+.atlas-ai-root .fc-kpi-unit {
+  font-size: 10px;
+  color: var(--t-3);
+  letter-spacing: 0.04em;
+}
+.atlas-ai-root .fc-kpi-msg {
+  font-size: 11px;
+  color: var(--t-2);
+  line-height: 1.4;
+}
+.atlas-ai-root .fc-kpi-msg b { color: var(--t-0); font-weight: 700; }
+
+/* Forecast tab — overall layout container (let it flex-fill the content area
+   so charts have height) */
+.atlas-ai-root .tab-pane.forecast {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Light theme tweaks for the forecast tab */
+.atlas-ai-root[data-theme='light'] .fc-verdict-card {
+  background:
+    linear-gradient(90deg, rgba(2, 132, 199, 0.05), rgba(5, 150, 105, 0.03) 60%, transparent),
+    var(--bg-card-solid);
+}
+.atlas-ai-root[data-theme='light'] .fc-vh-gold { color: #b45309; }
+.atlas-ai-root[data-theme='light'] .fc-vh-good { color: #047857; }
+.atlas-ai-root[data-theme='light'] .fc-vh-hi   { color: #0369a1; }
+.atlas-ai-root[data-theme='light'] .fc-flow-block-pred .fc-flow-num { color: #047857; }
+.atlas-ai-root[data-theme='light'] .fc-badge-good {
+  color: #047857;
+  background: rgba(5, 150, 105, 0.08);
+  border-color: rgba(5, 150, 105, 0.25);
+}
+.atlas-ai-root[data-theme='light'] .fc-badge-warn {
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.08);
+  border-color: rgba(217, 119, 6, 0.25);
+}
+
+@media (max-width: 1100px) {
+  .atlas-ai-root .row-fc-heroes,
+  .atlas-ai-root .row-fc-charts { grid-template-columns: 1fr; }
+  .atlas-ai-root .row-fc-kpis { grid-template-columns: repeat(2, 1fr); }
 }
 

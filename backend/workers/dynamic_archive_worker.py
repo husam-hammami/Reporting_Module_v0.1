@@ -191,58 +191,6 @@ def dynamic_archive_worker():
             except Exception as ret_err:
                 logger.warning(f"[Retention] Archive rollup/purge failed: {ret_err}")
 
-            # ── Plan 5 — ROI Money Layer: refresh asset_sec_hourly for the just-archived hour
-            # Runs after the universal archive completes so the SEC math operates on
-            # already-aggregated data. Failures here MUST NOT block the worker.
-            try:
-                from ai_money import sec as ai_sec
-                # archive_hour = top of current hour = end-of-bucket label for the prev-hour data.
-                # So the SEC row we just have data for is keyed at archive_hour (= end label).
-                # _sum_delta uses (t_from, t_to] semantics, so refresh_hour(archive_hour) reads
-                # rows where archive_hour > hour_start AND archive_hour <= hour_start+1h.
-                # Adjust: pass hour_start (the beginning of the just-archived bucket) and store
-                # the SEC row keyed there for natural "this is the SEC for the 13:00 hour" reads.
-                ai_sec.refresh_hour(hour_start, write=True)
-                logger.info(f"[ROI/SEC] Refreshed asset_sec_hourly for {hour_start}")
-            except Exception as sec_err:
-                logger.warning(f"[ROI/SEC] Refresh failed (non-blocking): {sec_err}")
-
-            # Plan 5 §4.5 — Yield drift: was spec'd alongside SEC but the writer
-            # module was never created, so asset_yield_hourly stayed empty and
-            # the L2 yield-drift lever has been a silent no-op. Now writes
-            # alongside SEC every hour boundary. Same hour_start key.
-            try:
-                from ai_money import yield_drift as ai_yield
-                ai_yield.refresh_hour(hour_start, write=True)
-                logger.info(f"[ROI/Yield] Refreshed asset_yield_hourly for {hour_start}")
-            except Exception as yld_err:
-                logger.warning(f"[ROI/Yield] Refresh failed (non-blocking): {yld_err}")
-
-            # ── Plan 5 Phase B — Crystal Ball hourly batch:
-            # Anomaly detectors + SEC drift check + accuracy_closer.
-            # All non-blocking; errors logged but never crash the worker.
-            try:
-                from ai_forecast import anomaly as ai_anom
-                counts = ai_anom.run_all()
-                if any(v for v in counts.values() if isinstance(v, int) and v > 0):
-                    logger.info(f"[ROI/Anomaly] Fired: {counts}")
-            except Exception as ae:
-                logger.warning(f"[ROI/Anomaly] Detector run failed: {ae}")
-
-            try:
-                from ai_forecast import sec_drift as ai_drift
-                drifts = ai_drift.check_all()
-                if drifts:
-                    logger.info(f"[ROI/Drift] {len(drifts)} drift events")
-            except Exception as de:
-                logger.warning(f"[ROI/Drift] Check failed: {de}")
-
-            try:
-                from ai_forecast import accuracy_closer as ai_close
-                ai_close.run_once()
-            except Exception as ce:
-                logger.warning(f"[ROI/Accuracy] Closer failed: {ce}")
-
             # Per-layout archiving (Live Monitor tables) — failures here do not block universal archive
             try:
                 from utils.dynamic_tables import get_active_monitors
