@@ -89,7 +89,7 @@ export const menuItems = getMenuItems((key) => {
     'nav.distribution': 'Distribution',
     'nav.herculesAI': 'Hercules AI',
     'nav.atlas': 'Hercules Atlas',
-    'nav.atlasAI': 'Atlas AI',
+    'nav.atlasAI': 'Hercules AI',
     'nav.engineering': 'Engineering',
     'nav.tooltip.builder': 'Design and build reports',
     'nav.tooltip.digitalTwin': '3D plant view',
