@@ -70,7 +70,7 @@ export const menuItems = getMenuItems((key) => {
     'nav.tableReports': 'Table Reports',
     'nav.jobLogs': 'Job Logs',
     'nav.distribution': 'Distribution',
-    'nav.atlasAI': 'Atlas AI',
+    'nav.atlasAI': 'Hercules AI',
     'nav.engineering': 'Engineering',
     'nav.tooltip.builder': 'Design and build reports',
     'nav.tooltip.digitalTwin': '3D plant view',

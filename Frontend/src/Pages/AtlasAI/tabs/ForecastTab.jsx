@@ -80,7 +80,7 @@ export default function ForecastTab() {
             <Sparkles size={18} strokeWidth={2.4} />
           </div>
           <div className="fc-verdict-text">
-            <div className="fc-verdict-eyebrow mono">ATLAS · VERDICT</div>
+            <div className="fc-verdict-eyebrow mono">HERCULES AI · VERDICT</div>
             <div className="fc-verdict-msg">{renderVerdict(verdict.text)}</div>
           </div>
         </article>

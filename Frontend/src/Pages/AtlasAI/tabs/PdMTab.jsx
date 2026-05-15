@@ -72,7 +72,7 @@ export default function PdMTab() {
 
         <article className="card concern-card">
           <div className="concern-rail"></div>
-          <div className="card-eyebrow amber"><span className="ce-dot warn"></span>Why Atlas is concerned</div>
+          <div className="card-eyebrow amber"><span className="ce-dot warn"></span>Why Hercules AI is concerned</div>
           <div className="concern-text">
             Phase 2 current in M31 is <b className="hl-amber">12% higher</b> than L1/L3 and has been rising for <b className="hl-amber">14 days</b>.
             Pattern matches early bearing wear with <span className="mono">87%</span> historical accuracy.

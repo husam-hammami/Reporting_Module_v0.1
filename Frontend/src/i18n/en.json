@@ -16,7 +16,7 @@
   "nav.tooltip.jobLogs": "Production order history",
   "nav.tooltip.distribution": "Scheduled report delivery",
   "nav.tooltip.engineering": "Tags, groups, formulas, mappings",
-  "nav.atlasAI": "Atlas AI",
+  "nav.atlasAI": "Hercules AI",
   "nav.tooltip.atlasAI": "Forecast · Production · PdM · Yield",
   "nav.digitalTwin": "Digital Twin",
   "nav.tooltip.digitalTwin": "3D plant view",

@@ -103,7 +103,7 @@ export default function AtlasAIPage() {
 
         <div className="neural-strip">
           <div className="ns-pillar">
-            <div className="ns-eyebrow">ATLAS · NOW</div>
+            <div className="ns-eyebrow">HERCULES AI · NOW</div>
             <div className="ns-headline">
               <span className="ns-time mono">{clock}</span>
               <span className="ns-pulse-dot"></span>

@@ -20,7 +20,7 @@ export default function ProductionTab() {
             You're trending to <span className="hl">108.0 t</span> by midnight.
           </h2>
           <p className="hero-sub">
-            Atlas projects target hit at <span className="mono">22:18</span> · 1h 42m of buffer remaining.
+            Hercules AI projects target hit at <span className="mono">22:18</span> · 1h 42m of buffer remaining.
           </p>
 
           <div className="hero-rings">
@@ -229,7 +229,7 @@ export default function ProductionTab() {
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v6m0 8v6m-9-9h6m8 0h6" />
             </svg>
-            <span><b>Bran split is 0.7% above normal.</b> Atlas suggests sifter adjustment to recover ~12 OMR/h.</span>
+            <span><b>Bran split is 0.7% above normal.</b> Hercules AI suggests sifter adjustment to recover ~12 OMR/h.</span>
           </div>
         </article>
 
