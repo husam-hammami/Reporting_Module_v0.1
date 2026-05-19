@@ -12,7 +12,7 @@
  *   8. System tray + periodic license recheck
  */
 
-const { app, BrowserWindow, Tray, Menu, dialog, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, Tray, Menu, dialog, ipcMain } = require('electron');
 const { execSync, spawn, execFile } = require('child_process');
 const crypto = require('crypto');
 const http = require('http');
@@ -57,7 +57,6 @@ const BRANCH_FILE = path.join(RESOURCES_DIR, 'release_branch.txt');
 
 let mainWindow = null;
 let splashWindow = null;
-let introWindow = null;
 let wizardWindow = null;
 let tray = null;
 let backendProcess = null;
@@ -1049,72 +1048,6 @@ function startLiveOTA() {
   setTimeout(tick, 60 * 1000);
 }
 
-// ─── Restart intro video (only when relaunched with --show-intro) ─────────────
-const INTRO_VIDEO = path.join(__dirname, 'assets', 'Hercules_animation_video.mp4');
-const INTRO_MAX_MS = 60000;
-
-function shouldShowIntro() {
-  return process.argv.includes('--show-intro');
-}
-
-function relaunchWithIntro() {
-  const args = process.argv.slice(1).filter((a) => a !== '--show-intro');
-  args.push('--show-intro');
-  app.relaunch({ args });
-  app.exit(0);
-}
-
-function destroyIntroWindow() {
-  if (introWindow && !introWindow.isDestroyed()) {
-    introWindow.destroy();
-    introWindow = null;
-  }
-}
-
-function createIntroWindow() {
-  return new Promise((resolve) => {
-    if (!fs.existsSync(INTRO_VIDEO)) {
-      console.warn('[Electron] Intro video missing — skipping intro');
-      resolve();
-      return;
-    }
-
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      destroyIntroWindow();
-      resolve();
-    };
-
-    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-    introWindow = new BrowserWindow({
-      width,
-      height,
-      x: 0,
-      y: 0,
-      frame: false,
-      resizable: false,
-      movable: false,
-      alwaysOnTop: true,
-      backgroundColor: '#000000',
-      webPreferences: {
-        preload: path.join(__dirname, 'intro-preload.js'),
-        nodeIntegration: false,
-        contextIsolation: true,
-      },
-    });
-    introWindow.loadFile(path.join(__dirname, 'intro.html'));
-    introWindow.on('closed', () => { introWindow = null; });
-
-    ipcMain.once('intro-complete', finish);
-    setTimeout(() => {
-      console.warn('[Electron] Intro timeout — continuing startup');
-      finish();
-    }, INTRO_MAX_MS);
-  });
-}
-
 // ─── Windows ─────────────────────────────────────────────────────────────────
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
@@ -1298,7 +1231,8 @@ ipcMain.handle('restart-for-update', async () => {
   console.log('[Electron] Restart requested for update...');
   stopBackend();
   stopPostgres();
-  relaunchWithIntro();
+  app.relaunch();
+  app.exit(0);
 });
 
 // ─── IPC: Clean restart (from UI) ───────────────────────────────────────────
@@ -1306,7 +1240,8 @@ ipcMain.handle('restart-app', async () => {
   console.log('[Electron] Clean restart requested by user...');
   stopBackend();
   stopPostgres();
-  relaunchWithIntro();
+  app.relaunch();
+  app.exit(0);
 });
 
 // ─── Setup wizard ────────────────────────────────────────────────────────────
@@ -1346,13 +1281,11 @@ async function runStartupServices() {
   const pgFree = await isPortFree(PG_PORT);
   const backendFree = await isPortFree(BACKEND_PORT);
   if (!pgFree && !pgStarted) {
-    destroyIntroWindow();
     dialog.showErrorBox('Port Conflict', `PostgreSQL port ${PG_PORT} is in use.\nClose the conflicting application and try again.`);
     app.quit();
     return { ok: false };
   }
   if (!backendFree) {
-    destroyIntroWindow();
     dialog.showErrorBox('Port Conflict', `Backend port ${BACKEND_PORT} is in use.\nClose the conflicting application and try again.`);
     app.quit();
     return { ok: false };
@@ -1403,24 +1336,9 @@ app.on('ready', async () => {
       if (!completed) { app.quit(); return; }
     }
 
-    // 3–6. Intro video on app restart only; otherwise splash + services (same startup work)
-    const showIntro = shouldShowIntro();
-    let startupResult;
-
-    if (showIntro) {
-      let servicesDone = false;
-      const servicesPromise = runStartupServices().then((result) => {
-        servicesDone = true;
-        return result;
-      });
-      await createIntroWindow();
-      if (!servicesDone) createSplashWindow();
-      startupResult = await servicesPromise;
-    } else {
-      createSplashWindow();
-      startupResult = await runStartupServices();
-    }
-
+    // 3–6. Splash + OTA, PostgreSQL, and backend startup
+    createSplashWindow();
+    const startupResult = await runStartupServices();
     if (!startupResult?.ok) return;
 
     // 7. Load app

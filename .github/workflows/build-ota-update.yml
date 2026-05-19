@@ -159,14 +159,6 @@ jobs:
           Write-Host "VC++ redistributable downloaded."
 
       # ── Step 5: Build Electron installer ─────────────────────────
-      - name: Copy intro video for Electron splash
-        shell: pwsh
-        run: |
-          $src = "Frontend/src/Assets/Hercules_animation_video.mp4"
-          if (-not (Test-Path $src)) { Write-Error "Intro video not found at $src"; exit 1 }
-          New-Item -ItemType Directory -Force -Path "desktop/assets" | Out-Null
-          Copy-Item $src "desktop/assets/Hercules_animation_video.mp4" -Force
-
       - name: Install Electron dependencies
         shell: bash
         run: |

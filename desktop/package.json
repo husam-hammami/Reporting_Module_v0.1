@@ -62,10 +62,7 @@
     "files": [
       "main.js",
       "preload.js",
-      "intro-preload.js",
       "splash.html",
-      "intro.html",
-      "assets/**",
       "license-pending.html",
       "license-denied.html",
       "setup-wizard.html"
