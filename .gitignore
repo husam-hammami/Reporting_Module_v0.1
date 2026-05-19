@@ -71,6 +71,7 @@ desktop/node_modules/
 desktop/pgsql/
 desktop/vcredist/
 desktop/dist/
+desktop/assets/Hercules_animation_video.mp4
 *.exe
 dist_launcher/
 dist/

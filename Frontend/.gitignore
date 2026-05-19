@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Intro splash video (large; keep locally, do not push to GitHub)
+src/Assets/Hercules_animation_video.mp4

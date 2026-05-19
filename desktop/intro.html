@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <video id="intro" autoplay playsinline muted src="assets/Hercules_animation_video.mp4"></video>
+  <script>
+    const video = document.getElementById('intro');
+    let finished = false;
+
+    function finish() {
+      if (finished) return;
+      finished = true;
+      if (window.herculesIntro) {
+        window.herculesIntro.complete();
+      }
+    }
+
+    video.addEventListener('ended', finish);
+    video.addEventListener('error', finish);
+    document.body.addEventListener('click', finish);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' || e.key === ' ') finish();
+    });
+
+    video.play().catch(finish);
+  </script>
+</body>
+</html>
