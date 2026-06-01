@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useReportCanvas, useAvailableTags, useAvailableFormulas } from '../../Hooks/useReportBuilder';
 import { evaluateFormula, extractTagRefs, parseFormulaTagReferences } from './formulas/formulaEngine';
 import { getCachedMappings, refreshMappingsCache } from '../../utils/mappingsCache';
+import { averageExcludingZero } from '../../utils/avgExcludeZero';
 import { useBranding } from '../../Context/BrandingContext';
 import HerculesLogoPng from '../../Assets/Hercules_New.png';
 import AsmLogoPng from '../../Assets/Asm_Logo.png';
@@ -1032,7 +1033,7 @@ function CellEditor({ cell, tags, onChange, savedFormulas }) {
           </div>
           <div className="flex items-center gap-1">
             <select value={cell.aggregation || 'avg'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })} className="rb-input-base text-[9px] py-0.5 px-1 flex-1">
-              <option value="avg">Average</option><option value="sum">Sum</option><option value="min">Min</option><option value="max">Max</option><option value="count">Count</option>
+              <option value="avg">Average (excl. 0)</option><option value="sum">Sum</option><option value="min">Min</option><option value="max">Max</option><option value="count">Count</option>
             </select>
             <UnitSelector cell={cell} onChange={onChange} />
           </div>
@@ -1203,7 +1204,7 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
             <div className="flex items-center gap-1.5 w-full min-w-0">
               <select value={cell.aggregation || 'avg'} onChange={(e) => onChange({ ...cell, aggregation: e.target.value })}
                 className="rb-input-base text-[11px] py-1 px-1.5 flex-shrink-0" style={{ width: '80px' }}>
-                <option value="avg">Avg</option><option value="sum">Sum</option><option value="min">Min</option><option value="max">Max</option><option value="count">Count</option>
+                <option value="avg">Avg (excl. 0)</option><option value="sum">Sum</option><option value="min">Min</option><option value="max">Max</option><option value="count">Count</option>
               </select>
               <span className="text-[10px] truncate opacity-60" style={{ color: 'var(--rb-text-secondary)' }}>
                 ({(cell.groupTags || []).filter(Boolean).length} tags)
@@ -1232,7 +1233,7 @@ function InlineCellEditor({ cell, columnName, tags, onChange, savedFormulas }) {
                 <option value="silo_first">First in silo segment</option>
                 <option value="silo_last">Last in silo segment</option>
                 <option value="silo_delta">Delta in silo segment</option>
-                <option value="avg">Average</option>
+                <option value="avg">Average (excl. 0)</option>
                 <option value="sum">Sum</option>
                 <option value="min">Min</option>
                 <option value="max">Max</option>
@@ -2129,7 +2130,7 @@ export function PaginatedReportPreview({
                       let aggResult = '—';
                       if (colTagValues.length > 0) {
                         if (sm.type === 'sum') aggResult = colTagValues.reduce((a, b) => a + b, 0);
-                        else if (sm.type === 'avg') aggResult = colTagValues.reduce((a, b) => a + b, 0) / colTagValues.length;
+                        else if (sm.type === 'avg') aggResult = averageExcludingZero(colTagValues);
                         else if (sm.type === 'min') aggResult = Math.min(...colTagValues);
                         else if (sm.type === 'max') aggResult = Math.max(...colTagValues);
                         else if (sm.type === 'count') aggResult = colTagValues.length;

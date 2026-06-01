@@ -190,7 +190,8 @@ The `/api/historian/by-tags` endpoint:
 1. Resolves tag names to tag IDs via the `tags` table
 2. Queries `tag_history` first (per-second data), applying the requested aggregation:
    - `last`: `DISTINCT ON (tag_id) ... ORDER BY timestamp DESC` -- most recent value in range
-   - `avg/min/max/sum/count`: Standard SQL aggregation functions grouped by tag_id
+   - `avg`: mean of non-zero samples only (`AVG(value) FILTER (WHERE value <> 0)`)
+   - `min/max/sum/count`: Standard SQL aggregation functions grouped by tag_id
    - `delta`: Last value minus first value in the range (for totalizer/counter tags)
 3. If no results from `tag_history` (data may have been archived), falls back to `tag_history_archive` with the same logic using `archive_hour` instead of `timestamp`
 

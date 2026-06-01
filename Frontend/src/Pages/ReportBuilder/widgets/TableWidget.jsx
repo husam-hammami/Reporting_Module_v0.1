@@ -9,6 +9,7 @@ import { previewDrillRowKey } from '../utils/drillDownTagPick';
 import { useReportTableTabLinkOptional } from '../context/ReportTableTabLinkContext';
 
 import { getCachedMappings, refreshMappingsCache } from '../../../utils/mappingsCache';
+import { averageExcludingZero } from '../../../utils/avgExcludeZero';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -147,7 +148,7 @@ function computeAggregation(values, aggType) {
   if (nums.length === 0) return null;
   switch (aggType) {
     case 'sum': return nums.reduce((a, b) => a + b, 0);
-    case 'avg': return nums.reduce((a, b) => a + b, 0) / nums.length;
+    case 'avg': return averageExcludingZero(nums);
     case 'min': return Math.min(...nums);
     case 'max': return Math.max(...nums);
     case 'count': return nums.length;

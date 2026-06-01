@@ -19,6 +19,8 @@ from contextlib import closing
 from psycopg2.extras import RealDictCursor
 from io import BytesIO
 
+from utils.historian_aggregation import sql_value_agg_expr
+
 logger = logging.getLogger(__name__)
 
 
@@ -509,10 +511,9 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
                 if name and joined is not None and joined != '':
                     result[name] = joined
         elif aggregation in ('avg', 'min', 'max', 'sum', 'count'):
-            agg_fn = {'avg': 'AVG', 'min': 'MIN', 'max': 'MAX', 'sum': 'SUM', 'count': 'COUNT'}
-            fn = agg_fn[aggregation]
+            agg_expr = sql_value_agg_expr(aggregation, 'h.value')
             cur.execute(f"""
-                SELECT h.tag_id, {fn}(h.value) AS agg_value
+                SELECT h.tag_id, {agg_expr} AS agg_value
                 FROM tag_history h
                 WHERE h.tag_id = ANY(%s)
                   AND h."timestamp" >= %s::timestamp
@@ -521,7 +522,7 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
             """, (tag_ids, from_dt, to_dt))
             for row in cur.fetchall():
                 name = id_to_name.get(row['tag_id'])
-                if name:
+                if name and row['agg_value'] is not None:
                     result[name] = row['agg_value']
 
         # ── Fallback to tag_history_archive for tags missing from result ──
@@ -614,10 +615,9 @@ def _fetch_tag_data(tag_names, from_dt, to_dt, aggregation='last'):
                     if name and joined is not None and joined != '':
                         result[name] = joined
             elif aggregation in ('avg', 'min', 'max', 'sum', 'count'):
-                agg_fn_map = {'avg': 'AVG', 'min': 'MIN', 'max': 'MAX', 'sum': 'SUM', 'count': 'COUNT'}
-                fn = agg_fn_map[aggregation]
+                agg_expr = sql_value_agg_expr(aggregation, 'a.value')
                 cur.execute(f"""
-                    SELECT a.tag_id, {fn}(a.value) AS agg_value
+                    SELECT a.tag_id, {agg_expr} AS agg_value
                     FROM tag_history_archive a
                     WHERE a.tag_id = ANY(%s)
                       AND a.archive_hour >= %s::timestamp
@@ -692,7 +692,7 @@ def _fetch_time_series_for_distribution(tag_names, from_dt, to_dt, max_points=50
                         SELECT EXTRACT(EPOCH FROM (%s::timestamp - %s::timestamp)) AS range_secs
                     )
                     SELECT h.tag_id,
-                           AVG(h.value) AS value,
+                           AVG(h.value) FILTER (WHERE h.value <> 0) AS value,
                            AVG(EXTRACT(EPOCH FROM h."timestamp")) * 1000 AS t_ms
                     FROM tag_history h, bounds
                     WHERE h.tag_id = ANY(%s)
@@ -2049,7 +2049,8 @@ def _generate_paginated_html(report_name, sections, tag_data, from_dt, to_dt):
                             if sm_type == 'sum':
                                 agg = sum(col_vals)
                             elif sm_type == 'avg':
-                                agg = sum(col_vals) / len(col_vals)
+                                nz = [v for v in col_vals if v != 0]
+                                agg = (sum(nz) / len(nz)) if nz else None
                             elif sm_type == 'min':
                                 agg = min(col_vals)
                             elif sm_type == 'max':

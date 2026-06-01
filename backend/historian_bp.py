@@ -20,6 +20,8 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from psycopg2.extras import RealDictCursor
 
+from utils.historian_aggregation import sql_value_agg_expr
+
 logger = logging.getLogger(__name__)
 
 historian_bp = Blueprint("historian_bp", __name__)
@@ -231,6 +233,7 @@ def get_by_tags():
       from (required): ISO timestamp
       to (required): ISO timestamp
       aggregation (optional): last|avg|min|max|sum|delta|count|unique_in_range|auto (default: last)
+        - avg: mean of non-zero samples only (excludes 0 / idle readings)
         - auto: counter tags (is_counter=true) → SUM(value_delta), others → last value
         - unique_in_range: distinct values in window (value_text or value::text), comma-separated,
           ordered by first occurrence
@@ -399,9 +402,9 @@ def get_by_tags():
                     if name and joined is not None and joined != "":
                         result[name] = joined
             elif aggregation in ("avg", "min", "max", "sum", "count"):
-                agg_fn = {"avg": "AVG", "min": "MIN", "max": "MAX", "sum": "SUM", "count": "COUNT"}[aggregation]
+                agg_expr = sql_value_agg_expr(aggregation, "h.value")
                 cur.execute(f"""
-                    SELECT h.tag_id, {agg_fn}(h.value) AS agg_value
+                    SELECT h.tag_id, {agg_expr} AS agg_value
                     FROM tag_history h
                     WHERE h.tag_id = ANY(%s)
                       AND h."timestamp" >= %s::timestamp
@@ -410,7 +413,7 @@ def get_by_tags():
                 """, (tag_ids, from_ts, to_ts))
                 for row in cur.fetchall():
                     name = id_to_name.get(row["tag_id"])
-                    if name:
+                    if name and row["agg_value"] is not None:
                         result[name] = row["agg_value"]
 
             # Fallback to tag_history_archive for tags MISSING from result.
@@ -502,9 +505,9 @@ def get_by_tags():
                         if name and joined is not None and joined != "":
                             result[name] = joined
                 elif aggregation in ("avg", "min", "max", "sum", "count"):
-                    agg_fn = {"avg": "AVG", "min": "MIN", "max": "MAX", "sum": "SUM", "count": "COUNT"}[aggregation]
+                    agg_expr = sql_value_agg_expr(aggregation, "a.value")
                     cur.execute(f"""
-                        SELECT a.tag_id, {agg_fn}(a.value) AS agg_value
+                        SELECT a.tag_id, {agg_expr} AS agg_value
                         FROM tag_history_archive a
                         WHERE a.tag_id = ANY(%s)
                           AND a.archive_hour >= %s::timestamp
@@ -742,7 +745,7 @@ def get_time_series():
                             SELECT EXTRACT(EPOCH FROM (%s::timestamp - %s::timestamp)) AS range_secs
                         )
                         SELECT h.tag_id,
-                               AVG(h.value) AS value,
+                               AVG(h.value) FILTER (WHERE h.value <> 0) AS value,
                                AVG(EXTRACT(EPOCH FROM h."timestamp")) * 1000 AS t_ms
                         FROM tag_history h, bounds
                         WHERE h.tag_id = ANY(%s)

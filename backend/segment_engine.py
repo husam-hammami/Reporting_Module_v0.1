@@ -291,10 +291,10 @@ def _fetch_companion_value(cur, tag_id, aggregation, t_start, t_end):
 
     # Compute aggregation
     if aggregation in ("avg", "min", "max", "sum", "count"):
-        # Try tag_history aggregate
-        agg_fn = {"avg": "AVG", "min": "MIN", "max": "MAX", "sum": "SUM", "count": "COUNT"}[aggregation]
+        from utils.historian_aggregation import sql_value_agg_expr
+        agg_expr = sql_value_agg_expr(aggregation, "h.value")
         cur.execute(f"""
-            SELECT {agg_fn}(h.value) AS agg_value
+            SELECT {agg_expr} AS agg_value
             FROM tag_history h
             WHERE h.tag_id = %s
               AND h."timestamp" >= %s::timestamp
@@ -305,8 +305,9 @@ def _fetch_companion_value(cur, tag_id, aggregation, t_start, t_end):
 
         if agg_val is None:
             # Archive fallback for aggregation
+            arch_expr = sql_value_agg_expr(aggregation, "a.value")
             cur.execute(f"""
-                SELECT {agg_fn}(a.value) AS agg_value
+                SELECT {arch_expr} AS agg_value
                 FROM tag_history_archive a
                 WHERE a.tag_id = %s
                   AND a.archive_hour >= %s::timestamp
@@ -611,7 +612,8 @@ def merge_segments_by_identity(segments):
             elif na == "max":
                 merged_val = max(numeric_vals) if numeric_vals else None
             elif na == "avg":
-                merged_val = (sum(numeric_vals) / len(numeric_vals)) if numeric_vals else None
+                nz = [v for v in numeric_vals if v != 0]
+                merged_val = (sum(nz) / len(nz)) if nz else None
             elif na == "first":
                 merged_val = entries[0].get("value") if entries else None
             elif na == "last":

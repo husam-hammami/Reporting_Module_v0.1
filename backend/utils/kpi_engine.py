@@ -237,7 +237,8 @@ def get_aggregated_tag_values(
                 cur.execute(
                     """
                     SELECT a.tag_id, BOOL_OR(a.is_counter) AS is_counter,
-                           CASE WHEN BOOL_OR(a.is_counter) THEN SUM(COALESCE(a.value_delta, 0)) ELSE AVG(a.value) END AS agg_value
+                           CASE WHEN BOOL_OR(a.is_counter) THEN SUM(COALESCE(a.value_delta, 0))
+                                ELSE AVG(a.value) FILTER (WHERE a.value IS NOT NULL AND a.value <> 0) END AS agg_value
                     FROM tag_history_archive a
                     WHERE a.layout_id = %s AND a.tag_id = ANY(%s)
                       AND a.archive_hour >= %s::timestamp AND a.archive_hour <= %s::timestamp
@@ -249,7 +250,8 @@ def get_aggregated_tag_values(
                 cur.execute(
                     """
                     SELECT h.tag_id, BOOL_OR(h.is_counter) AS is_counter,
-                           CASE WHEN BOOL_OR(h.is_counter) THEN SUM(COALESCE(h.value_delta, 0)) ELSE AVG(h.value) END AS agg_value
+                           CASE WHEN BOOL_OR(h.is_counter) THEN SUM(COALESCE(h.value_delta, 0))
+                                ELSE AVG(h.value) FILTER (WHERE h.value IS NOT NULL AND h.value <> 0) END AS agg_value
                     FROM tag_history h
                     WHERE h.layout_id = %s AND h.tag_id = ANY(%s)
                       AND h."timestamp" >= %s::timestamp AND h."timestamp" <= %s::timestamp

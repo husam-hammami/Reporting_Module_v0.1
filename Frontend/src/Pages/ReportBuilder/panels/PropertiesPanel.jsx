@@ -307,7 +307,7 @@ function DataSourceSection({ config, onUpdate, tags, tagValues, groups = [], sav
               onChange={(v) => updateDS({ aggregation: v })}
               options={[
                 { value: 'last', label: 'Last Value' },
-                { value: 'avg', label: 'Average' },
+                { value: 'avg', label: 'Average (excl. 0)' },
                 { value: 'sum', label: 'Sum' },
                 { value: 'min', label: 'Minimum' },
                 { value: 'max', label: 'Maximum' },
@@ -396,7 +396,7 @@ function DataSourceSection({ config, onUpdate, tags, tagValues, groups = [], sav
               value={ds.aggregation}
               onChange={(v) => updateDS({ aggregation: v })}
               options={[
-                { value: 'avg', label: 'Average' },
+                { value: 'avg', label: 'Average (excl. 0)' },
                 { value: 'sum', label: 'Sum' },
                 { value: 'min', label: 'Minimum' },
                 { value: 'max', label: 'Maximum' },
@@ -1333,7 +1333,7 @@ function TableColumnsSection({ config, onUpdate, tags, tagValues, savedFormulas 
                       onChange={(v) => updateColumn(i, { aggregation: v })}
                       options={[
                         { value: 'last', label: 'Last' },
-                        { value: 'avg', label: 'Average' },
+                        { value: 'avg', label: 'Average (excl. 0)' },
                         { value: 'sum', label: 'Sum' },
                         { value: 'min', label: 'Minimum' },
                         { value: 'max', label: 'Maximum' },
