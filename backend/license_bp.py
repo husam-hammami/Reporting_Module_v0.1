@@ -5,8 +5,11 @@ Public endpoints for EXE registration and admin endpoints for
 managing machine license activations (superadmin only).
 """
 
+import json
 import logging
 import os
+import urllib.error
+import urllib.request
 from datetime import datetime, date, timedelta
 from functools import wraps
 from flask import Blueprint, jsonify, request
@@ -19,6 +22,10 @@ logger = logging.getLogger(__name__)
 license_bp = Blueprint('license_bp', __name__)
 
 DEFAULT_TRIAL_DAYS = 15
+_license_columns_ensured = False
+LICENSE_SERVER_URL = os.environ.get('LICENSE_SERVER_URL', 'https://api.herculesv2.app')
+
+_DEFAULT_FEATURES = {'digital_twin': True, 'atlas_ai': True}
 
 
 def _get_db_connection():
@@ -45,9 +52,92 @@ def _require_superadmin(f):
     return wrapper
 
 
-# ---------------------------------------------------------------------------
-# Public routes (called by customer EXE, no auth required)
-# ---------------------------------------------------------------------------
+def _features_from_row(row):
+    """Map DB columns to public feature flags."""
+    if not row:
+        return dict(_DEFAULT_FEATURES)
+    return {
+        'digital_twin': bool(row.get('enable_digital_twin', True)),
+        'atlas_ai': bool(row.get('enable_atlas_ai', True)),
+    }
+
+
+def _license_json_paths():
+    """Candidate paths for license.json written by launcher."""
+    paths = []
+    env_path = os.environ.get('HERCULES_LICENSE_PATH', '').strip()
+    if env_path:
+        paths.append(env_path)
+    try:
+        from config_paths import get_data_dir
+        paths.append(os.path.join(get_data_dir(), 'license.json'))
+    except Exception:
+        pass
+    backend_dir = os.path.abspath(os.path.dirname(__file__))
+    paths.append(os.path.join(backend_dir, '..', 'license.json'))
+    paths.append(os.path.join(backend_dir, 'license.json'))
+    seen = set()
+    for p in paths:
+        norm = os.path.normpath(p)
+        if norm not in seen:
+            seen.add(norm)
+            yield norm
+
+
+def _read_license_json_features():
+    for path in _license_json_paths():
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, encoding='utf-8') as f:
+                data = json.load(f)
+            features = data.get('features')
+            if isinstance(features, dict):
+                return {
+                    'digital_twin': bool(features.get('digital_twin', True)),
+                    'atlas_ai': bool(features.get('atlas_ai', True)),
+                }
+        except (OSError, json.JSONDecodeError) as e:
+            logger.debug("Could not read license.json at %s: %s", path, e)
+    return None
+
+
+def _fetch_cloud_status(machine_id):
+    """Optional refresh from cloud license API."""
+    try:
+        url = f"{LICENSE_SERVER_URL}/api/license/status?machine_id={machine_id}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'HerculesBackend/1.0'})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            return json.loads(resp.read().decode('utf-8'))
+    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError) as e:
+        logger.debug("Cloud license status unavailable: %s", e)
+        return None
+
+
+@license_bp.before_request
+def _ensure_license_module_columns():
+    """Apply entitlement columns on existing DBs without re-running init_db."""
+    global _license_columns_ensured
+    if _license_columns_ensured:
+        return
+    get_conn = _get_db_connection()
+    try:
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor()
+            cur.execute(
+                "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS "
+                "enable_digital_twin BOOLEAN NOT NULL DEFAULT TRUE"
+            )
+            cur.execute(
+                "ALTER TABLE licenses ADD COLUMN IF NOT EXISTS "
+                "enable_atlas_ai BOOLEAN NOT NULL DEFAULT TRUE"
+            )
+            actual.commit()
+        _license_columns_ensured = True
+    except Exception as e:
+        logger.warning("Could not ensure license module columns: %s", e)
+
 
 def _effective_status(row):
     """Return the effective status, enforcing expiry server-side."""
@@ -59,6 +149,20 @@ def _effective_status(row):
             return 'expired'
     return status
 
+
+def _status_response(row):
+    """Build JSON for register/status including features when approved."""
+    expiry_str = row['expiry'].strftime('%Y-%m-%d') if row.get('expiry') else None
+    status = _effective_status(row)
+    payload = {'status': status, 'expiry': expiry_str}
+    if status == 'approved':
+        payload['features'] = _features_from_row(row)
+    return payload
+
+
+# ---------------------------------------------------------------------------
+# Public routes (called by customer EXE, no auth required)
+# ---------------------------------------------------------------------------
 
 @license_bp.route('/license/register', methods=['POST'])
 def register_machine():
@@ -85,7 +189,9 @@ def register_machine():
             cur = actual.cursor(cursor_factory=RealDictCursor)
 
             cur.execute(
-                "SELECT id, machine_id, status, expiry FROM licenses WHERE machine_id = %s",
+                """SELECT id, machine_id, status, expiry,
+                          enable_digital_twin, enable_atlas_ai
+                   FROM licenses WHERE machine_id = %s""",
                 (machine_id,),
             )
             row = cur.fetchone()
@@ -107,26 +213,28 @@ def register_machine():
                      cpu_info, ram_gb, disk_serial, machine_id),
                 )
                 actual.commit()
-                expiry_str = row['expiry'].strftime('%Y-%m-%d') if row['expiry'] else None
-                return jsonify({'status': _effective_status(row), 'expiry': expiry_str}), 200
+                return jsonify(_status_response(row)), 200
 
             cur.execute(
                 """INSERT INTO licenses
                     (machine_id, user_id, hostname, status, mac_address, ip_address,
                      os_version, cpu_info, ram_gb, disk_serial)
                    VALUES (%s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s)
-                   RETURNING id""",
+                   RETURNING id, machine_id, status, expiry,
+                             enable_digital_twin, enable_atlas_ai""",
                 (machine_id, user_id, hostname, mac_address, ip_address,
                  os_version, cpu_info, ram_gb, disk_serial),
             )
+            row = cur.fetchone()
             actual.commit()
-            return jsonify({'status': 'pending', 'expiry': None}), 200
+            return jsonify(_status_response(row)), 200
 
     except Exception as e:
         logger.error("license/register error: %s", e, exc_info=True)
         _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
         payload = {'error': 'Server error'}
-        if _dev: payload['detail'] = str(e)
+        if _dev:
+            payload['detail'] = str(e)
         return jsonify(payload), 500
 
 
@@ -143,26 +251,75 @@ def license_status():
             actual = conn._conn if hasattr(conn, '_conn') else conn
             cur = actual.cursor(cursor_factory=RealDictCursor)
             cur.execute(
-                "SELECT status, expiry FROM licenses WHERE machine_id = %s",
+                """SELECT status, expiry, enable_digital_twin, enable_atlas_ai
+                   FROM licenses WHERE machine_id = %s""",
                 (machine_id,),
             )
             row = cur.fetchone()
             if not row:
                 return jsonify({'error': 'Not found'}), 404
-            # Update last_seen_at so admin can tell if a machine is still active
             cur.execute(
                 "UPDATE licenses SET last_seen_at = NOW() WHERE machine_id = %s",
                 (machine_id,),
             )
             actual.commit()
-            expiry_str = row['expiry'].strftime('%Y-%m-%d') if row['expiry'] else None
-            return jsonify({'status': _effective_status(row), 'expiry': expiry_str}), 200
+            return jsonify(_status_response(row)), 200
     except Exception as e:
         logger.error("license/status error: %s", e, exc_info=True)
         _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
         payload = {'error': 'Server error'}
-        if _dev: payload['detail'] = str(e)
+        if _dev:
+            payload['detail'] = str(e)
         return jsonify(payload), 500
+
+
+@license_bp.route('/license/entitlements', methods=['GET'])
+def license_entitlements():
+    """Return module entitlements for this machine (desktop React app)."""
+    try:
+        from machine_id import get_machine_id
+        machine_id = get_machine_id()
+    except Exception as e:
+        logger.warning("license/entitlements: machine_id unavailable: %s", e)
+        machine_id = None
+
+    features = _read_license_json_features()
+    status = 'approved'
+
+    if machine_id:
+        cloud = _fetch_cloud_status(machine_id)
+        if cloud and cloud.get('status') == 'approved' and isinstance(cloud.get('features'), dict):
+            features = {
+                'digital_twin': bool(cloud['features'].get('digital_twin', True)),
+                'atlas_ai': bool(cloud['features'].get('atlas_ai', True)),
+            }
+            status = 'approved'
+        else:
+            get_conn = _get_db_connection()
+            try:
+                with closing(get_conn()) as conn:
+                    actual = conn._conn if hasattr(conn, '_conn') else conn
+                    cur = actual.cursor(cursor_factory=RealDictCursor)
+                    cur.execute(
+                        """SELECT status, expiry, enable_digital_twin, enable_atlas_ai
+                           FROM licenses WHERE machine_id = %s""",
+                        (machine_id,),
+                    )
+                    row = cur.fetchone()
+                    if row:
+                        status = _effective_status(row)
+                        if status == 'approved':
+                            features = _features_from_row(row)
+            except Exception as e:
+                logger.debug("license/entitlements DB lookup failed: %s", e)
+
+    if features is None:
+        features = dict(_DEFAULT_FEATURES)
+
+    return jsonify({
+        'status': status,
+        'features': features,
+    }), 200
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +356,8 @@ def list_licenses():
         logger.error("admin/licenses list error: %s", e, exc_info=True)
         _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
         payload = {'error': 'Server error'}
-        if _dev: payload['detail'] = str(e)
+        if _dev:
+            payload['detail'] = str(e)
         return jsonify(payload), 500
 
 
@@ -230,6 +388,14 @@ def update_license(license_id):
     if license_name is not None:
         sets.append("license_name = %s")
         params.append(license_name.strip())
+
+    if 'enable_digital_twin' in data:
+        sets.append("enable_digital_twin = %s")
+        params.append(bool(data['enable_digital_twin']))
+
+    if 'enable_atlas_ai' in data:
+        sets.append("enable_atlas_ai = %s")
+        params.append(bool(data['enable_atlas_ai']))
 
     if new_status:
         if new_status not in ('approved', 'denied', 'pending'):
@@ -279,7 +445,8 @@ def update_license(license_id):
         logger.error("admin/licenses update error: %s", e, exc_info=True)
         _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
         payload = {'error': 'Server error'}
-        if _dev: payload['detail'] = str(e)
+        if _dev:
+            payload['detail'] = str(e)
         return jsonify(payload), 500
 
 
@@ -302,5 +469,6 @@ def delete_license(license_id):
         logger.error("admin/licenses delete error: %s", e, exc_info=True)
         _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
         payload = {'error': 'Server error'}
-        if _dev: payload['detail'] = str(e)
+        if _dev:
+            payload['detail'] = str(e)
         return jsonify(payload), 500

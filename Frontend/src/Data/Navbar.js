@@ -36,6 +36,7 @@ export const getMenuItems = (t) => [
     tooltip: t('nav.tooltip.herculesAI'),
     link: '/hercules-ai',
     roles: [Roles.Admin],
+    licenseFeature: 'atlas_ai',
     badgeEndpoint: '/api/hercules-ai/status',
     badgeKey: 'unseen_reports_count',
   },

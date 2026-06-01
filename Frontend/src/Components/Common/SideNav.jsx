@@ -5,6 +5,7 @@ import { useContext, useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../Context/AuthProvider';
 import { useLanguage } from '../../Hooks/useLanguage';
+import { useLicenseFeatures } from '../../Context/LicenseFeaturesProvider';
 import { User, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axios from '../../API/axios';
@@ -17,6 +18,7 @@ export default function SideNav() {
   const { t, isRTL } = useLanguage();
   const location = useLocation();
   const [badgeCounts, setBadgeCounts] = useState({});
+  const { hasFeature } = useLicenseFeatures();
 
   const sideWidth = open ? 220 : 60;
   const items = getMenuItems(t);
@@ -61,6 +63,7 @@ export default function SideNav() {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', pt: 3, px: 0.75 }}>
         {uniqueMenuItems.map((item) => {
           if (!auth || (auth.role !== 'superadmin' && !item.roles.includes(auth.role))) return null;
+          if (item.licenseFeature && !hasFeature(item.licenseFeature)) return null;
 
           return (
             <NavLink

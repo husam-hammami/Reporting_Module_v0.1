@@ -14,6 +14,26 @@ const STATUS_BADGE = {
 
 const FILTER_OPTIONS = ['all', 'pending', 'approved', 'denied'];
 
+function defaultExpiry15Days() {
+  const d = new Date();
+  d.setDate(d.getDate() + 15);
+  return d.toISOString().split('T')[0];
+}
+
+function ModuleCheck({ checked, label, onChange }) {
+  return (
+    <label className="flex items-center gap-2 text-[12px] text-[#2a3545] dark:text-[#e1e8f0] cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="rounded border-[#e3e9f0] dark:border-[#1e2d40]"
+      />
+      {label}
+    </label>
+  );
+}
+
 export default function LicenseActivations() {
   const { t } = useLanguage();
   const [licenses, setLicenses] = useState([]);
@@ -24,6 +44,15 @@ export default function LicenseActivations() {
   const [deleteId, setDeleteId] = useState(null);
   const [editField, setEditField] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [approveTarget, setApproveTarget] = useState(null);
+  const [approveExpiry, setApproveExpiry] = useState(() => defaultExpiry15Days());
+  const [approveDigitalTwin, setApproveDigitalTwin] = useState(true);
+  const [approveAtlasAi, setApproveAtlasAi] = useState(true);
+  const [approveSaving, setApproveSaving] = useState(false);
+  const [editModulesId, setEditModulesId] = useState(null);
+  const [moduleDigitalTwin, setModuleDigitalTwin] = useState(true);
+  const [moduleAtlasAi, setModuleAtlasAi] = useState(true);
+  const [moduleSaving, setModuleSaving] = useState(false);
 
   const fetchLicenses = useCallback(() => {
     setLoading(true);
@@ -44,14 +73,71 @@ export default function LicenseActivations() {
     return () => clearInterval(interval);
   }, [fetchLicenses]);
 
-  const handleApprove = async (id) => {
+  const openApproveDialog = (lic) => {
+    setApproveTarget(lic);
+    setApproveExpiry(defaultExpiry15Days());
+    setApproveDigitalTwin(lic.enable_digital_twin !== false);
+    setApproveAtlasAi(lic.enable_atlas_ai !== false);
+  };
+
+  const handleApproveConfirm = async () => {
+    if (!approveTarget) return;
+    setApproveSaving(true);
     try {
-      await axios.patch(endpoints.licenses.update(id), { status: 'approved' });
+      await axios.patch(endpoints.licenses.update(approveTarget.id), {
+        status: 'approved',
+        expiry: approveExpiry,
+        enable_digital_twin: approveDigitalTwin,
+        enable_atlas_ai: approveAtlasAi,
+      });
       toast.success(t('licenses.approvedMsg'));
+      setApproveTarget(null);
       fetchLicenses();
     } catch (err) {
       toast.error(err.response?.data?.error || t('licenses.failedApprove'));
+    } finally {
+      setApproveSaving(false);
     }
+  };
+
+  const openEditModules = (lic) => {
+    setEditModulesId(lic.id);
+    setModuleDigitalTwin(lic.enable_digital_twin !== false);
+    setModuleAtlasAi(lic.enable_atlas_ai !== false);
+  };
+
+  const handleSaveModules = async () => {
+    const lic = licenses.find((l) => l.id === editModulesId);
+    if (!lic) return;
+    if (
+      moduleDigitalTwin === (lic.enable_digital_twin !== false)
+      && moduleAtlasAi === (lic.enable_atlas_ai !== false)
+    ) {
+      setEditModulesId(null);
+      return;
+    }
+    setModuleSaving(true);
+    try {
+      await axios.patch(endpoints.licenses.update(editModulesId), {
+        enable_digital_twin: moduleDigitalTwin,
+        enable_atlas_ai: moduleAtlasAi,
+      });
+      toast.success(t('licenses.modulesSaved'));
+      setEditModulesId(null);
+      fetchLicenses();
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('licenses.failedSaveModules'));
+    } finally {
+      setModuleSaving(false);
+    }
+  };
+
+  const moduleFlagsChanged = (lic) => {
+    if (editModulesId !== lic.id) return false;
+    return (
+      moduleDigitalTwin !== (lic.enable_digital_twin !== false)
+      || moduleAtlasAi !== (lic.enable_atlas_ai !== false)
+    );
   };
 
   const handleDeny = async (id) => {
@@ -129,6 +215,9 @@ export default function LicenseActivations() {
   };
 
   const smallBtnClass = 'px-2.5 py-1 text-[10px] font-medium rounded-md transition-colors';
+  const moduleTick = (enabled) => (
+    enabled ? <span className="text-emerald-600 font-semibold">✓</span> : <span className="text-[#8898aa]">—</span>
+  );
 
   return (
     <div className="p-6">
@@ -150,6 +239,64 @@ export default function LicenseActivations() {
             {t('licenses.refresh')}
           </button>
         </div>
+
+        {approveTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div
+              className="w-full max-w-md rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#0d1825] p-5 shadow-xl"
+              role="dialog"
+              aria-labelledby="approve-license-title"
+            >
+              <h4 id="approve-license-title" className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] mb-1">
+                {t('licenses.approveTitle')}
+              </h4>
+              <p className="text-[11px] text-[#8898aa] mb-4 font-mono truncate">
+                {approveTarget.hostname || approveTarget.machine_id}
+              </p>
+              <label className="block text-[10px] font-semibold uppercase text-[#6b7f94] mb-1">
+                {t('licenses.expiry')}
+              </label>
+              <input
+                type="date"
+                value={approveExpiry}
+                onChange={(e) => setApproveExpiry(e.target.value)}
+                className="mb-4 w-full px-2 py-1.5 text-[12px] rounded border border-[#e3e9f0] dark:border-[#1e2d40] bg-white dark:bg-[#0d1825] text-[#2a3545] dark:text-[#e1e8f0]"
+              />
+              <fieldset className="mb-4 space-y-2 border border-[#e3e9f0] dark:border-[#1e2d40] rounded-md p-3">
+                <legend className="text-[10px] font-semibold uppercase text-[#6b7f94] px-1">
+                  {t('licenses.moduleAccess')}
+                </legend>
+                <ModuleCheck
+                  checked={approveDigitalTwin}
+                  label={t('licenses.moduleDigitalTwin')}
+                  onChange={setApproveDigitalTwin}
+                />
+                <ModuleCheck
+                  checked={approveAtlasAi}
+                  label={t('licenses.moduleHerculesAi')}
+                  onChange={setApproveAtlasAi}
+                />
+              </fieldset>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setApproveTarget(null)}
+                  className={`${smallBtnClass} border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94]`}
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApproveConfirm}
+                  disabled={approveSaving}
+                  className={`${smallBtnClass} bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50`}
+                >
+                  {approveSaving ? t('common.loading') : t('licenses.approveConfirm')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex gap-1.5">
@@ -180,6 +327,8 @@ export default function LicenseActivations() {
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.licenseName')}</th>
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.hostname')}</th>
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.status')}</th>
+                  <th className="text-center py-2 px-2 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.colTwin')}</th>
+                  <th className="text-center py-2 px-2 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.colAi')}</th>
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.expiry')}</th>
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.lastSeen')}</th>
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.info')}</th>
@@ -308,6 +457,8 @@ export default function LicenseActivations() {
                           {lic.status}
                         </span>
                       </td>
+                      <td className="py-2.5 px-2 text-center">{moduleTick(lic.enable_digital_twin !== false)}</td>
+                      <td className="py-2.5 px-2 text-center">{moduleTick(lic.enable_atlas_ai !== false)}</td>
                       <td className="py-2.5 px-3">
                         <span className={isExpired(lic.expiry) ? 'text-red-500 font-medium' : 'text-[#2a3545] dark:text-[#e1e8f0]'}>
                           {formatDate(lic.expiry)}
@@ -351,10 +502,40 @@ export default function LicenseActivations() {
                               <FaTimes size={9} />
                             </button>
                           </div>
+                        ) : editModulesId === lic.id ? (
+                          <div className="flex flex-col gap-2 min-w-[200px]">
+                            <ModuleCheck
+                              checked={moduleDigitalTwin}
+                              label={t('licenses.moduleDigitalTwin')}
+                              onChange={setModuleDigitalTwin}
+                            />
+                            <ModuleCheck
+                              checked={moduleAtlasAi}
+                              label={t('licenses.moduleHerculesAi')}
+                              onChange={setModuleAtlasAi}
+                            />
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={handleSaveModules}
+                                disabled={moduleSaving || !moduleFlagsChanged(lic)}
+                                className={`${smallBtnClass} bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40`}
+                              >
+                                {moduleSaving ? '…' : t('common.save')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditModulesId(null)}
+                                className={`${smallBtnClass} bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300`}
+                              >
+                                <FaTimes size={9} />
+                              </button>
+                            </div>
+                          </div>
                         ) : (
-                          <div className="flex gap-1">
+                          <div className="flex gap-1 flex-wrap">
                             {lic.status !== 'approved' && (
-                              <button onClick={() => handleApprove(lic.id)} title={t('licenses.approveDefault')}
+                              <button onClick={() => openApproveDialog(lic)} title={t('licenses.approveDefault')}
                                 className={`${smallBtnClass} bg-emerald-600 text-white hover:bg-emerald-700`}>
                                 <FaCheck size={9} />
                               </button>
@@ -366,10 +547,16 @@ export default function LicenseActivations() {
                               </button>
                             )}
                             {lic.status === 'approved' && (
-                              <button onClick={() => setExtendId(lic.id)} title={t('licenses.extendExpiry')}
-                                className={`${smallBtnClass} border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94] hover:bg-[#f5f8fb] dark:hover:bg-[#0d1825]`}>
-                                <FaCalendarPlus size={9} />
-                              </button>
+                              <>
+                                <button onClick={() => openEditModules(lic)} title={t('licenses.editModules')}
+                                  className={`${smallBtnClass} border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94] hover:bg-[#f5f8fb] dark:hover:bg-[#0d1825]`}>
+                                  {t('licenses.modulesShort')}
+                                </button>
+                                <button onClick={() => setExtendId(lic.id)} title={t('licenses.extendExpiry')}
+                                  className={`${smallBtnClass} border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94] hover:bg-[#f5f8fb] dark:hover:bg-[#0d1825]`}>
+                                  <FaCalendarPlus size={9} />
+                                </button>
+                              </>
                             )}
                             <button onClick={() => setDeleteId(lic.id)} title={t('common.delete')}
                               className={`${smallBtnClass} border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20`}>
@@ -382,7 +569,7 @@ export default function LicenseActivations() {
                     {/* Expanded machine info row */}
                     {expandedId === lic.id && (
                       <tr className="bg-[#f8fafc] dark:bg-[#0a1018]">
-                        <td colSpan={9} className="py-3 px-6">
+                        <td colSpan={11} className="py-3 px-6">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-2 text-[11px]">
                             <div>
                               <span className="text-[#8898aa]">{t('licenses.mac')} </span>

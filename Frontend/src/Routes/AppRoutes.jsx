@@ -34,6 +34,7 @@ import MyAccount from '../Pages/Profile/MyAccount';
 import AppSettingsPage from '../Pages/AppSettings/AppSettingsPage';
 import SystemLogs from '../Pages/Settings/Logs/SystemLogs';
 import HerculesAISetup from '../Pages/HerculesAI/HerculesAISetup';
+import LicenseFeatureGuard from '../Components/Routes/LicenseFeatureGuard';
 import { useContext } from 'react';
 import { AuthContext } from '../Context/AuthProvider';
 
@@ -197,7 +198,9 @@ const AppRoutes = () => {
             path="hercules-ai"
             element={
               <ProtectedRoute roles={[Roles.Admin]}>
-                <HerculesAISetup />
+                <LicenseFeatureGuard featureKey="atlas_ai">
+                  <HerculesAISetup />
+                </LicenseFeatureGuard>
               </ProtectedRoute>
             }
           />

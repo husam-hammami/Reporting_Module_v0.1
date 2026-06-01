@@ -474,8 +474,20 @@ def main():
                 expiry_date = None
 
             if expiry_date and expiry_date >= datetime.now().date():
+                cache = {"machine_id": machine_id, "expiry": expiry_str}
+                features = response.get("features")
+                if isinstance(features, dict):
+                    cache["features"] = {
+                        "digital_twin": bool(features.get("digital_twin", True)),
+                        "atlas_ai": bool(features.get("atlas_ai", True)),
+                    }
+                else:
+                    cache["features"] = {
+                        "digital_twin": bool(response.get("enable_digital_twin", True)),
+                        "atlas_ai": bool(response.get("enable_atlas_ai", True)),
+                    }
                 with open(license_path, "w", encoding="utf-8") as f:
-                    json.dump({"machine_id": machine_id, "expiry": expiry_str}, f, indent=4)
+                    json.dump(cache, f, indent=4)
                 print(f"License valid until {expiry_str}")
             else:
                 print(f"License expired on {expiry_str}. Contact administrator to extend.")

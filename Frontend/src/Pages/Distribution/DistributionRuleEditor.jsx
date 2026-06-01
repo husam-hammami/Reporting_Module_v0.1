@@ -5,6 +5,7 @@ import { herculesAIApi } from '../../API/herculesAIApi';
 import RecipientInput from '../Settings/ReportDistribution/RecipientInput';
 import { toast } from 'react-toastify';
 import { useLanguage } from '../../Hooks/useLanguage';
+import { useLicenseFeatures } from '../../Context/LicenseFeaturesProvider';
 import axios from '../../API/axios';
 
 const DAY_PILLS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -242,6 +243,7 @@ function FolderBrowserModal({ open, onClose, onSelect, theme: t }) {
 /* ── Main editor (inside drawer) ──────────────────────────────────────────── */
 export default function DistributionRuleEditor({ rule, theme: t, onSave, onCancel, onRunNow }) {
   const { t: tr } = useLanguage();
+  const { hasFeature } = useLicenseFeatures();
   const [form, setForm] = useState({ ...EMPTY_RULE });
   const [reports, setReports] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -388,25 +390,26 @@ export default function DistributionRuleEditor({ rule, theme: t, onSave, onCance
               </div>
             </div>
 
-            {/* AI Summary toggle */}
-            <div className="w-48">
-              <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.includeAISummary')}</div>
-              <button
-                onClick={() => aiSetupComplete && set('include_ai_summary', !form.include_ai_summary)}
-                disabled={!aiSetupComplete}
-                className="flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all w-full"
-                style={{
-                  background: form.include_ai_summary ? t.accent : t.inputBg,
-                  color: form.include_ai_summary ? t.btnText : t.textSecondary,
-                  border: `1.5px solid ${form.include_ai_summary ? t.accent : t.border}`,
-                  opacity: aiSetupComplete ? 1 : 0.5,
-                  cursor: aiSetupComplete ? 'pointer' : 'not-allowed',
-                }}
-                title={!aiSetupComplete ? tr('distribution.aiSummaryDisabledHint') : ''}
-              >
-                {form.include_ai_summary ? 'On' : 'Off'}
-              </button>
-            </div>
+            {hasFeature('atlas_ai') && (
+              <div className="w-48">
+                <div className={labelClass} style={{ color: t.textMuted }}>{tr('distribution.includeAISummary')}</div>
+                <button
+                  onClick={() => aiSetupComplete && set('include_ai_summary', !form.include_ai_summary)}
+                  disabled={!aiSetupComplete}
+                  className="flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all w-full"
+                  style={{
+                    background: form.include_ai_summary ? t.accent : t.inputBg,
+                    color: form.include_ai_summary ? t.btnText : t.textSecondary,
+                    border: `1.5px solid ${form.include_ai_summary ? t.accent : t.border}`,
+                    opacity: aiSetupComplete ? 1 : 0.5,
+                    cursor: aiSetupComplete ? 'pointer' : 'not-allowed',
+                  }}
+                  title={!aiSetupComplete ? tr('distribution.aiSummaryDisabledHint') : ''}
+                >
+                  {form.include_ai_summary ? 'On' : 'Off'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Conditional: Recipients */}
