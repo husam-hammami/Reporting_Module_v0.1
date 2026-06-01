@@ -16,6 +16,7 @@ const endpoints = {
     list: '/api/admin/licenses',
     update: id => `/api/admin/licenses/${id}`,
     remove: id => `/api/admin/licenses/${id}`,
+    entitlements: '/api/license/entitlements',
   },
 };
 

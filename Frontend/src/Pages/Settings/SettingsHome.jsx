@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useLenisScroll } from '../../Hooks/useLenisScroll';
 import { FaTags, FaLayerGroup, FaExchangeAlt, FaDownload, FaSuperscript, FaEnvelope, FaClock, FaImage, FaRobot } from 'react-icons/fa';
 import { AuthContext } from '../../Context/AuthProvider';
+import { useFeatures } from '../../Context/FeatureContext';
 import { useLanguage } from '../../Hooks/useLanguage';
 import '../ReportBuilder/reportBuilderTheme.css';
 
@@ -11,6 +12,7 @@ const SettingsHome = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { auth } = useContext(AuthContext);
+  const { features } = useFeatures();
   const { t } = useLanguage();
 
   const NAV_ITEMS = [
@@ -25,7 +27,10 @@ const SettingsHome = () => {
     { name: t('settings.branding'), icon: FaImage, link: '/settings/branding', description: t('settings.desc.branding') },
   ];
 
-  const filteredNavItems = NAV_ITEMS;
+  const filteredNavItems = NAV_ITEMS.filter((item) => {
+    if (item.link === '/settings/ai' && !features.atlas_ai) return false;
+    return true;
+  });
 
   useEffect(() => {
     if (location.pathname === '/settings') {

@@ -4,6 +4,7 @@ import { NavbarContext } from '../../Context/NavbarContext';
 import { useContext, useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../Context/AuthProvider';
+import { useFeatures } from '../../Context/FeatureContext';
 import { useLanguage } from '../../Hooks/useLanguage';
 import { User, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -18,8 +19,13 @@ export default function SideNav() {
   const location = useLocation();
   const [badgeCounts, setBadgeCounts] = useState({});
 
+  const { features } = useFeatures();
   const sideWidth = open ? 220 : 60;
-  const items = getMenuItems(t);
+  const items = getMenuItems(t).filter((item) => {
+    if (item.link === '/digital-twin' && !features.digital_twin) return false;
+    if (item.link === '/atlas-ai' && !features.atlas_ai) return false;
+    return true;
+  });
 
   const uniqueMenuItems = items.reduce((acc, item) => {
     const idx = acc.findIndex((i) => i.link === item.link);

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Home from '../Pages/Home';
 import Login from '../Pages/Login';
 import { ProtectedCredentials, ProtectedRoute } from './ProtectedRoute';
+import { FeatureRoute } from './FeatureRoute';
 import { Roles } from '../Data/Roles';
 import SettingsHome from '../Pages/Settings/SettingsHome';
 import TagManager from '../Pages/Settings/Tags/TagManager';
@@ -210,7 +211,9 @@ const AppRoutes = () => {
             path="atlas-ai"
             element={
               <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
-                <AtlasAIPage />
+                <FeatureRoute feature="atlas_ai">
+                  <AtlasAIPage />
+                </FeatureRoute>
               </ProtectedRoute>
             }
           />
@@ -226,7 +229,9 @@ const AppRoutes = () => {
             path="digital-twin"
             element={
               <ProtectedRoute roles={[Roles.Admin, Roles.Manager, Roles.Operator]}>
-                <DigitalTwinPage />
+                <FeatureRoute feature="digital_twin">
+                  <DigitalTwinPage />
+                </FeatureRoute>
               </ProtectedRoute>
             }
           />
@@ -281,7 +286,14 @@ const AppRoutes = () => {
             <Route path="mappings" element={<MappingManager />} />
             <Route path="export-import" element={<ExportImport />} />
             <Route path="distribution" element={<ReportDistribution />} />
-            <Route path="ai" element={<AISettings />} />
+            <Route
+              path="ai"
+              element={
+                <FeatureRoute feature="atlas_ai" redirectTo="/settings/tags">
+                  <AISettings />
+                </FeatureRoute>
+              }
+            />
             <Route path="shifts" element={<ShiftsSettings />} />
             <Route path="branding" element={<BrandingSettings />} />
           </Route>

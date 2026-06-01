@@ -8,6 +8,7 @@ import { SocketProvider } from '../Context/SocketContext';
 import { EmulatorProvider } from '../Context/EmulatorContext';
 import { SystemStatusProvider } from '../Context/SystemStatusContext';
 import { BrandingProvider } from '../Context/BrandingContext';
+import { FeatureProvider } from '../Context/FeatureContext';
 import { LanguageProvider } from '../Context/LanguageProvider';
 
 // Create a client
@@ -32,6 +33,7 @@ const AppProviders = ({ children }) => {
       <SocketProvider>
         <SystemStatusProvider>
         <BrandingProvider>
+        <FeatureProvider>
         <EmulatorProvider>
         <NavbarProvider>
           <LanguageProvider>
@@ -41,6 +43,7 @@ const AppProviders = ({ children }) => {
           </LanguageProvider>
         </NavbarProvider>
         </EmulatorProvider>
+        </FeatureProvider>
         </BrandingProvider>
         </SystemStatusProvider>
       </SocketProvider>

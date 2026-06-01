@@ -24,6 +24,12 @@ export default function LicenseActivations() {
   const [deleteId, setDeleteId] = useState(null);
   const [editField, setEditField] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [approveId, setApproveId] = useState(null);
+  const [approveModules, setApproveModules] = useState({
+    enable_digital_twin: true,
+    enable_atlas_ai: true,
+  });
+  const [moduleEdits, setModuleEdits] = useState({});
 
   const fetchLicenses = useCallback(() => {
     setLoading(true);
@@ -44,14 +50,55 @@ export default function LicenseActivations() {
     return () => clearInterval(interval);
   }, [fetchLicenses]);
 
-  const handleApprove = async (id) => {
+  const handleApprove = async (id, modules = approveModules) => {
     try {
-      await axios.patch(endpoints.licenses.update(id), { status: 'approved' });
+      await axios.patch(endpoints.licenses.update(id), {
+        status: 'approved',
+        enable_digital_twin: Boolean(modules.enable_digital_twin),
+        enable_atlas_ai: Boolean(modules.enable_atlas_ai),
+      });
       toast.success(t('licenses.approvedMsg'));
+      setApproveId(null);
       fetchLicenses();
     } catch (err) {
       toast.error(err.response?.data?.error || t('licenses.failedApprove'));
     }
+  };
+
+  const handleSaveModules = async (id) => {
+    const edits = moduleEdits[id];
+    if (!edits) return;
+    try {
+      await axios.patch(endpoints.licenses.update(id), {
+        enable_digital_twin: Boolean(edits.enable_digital_twin),
+        enable_atlas_ai: Boolean(edits.enable_atlas_ai),
+      });
+      toast.success(t('licenses.modulesSaved'));
+      fetchLicenses();
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('licenses.failedSaveModules'));
+    }
+  };
+
+  const getModuleState = (lic) => {
+    if (moduleEdits[lic.id]) return moduleEdits[lic.id];
+    return {
+      enable_digital_twin: lic.enable_digital_twin !== false,
+      enable_atlas_ai: lic.enable_atlas_ai !== false,
+    };
+  };
+
+  const setModuleField = (lic, field, value) => {
+    setModuleEdits((prev) => ({
+      ...prev,
+      [lic.id]: {
+        ...(prev[lic.id] || {
+          enable_digital_twin: lic.enable_digital_twin !== false,
+          enable_atlas_ai: lic.enable_atlas_ai !== false,
+        }),
+        [field]: value,
+      },
+    }));
   };
 
   const handleDeny = async (id) => {
@@ -151,6 +198,53 @@ export default function LicenseActivations() {
           </button>
         </div>
 
+        <p className="text-[11px] text-[#8898aa] -mt-2">
+          {t('licenses.portalHint')}
+        </p>
+
+        {/* Approve module picker */}
+        {approveId !== null && (
+          <div className="rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] bg-[#f8fafc] dark:bg-[#0d1825] p-4 space-y-3">
+            <p className="text-[12px] font-medium text-[#2a3545] dark:text-[#e1e8f0]">
+              {t('licenses.approveModulesTitle')}
+            </p>
+            <div className="flex flex-wrap gap-6 text-[12px]">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={approveModules.enable_digital_twin}
+                  onChange={(e) => setApproveModules((m) => ({ ...m, enable_digital_twin: e.target.checked }))}
+                />
+                {t('licenses.moduleDigitalTwin')}
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={approveModules.enable_atlas_ai}
+                  onChange={(e) => setApproveModules((m) => ({ ...m, enable_atlas_ai: e.target.checked }))}
+                />
+                {t('licenses.moduleHerculesAI')}
+              </label>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleApprove(approveId)}
+                className={`${smallBtnClass} bg-emerald-600 text-white hover:bg-emerald-700 px-3`}
+              >
+                {t('licenses.confirmApprove')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setApproveId(null)}
+                className={`${smallBtnClass} border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94]`}
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex gap-1.5">
           {FILTER_OPTIONS.map(opt => (
@@ -182,6 +276,7 @@ export default function LicenseActivations() {
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.status')}</th>
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.expiry')}</th>
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.lastSeen')}</th>
+                  <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.modules')}</th>
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('licenses.info')}</th>
                   <th className="text-start py-2 px-3 text-[10px] font-semibold uppercase text-[#6b7f94]">{t('common.actions')}</th>
                 </tr>
@@ -318,6 +413,39 @@ export default function LicenseActivations() {
                       </td>
                       <td className="py-2.5 px-3 text-[#8898aa]">{formatDate(lic.last_seen_at)}</td>
                       <td className="py-2.5 px-3">
+                        {lic.status === 'approved' ? (
+                          <div className="space-y-1.5">
+                            <label className="flex items-center gap-1.5 text-[10px] cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={getModuleState(lic).enable_digital_twin}
+                                onChange={(e) => setModuleField(lic, 'enable_digital_twin', e.target.checked)}
+                              />
+                              {t('licenses.moduleTwinShort')}
+                            </label>
+                            <label className="flex items-center gap-1.5 text-[10px] cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={getModuleState(lic).enable_atlas_ai}
+                                onChange={(e) => setModuleField(lic, 'enable_atlas_ai', e.target.checked)}
+                              />
+                              {t('licenses.moduleAiShort')}
+                            </label>
+                            {moduleEdits[lic.id] && (
+                              <button
+                                type="button"
+                                onClick={() => handleSaveModules(lic.id)}
+                                className={`${smallBtnClass} bg-brand text-white hover:bg-brand-hover w-full`}
+                              >
+                                {t('licenses.saveModules')}
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-[#8898aa]">—</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3">
                         <button
                           onClick={() => setExpandedId(expandedId === lic.id ? null : lic.id)}
                           className={`${smallBtnClass} border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94] hover:bg-[#f5f8fb] dark:hover:bg-[#0d1825]`}
@@ -354,8 +482,14 @@ export default function LicenseActivations() {
                         ) : (
                           <div className="flex gap-1">
                             {lic.status !== 'approved' && (
-                              <button onClick={() => handleApprove(lic.id)} title={t('licenses.approveDefault')}
-                                className={`${smallBtnClass} bg-emerald-600 text-white hover:bg-emerald-700`}>
+                              <button
+                                onClick={() => {
+                                  setApproveModules({ enable_digital_twin: true, enable_atlas_ai: true });
+                                  setApproveId(lic.id);
+                                }}
+                                title={t('licenses.approveDefault')}
+                                className={`${smallBtnClass} bg-emerald-600 text-white hover:bg-emerald-700`}
+                              >
                                 <FaCheck size={9} />
                               </button>
                             )}
@@ -382,7 +516,7 @@ export default function LicenseActivations() {
                     {/* Expanded machine info row */}
                     {expandedId === lic.id && (
                       <tr className="bg-[#f8fafc] dark:bg-[#0a1018]">
-                        <td colSpan={9} className="py-3 px-6">
+                        <td colSpan={10} className="py-3 px-6">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-2 text-[11px]">
                             <div>
                               <span className="text-[#8898aa]">{t('licenses.mac')} </span>

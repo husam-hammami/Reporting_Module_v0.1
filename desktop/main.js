@@ -199,18 +199,30 @@ function loadLicenseCache() {
   } catch { return null; }
 }
 
+function normalizeLicenseFeatures(result) {
+  const f = result && result.features;
+  if (f && typeof f === 'object') {
+    return {
+      digital_twin: Boolean(f.digital_twin),
+      atlas_ai: Boolean(f.atlas_ai),
+    };
+  }
+  return { digital_twin: false, atlas_ai: false };
+}
+
 async function checkLicense() {
   const info = getMachineInfo();
   try {
     const result = await postJSON(`${LICENSE_SERVER}/api/license/register`, info);
     const status = result.status;
     const expiry = result.expiry;
+    const features = normalizeLicenseFeatures(result);
 
     if (status === 'approved' && expiry) {
       const expiryDate = new Date(expiry + 'T23:59:59');
       if (expiryDate >= new Date()) {
-        saveLicenseCache({ status, expiry, machine_id: info.machine_id });
-        return { ok: true, status };
+        saveLicenseCache({ status, expiry, machine_id: info.machine_id, features });
+        return { ok: true, status, features };
       }
       return { ok: false, status: 'expired' };
     }
@@ -351,6 +363,7 @@ function runInitDb() {
       'add_tag_history_archive_unique_universal.sql',
       'add_license_machine_info.sql',
       'add_site_and_license_name.sql',
+      'add_license_module_flags.sql',
       'create_distribution_rules_table.sql',
       'add_archive_granularity.sql',
       'create_report_execution_log.sql',

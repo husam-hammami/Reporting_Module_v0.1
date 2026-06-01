@@ -62,6 +62,8 @@ a = Analysis(
         'report_builder_bp',
         'mappings_bp',
         'license_bp',
+        'license_entitlements',
+        'machine_id',
         'branding_bp',
         'distribution_bp',
         'updates_bp',

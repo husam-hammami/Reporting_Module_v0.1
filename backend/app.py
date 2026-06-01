@@ -787,6 +787,7 @@ def _run_startup_migrations():
         'add_tag_history_archive_unique_universal.sql',
         'add_license_machine_info.sql',
         'add_site_and_license_name.sql',
+        'add_license_module_flags.sql',
         'create_distribution_rules_table.sql',
         'add_archive_granularity.sql',
         'create_report_execution_log.sql',

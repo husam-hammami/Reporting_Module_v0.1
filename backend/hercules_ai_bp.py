@@ -92,6 +92,14 @@ def _ensure_tables():
 @hercules_ai_bp.before_request
 def _before_request():
     _ensure_tables()
+    try:
+        from license_entitlements import is_atlas_ai_enabled
+        if not is_atlas_ai_enabled():
+            return jsonify({
+                'error': 'Hercules AI is not licensed for this machine',
+            }), 403
+    except Exception as e:
+        logger.warning('License entitlement check failed: %s', e)
 
 
 def _get_db_connection():

@@ -14,11 +14,18 @@ from flask_login import login_required, current_user
 from contextlib import closing
 from psycopg2.extras import RealDictCursor
 
+from license_entitlements import features_from_license_row, get_entitlements, invalidate_entitlements_cache
+
 logger = logging.getLogger(__name__)
 
 license_bp = Blueprint('license_bp', __name__)
 
 DEFAULT_TRIAL_DAYS = 15
+
+_LICENSE_SELECT = (
+    "SELECT id, machine_id, status, expiry, enable_digital_twin, enable_atlas_ai "
+    "FROM licenses WHERE machine_id = %s"
+)
 
 
 def _get_db_connection():
@@ -45,10 +52,6 @@ def _require_superadmin(f):
     return wrapper
 
 
-# ---------------------------------------------------------------------------
-# Public routes (called by customer EXE, no auth required)
-# ---------------------------------------------------------------------------
-
 def _effective_status(row):
     """Return the effective status, enforcing expiry server-side."""
     status = row['status']
@@ -59,6 +62,31 @@ def _effective_status(row):
             return 'expired'
     return status
 
+
+def _license_json(row):
+    """Build public license response including module features."""
+    expiry_str = row['expiry'].strftime('%Y-%m-%d') if row.get('expiry') else None
+    return {
+        'status': _effective_status(row),
+        'expiry': expiry_str,
+        'features': features_from_license_row(row),
+    }
+
+
+def _select_license_row(cur, machine_id):
+    try:
+        cur.execute(_LICENSE_SELECT, (machine_id,))
+    except Exception:
+        cur.execute(
+            "SELECT id, machine_id, status, expiry FROM licenses WHERE machine_id = %s",
+            (machine_id,),
+        )
+    return cur.fetchone()
+
+
+# ---------------------------------------------------------------------------
+# Public routes (called by customer EXE, no auth required)
+# ---------------------------------------------------------------------------
 
 @license_bp.route('/license/register', methods=['POST'])
 def register_machine():
@@ -84,11 +112,7 @@ def register_machine():
             actual = conn._conn if hasattr(conn, '_conn') else conn
             cur = actual.cursor(cursor_factory=RealDictCursor)
 
-            cur.execute(
-                "SELECT id, machine_id, status, expiry FROM licenses WHERE machine_id = %s",
-                (machine_id,),
-            )
-            row = cur.fetchone()
+            row = _select_license_row(cur, machine_id)
 
             if row:
                 cur.execute(
@@ -107,26 +131,39 @@ def register_machine():
                      cpu_info, ram_gb, disk_serial, machine_id),
                 )
                 actual.commit()
-                expiry_str = row['expiry'].strftime('%Y-%m-%d') if row['expiry'] else None
-                return jsonify({'status': _effective_status(row), 'expiry': expiry_str}), 200
+                return jsonify(_license_json(row)), 200
 
-            cur.execute(
-                """INSERT INTO licenses
-                    (machine_id, user_id, hostname, status, mac_address, ip_address,
-                     os_version, cpu_info, ram_gb, disk_serial)
-                   VALUES (%s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s)
-                   RETURNING id""",
-                (machine_id, user_id, hostname, mac_address, ip_address,
-                 os_version, cpu_info, ram_gb, disk_serial),
-            )
+            try:
+                cur.execute(
+                    """INSERT INTO licenses
+                        (machine_id, user_id, hostname, status, mac_address, ip_address,
+                         os_version, cpu_info, ram_gb, disk_serial,
+                         enable_digital_twin, enable_atlas_ai)
+                       VALUES (%s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s, FALSE, FALSE)
+                       RETURNING id, machine_id, status, expiry, enable_digital_twin, enable_atlas_ai""",
+                    (machine_id, user_id, hostname, mac_address, ip_address,
+                     os_version, cpu_info, ram_gb, disk_serial),
+                )
+            except Exception:
+                cur.execute(
+                    """INSERT INTO licenses
+                        (machine_id, user_id, hostname, status, mac_address, ip_address,
+                         os_version, cpu_info, ram_gb, disk_serial)
+                       VALUES (%s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s)
+                       RETURNING id, machine_id, status, expiry""",
+                    (machine_id, user_id, hostname, mac_address, ip_address,
+                     os_version, cpu_info, ram_gb, disk_serial),
+                )
+            row = cur.fetchone()
             actual.commit()
-            return jsonify({'status': 'pending', 'expiry': None}), 200
+            return jsonify(_license_json(row)), 200
 
     except Exception as e:
         logger.error("license/register error: %s", e, exc_info=True)
         _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
         payload = {'error': 'Server error'}
-        if _dev: payload['detail'] = str(e)
+        if _dev:
+            payload['detail'] = str(e)
         return jsonify(payload), 500
 
 
@@ -142,27 +179,30 @@ def license_status():
         with closing(get_conn()) as conn:
             actual = conn._conn if hasattr(conn, '_conn') else conn
             cur = actual.cursor(cursor_factory=RealDictCursor)
-            cur.execute(
-                "SELECT status, expiry FROM licenses WHERE machine_id = %s",
-                (machine_id,),
-            )
-            row = cur.fetchone()
+            row = _select_license_row(cur, machine_id)
             if not row:
                 return jsonify({'error': 'Not found'}), 404
-            # Update last_seen_at so admin can tell if a machine is still active
             cur.execute(
                 "UPDATE licenses SET last_seen_at = NOW() WHERE machine_id = %s",
                 (machine_id,),
             )
             actual.commit()
-            expiry_str = row['expiry'].strftime('%Y-%m-%d') if row['expiry'] else None
-            return jsonify({'status': _effective_status(row), 'expiry': expiry_str}), 200
+            return jsonify(_license_json(row)), 200
     except Exception as e:
         logger.error("license/status error: %s", e, exc_info=True)
         _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
         payload = {'error': 'Server error'}
-        if _dev: payload['detail'] = str(e)
+        if _dev:
+            payload['detail'] = str(e)
         return jsonify(payload), 500
+
+
+@license_bp.route('/license/entitlements', methods=['GET'])
+@login_required
+def license_entitlements():
+    """Return module entitlements for this machine (logged-in desktop / web UI)."""
+    features, source = get_entitlements(force_refresh=request.args.get('refresh') == '1')
+    return jsonify({'features': features, 'source': source}), 200
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +239,8 @@ def list_licenses():
         logger.error("admin/licenses list error: %s", e, exc_info=True)
         _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
         payload = {'error': 'Server error'}
-        if _dev: payload['detail'] = str(e)
+        if _dev:
+            payload['detail'] = str(e)
         return jsonify(payload), 500
 
 
@@ -208,7 +249,7 @@ def list_licenses():
 @_require_superadmin
 def update_license(license_id):
     """Approve, deny, or extend a license. Default expiry = today + 15 days on approve.
-    Also supports updating the admin-editable 'label', 'site_name', and 'license_name' fields."""
+    Also supports label, site_name, license_name, enable_digital_twin, enable_atlas_ai."""
     data = request.get_json(silent=True) or {}
     new_status = data.get('status')
     expiry_str = data.get('expiry')
@@ -230,6 +271,14 @@ def update_license(license_id):
     if license_name is not None:
         sets.append("license_name = %s")
         params.append(license_name.strip())
+
+    if 'enable_digital_twin' in data:
+        sets.append("enable_digital_twin = %s")
+        params.append(bool(data['enable_digital_twin']))
+
+    if 'enable_atlas_ai' in data:
+        sets.append("enable_atlas_ai = %s")
+        params.append(bool(data['enable_atlas_ai']))
 
     if new_status:
         if new_status not in ('approved', 'denied', 'pending'):
@@ -269,6 +318,7 @@ def update_license(license_id):
             actual.commit()
             if not row:
                 return jsonify({'error': 'License not found'}), 404
+            invalidate_entitlements_cache()
             if row.get('expiry'):
                 row['expiry'] = row['expiry'].strftime('%Y-%m-%d')
             for col in ('created_at', 'updated_at', 'last_seen_at'):
@@ -279,7 +329,8 @@ def update_license(license_id):
         logger.error("admin/licenses update error: %s", e, exc_info=True)
         _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
         payload = {'error': 'Server error'}
-        if _dev: payload['detail'] = str(e)
+        if _dev:
+            payload['detail'] = str(e)
         return jsonify(payload), 500
 
 
@@ -297,10 +348,12 @@ def delete_license(license_id):
             actual.commit()
             if cur.rowcount == 0:
                 return jsonify({'error': 'License not found'}), 404
+            invalidate_entitlements_cache()
             return jsonify({'status': 'deleted'}), 200
     except Exception as e:
         logger.error("admin/licenses delete error: %s", e, exc_info=True)
         _dev = os.environ.get('DEV_MODE') == '1' or os.environ.get('FLASK_ENV') == 'development'
         payload = {'error': 'Server error'}
-        if _dev: payload['detail'] = str(e)
+        if _dev:
+            payload['detail'] = str(e)
         return jsonify(payload), 500
