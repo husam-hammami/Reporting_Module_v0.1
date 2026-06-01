@@ -72,7 +72,9 @@ export default function TabSelector({
   onChange,
   size = 'sm',
   className = '',
+  variant = 'default',
 }) {
+  const isDark = variant === 'dark';
   const s = SIZE[size] ?? SIZE.sm;
 
   /* Single ref on the wrapper — both the ResizeObserver target AND the
@@ -112,8 +114,9 @@ export default function TabSelector({
         /* Positioning context for the sliding indicator */
         'relative inline-flex items-center',
         'p-0.5 rounded-xl',
-        'bg-[#f1f5f9] dark:bg-[#0d1e30]',
-        'border border-[#e3e9f0] dark:border-[#1e293b]',
+        isDark
+          ? 'bg-white/10 border border-white/15'
+          : 'bg-[#f1f5f9] dark:bg-[#0d1e30] border border-[#e3e9f0] dark:border-[#1e293b]',
         className,
       ].join(' ')}
     >
@@ -134,7 +137,10 @@ export default function TabSelector({
               ? { transition: 'left 180ms cubic-bezier(0.4,0,0.2,1), width 180ms cubic-bezier(0.4,0,0.2,1)' }
               : {}),
           }}
-          className="bg-white dark:bg-[#0a1525] shadow-sm border border-[#e3e9f0] dark:border-[#2a3347]"
+          className={isDark
+            ? 'bg-white/20 shadow-sm border border-white/10'
+            : 'bg-white dark:bg-[#0a1525] shadow-sm border border-[#e3e9f0] dark:border-[#2a3347]'
+          }
         />
       )}
 
@@ -161,8 +167,8 @@ export default function TabSelector({
               s.px, s.py, s.text,
               animate ? 'transition-[color,transform] duration-150 active:scale-[0.94]' : '',
               isActive
-                ? 'text-brand dark:text-brand'
-                : 'text-[#6b7f94] dark:text-[#8898aa] hover:text-[#3a4a5c] dark:hover:text-[#c1ccd9]',
+                ? isDark ? 'text-white' : 'text-brand dark:text-brand'
+                : isDark ? 'text-white/60 hover:text-white/90' : 'text-[#6b7f94] dark:text-[#8898aa] hover:text-[#3a4a5c] dark:hover:text-[#c1ccd9]',
             ].join(' ')}
           >
             {/* Status dot (live pulse, error, warning)

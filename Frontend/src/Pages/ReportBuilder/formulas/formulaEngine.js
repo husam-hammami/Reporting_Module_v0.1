@@ -33,16 +33,36 @@ export const AVAILABLE_FUNCTIONS = Object.entries(FUNCTIONS).map(([name, meta]) 
 const TAG_REGEX = /\{([^}]+)\}/g;
 const COL_REGEX = /\{col:([^}]+)\}/g;
 
-export function extractTagRefs(formula) {
-  const tags = [];
-  let match;
+/** Historian / paginated merge aggregations allowed as {agg::tagName} in formulas */
+const FORMULA_AGG_PREFIX = /^(first|last|delta|avg|min|max|sum|count)::(.+)$/i;
+
+/**
+ * Parse each {…} token (excluding {col:…}) into base tag name and optional explicit aggregation.
+ * @param {string} formula
+ * @returns {{ raw: string, base: string, explicitAgg: string|null }[]}
+ */
+export function parseFormulaTagReferences(formula) {
+  if (!formula || typeof formula !== 'string') return [];
+  const out = [];
   const re = new RegExp(TAG_REGEX.source, 'g');
+  let match;
   while ((match = re.exec(formula)) !== null) {
-    if (!match[1].startsWith('col:')) {
-      tags.push(match[1]);
+    const raw = match[1];
+    if (raw.startsWith('col:')) continue;
+    const m = raw.match(FORMULA_AGG_PREFIX);
+    if (m) {
+      out.push({ raw, base: m[2], explicitAgg: m[1].toLowerCase() });
+    } else {
+      out.push({ raw, base: raw, explicitAgg: null });
     }
   }
-  return [...new Set(tags)];
+  return out;
+}
+
+export function extractTagRefs(formula) {
+  const refs = parseFormulaTagReferences(formula);
+  const bases = refs.map((r) => r.base);
+  return [...new Set(bases)];
 }
 
 export function extractColumnRefs(formula) {
@@ -113,9 +133,62 @@ export function validateFormula(formula, availableTagNames = [], availableColNam
 
 /* ── Mock Evaluator ────────────────────────────────────────────── */
 
+/**
+ * Count how many times each bare tag (no agg:: prefix) appears in {…} refs.
+ * @param {string} formula
+ * @returns {Record<string, number>}
+ */
+function countBareTagOccurrencesInFormula(formula) {
+  const counts = Object.create(null);
+  for (const { base, explicitAgg } of parseFormulaTagReferences(formula)) {
+    if (explicitAgg) continue;
+    counts[base] = (counts[base] || 0) + 1;
+  }
+  return counts;
+}
+
+/**
+ * Resolve a tag placeholder against merged historian/live maps.
+ * - {agg::Tag} uses namespaced keys (first::Tag, delta::Tag, …); plain {Tag} is last snapshot.
+ * - If the same bare {Tag} appears exactly twice (typical totalizer: End−Start), the first
+ *   occurrence maps to last-in-range and the second to first-in-range so Weight matches
+ *   Start/End columns under per-aggregation fetch (fixes "Yesterday shows 0" for {T}-{T}).
+ */
+function resolveFormulaTagValue(name, tagValues, bareOccurrence, bareDupCounts) {
+  if (name.startsWith('col:')) {
+    return null;
+  }
+  const m = name.match(FORMULA_AGG_PREFIX);
+  if (m) {
+    const agg = m[1].toLowerCase();
+    const base = m[2];
+    const key = agg === 'last' ? base : `${agg}::${base}`;
+    const v = tagValues[key] ?? (agg === 'last' ? tagValues[base] : undefined);
+    return v;
+  }
+  const useDup = bareDupCounts[name] === 2;
+  if (useDup) {
+    const k = bareOccurrence[name];
+    bareOccurrence[name] = k + 1;
+    if (k === 0) {
+      const lastVal = tagValues[name];
+      if (lastVal != null) return lastVal;
+      return tagValues[`last::${name}`];
+    }
+    const firstVal = tagValues[`first::${name}`];
+    if (firstVal != null) return firstVal;
+    return tagValues[name];
+  }
+  return tagValues[name];
+}
+
 export function evaluateFormula(formula, tagValues = {}, columnValues = {}) {
   try {
     if (!formula || !formula.trim()) return null;
+
+    const bareDupCounts = countBareTagOccurrencesInFormula(formula);
+    const bareOccurrence = Object.create(null);
+    for (const k of Object.keys(bareDupCounts)) bareOccurrence[k] = 0;
 
     // Replace tag refs with values
     let expr = formula.replace(TAG_REGEX, (_, name) => {
@@ -124,7 +197,7 @@ export function evaluateFormula(formula, tagValues = {}, columnValues = {}) {
         const val = columnValues[colName];
         return val != null ? String(Number(val)) : '0';
       }
-      const val = tagValues[name];
+      const val = resolveFormulaTagValue(name, tagValues, bareOccurrence, bareDupCounts);
       return val != null ? String(Number(val)) : '0';
     });
 

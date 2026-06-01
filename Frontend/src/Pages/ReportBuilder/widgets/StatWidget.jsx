@@ -60,7 +60,7 @@ function useAnimatedNumber(target, decimals, skipAnimation) {
   useEffect(() => { fromRef.current = display; }, [display]);
 
   if (target == null) return '\u2014';
-  return Number(display).toFixed(decimals);
+  return Number(display).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 export default function StatWidget({ config, tagValues }) {
@@ -90,11 +90,11 @@ export default function StatWidget({ config, tagValues }) {
         justifyContent: 'center',
         height: '100%',
         minHeight: 0,
-        padding: '6px 10px 6px 0',
+        padding: '2px 8px 2px 0',
         alignItems,
         position: 'relative',
         borderLeft: `3px solid ${color}`,
-        paddingLeft: '10px',
+        paddingLeft: '8px',
       }}
     >
       {showTitle && (
@@ -118,7 +118,7 @@ export default function StatWidget({ config, tagValues }) {
         className="rb-value-primary"
         style={{
           color,
-          fontSize: valueFontSize || 'clamp(20px, 4vw, 40px)',
+          fontSize: valueFontSize || (display.length > 10 ? 'clamp(16px, 3vw, 28px)' : display.length > 7 ? 'clamp(18px, 3.5vw, 32px)' : 'clamp(20px, 4vw, 40px)'),
           lineHeight: 1.1,
           fontWeight: 800,
           fontVariantNumeric: 'tabular-nums',

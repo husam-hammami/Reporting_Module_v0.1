@@ -228,6 +228,41 @@ export const WIDGET_CATALOG = [
       borderColor: '',
       sectionHeaderBg: '',
       sectionHeaderColor: '',
+      sectionHeaderBorderWidth: '1',
+      drillDown: {
+        enabled: false,
+        keyColumn: 0,
+        prefixSeparator: '_',
+        detailWidgets: [],
+        detailGridCols: 2,
+      },
+      tableRowTabLink: {
+        enabled: false,
+        tabContainerWidgetId: '',
+      },
+    },
+  },
+
+  {
+    type: 'datapanel',
+    category: 'data',
+    label: 'Data Panel',
+    lucideIcon: 'LayoutGrid',
+    description: 'Freeform panel with positioned fields for labels, tags and values',
+    defaultW: 4,
+    defaultH: 3,
+    defaultConfig: {
+      title: 'Data Panel',
+      headerStyle: 'bar',
+      headerAlign: 'left',
+      headerBg: '',
+      headerColor: '',
+      panelBg: '',
+      panelBorder: '',
+      panelBorderWidth: '1',
+      contentPadding: 6,
+      showCard: true,
+      fields: [],
     },
   },
 
@@ -282,13 +317,35 @@ export const WIDGET_CATALOG = [
     },
   },
 
+  // ── Containers ──
+  {
+    type: 'tabcontainer',
+    category: 'layout',
+    label: 'Tab Container',
+    lucideIcon: 'Layers',
+    description: 'Tabbed container with independent dashboards per tab',
+    defaultW: 12,
+    defaultH: 8,
+    defaultConfig: {
+      tabs: [
+        { id: 'tc-tab-1', label: 'Tab 1', widgets: [] },
+      ],
+      activeTabId: 'tc-tab-1',
+      showCard: true,
+      /** When a data table row selects a tab, hide other tabs in this container (viewer / non-edit only). */
+      hideNonMatchingTabsOnTableRowLink: true,
+      /** Tab ids that stay visible in the tab bar while a row drives selection (e.g. config / details tab). */
+      tableRowLinkAlwaysVisibleTabIds: [],
+    },
+  },
+
   // ── Industrial ──
   {
     type: 'status',
-    category: 'values',
-    label: 'Status Indicator',
+    category: 'advanced',
+    label: 'Status (Single)',
     lucideIcon: 'CircleDot',
-    description: 'On/off/alarm status for equipment',
+    description: 'Single tag on/off — use Status Bar for multiple',
     defaultW: 2,
     defaultH: 1,
     defaultConfig: {
@@ -374,6 +431,34 @@ export const WIDGET_CATALOG = [
       showCapacity: false,
     },
   },
+  // ── Composite ──
+  {
+    type: 'statusbar',
+    category: 'values',
+    label: 'Status Bar',
+    lucideIcon: 'CircleDot',
+    description: 'Multi-tag equipment status indicators',
+    defaultW: 12,
+    defaultH: 1,
+    defaultConfig: {
+      title: '',
+      tags: [],
+      layout: 'horizontal',
+      showTitle: false,
+      showCard: true,
+      cardStyle: 'glass',
+    },
+  },
+];
+
+/* ── Card Style Options ───────────────────────────────────────── */
+
+export const CARD_STYLES = [
+  { value: 'default', label: 'Default' },
+  { value: 'borderless', label: 'Borderless' },
+  { value: 'glass', label: 'Glass' },
+  { value: 'accent-top', label: 'Accent Top' },
+  { value: 'holographic', label: 'Holographic' },
 ];
 
 /* ── DataSource defaults ───────────────────────────────────────── */
@@ -407,4 +492,50 @@ export function createWidget(catalogEntry, x = 0, y = Infinity) {
     h: catalogEntry.defaultH,
     config: JSON.parse(JSON.stringify(catalogEntry.defaultConfig)),
   };
+}
+
+/**
+ * Deep-clone a report widget (root or nested) with fresh ids.
+ * Remaps tabcontainer tabs + sub-widgets and table drill-down detailWidgets recursively.
+ */
+export function cloneWidgetTreeWithNewIds(widget) {
+  if (!widget || typeof widget !== 'object') return widget;
+
+  function remap(wgt) {
+    if (!wgt || typeof wgt !== 'object') return wgt;
+    const raw = JSON.parse(JSON.stringify(wgt));
+    raw.id = uid();
+
+    const cfg = raw.config && typeof raw.config === 'object' ? { ...raw.config } : raw.config;
+    raw.config = cfg;
+
+    if (raw.type === 'tabcontainer' && cfg && Array.isArray(cfg.tabs)) {
+      const tabIdMap = {};
+      cfg.tabs = cfg.tabs.map((tab) => {
+        const newTabId = `tc-${uid()}`;
+        if (tab && tab.id != null) tabIdMap[String(tab.id)] = newTabId;
+        return {
+          ...tab,
+          id: newTabId,
+          widgets: Array.isArray(tab.widgets) ? tab.widgets.map(remap) : [],
+        };
+      });
+      if (cfg.activeTabId != null && tabIdMap[String(cfg.activeTabId)]) {
+        cfg.activeTabId = tabIdMap[String(cfg.activeTabId)];
+      } else if (cfg.tabs[0]) {
+        cfg.activeTabId = cfg.tabs[0].id;
+      }
+    }
+
+    if (cfg && cfg.drillDown && Array.isArray(cfg.drillDown.detailWidgets)) {
+      cfg.drillDown = {
+        ...cfg.drillDown,
+        detailWidgets: cfg.drillDown.detailWidgets.map(remap),
+      };
+    }
+
+    return raw;
+  }
+
+  return remap(widget);
 }

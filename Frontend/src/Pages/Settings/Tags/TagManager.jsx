@@ -37,6 +37,8 @@ const TagManager = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingTag, setEditingTag] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [selectedTags, setSelectedTags] = useState(new Set());
   const [draftConfirm, setDraftConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sourceTypeFilter, setSourceTypeFilter] = useState('all');
@@ -93,6 +95,7 @@ const TagManager = () => {
     });
     setFilteredTags(filtered);
     setPage(1);
+    setSelectedTags(new Set());
   }, [tags, searchTerm, sourceTypeFilter, sortBy, sortOrder]);
 
   const loadTagsFromAPI = async () => {
@@ -189,6 +192,35 @@ const TagManager = () => {
     } catch (e) {
       toast.error(t('tags.failedDelete') + ': ' + (e.response?.data?.message || e.message));
       setDeleteConfirm(null);
+    }
+  };
+
+  const toggleSelectTag = (tagName) => {
+    setSelectedTags(prev => {
+      const next = new Set(prev);
+      if (next.has(tagName)) next.delete(tagName);
+      else next.add(tagName);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedTags.size === paginatedTags.length) setSelectedTags(new Set());
+    else setSelectedTags(new Set(paginatedTags.map(t => t.tag_name)));
+  };
+
+  const confirmBulkDelete = async () => {
+    if (selectedTags.size === 0) return;
+    try {
+      await axios.post('/api/tags/bulk-delete', { tag_names: [...selectedTags] });
+      await loadTags();
+      window.dispatchEvent(new Event('tagsUpdated'));
+      toast.success(t('tags.bulkDeleteSuccess').replace('{count}', selectedTags.size));
+      setSelectedTags(new Set());
+      setBulkDeleteConfirm(false);
+    } catch (e) {
+      toast.error(t('tags.failedDelete') + ': ' + (e.response?.data?.message || e.message));
+      setBulkDeleteConfirm(false);
     }
   };
 
@@ -422,7 +454,14 @@ const TagManager = () => {
             <option value="Manual">Manual</option>
           </select>
         </div>
-        <span className="text-[11px] text-[#8898aa] ml-auto">{filteredTags.length} {t('tags.tagsCount')}</span>
+        <span className="text-[11px] text-[#8898aa] ml-auto flex items-center gap-2">
+          {selectedTags.size > 0 && (
+            <button onClick={() => setBulkDeleteConfirm(true)} className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-lg bg-[#dc2626] hover:bg-[#b91c1c] text-white transition-colors">
+              <FaTrash size={10} /> {t('tags.deleteSelected')} ({selectedTags.size})
+            </button>
+          )}
+          {filteredTags.length} {t('tags.tagsCount')}
+        </span>
       </div>
 
       {/* ── Table ── */}
@@ -431,6 +470,9 @@ const TagManager = () => {
           <table className="w-full text-[12px]">
             <thead>
               <tr className="bg-[#f5f8fb] dark:bg-[#0d1825] border-b border-[#e3e9f0] dark:border-[#1e2d40]">
+                <th className="px-3 py-2.5 w-10">
+                  <input type="checkbox" checked={paginatedTags.length > 0 && selectedTags.size === paginatedTags.length} onChange={toggleSelectAll} className="w-3.5 h-3.5 rounded border-[#c1ccd9] text-brand focus:ring-brand cursor-pointer" />
+                </th>
                 {[
                   { key: 'tag_name', label: t('tags.tagName') },
                   { key: 'display_name', label: t('tags.displayName') },
@@ -450,19 +492,22 @@ const TagManager = () => {
             <tbody className="divide-y divide-[#e3e9f0] dark:divide-[#1e2d40]">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-10 text-center text-[#8898aa]">
+                  <td colSpan="9" className="px-4 py-10 text-center text-[#8898aa]">
                     <FaSpinner className="animate-spin inline mr-2" size={14} />{t('tags.loadingTags')}
                   </td>
                 </tr>
               ) : filteredTags.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-10 text-center text-[#8898aa]">
+                  <td colSpan="9" className="px-4 py-10 text-center text-[#8898aa]">
                     {tags.length === 0 ? t('tags.noTags') : t('tags.noMatch')}
                   </td>
                 </tr>
               ) : (
                 paginatedTags.map((tag) => (
-                  <tr key={tag.id} className="hover:bg-[#f9fbfd] dark:hover:bg-[#111d2e] transition-colors">
+                  <tr key={tag.id} className={`hover:bg-[#f9fbfd] dark:hover:bg-[#111d2e] transition-colors ${selectedTags.has(tag.tag_name) ? 'bg-brand-subtle/30 dark:bg-[#0f2840]/30' : ''}`}>
+                    <td className="px-3 py-2.5">
+                      <input type="checkbox" checked={selectedTags.has(tag.tag_name)} onChange={() => toggleSelectTag(tag.tag_name)} className="w-3.5 h-3.5 rounded border-[#c1ccd9] text-brand focus:ring-brand cursor-pointer" />
+                    </td>
                     <td className="px-4 py-2.5 font-medium text-[#2a3545] dark:text-[#e1e8f0]">{tag.tag_name}</td>
                     <td className="px-4 py-2.5 text-[#6b7f94]">{tag.display_name || '—'}</td>
                     <td className="px-4 py-2.5">
@@ -563,6 +608,34 @@ const TagManager = () => {
               </button>
               <button onClick={confirmDelete} className="px-3 py-1.5 text-[11px] font-medium rounded-lg bg-[#dc2626] hover:bg-[#b91c1c] text-white transition-colors inline-flex items-center gap-1.5">
                 <FaTrash size={10} /> {t('common.delete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk Delete Confirmation ── */}
+      {bulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-[#131b2d] rounded-xl p-6 w-full max-w-sm shadow-xl border border-[#e3e9f0] dark:border-[#1e2d40]">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-full bg-[#fef2f2] dark:bg-[#2a1215] flex items-center justify-center">
+                <FaTrash className="text-[#dc2626]" size={14} />
+              </div>
+            </div>
+            <div className="text-center mb-5">
+              <h3 className="text-[13px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] mb-1">{t('tags.bulkDeleteTitle')}</h3>
+              <p className="text-[11px] text-[#6b7f94]">
+                {t('tags.bulkDeleteConfirm').replace('{count}', selectedTags.size)}
+                <span className="block mt-1.5 text-[#dc2626]">{t('tags.deleteTagWarning')}</span>
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setBulkDeleteConfirm(false)} className="px-3 py-1.5 text-[11px] font-medium rounded-lg border border-[#e3e9f0] dark:border-[#1e2d40] text-[#6b7f94] hover:bg-[#f5f8fb] dark:hover:bg-[#131b2d] transition-colors">
+                {t('common.cancel')}
+              </button>
+              <button onClick={confirmBulkDelete} className="px-3 py-1.5 text-[11px] font-medium rounded-lg bg-[#dc2626] hover:bg-[#b91c1c] text-white transition-colors inline-flex items-center gap-1.5">
+                <FaTrash size={10} /> {t('tags.deleteSelected')} ({selectedTags.size})
               </button>
             </div>
           </div>

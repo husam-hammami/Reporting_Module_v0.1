@@ -9,10 +9,15 @@ const LiveMonitorLayoutForm = ({ layout, onSave, onCancel }) => {
     is_active: true,
     is_default: false,
     include_line_running_tag: false,
-    line_running_tag_name: ''
+    line_running_tag_name: '',
+    order_status_tag_name: '',
+    order_prefix: '',
+    order_start_value: 1,
+    order_stop_value: 0,
   });
   
   const [tags, setTags] = useState([]);
+  const [allTags, setAllTags] = useState([]);
 
   const [errors, setErrors] = useState({});
   const [existingLayouts, setExistingLayouts] = useState([]);
@@ -36,7 +41,11 @@ const LiveMonitorLayoutForm = ({ layout, onSave, onCancel }) => {
         is_active: layout.is_active !== undefined ? layout.is_active : true,
         is_default: layout.is_default || false,
         include_line_running_tag: layout.include_line_running_tag || false,
-        line_running_tag_name: layout.line_running_tag_name || ''
+        line_running_tag_name: layout.line_running_tag_name || '',
+        order_status_tag_name: layout.order_status_tag_name || '',
+        order_prefix: layout.order_prefix || '',
+        order_start_value: layout.order_start_value ?? 1,
+        order_stop_value: layout.order_stop_value ?? 0,
       });
     }
   }, [layout]);
@@ -57,15 +66,14 @@ const LiveMonitorLayoutForm = ({ layout, onSave, onCancel }) => {
       });
       
       if (response.data.status === 'success') {
-        const allTags = response.data.tags || [];
-        console.log(`[LiveMonitorLayoutForm] Total tags received: ${allTags.length}`);
+        const fetchedTags = response.data.tags || [];
+        console.log(`[LiveMonitorLayoutForm] Total tags received: ${fetchedTags.length}`);
         
-        // Filter for BOOL type tags only (for line running status)
-        // Note: is_active filter is redundant since we already requested active tags,
-        // but keep it as a safety check in case API doesn't filter properly
-        const boolTags = allTags.filter(t => {
+        setAllTags(fetchedTags);
+
+        const boolTags = fetchedTags.filter(t => {
           const isBool = t.data_type === 'BOOL';
-          const isActive = t.is_active !== false; // Include if true or undefined
+          const isActive = t.is_active !== false;
           if (!isBool) return false;
           if (!isActive) {
             console.warn(`[LiveMonitorLayoutForm] Skipping inactive BOOL tag: ${t.tag_name}`);
@@ -75,7 +83,6 @@ const LiveMonitorLayoutForm = ({ layout, onSave, onCancel }) => {
         });
         
         console.log(`[LiveMonitorLayoutForm] Filtered to ${boolTags.length} active BOOL tags`);
-        console.log(`[LiveMonitorLayoutForm] BOOL tag names:`, boolTags.map(t => t.tag_name));
         setTags(boolTags);
       } else {
         console.warn('[LiveMonitorLayoutForm] API returned error status:', response.data);
@@ -266,6 +273,88 @@ const LiveMonitorLayoutForm = ({ layout, onSave, onCancel }) => {
                   No active BOOL tags found. Please create a BOOL tag in the Tags section first.
                 </p>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Order Tracking */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">
+            Order Tracking (Job Logs)
+          </h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            Configure automatic order detection from a PLC status tag. Leave empty to disable order tracking for this layout.
+          </p>
+
+          {/* Order Status Tag */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Order Status Tag
+              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                (Numeric tag: value transitions trigger order start/stop)
+              </span>
+            </label>
+            <select
+              value={formData.order_status_tag_name}
+              onChange={(e) => handleChange('order_status_tag_name', e.target.value)}
+              onFocus={loadTags}
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
+            >
+              <option value="">None (order tracking disabled)</option>
+              {allTags.map((tag) => (
+                <option key={tag.tag_name} value={tag.tag_name}>
+                  {tag.tag_name} {tag.display_name ? `(${tag.display_name})` : ''} [{tag.data_type}]
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {formData.order_status_tag_name && (
+            <div className="ml-4 space-y-4">
+              {/* Order Prefix */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Order Name Prefix
+                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                    (e.g. MILA → MILA1, MILA2, …)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.order_prefix}
+                  onChange={(e) => handleChange('order_prefix', e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
+                  placeholder="e.g. MILA, MILB, FCL"
+                />
+              </div>
+
+              {/* Start / Stop Values */}
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Start Value
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">(order begins)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.order_start_value}
+                    onChange={(e) => handleChange('order_start_value', parseInt(e.target.value, 10) || 0)}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Stop Value
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">(order ends)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.order_stop_value}
+                    onChange={(e) => handleChange('order_stop_value', parseInt(e.target.value, 10) || 0)}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:!bg-[#081320] text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>

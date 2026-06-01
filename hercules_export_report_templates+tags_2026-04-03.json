@@ -1,0 +1,5166 @@
+{
+  "tags": [
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Apparent Power Summary L1-L3",
+      "display_name": "C32 Apparent Power",
+      "formula": null,
+      "id": 144,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 396,
+      "plc_address": "DB1603.396",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_apparent_power",
+      "unit": "kVA",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Power Factor (0..1) Summary L1-L3",
+      "display_name": "C32 Cos Phi",
+      "formula": null,
+      "id": 145,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 404,
+      "plc_address": "DB1603.404",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_cos_phi",
+      "unit": "",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Effective Power Summary L1-L3",
+      "display_name": "C32 Effective Power",
+      "formula": null,
+      "id": 146,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 392,
+      "plc_address": "DB1603.392",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_effective_power",
+      "unit": "kW",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Current Reading from Wago L1",
+      "display_name": "C32 L1 Current",
+      "formula": null,
+      "id": 147,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 20,
+      "plc_address": "DB1603.20",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_l1_current",
+      "unit": "A",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Voltage Reading from Wago L1",
+      "display_name": "C32 L1 Voltage",
+      "formula": null,
+      "id": 148,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 32,
+      "plc_address": "DB1603.32",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_l1_voltage",
+      "unit": "V",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Current Reading from Wago L2",
+      "display_name": "C32 L2 Current",
+      "formula": null,
+      "id": 149,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 148,
+      "plc_address": "DB1603.148",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_l2_current",
+      "unit": "A",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Voltage Reading from Wago L2",
+      "display_name": "C32 L2 Voltage",
+      "formula": null,
+      "id": 150,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 160,
+      "plc_address": "DB1603.160",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_l2_voltage",
+      "unit": "V",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Current Reading from Wago L3",
+      "display_name": "C32 L3 Current",
+      "formula": null,
+      "id": 151,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 276,
+      "plc_address": "DB1603.276",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_l3_current",
+      "unit": "A",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Voltage Reading from Wago L3",
+      "display_name": "C32 L3 Voltage",
+      "formula": null,
+      "id": 152,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 288,
+      "plc_address": "DB1603.288",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_l3_voltage",
+      "unit": "V",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Reactive Power Summary L1-L3",
+      "display_name": "C32 Reactive Power",
+      "formula": null,
+      "id": 153,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 400,
+      "plc_address": "DB1603.400",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_reactive_power",
+      "unit": "kvar",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "DINT",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Total Active Energy (raw 0.01kWh)",
+      "display_name": "C32 Total Active Energy",
+      "formula": null,
+      "id": 154,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 408,
+      "plc_address": "DB1603.408",
+      "scaling": "0.0100",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_total_active_energy",
+      "unit": "kWh",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "DINT",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Total Apparent Energy (raw 0.01kVAh)",
+      "display_name": "C32 Total Apparent Energy",
+      "formula": null,
+      "id": 155,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 416,
+      "plc_address": "DB1603.416",
+      "scaling": "0.0100",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_total_apparent_energy",
+      "unit": "kVAh",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "DINT",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Total Reactive Energy (raw 0.01kvarh)",
+      "display_name": "C32 Total Reactive Energy",
+      "formula": null,
+      "id": 156,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 412,
+      "plc_address": "DB1603.412",
+      "scaling": "0.0100",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "c32_total_reactive_energy",
+      "unit": "kvarh",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Apparent Power Summary L1-L3",
+      "display_name": "M30 Apparent Power",
+      "formula": null,
+      "id": 157,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 940,
+      "plc_address": "DB1603.940",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_apparent_power",
+      "unit": "kVA",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Power Factor (0..1) Summary L1-L3",
+      "display_name": "M30 Cos Phi",
+      "formula": null,
+      "id": 158,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 948,
+      "plc_address": "DB1603.948",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_cos_phi",
+      "unit": "",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Effective Power Summary L1-L3",
+      "display_name": "M30 Effective Power",
+      "formula": null,
+      "id": 159,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 936,
+      "plc_address": "DB1603.936",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_effective_power",
+      "unit": "kW",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Current Reading from Wago L1",
+      "display_name": "M30 L1 Current",
+      "formula": null,
+      "id": 160,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 564,
+      "plc_address": "DB1603.564",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_l1_current",
+      "unit": "A",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Voltage Reading from Wago L1",
+      "display_name": "M30 L1 Voltage",
+      "formula": null,
+      "id": 161,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 576,
+      "plc_address": "DB1603.576",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_l1_voltage",
+      "unit": "V",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Current Reading from Wago L2",
+      "display_name": "M30 L2 Current",
+      "formula": null,
+      "id": 162,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 692,
+      "plc_address": "DB1603.692",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_l2_current",
+      "unit": "A",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Voltage Reading from Wago L2",
+      "display_name": "M30 L2 Voltage",
+      "formula": null,
+      "id": 163,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 704,
+      "plc_address": "DB1603.704",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_l2_voltage",
+      "unit": "V",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Current Reading from Wago L3",
+      "display_name": "M30 L3 Current",
+      "formula": null,
+      "id": 164,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 820,
+      "plc_address": "DB1603.820",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_l3_current",
+      "unit": "A",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Voltage Reading from Wago L3",
+      "display_name": "M30 L3 Voltage",
+      "formula": null,
+      "id": 165,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 832,
+      "plc_address": "DB1603.832",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_l3_voltage",
+      "unit": "V",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Reactive Power Summary L1-L3",
+      "display_name": "M30 Reactive Power",
+      "formula": null,
+      "id": 166,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 944,
+      "plc_address": "DB1603.944",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_reactive_power",
+      "unit": "kvar",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "DINT",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Total Active Energy (raw 0.01kWh)",
+      "display_name": "M30 Total Active Energy",
+      "formula": null,
+      "id": 167,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 952,
+      "plc_address": "DB1603.952",
+      "scaling": "0.0100",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_total_active_energy",
+      "unit": "kWh",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "DINT",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Total Apparent Energy (raw 0.01kVAh)",
+      "display_name": "M30 Total Apparent Energy",
+      "formula": null,
+      "id": 168,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 960,
+      "plc_address": "DB1603.960",
+      "scaling": "0.0100",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_total_apparent_energy",
+      "unit": "kVAh",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "DINT",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Total Reactive Energy (raw 0.01kvarh)",
+      "display_name": "M30 Total Reactive Energy",
+      "formula": null,
+      "id": 169,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 956,
+      "plc_address": "DB1603.956",
+      "scaling": "0.0100",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m30_total_reactive_energy",
+      "unit": "kvarh",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Apparent Power Summary L1-L3",
+      "display_name": "M31 Apparent Power",
+      "formula": null,
+      "id": 170,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1484,
+      "plc_address": "DB1603.1484",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_apparent_power",
+      "unit": "kVA",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Power Factor (0..1) Summary L1-L3",
+      "display_name": "M31 Cos Phi",
+      "formula": null,
+      "id": 171,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1492,
+      "plc_address": "DB1603.1492",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_cos_phi",
+      "unit": "",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Effective Power Summary L1-L3",
+      "display_name": "M31 Effective Power",
+      "formula": null,
+      "id": 172,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1480,
+      "plc_address": "DB1603.1480",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_effective_power",
+      "unit": "kW",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Current Reading from Wago L1",
+      "display_name": "M31 L1 Current",
+      "formula": null,
+      "id": 173,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1108,
+      "plc_address": "DB1603.1108",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_l1_current",
+      "unit": "A",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Voltage Reading from Wago L1",
+      "display_name": "M31 L1 Voltage",
+      "formula": null,
+      "id": 174,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1120,
+      "plc_address": "DB1603.1120",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_l1_voltage",
+      "unit": "V",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Current Reading from Wago L2",
+      "display_name": "M31 L2 Current",
+      "formula": null,
+      "id": 175,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1236,
+      "plc_address": "DB1603.1236",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_l2_current",
+      "unit": "A",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Voltage Reading from Wago L2",
+      "display_name": "M31 L2 Voltage",
+      "formula": null,
+      "id": 176,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1248,
+      "plc_address": "DB1603.1248",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_l2_voltage",
+      "unit": "V",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Current Reading from Wago L3",
+      "display_name": "M31 L3 Current",
+      "formula": null,
+      "id": 177,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1364,
+      "plc_address": "DB1603.1364",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_l3_current",
+      "unit": "A",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Output Voltage Reading from Wago L3",
+      "display_name": "M31 L3 Voltage",
+      "formula": null,
+      "id": 178,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1376,
+      "plc_address": "DB1603.1376",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_l3_voltage",
+      "unit": "V",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "REAL",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Reactive Power Summary L1-L3",
+      "display_name": "M31 Reactive Power",
+      "formula": null,
+      "id": 179,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1488,
+      "plc_address": "DB1603.1488",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_reactive_power",
+      "unit": "kvar",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "DINT",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Total Active Energy (raw 0.01kWh)",
+      "display_name": "M31 Total Active Energy",
+      "formula": null,
+      "id": 180,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1496,
+      "plc_address": "DB1603.1496",
+      "scaling": "0.0100",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_total_active_energy",
+      "unit": "kWh",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "DINT",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Total Apparent Energy (raw 0.01kVAh)",
+      "display_name": "M31 Total Apparent Energy",
+      "formula": null,
+      "id": 181,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1504,
+      "plc_address": "DB1603.1504",
+      "scaling": "0.0100",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_total_apparent_energy",
+      "unit": "kVAh",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "data_type": "DINT",
+      "db_number": 1603,
+      "decimal_places": 2,
+      "description": "Total Reactive Energy (raw 0.01kvarh)",
+      "display_name": "M31 Total Reactive Energy",
+      "formula": null,
+      "id": 182,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 1500,
+      "plc_address": "DB1603.1500",
+      "scaling": "0.0100",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "m31_total_reactive_energy",
+      "unit": "kvarh",
+      "updated_at": "Thu, 02 Apr 2026 10:20:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": 3,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "BOOL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Check Box",
+      "display_name": "Mil B B1 Deopt Emptying",
+      "formula": null,
+      "id": 85,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 40,
+      "plc_address": "DB499.40.3",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_b1_deopt_emptying",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "B1 FlowRate",
+      "display_name": "Mil B B1 FlowRate",
+      "formula": null,
+      "id": 86,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 0,
+      "plc_address": "DB499.0",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_b1_flowrate",
+      "unit": "t/h",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "B1 Percentage",
+      "display_name": "Mil B B1 Percentage",
+      "formula": null,
+      "id": 87,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 4,
+      "plc_address": "DB499.4",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_b1_percentage",
+      "unit": "%",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": 0,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "BOOL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Check Box",
+      "display_name": "Mil B B1 Scale",
+      "formula": null,
+      "id": 88,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 40,
+      "plc_address": "DB499.40.0",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_b1_scale",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "DINT",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "B1 Totalizer",
+      "display_name": "Mil B B1 Totalizer",
+      "formula": null,
+      "id": 89,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 8,
+      "plc_address": "DB499.8",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_b1_totalizer",
+      "unit": "Kg",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Bran FlowRate",
+      "display_name": "Mil B Bran FlowRate",
+      "formula": null,
+      "id": 90,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 12,
+      "plc_address": "DB499.12",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_bran_flowrate",
+      "unit": "t/h",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Bran Percentage",
+      "display_name": "Mil B Bran Percentage",
+      "formula": null,
+      "id": 91,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 16,
+      "plc_address": "DB499.16",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_bran_percentage",
+      "unit": "%",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "DINT",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Bran Totalizer",
+      "display_name": "Mil B Bran Totalizer",
+      "formula": null,
+      "id": 92,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 20,
+      "plc_address": "DB499.20",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_bran_totalizer",
+      "unit": "Kg",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": 5,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "BOOL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Check Box",
+      "display_name": "Mil B Dampening On",
+      "formula": null,
+      "id": 93,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 40,
+      "plc_address": "DB499.40.5",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_dampening_on",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "INT",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Active Destination 1 ID",
+      "display_name": "Mil B Dest ID 1",
+      "formula": null,
+      "id": 94,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 36,
+      "plc_address": "DB499.36",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_dest_id_1",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "INT",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Active Destination 2 ID",
+      "display_name": "Mil B Dest ID 2",
+      "formula": null,
+      "id": 95,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 38,
+      "plc_address": "DB499.38",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_dest_id_2",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": 2,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "BOOL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Check Box",
+      "display_name": "Mil B Enable Small Sifters",
+      "formula": null,
+      "id": 96,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 40,
+      "plc_address": "DB499.40.2",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_enable_small_sifters",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": 1,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "BOOL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Check Box",
+      "display_name": "Mil B Filter Flour Feeder",
+      "formula": null,
+      "id": 97,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 40,
+      "plc_address": "DB499.40.1",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_filter_flour_feeder",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Flour FlowRate",
+      "display_name": "Mil B Flour FlowRate",
+      "formula": null,
+      "id": 98,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 24,
+      "plc_address": "DB499.24",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_flour_flowrate",
+      "unit": "t/h",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Flour Percentage",
+      "display_name": "Mil B Flour Percentage",
+      "formula": null,
+      "id": 99,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 28,
+      "plc_address": "DB499.28",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_flour_percentage",
+      "unit": "%",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "DINT",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Flour Totalizer",
+      "display_name": "Mil B Flour Totalizer",
+      "formula": null,
+      "id": 100,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 32,
+      "plc_address": "DB499.32",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_flour_totalizer",
+      "unit": "Kg",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Job FlowRate",
+      "display_name": "Mil B Job FlowRate",
+      "formula": null,
+      "id": 101,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 46,
+      "plc_address": "DB499.46",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_job_flowrate",
+      "unit": "t/h",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": 4,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "BOOL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Check Box",
+      "display_name": "Mil B Mill Emptying",
+      "formula": null,
+      "id": 102,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 40,
+      "plc_address": "DB499.40.4",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_mill_emptying",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "BOOL",
+      "db_number": 199,
+      "decimal_places": 2,
+      "description": "Order Active",
+      "display_name": "Mil B Order Active",
+      "formula": null,
+      "id": 103,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 18,
+      "plc_address": "DB199.18",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_order_active",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "BOOL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Order Active",
+      "display_name": "Mil B Order Active 499",
+      "formula": null,
+      "id": 104,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 50,
+      "plc_address": "DB499.50",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_order_active_499",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "INT",
+      "db_number": 199,
+      "decimal_places": 2,
+      "description": "Active Sender 1 ID",
+      "display_name": "Mil B Sender ID 1",
+      "formula": null,
+      "id": 105,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 0,
+      "plc_address": "DB199.0",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_sender_id_1",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "INT",
+      "db_number": 199,
+      "decimal_places": 2,
+      "description": "Active Sender 2 ID",
+      "display_name": "Mil B Sender ID 2",
+      "formula": null,
+      "id": 106,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 6,
+      "plc_address": "DB199.6",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_sender_id_2",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "INT",
+      "db_number": 199,
+      "decimal_places": 2,
+      "description": "Active Sender 3 ID",
+      "display_name": "Mil B Sender ID 3",
+      "formula": null,
+      "id": 107,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 12,
+      "plc_address": "DB199.12",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_sender_id_3",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 199,
+      "decimal_places": 2,
+      "description": "% Sender 1",
+      "display_name": "Mil B Sender Qty % 1",
+      "formula": null,
+      "id": 108,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 2,
+      "plc_address": "DB199.2",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_sender_qty_pct_1",
+      "unit": "%",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 199,
+      "decimal_places": 2,
+      "description": "% Sender 2",
+      "display_name": "Mil B Sender Qty % 2",
+      "formula": null,
+      "id": 109,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 8,
+      "plc_address": "DB199.8",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_sender_qty_pct_2",
+      "unit": "%",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 199,
+      "decimal_places": 2,
+      "description": "% Sender 3",
+      "display_name": "Mil B Sender Qty % 3",
+      "formula": null,
+      "id": 110,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 14,
+      "plc_address": "DB199.14",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_sender_qty_pct_3",
+      "unit": "%",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": 6,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "BOOL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Check Box",
+      "display_name": "Mil B Vitamin Feeder On",
+      "formula": null,
+      "id": 111,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 40,
+      "plc_address": "DB499.40.6",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_vitamin_feeder_on",
+      "unit": "",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": null,
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "REAL",
+      "db_number": 499,
+      "decimal_places": 2,
+      "description": "Vitamin Feeder %",
+      "display_name": "Mil B Vitamin Feeder Percentage",
+      "formula": null,
+      "id": 112,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 42,
+      "plc_address": "DB499.42",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "mil_b_vitamin_feeder_percentage",
+      "unit": "%",
+      "updated_at": "Wed, 01 Apr 2026 14:14:37 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": "equals",
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "DINT",
+      "db_number": 899,
+      "decimal_places": 0,
+      "description": "Wheat transfer scale",
+      "display_name": "Pasta 1 521WE Totalizer",
+      "formula": null,
+      "id": 125,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 0,
+      "plc_address": "DB899.0",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "pasta_1_521we_totalizer",
+      "unit": "Kg",
+      "updated_at": "Wed, 01 Apr 2026 14:36:41 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": "equals",
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "DINT",
+      "db_number": 899,
+      "decimal_places": 0,
+      "description": "Pasta transfer scale",
+      "display_name": "Pasta 4 830WE Totalizer",
+      "formula": null,
+      "id": 126,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 4,
+      "plc_address": "DB899.4",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "pasta_4_830we_totalizer",
+      "unit": "Kg",
+      "updated_at": "Wed, 01 Apr 2026 14:36:59 GMT",
+      "value_formula": null
+    },
+    {
+      "activation_condition": "equals",
+      "activation_tag_name": null,
+      "activation_value": null,
+      "bit_position": null,
+      "byte_swap": true,
+      "created_at": "Tue, 31 Mar 2026 21:56:26 GMT",
+      "data_type": "DINT",
+      "db_number": 899,
+      "decimal_places": 0,
+      "description": "Wheat intake & transfer scale",
+      "display_name": "Pasta E 1010 Totalizer",
+      "formula": null,
+      "id": 127,
+      "is_active": true,
+      "is_bin_tag": false,
+      "mapping_name": null,
+      "offset": 8,
+      "plc_address": "DB899.8",
+      "scaling": "1.0000",
+      "source_type": "PLC",
+      "string_length": 40,
+      "tag_name": "pasta_e_1010_totalizer",
+      "unit": "Kg",
+      "updated_at": "Wed, 01 Apr 2026 14:37:15 GMT",
+      "value_formula": null
+    }
+  ],
+  "report_templates": [
+    {
+      "created_at": "2026-04-01T18:40:24.583066",
+      "description": "Comprehensive Mill B production dashboard",
+      "id": 13,
+      "is_active": true,
+      "is_default": true,
+      "layout_config": {
+        "computedSignals": [],
+        "dashboardHeader": {
+          "showLogo": true,
+          "title": "Mill B — Production Dashboard"
+        },
+        "dashboardTabs": null,
+        "grid": {
+          "cols": 12,
+          "pageMode": "a4",
+          "rowHeight": 32
+        },
+        "parameters": [],
+        "schemaVersion": 2,
+        "widgets": [
+          {
+            "config": {
+              "cardStyle": "accent-top",
+              "layout": "horizontal",
+              "showCard": true,
+              "showTitle": false,
+              "tags": [
+                {
+                  "label": "Order",
+                  "offColor": "#ef4444",
+                  "offLabel": "STOP",
+                  "onColor": "#10b981",
+                  "onLabel": "RUN",
+                  "tagName": "mil_b_order_active"
+                },
+                {
+                  "label": "Damp",
+                  "offLabel": "OFF",
+                  "onLabel": "ON",
+                  "tagName": "mil_b_dampening_on"
+                },
+                {
+                  "label": "B1 Scale",
+                  "offColor": "#ef4444",
+                  "offLabel": "OFF",
+                  "onColor": "#10b981",
+                  "onLabel": "ON",
+                  "tagName": "mil_b_b1_scale"
+                },
+                {
+                  "label": "Vitamin",
+                  "offLabel": "OFF",
+                  "onLabel": "ON",
+                  "tagName": "mil_b_vitamin_feeder_on"
+                },
+                {
+                  "label": "Filter",
+                  "offLabel": "OFF",
+                  "onLabel": "ON",
+                  "tagName": "mil_b_filter_flour_feeder"
+                }
+              ],
+              "title": ""
+            },
+            "h": 1,
+            "id": "w-statusbar",
+            "type": "statusbar",
+            "w": 4,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "config": {
+              "align": "center",
+              "cardStyle": "accent-top",
+              "color": "#7c3aed",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_job_flowrate",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "showCard": true,
+              "showSparkline": false,
+              "showTitle": true,
+              "thresholds": [],
+              "title": "Job Flow",
+              "titleFontSize": "sm",
+              "unit": "t/h",
+              "valueFontSize": "auto"
+            },
+            "h": 1,
+            "id": "w-kpi-job",
+            "type": "kpi",
+            "w": 2,
+            "x": 4,
+            "y": 0
+          },
+          {
+            "config": {
+              "align": "center",
+              "cardStyle": "accent-top",
+              "color": "#2563eb",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_b1_flowrate",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "showCard": true,
+              "showSparkline": false,
+              "showTitle": true,
+              "thresholds": [],
+              "title": "B1 Flow",
+              "titleFontSize": "sm",
+              "unit": "t/h",
+              "valueFontSize": "auto"
+            },
+            "h": 1,
+            "id": "w-kpi-b1",
+            "type": "kpi",
+            "w": 2,
+            "x": 10,
+            "y": 0
+          },
+          {
+            "config": {
+              "align": "center",
+              "cardStyle": "accent-top",
+              "color": "#059669",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_flour_flowrate",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "showCard": true,
+              "showSparkline": false,
+              "showTitle": true,
+              "thresholds": [],
+              "title": "Flour Flow",
+              "titleFontSize": "sm",
+              "unit": "t/h",
+              "valueFontSize": "auto"
+            },
+            "h": 1,
+            "id": "w-kpi-flour",
+            "type": "kpi",
+            "w": 2,
+            "x": 6,
+            "y": 0
+          },
+          {
+            "config": {
+              "align": "center",
+              "cardStyle": "accent-top",
+              "color": "#d97706",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_bran_flowrate",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "showCard": true,
+              "showSparkline": false,
+              "showTitle": true,
+              "thresholds": [],
+              "title": "Bran Flow",
+              "titleFontSize": "sm",
+              "unit": "t/h",
+              "valueFontSize": "auto"
+            },
+            "h": 1,
+            "id": "w-kpi-bran",
+            "type": "kpi",
+            "w": 2,
+            "x": 8,
+            "y": 0
+          },
+          {
+            "config": {
+              "cardStyle": "accent-top",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_b1_percentage",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "max": 100,
+              "min": 0,
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "showValue": true,
+              "title": "B1 Extraction",
+              "titleFontSize": "sm",
+              "unit": "%",
+              "zones": [
+                {
+                  "color": "#2563eb",
+                  "from": 0,
+                  "to": 100
+                }
+              ]
+            },
+            "h": 1,
+            "id": "w-p-b1",
+            "type": "progress",
+            "w": 3,
+            "x": 9,
+            "y": 3
+          },
+          {
+            "config": {
+              "cardStyle": "accent-top",
+              "color": "#45a157",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_flour_percentage",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "max": 100,
+              "min": 0,
+              "separatorColor": "#059669",
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "showValue": true,
+              "title": "Flour Extraction",
+              "titleFontSize": "sm",
+              "unit": "%",
+              "zones": [
+                {
+                  "color": "#059669",
+                  "from": 0,
+                  "to": 100
+                }
+              ]
+            },
+            "h": 1,
+            "id": "w-p-flour",
+            "type": "progress",
+            "w": 3,
+            "x": 3,
+            "y": 4
+          },
+          {
+            "config": {
+              "cardStyle": "accent-top",
+              "color": "#d97706",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_bran_percentage",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "max": 100,
+              "min": 0,
+              "separatorColor": "#d97706",
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "showValue": true,
+              "title": "Bran Extraction",
+              "titleFontSize": "sm",
+              "unit": "%",
+              "zones": [
+                {
+                  "color": "#d97706",
+                  "from": 0,
+                  "to": 100
+                }
+              ]
+            },
+            "h": 1,
+            "id": "w-p-bran",
+            "type": "progress",
+            "w": 3,
+            "x": 6,
+            "y": 4
+          },
+          {
+            "config": {
+              "accentColor": "",
+              "annotations": [],
+              "backgroundColor": "",
+              "cardStyle": "glass",
+              "chartType": "line",
+              "gridColor": "",
+              "series": [
+                {
+                  "color": "#7c3aed",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_job_flowrate",
+                    "type": "tag"
+                  },
+                  "label": "Job"
+                },
+                {
+                  "color": "#2563eb",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_b1_flowrate",
+                    "type": "tag"
+                  },
+                  "label": "B1"
+                },
+                {
+                  "color": "#059669",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_flour_flowrate",
+                    "type": "tag"
+                  },
+                  "label": "Flour"
+                },
+                {
+                  "color": "#d97706",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_bran_flowrate",
+                    "type": "tag"
+                  },
+                  "label": "Bran"
+                }
+              ],
+              "showCard": true,
+              "showGrid": true,
+              "showLegend": true,
+              "timeRange": "1h",
+              "title": "Flow Rates (t/h)"
+            },
+            "h": 2,
+            "id": "w-ch-flow",
+            "type": "chart",
+            "w": 9,
+            "x": 0,
+            "y": 5
+          },
+          {
+            "config": {
+              "accentColor": "",
+              "annotations": [],
+              "backgroundColor": "",
+              "cardStyle": "glass",
+              "chartType": "line",
+              "gridColor": "",
+              "series": [
+                {
+                  "color": "#2563eb",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_b1_percentage",
+                    "type": "tag"
+                  },
+                  "label": "B1"
+                },
+                {
+                  "color": "#059669",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_flour_percentage",
+                    "type": "tag"
+                  },
+                  "label": "Flour"
+                },
+                {
+                  "color": "#d97706",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_bran_percentage",
+                    "type": "tag"
+                  },
+                  "label": "Bran"
+                }
+              ],
+              "showCard": true,
+              "showGrid": true,
+              "showLegend": true,
+              "timeRange": "1h",
+              "title": "Extraction % Trend"
+            },
+            "h": 2,
+            "id": "w-ch-pct",
+            "type": "chart",
+            "w": 5,
+            "x": 4,
+            "y": 2
+          },
+          {
+            "config": {
+              "cardStyle": "glass",
+              "doughnut": true,
+              "series": [
+                {
+                  "color": "#059669",
+                  "dataSource": {
+                    "aggregation": "last",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_flour_percentage",
+                    "type": "tag"
+                  },
+                  "label": "Flour"
+                },
+                {
+                  "color": "#d97706",
+                  "dataSource": {
+                    "aggregation": "last",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_bran_percentage",
+                    "type": "tag"
+                  },
+                  "label": "Bran"
+                }
+              ],
+              "showCard": true,
+              "showLegend": true,
+              "showTitle": true,
+              "title": "Extraction Split",
+              "titleFontSize": "sm"
+            },
+            "h": 1,
+            "id": "w-pie",
+            "type": "piechart",
+            "w": 3,
+            "x": 9,
+            "y": 2
+          },
+          {
+            "config": {
+              "align": "center",
+              "cardStyle": "accent-top",
+              "color": "#2563eb",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_b1_totalizer",
+                "type": "tag"
+              },
+              "decimals": 0,
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "thresholds": [],
+              "title": "B1 Totalizer",
+              "titleFontSize": "sm",
+              "unit": "kg",
+              "valueFontSize": "auto"
+            },
+            "h": 1,
+            "id": "w-stat-b1",
+            "type": "stat",
+            "w": 3,
+            "x": 9,
+            "y": 5
+          },
+          {
+            "config": {
+              "align": "center",
+              "cardStyle": "accent-top",
+              "color": "#059669",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_flour_totalizer",
+                "type": "tag"
+              },
+              "decimals": 0,
+              "separatorColor": "#059669",
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "thresholds": [],
+              "title": "Flour Totalizer",
+              "titleFontSize": "sm",
+              "unit": "kg",
+              "valueFontSize": "auto"
+            },
+            "h": 1,
+            "id": "w-stat-flour",
+            "type": "stat",
+            "w": 3,
+            "x": 0,
+            "y": 4
+          },
+          {
+            "config": {
+              "align": "center",
+              "cardStyle": "accent-top",
+              "color": "#d97706",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_bran_totalizer",
+                "type": "tag"
+              },
+              "decimals": 0,
+              "separatorColor": "#d97706",
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "thresholds": [],
+              "title": "Bran Totalizer",
+              "titleFontSize": "sm",
+              "unit": "kg",
+              "valueFontSize": "auto"
+            },
+            "h": 1,
+            "id": "w-stat-bran",
+            "type": "stat",
+            "w": 3,
+            "x": 9,
+            "y": 4
+          },
+          {
+            "config": {
+              "cardStyle": "accent-top",
+              "color": "#7c3aed",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_job_flowrate",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "title": "Job",
+              "titleFontSize": "sm",
+              "unit": "t/h"
+            },
+            "h": 1,
+            "id": "w-spark-job",
+            "type": "sparkline",
+            "w": 3,
+            "x": 9,
+            "y": 6
+          },
+          {
+            "config": {
+              "cardStyle": "glass",
+              "color": "#059669",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_flour_flowrate",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "title": "Flour",
+              "titleFontSize": "sm",
+              "unit": "t/h"
+            },
+            "h": 1,
+            "id": "w-spark-flour",
+            "type": "sparkline",
+            "w": 3,
+            "x": 3,
+            "y": 1
+          },
+          {
+            "config": {
+              "cardStyle": "glass",
+              "color": "#d97706",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "mil_b_bran_flowrate",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "title": "Bran",
+              "titleFontSize": "sm",
+              "unit": "t/h"
+            },
+            "h": 1,
+            "id": "w-spark-bran",
+            "type": "sparkline",
+            "w": 3,
+            "x": 6,
+            "y": 1
+          },
+          {
+            "config": {
+              "cardStyle": "glass",
+              "color": "#2563eb",
+              "dataSource": {
+                "tagName": "mil_b_b1_flowrate"
+              },
+              "decimals": 1,
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "title": "B1 Flow",
+              "titleFontSize": "sm",
+              "unit": "t/h"
+            },
+            "h": 1,
+            "id": "w-1775172351972-tit",
+            "type": "sparkline",
+            "w": 3,
+            "x": 9,
+            "y": 1
+          },
+          {
+            "config": {
+              "cardStyle": "glass",
+              "color": "#059669",
+              "dataSource": {
+                "tagName": "mil_b_job_flowrate"
+              },
+              "decimals": 1,
+              "showCard": true,
+              "showSeparator": true,
+              "showTitle": true,
+              "title": "Job Flow",
+              "titleFontSize": "sm",
+              "unit": "t/h"
+            },
+            "h": 1,
+            "id": "w-1775172433246-v19",
+            "type": "sparkline",
+            "w": 3,
+            "x": 0,
+            "y": 1
+          },
+          {
+            "config": {
+              "accentColor": "",
+              "backgroundColor": "",
+              "cardStyle": "glass",
+              "chartType": "bar",
+              "gridColor": "",
+              "series": [
+                {
+                  "color": "#7c3aed",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_job_flowrate",
+                    "type": "tag"
+                  },
+                  "label": "Job"
+                },
+                {
+                  "color": "#059669",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_flour_flowrate",
+                    "type": "tag"
+                  },
+                  "label": "Flour"
+                },
+                {
+                  "color": "#d97706",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_bran_flowrate",
+                    "type": "tag"
+                  },
+                  "label": "Bran"
+                },
+                {
+                  "color": "#2563eb",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "mil_b_b1_flowrate",
+                    "type": "tag"
+                  },
+                  "label": "B1"
+                }
+              ],
+              "showCard": true,
+              "showGrid": true,
+              "showLegend": true,
+              "stacked": false,
+              "timeRange": "1h",
+              "title": "Flowrate"
+            },
+            "h": 2,
+            "id": "w-1775171325346-k2x60",
+            "type": "barchart",
+            "w": 4,
+            "x": 0,
+            "y": 2
+          }
+        ]
+      },
+      "name": "Mill B Dashboard",
+      "status": "released",
+      "thumbnail": "",
+      "updated_at": "2026-04-03T15:04:13.694186"
+    },
+    {
+      "created_at": "2026-04-02T10:22:33.664057",
+      "description": "",
+      "id": 14,
+      "is_active": true,
+      "is_default": false,
+      "layout_config": {
+        "computedSignals": [],
+        "dashboardTabs": {
+          "activeTabId": "tab-1775119040825-28nz",
+          "enabled": true,
+          "tabs": [
+            {
+              "id": "tab-1775119015297-d4hd",
+              "label": "C32",
+              "widgets": [
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0090fc",
+                    "content": "Machine C32 - Power analysis",
+                    "fontSize": "32px",
+                    "fontStyle": "normal",
+                    "fontWeight": "700",
+                    "showCard": false
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-tue37",
+                  "type": "text",
+                  "w": 12,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_apparent_power",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Apparent Power (kVA)",
+                    "titleFontSize": "lg",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-282py",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 0,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_reactive_power",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Reactive Power (kvar)",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-im09n",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 6,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_cos_phi",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Power Factor (Cos Phi)",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-ddky3",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 9,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_effective_power",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Effective Power (kW)",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-0hrvr",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 3,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "accentColor": "",
+                    "annotations": [],
+                    "backgroundColor": "",
+                    "chartType": "line",
+                    "gridColor": "",
+                    "series": [
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_l1_voltage",
+                          "type": "tag"
+                        },
+                        "label": "L1_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_l2_voltage",
+                          "type": "tag"
+                        },
+                        "label": "L2_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_l3_voltage",
+                          "type": "tag"
+                        },
+                        "label": "L1_Voltage"
+                      }
+                    ],
+                    "showCard": true,
+                    "showGrid": true,
+                    "showLegend": true,
+                    "timeRange": "5m",
+                    "title": "Voltage Chart Trend"
+                  },
+                  "h": 2,
+                  "id": "w-1775119015297-7bj7w",
+                  "type": "chart",
+                  "w": 6,
+                  "x": 0,
+                  "y": 2
+                },
+                {
+                  "config": {
+                    "accentColor": "",
+                    "annotations": [],
+                    "backgroundColor": "",
+                    "chartType": "line",
+                    "gridColor": "",
+                    "series": [
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_l1_current",
+                          "type": "tag"
+                        },
+                        "label": "L1_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_l2_current",
+                          "type": "tag"
+                        },
+                        "label": "L2_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_l3_current",
+                          "type": "tag"
+                        },
+                        "label": "L3_Voltage"
+                      }
+                    ],
+                    "showCard": true,
+                    "showGrid": true,
+                    "showLegend": true,
+                    "timeRange": "5m",
+                    "title": "Curremt(V)"
+                  },
+                  "h": 2,
+                  "id": "w-1775119015297-h47r0",
+                  "type": "chart",
+                  "w": 6,
+                  "x": 6,
+                  "y": 2
+                },
+                {
+                  "config": {
+                    "color": "#1e61b8",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_active_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "max": 229999,
+                    "min": 0,
+                    "showCard": true,
+                    "showTitle": true,
+                    "showValue": true,
+                    "title": "Total active energy",
+                    "titleFontSize": "lg",
+                    "unit": "%",
+                    "zones": [
+                      {
+                        "color": "#10b981",
+                        "from": 0,
+                        "to": 70
+                      },
+                      {
+                        "color": "#f59e0b",
+                        "from": 70,
+                        "to": 90
+                      },
+                      {
+                        "color": "#ef4444",
+                        "from": 90,
+                        "to": 100
+                      }
+                    ]
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-6v96b",
+                  "type": "progress",
+                  "w": 4,
+                  "x": 0,
+                  "y": 4
+                },
+                {
+                  "config": {
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_apparent_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "max": 729999,
+                    "min": 0,
+                    "showCard": true,
+                    "showTitle": true,
+                    "showValue": true,
+                    "title": "Total Apparent energy",
+                    "titleFontSize": "md",
+                    "unit": "%",
+                    "zones": [
+                      {
+                        "color": "#10b981",
+                        "from": 0,
+                        "to": 70
+                      },
+                      {
+                        "color": "#f59e0b",
+                        "from": 70,
+                        "to": 90
+                      },
+                      {
+                        "color": "#ef4444",
+                        "from": 90,
+                        "to": 100
+                      }
+                    ]
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-4vuzy",
+                  "type": "progress",
+                  "w": 4,
+                  "x": 0,
+                  "y": 5
+                },
+                {
+                  "config": {
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_reactive_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "max": 1119999,
+                    "min": 0,
+                    "showCard": true,
+                    "showTitle": true,
+                    "showValue": true,
+                    "title": "Total Reactive energy",
+                    "titleFontSize": "md",
+                    "unit": "%",
+                    "zones": [
+                      {
+                        "color": "#10b981",
+                        "from": 0,
+                        "to": 70
+                      },
+                      {
+                        "color": "#f59e0b",
+                        "from": 70,
+                        "to": 90
+                      },
+                      {
+                        "color": "#ef4444",
+                        "from": 90,
+                        "to": 100
+                      }
+                    ]
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-fjrj4",
+                  "type": "progress",
+                  "w": 4,
+                  "x": 0,
+                  "y": 6
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_active_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": false,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Total active energy",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-yaztr",
+                  "type": "kpi",
+                  "w": 4,
+                  "x": 4,
+                  "y": 4
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_apparent_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": false,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Total Apparent energy",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-tukd6",
+                  "type": "kpi",
+                  "w": 4,
+                  "x": 4,
+                  "y": 5
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_reactive_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": false,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Total Reactive energy",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119015297-sdo1s",
+                  "type": "kpi",
+                  "w": 4,
+                  "x": 4,
+                  "y": 6
+                },
+                {
+                  "config": {
+                    "doughnut": true,
+                    "series": [
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_effective_power",
+                          "type": "tag"
+                        },
+                        "label": "Active Power"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_reactive_power",
+                          "type": "tag"
+                        },
+                        "label": "Reactive Power"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_apparent_power",
+                          "type": "tag"
+                        },
+                        "label": "apparent_power"
+                      }
+                    ],
+                    "showCard": true,
+                    "showLegend": true,
+                    "showTitle": true,
+                    "title": "Power Distribution",
+                    "titleFontSize": "md"
+                  },
+                  "h": 3,
+                  "id": "w-1775119015297-3d9du",
+                  "type": "piechart",
+                  "w": 4,
+                  "x": 8,
+                  "y": 4
+                }
+              ]
+            },
+            {
+              "id": "tab-1775119040825-28nz",
+              "label": "M30",
+              "widgets": [
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0090fc",
+                    "content": "Machine M30 - Power analysis",
+                    "fontSize": "32px",
+                    "fontStyle": "normal",
+                    "fontWeight": "700",
+                    "showCard": false
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-vuert",
+                  "type": "text",
+                  "w": 12,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m30_apparent_power",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Apparent Power (kVA)",
+                    "titleFontSize": "lg",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-itkx4",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 0,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m30_reactive_power",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Reactive Power (kvar)",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-8r2lm",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 6,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m30_cos_phi",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Power Factor (Cos Phi)",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-98nxn",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 9,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m30_effective_power",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Effective Power (kW)",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-evbt4",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 3,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "accentColor": "",
+                    "annotations": [],
+                    "backgroundColor": "",
+                    "chartType": "line",
+                    "gridColor": "",
+                    "series": [
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m30_l1_voltage",
+                          "type": "tag"
+                        },
+                        "label": "L1_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m30_l2_voltage",
+                          "type": "tag"
+                        },
+                        "label": "L2_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m30_l3_voltage",
+                          "type": "tag"
+                        },
+                        "label": "L1_Voltage"
+                      }
+                    ],
+                    "showCard": true,
+                    "showGrid": true,
+                    "showLegend": true,
+                    "timeRange": "5m",
+                    "title": "Voltage Chart Trend"
+                  },
+                  "h": 2,
+                  "id": "w-1775119040825-tm27a",
+                  "type": "chart",
+                  "w": 6,
+                  "x": 0,
+                  "y": 2
+                },
+                {
+                  "config": {
+                    "accentColor": "",
+                    "annotations": [],
+                    "backgroundColor": "",
+                    "chartType": "line",
+                    "gridColor": "",
+                    "series": [
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m30_l1_current",
+                          "type": "tag"
+                        },
+                        "label": "L1_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m30_l2_current",
+                          "type": "tag"
+                        },
+                        "label": "L2_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m30_l3_current",
+                          "type": "tag"
+                        },
+                        "label": "L3_Voltage"
+                      }
+                    ],
+                    "showCard": true,
+                    "showGrid": true,
+                    "showLegend": true,
+                    "timeRange": "5m",
+                    "title": "Curremt(V)"
+                  },
+                  "h": 2,
+                  "id": "w-1775119040825-9ogu5",
+                  "type": "chart",
+                  "w": 6,
+                  "x": 6,
+                  "y": 2
+                },
+                {
+                  "config": {
+                    "color": "#1e61b8",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_active_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "max": 229999,
+                    "min": 0,
+                    "showCard": true,
+                    "showTitle": true,
+                    "showValue": true,
+                    "title": "Total active energy",
+                    "titleFontSize": "lg",
+                    "unit": "%",
+                    "zones": [
+                      {
+                        "color": "#10b981",
+                        "from": 0,
+                        "to": 70
+                      },
+                      {
+                        "color": "#f59e0b",
+                        "from": 70,
+                        "to": 90
+                      },
+                      {
+                        "color": "#ef4444",
+                        "from": 90,
+                        "to": 100
+                      }
+                    ]
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-s1k2k",
+                  "type": "progress",
+                  "w": 4,
+                  "x": 0,
+                  "y": 4
+                },
+                {
+                  "config": {
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_apparent_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "max": 729999,
+                    "min": 0,
+                    "showCard": true,
+                    "showTitle": true,
+                    "showValue": true,
+                    "title": "Total Apparent energy",
+                    "titleFontSize": "md",
+                    "unit": "%",
+                    "zones": [
+                      {
+                        "color": "#10b981",
+                        "from": 0,
+                        "to": 70
+                      },
+                      {
+                        "color": "#f59e0b",
+                        "from": 70,
+                        "to": 90
+                      },
+                      {
+                        "color": "#ef4444",
+                        "from": 90,
+                        "to": 100
+                      }
+                    ]
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-y1l0c",
+                  "type": "progress",
+                  "w": 4,
+                  "x": 0,
+                  "y": 5
+                },
+                {
+                  "config": {
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_reactive_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "max": 1119999,
+                    "min": 0,
+                    "showCard": true,
+                    "showTitle": true,
+                    "showValue": true,
+                    "title": "Total Reactive energy",
+                    "titleFontSize": "md",
+                    "unit": "%",
+                    "zones": [
+                      {
+                        "color": "#10b981",
+                        "from": 0,
+                        "to": 70
+                      },
+                      {
+                        "color": "#f59e0b",
+                        "from": 70,
+                        "to": 90
+                      },
+                      {
+                        "color": "#ef4444",
+                        "from": 90,
+                        "to": 100
+                      }
+                    ]
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-t6yvt",
+                  "type": "progress",
+                  "w": 4,
+                  "x": 0,
+                  "y": 6
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_active_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": false,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Total active energy",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-jb23i",
+                  "type": "kpi",
+                  "w": 4,
+                  "x": 4,
+                  "y": 4
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_apparent_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": false,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Total Apparent energy",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-o6jf2",
+                  "type": "kpi",
+                  "w": 4,
+                  "x": 4,
+                  "y": 5
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "c32_total_reactive_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": false,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Total Reactive energy",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775119040825-u76tr",
+                  "type": "kpi",
+                  "w": 4,
+                  "x": 4,
+                  "y": 6
+                },
+                {
+                  "config": {
+                    "doughnut": true,
+                    "series": [
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_effective_power",
+                          "type": "tag"
+                        },
+                        "label": "Active Power"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_reactive_power",
+                          "type": "tag"
+                        },
+                        "label": "Reactive Power"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "c32_apparent_power",
+                          "type": "tag"
+                        },
+                        "label": "apparent_power"
+                      }
+                    ],
+                    "showCard": true,
+                    "showLegend": true,
+                    "showTitle": true,
+                    "title": "Power Distribution",
+                    "titleFontSize": "md"
+                  },
+                  "h": 3,
+                  "id": "w-1775119040825-rohgc",
+                  "type": "piechart",
+                  "w": 4,
+                  "x": 8,
+                  "y": 4
+                }
+              ]
+            },
+            {
+              "id": "tab-1775129319841-v0jm",
+              "label": "M31",
+              "widgets": [
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0090fc",
+                    "content": "Machine M31 - Power analysis",
+                    "fontSize": "32px",
+                    "fontStyle": "normal",
+                    "fontWeight": "700",
+                    "showCard": false
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-eetz2",
+                  "type": "text",
+                  "w": 12,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m31_apparent_power",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Apparent Power (kVA)",
+                    "titleFontSize": "lg",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-q3mz3",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 0,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m31_reactive_power",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Reactive Power (kvar)",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-r5upv",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 6,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m31_cos_phi",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Power Factor (Cos Phi)",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-e3eh5",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 9,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m31_effective_power",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": true,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Effective Power (kW)",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-mp1si",
+                  "type": "kpi",
+                  "w": 3,
+                  "x": 3,
+                  "y": 1
+                },
+                {
+                  "config": {
+                    "accentColor": "",
+                    "annotations": [],
+                    "backgroundColor": "",
+                    "chartType": "line",
+                    "gridColor": "",
+                    "series": [
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m31_l1_voltage",
+                          "type": "tag"
+                        },
+                        "label": "L1_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m31_l2_voltage",
+                          "type": "tag"
+                        },
+                        "label": "L2_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m31_l3_voltage",
+                          "type": "tag"
+                        },
+                        "label": "L1_Voltage"
+                      }
+                    ],
+                    "showCard": true,
+                    "showGrid": true,
+                    "showLegend": true,
+                    "timeRange": "5m",
+                    "title": "Voltage Chart Trend"
+                  },
+                  "h": 2,
+                  "id": "w-1775129319841-mje44",
+                  "type": "chart",
+                  "w": 6,
+                  "x": 0,
+                  "y": 2
+                },
+                {
+                  "config": {
+                    "accentColor": "",
+                    "annotations": [],
+                    "backgroundColor": "",
+                    "chartType": "line",
+                    "gridColor": "",
+                    "series": [
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m31_l1_current",
+                          "type": "tag"
+                        },
+                        "label": "L1_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m31_l2_current",
+                          "type": "tag"
+                        },
+                        "label": "L2_Voltage"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m31_l3_current",
+                          "type": "tag"
+                        },
+                        "label": "L3_Voltage"
+                      }
+                    ],
+                    "showCard": true,
+                    "showGrid": true,
+                    "showLegend": true,
+                    "timeRange": "5m",
+                    "title": "Curremt(V)"
+                  },
+                  "h": 2,
+                  "id": "w-1775129319841-z6jiq",
+                  "type": "chart",
+                  "w": 6,
+                  "x": 6,
+                  "y": 2
+                },
+                {
+                  "config": {
+                    "color": "#1e61b8",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m31_total_active_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "max": 229999,
+                    "min": 0,
+                    "showCard": true,
+                    "showTitle": true,
+                    "showValue": true,
+                    "title": "Total active energy",
+                    "titleFontSize": "lg",
+                    "unit": "%",
+                    "zones": [
+                      {
+                        "color": "#10b981",
+                        "from": 0,
+                        "to": 70
+                      },
+                      {
+                        "color": "#f59e0b",
+                        "from": 70,
+                        "to": 90
+                      },
+                      {
+                        "color": "#ef4444",
+                        "from": 90,
+                        "to": 100
+                      }
+                    ]
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-4n0xu",
+                  "type": "progress",
+                  "w": 4,
+                  "x": 0,
+                  "y": 4
+                },
+                {
+                  "config": {
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m31_total_apparent_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "max": 729999,
+                    "min": 0,
+                    "showCard": true,
+                    "showTitle": true,
+                    "showValue": true,
+                    "title": "Total Apparent energy",
+                    "titleFontSize": "md",
+                    "unit": "%",
+                    "zones": [
+                      {
+                        "color": "#10b981",
+                        "from": 0,
+                        "to": 70
+                      },
+                      {
+                        "color": "#f59e0b",
+                        "from": 70,
+                        "to": 90
+                      },
+                      {
+                        "color": "#ef4444",
+                        "from": 90,
+                        "to": 100
+                      }
+                    ]
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-mi6y6",
+                  "type": "progress",
+                  "w": 4,
+                  "x": 0,
+                  "y": 5
+                },
+                {
+                  "config": {
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m31_total_reactive_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "max": 1119999,
+                    "min": 0,
+                    "showCard": true,
+                    "showTitle": true,
+                    "showValue": true,
+                    "title": "Total Reactive energy",
+                    "titleFontSize": "md",
+                    "unit": "%",
+                    "zones": [
+                      {
+                        "color": "#10b981",
+                        "from": 0,
+                        "to": 70
+                      },
+                      {
+                        "color": "#f59e0b",
+                        "from": 70,
+                        "to": 90
+                      },
+                      {
+                        "color": "#ef4444",
+                        "from": 90,
+                        "to": 100
+                      }
+                    ]
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-rrw8t",
+                  "type": "progress",
+                  "w": 4,
+                  "x": 0,
+                  "y": 6
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m31_total_active_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": false,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Total active energy",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-hme1x",
+                  "type": "kpi",
+                  "w": 4,
+                  "x": 4,
+                  "y": 4
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m31_total_apparent_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": false,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Total Apparent energy",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-48qf6",
+                  "type": "kpi",
+                  "w": 4,
+                  "x": 4,
+                  "y": 5
+                },
+                {
+                  "config": {
+                    "align": "left",
+                    "color": "#0098cc",
+                    "dataSource": {
+                      "aggregation": "last",
+                      "formula": "",
+                      "groupTags": [],
+                      "tagName": "m31_total_reactive_energy",
+                      "type": "tag"
+                    },
+                    "decimals": 1,
+                    "showCard": true,
+                    "showSparkline": false,
+                    "showTitle": true,
+                    "thresholds": [],
+                    "title": "Total Reactive energy",
+                    "titleFontSize": "md",
+                    "unit": "",
+                    "valueFontSize": "auto"
+                  },
+                  "h": 1,
+                  "id": "w-1775129319841-cki7v",
+                  "type": "kpi",
+                  "w": 4,
+                  "x": 4,
+                  "y": 6
+                },
+                {
+                  "config": {
+                    "doughnut": true,
+                    "series": [
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m31_effective_power",
+                          "type": "tag"
+                        },
+                        "label": "Active Power"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m31_reactive_power",
+                          "type": "tag"
+                        },
+                        "label": "Reactive Power"
+                      },
+                      {
+                        "color": "",
+                        "dataSource": {
+                          "aggregation": "avg",
+                          "formula": "",
+                          "groupTags": [],
+                          "tagName": "m31_apparent_power",
+                          "type": "tag"
+                        },
+                        "label": "apparent_power"
+                      }
+                    ],
+                    "showCard": true,
+                    "showLegend": true,
+                    "showTitle": true,
+                    "title": "Power Distribution",
+                    "titleFontSize": "md"
+                  },
+                  "h": 3,
+                  "id": "w-1775129319841-hxmv6",
+                  "type": "piechart",
+                  "w": 4,
+                  "x": 8,
+                  "y": 4
+                }
+              ]
+            }
+          ]
+        },
+        "grid": {
+          "cols": 12,
+          "pageMode": "full",
+          "rowHeight": 40
+        },
+        "parameters": [],
+        "schemaVersion": 2,
+        "widgets": []
+      },
+      "name": "Energy_report_dashboard",
+      "status": "released",
+      "thumbnail": "",
+      "updated_at": "2026-04-02T18:45:50.440203"
+    },
+    {
+      "created_at": "2026-03-31T22:33:18.483721",
+      "description": "",
+      "id": 3,
+      "is_active": true,
+      "is_default": false,
+      "layout_config": {
+        "grid": {
+          "cols": 12,
+          "pageMode": "a4",
+          "rowHeight": 40
+        },
+        "paginatedSections": [
+          {
+            "align": "center",
+            "id": "ps-1774433617785-7eny",
+            "logoUrl": "",
+            "showDateRange": true,
+            "showLogo": false,
+            "statusAggregation": "avg",
+            "statusFormula": "",
+            "statusGroupTags": [],
+            "statusLabel": "Status",
+            "statusMappingName": "",
+            "statusSourceType": "static",
+            "statusTagName": "",
+            "statusValue": "",
+            "subtitle": "",
+            "title": "Pasta",
+            "type": "header"
+          },
+          {
+            "columns": [
+              {
+                "align": "center",
+                "header": "ID",
+                "id": "ps-1774433617787-i26h",
+                "summary": {
+                  "enabled": false,
+                  "label": "",
+                  "type": "none"
+                },
+                "width": "auto"
+              },
+              {
+                "align": "center",
+                "header": "Weight",
+                "id": "ps-1774433617789-0fwn",
+                "summary": {
+                  "enabled": false,
+                  "label": "",
+                  "type": "none"
+                },
+                "width": "auto"
+              },
+              {
+                "align": "center",
+                "header": "Start",
+                "id": "ps-1774859599469-0e66",
+                "summary": {
+                  "enabled": false,
+                  "label": "",
+                  "type": "none"
+                },
+                "width": "auto"
+              },
+              {
+                "align": "center",
+                "header": "End",
+                "id": "ps-1774859599470-8ebe",
+                "summary": {
+                  "enabled": false,
+                  "label": "",
+                  "type": "none"
+                },
+                "width": "auto"
+              }
+            ],
+            "id": "ps-1774433617786-1ilj",
+            "label": "Table Section",
+            "rows": [
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "1_521WE_Totalizer"
+                  },
+                  {
+                    "aggregation": "delta",
+                    "decimals": 1,
+                    "formula": "",
+                    "sourceType": "tag",
+                    "tagName": "pasta_1_521we_totalizer",
+                    "unit": "kg"
+                  },
+                  {
+                    "aggregation": "first",
+                    "sourceType": "tag",
+                    "tagName": "pasta_1_521we_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "pasta_1_521we_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617790-7900"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "4_830WE_Totalizer"
+                  },
+                  {
+                    "aggregation": "delta",
+                    "decimals": 0,
+                    "sourceType": "tag",
+                    "tagName": "pasta_4_830we_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  },
+                  {
+                    "aggregation": "first",
+                    "sourceType": "tag",
+                    "tagName": "pasta_4_830we_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  },
+                  {
+                    "decimals": 0,
+                    "sourceType": "tag",
+                    "tagName": "pasta_4_830we_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617791-v4v3"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "E_1010_Totalizer"
+                  },
+                  {
+                    "aggregation": "delta",
+                    "sourceType": "tag",
+                    "tagName": "pasta_e_1010_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  },
+                  {
+                    "aggregation": "first",
+                    "sourceType": "tag",
+                    "tagName": "pasta_e_1010_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "pasta_e_1010_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617792-sxte"
+              }
+            ],
+            "showSummaryRow": true,
+            "summaryFormula": "",
+            "summaryLabel": "Total",
+            "summaryUnit": "",
+            "type": "table"
+          }
+        ],
+        "reportType": "paginated",
+        "widgets": []
+      },
+      "name": "Pasta",
+      "status": "released",
+      "thumbnail": "",
+      "updated_at": "2026-04-01T15:45:50.322329"
+    },
+    {
+      "created_at": "2026-04-01T15:14:35.841759",
+      "description": "",
+      "id": 11,
+      "is_active": true,
+      "is_default": false,
+      "layout_config": {
+        "computedSignals": [],
+        "grid": {
+          "cols": 12,
+          "pageMode": "a4",
+          "rowHeight": 40
+        },
+        "parameters": [],
+        "schemaVersion": 2,
+        "widgets": [
+          {
+            "config": {
+              "align": "left",
+              "color": "#0098cc",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "showCard": true,
+              "showSparkline": false,
+              "showTitle": true,
+              "thresholds": [],
+              "title": "KPI Value",
+              "titleFontSize": "md",
+              "unit": "",
+              "valueFontSize": "auto"
+            },
+            "h": 1,
+            "id": "w-1775041531738-2c1kh",
+            "type": "kpi",
+            "w": 2,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "config": {
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "",
+                "type": "tag"
+              },
+              "decimals": 0,
+              "max": 100,
+              "min": 0,
+              "showCard": true,
+              "showTitle": true,
+              "title": "Gauge",
+              "titleFontSize": "md",
+              "unit": "%",
+              "valueFontSize": "auto",
+              "zones": [
+                {
+                  "color": "#ef4444",
+                  "from": 0,
+                  "to": 40
+                },
+                {
+                  "color": "#f59e0b",
+                  "from": 40,
+                  "to": 70
+                },
+                {
+                  "color": "#10b981",
+                  "from": 70,
+                  "to": 100
+                }
+              ]
+            },
+            "h": 1,
+            "id": "w-1775041531739-iiiuh",
+            "type": "gauge",
+            "w": 2,
+            "x": 3,
+            "y": 0
+          },
+          {
+            "config": {
+              "accentColor": "",
+              "annotations": [],
+              "backgroundColor": "",
+              "chartType": "line",
+              "gridColor": "",
+              "series": [
+                {
+                  "color": "",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "{mil_b_b1_flowrate} + {mil_b_b1_percentage} *",
+                    "groupTags": [],
+                    "tagName": "",
+                    "type": "formula"
+                  },
+                  "label": "Series 1"
+                },
+                {
+                  "color": "",
+                  "dataSource": {
+                    "aggregation": "avg",
+                    "formula": "",
+                    "groupTags": [],
+                    "tagName": "",
+                    "type": "tag"
+                  },
+                  "label": "Series 2"
+                }
+              ],
+              "showCard": true,
+              "showGrid": true,
+              "showLegend": true,
+              "timeRange": "5m",
+              "title": "Line Chart"
+            },
+            "h": 2,
+            "id": "w-1775041531740-rqxpt",
+            "type": "chart",
+            "w": 4,
+            "x": 7,
+            "y": 0
+          },
+          {
+            "config": {
+              "capacityTag": "",
+              "color": "",
+              "dataSource": {
+                "aggregation": "last",
+                "formula": "",
+                "groupTags": [],
+                "tagName": "",
+                "type": "tag"
+              },
+              "decimals": 1,
+              "showCapacity": false,
+              "showCard": true,
+              "showTitle": true,
+              "showTons": true,
+              "title": "Silo",
+              "titleFontSize": "md",
+              "tonsTag": "",
+              "unit": "%",
+              "zones": [
+                {
+                  "color": "#10b981",
+                  "from": 0,
+                  "to": 70
+                },
+                {
+                  "color": "#f59e0b",
+                  "from": 70,
+                  "to": 90
+                },
+                {
+                  "color": "#ef4444",
+                  "from": 90,
+                  "to": 100
+                }
+              ]
+            },
+            "h": 1,
+            "id": "w-1775041531741-ypg7j",
+            "type": "silo",
+            "w": 2,
+            "x": 2,
+            "y": 1
+          },
+          {
+            "config": {
+              "capacityTag": "",
+              "dataSource": {
+                "tagName": "mil_b_bran_totalizer"
+              },
+              "decimals": 1,
+              "showCapacity": false,
+              "showCard": true,
+              "showTitle": true,
+              "title": "mil_b_bran_totalizer",
+              "titleFontSize": "md",
+              "unit": "Kg",
+              "zones": [
+                {
+                  "color": "#10b981",
+                  "from": 0,
+                  "to": 70
+                },
+                {
+                  "color": "#f59e0b",
+                  "from": 70,
+                  "to": 90
+                },
+                {
+                  "color": "#ef4444",
+                  "from": 90,
+                  "to": 100
+                }
+              ]
+            },
+            "h": 2,
+            "id": "w-1775041531742-8k16u",
+            "type": "hopper",
+            "w": 2,
+            "x": 6,
+            "y": 2
+          },
+          {
+            "config": {
+              "borderRadius": "0",
+              "objectFit": "contain",
+              "showCard": false
+            },
+            "h": 1,
+            "id": "w-1775041531743-nhzwa",
+            "type": "logo",
+            "w": 2,
+            "x": 2,
+            "y": 2
+          },
+          {
+            "config": {
+              "borderColor": "",
+              "compact": false,
+              "headerBg": "",
+              "headerColor": "",
+              "reportHeader": null,
+              "rowBg": "",
+              "sectionHeaderBg": "",
+              "sectionHeaderColor": "",
+              "sectionHeaders": [],
+              "showCard": true,
+              "showUnitsInCells": false,
+              "staticDataRows": [],
+              "striped": true,
+              "stripedRowBg": "",
+              "summaryRows": [],
+              "tableColumns": [],
+              "title": "Data Table"
+            },
+            "h": 2,
+            "id": "w-1775041531744-3bync",
+            "type": "table",
+            "w": 4,
+            "x": 0,
+            "y": 3
+          },
+          {
+            "config": {
+              "doughnut": true,
+              "series": [],
+              "showCard": true,
+              "showLegend": true,
+              "showTitle": true,
+              "title": "Pie Chart",
+              "titleFontSize": "md"
+            },
+            "h": 2,
+            "id": "w-1775041531745-y3mcq",
+            "type": "piechart",
+            "w": 3,
+            "x": 9,
+            "y": 12
+          }
+        ]
+      },
+      "name": "test",
+      "status": "released",
+      "thumbnail": "",
+      "updated_at": "2026-04-01T15:45:30.991850"
+    },
+    {
+      "created_at": "2026-03-31T22:33:18.490435",
+      "description": "",
+      "id": 5,
+      "is_active": true,
+      "is_default": false,
+      "layout_config": {
+        "grid": {
+          "cols": 12,
+          "pageMode": "a4",
+          "rowHeight": 40
+        },
+        "paginatedSections": [
+          {
+            "align": "center",
+            "id": "ps-1774423414525-8zdb",
+            "logoUrl": "",
+            "showDateRange": true,
+            "showLogo": false,
+            "statusAggregation": "avg",
+            "statusFormula": "",
+            "statusGroupTags": [],
+            "statusLabel": "Status",
+            "statusMappingName": "WPK1_running_Status",
+            "statusSourceType": "mapping",
+            "statusTagName": "",
+            "statusValue": "",
+            "subtitle": "",
+            "title": "WPK1",
+            "type": "header"
+          },
+          {
+            "columns": [
+              {
+                "align": "left",
+                "header": "ID",
+                "id": "ps-1774423414527-eat1",
+                "width": "auto"
+              },
+              {
+                "align": "left",
+                "header": "Sender QTY%",
+                "id": "ps-1774423414528-6w59",
+                "width": "auto"
+              }
+            ],
+            "id": "ps-1774423414526-gwhf",
+            "label": "Table Section",
+            "rows": [
+              {
+                "cells": [
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_sender_id_1",
+                    "unit": "",
+                    "value": ""
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_sender_qty_pct_1",
+                    "unit": "%",
+                    "value": ""
+                  }
+                ],
+                "hideWhenInactive": false,
+                "id": "ps-1774423414530-d7cd"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_sender_id_2",
+                    "value": ""
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_sender_qty_pct_2",
+                    "unit": "%",
+                    "value": ""
+                  }
+                ],
+                "hideWhenInactive": false,
+                "id": "ps-1774423414531-ro4n"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_sender_id_3",
+                    "value": ""
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_sender_qty_pct_3",
+                    "unit": "%",
+                    "value": ""
+                  }
+                ],
+                "hideWhenInactive": false,
+                "id": "ps-1774423414532-ie25"
+              }
+            ],
+            "showSummaryRow": false,
+            "summaryFormula": "",
+            "summaryLabel": "Total",
+            "summaryUnit": "",
+            "type": "table"
+          }
+        ],
+        "reportType": "paginated",
+        "widgets": []
+      },
+      "name": "WPK1",
+      "status": "released",
+      "thumbnail": "",
+      "updated_at": "2026-04-01T14:34:08.589372"
+    },
+    {
+      "created_at": "2026-03-31T22:33:18.493654",
+      "description": "",
+      "id": 6,
+      "is_active": true,
+      "is_default": false,
+      "layout_config": {
+        "grid": {
+          "cols": 12,
+          "pageMode": "a4",
+          "rowHeight": 40
+        },
+        "paginatedSections": [
+          {
+            "align": "center",
+            "id": "ps-1774433617757-pkgf",
+            "logoUrl": "",
+            "showDateRange": true,
+            "showLogo": false,
+            "statusAggregation": "avg",
+            "statusFormula": "",
+            "statusGroupTags": [],
+            "statusLabel": "Status",
+            "statusMappingName": "MIL_B_Status",
+            "statusSourceType": "mapping",
+            "statusTagName": "",
+            "statusValue": "",
+            "subtitle": "",
+            "title": "MIL-B",
+            "type": "header"
+          },
+          {
+            "columns": [
+              {
+                "align": "left",
+                "header": "ID",
+                "id": "ps-1774433617759-znhf",
+                "width": "auto"
+              },
+              {
+                "align": "right",
+                "header": "Weight",
+                "id": "ps-1774433617761-9gti",
+                "width": "auto"
+              }
+            ],
+            "id": "ps-1774433617758-4ih9",
+            "label": "Order Info",
+            "rows": [
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "B1 FlowRate"
+                  },
+                  {
+                    "aggregation": "avg",
+                    "decimals": 1,
+                    "formula": "",
+                    "sourceType": "tag",
+                    "tagName": "mil_b_b1_flowrate",
+                    "unit": "t/h"
+                  }
+                ],
+                "id": "ps-1774433617762-acvp"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "B1 Percentage"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_b1_percentage",
+                    "unit": "%",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617763-d9r2"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "B1 Totalizer"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_b1_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617764-bplm"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "Bran FlowRate"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_bran_flowrate",
+                    "unit": "t/h",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617765-o0my"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "Bran Totalizer"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_bran_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617766-xv1p"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "Flour FlowRate"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_flour_flowrate",
+                    "unit": "t/h",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617767-3pzq"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "Flour Percentage"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_flour_percentage",
+                    "unit": "%",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617768-7viw"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "Flour Totalizer"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_flour_totalizer",
+                    "unit": "kg",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617769-vg6m"
+              }
+            ],
+            "showSummaryRow": false,
+            "summaryFormula": "",
+            "summaryLabel": "Total",
+            "summaryUnit": "",
+            "type": "table"
+          },
+          {
+            "columns": [
+              {
+                "align": "left",
+                "header": "ID",
+                "id": "ps-1774433617773-6wa6",
+                "width": "auto"
+              },
+              {
+                "align": "right",
+                "header": "Weight",
+                "id": "ps-1774433617775-ehqc",
+                "width": "auto"
+              }
+            ],
+            "id": "ps-1774433617772-431k",
+            "label": "Setpoint",
+            "rows": [
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "B1_Scale"
+                  },
+                  {
+                    "decimals": 1,
+                    "formula": "",
+                    "sourceType": "tag",
+                    "tagName": "mil_b_b1_scale",
+                    "unit": "__checkbox__"
+                  }
+                ],
+                "id": "ps-1774433617776-d3j0"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "Filter_Flour_Feeder"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_filter_flour_feeder",
+                    "unit": "__checkbox__",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617778-528e"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "B1_Deopt_Emptying"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_b1_deopt_emptying",
+                    "unit": "__checkbox__",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617779-1dxj"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "Mill_Emptying"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_mill_emptying",
+                    "unit": "__checkbox__",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617780-ysod"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "Dampening_On"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_dampening_on",
+                    "unit": "__checkbox__",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617781-2pgf"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "Vitamin_Feeder_On"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_vitamin_feeder_on",
+                    "unit": "__checkbox__",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617782-nito"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "Vitamin_Feeder_Percentage"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_vitamin_feeder_percentage",
+                    "unit": "%",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617783-yrgp"
+              },
+              {
+                "cells": [
+                  {
+                    "sourceType": "static",
+                    "value": "JobFlowRate"
+                  },
+                  {
+                    "sourceType": "tag",
+                    "tagName": "mil_b_job_flowrate",
+                    "unit": "t/h",
+                    "value": ""
+                  }
+                ],
+                "id": "ps-1774433617784-n6ou"
+              }
+            ],
+            "showSummaryRow": false,
+            "summaryFormula": "",
+            "summaryLabel": "Total",
+            "summaryUnit": "",
+            "type": "table"
+          },
+          {
+            "columns": [
+              {
+                "align": "left",
+                "header": "ID",
+                "id": "ps-1775038344539-aaun",
+                "width": "auto"
+              },
+              {
+                "align": "right",
+                "header": "Weight",
+                "id": "ps-1775038344541-e5fw",
+                "width": "auto"
+              }
+            ],
+            "id": "ps-1775038344538-vxgw",
+            "label": "Receiver",
+            "rows": [
+              {
+                "cells": [
+                  {
+                    "aggregation": "delta",
+                    "sourceType": "static",
+                    "tagName": "mil_b_flour_totalizer",
+                    "unit": "kg",
+                    "value": "Destination "
+                  },
+                  {
+                    "aggregation": "delta",
+                    "decimals": 1,
+                    "formula": "",
+                    "sourceType": "tag",
+                    "tagName": "mil_b_flour_totalizer",
+                    "unit": "kg"
+                  }
+                ],
+                "id": "ps-1775038344542-6pg4"
+              }
+            ],
+            "showSummaryRow": false,
+            "summaryFormula": "",
+            "summaryLabel": "Total",
+            "summaryUnit": "",
+            "type": "table"
+          }
+        ],
+        "reportType": "paginated",
+        "widgets": []
+      },
+      "name": "MIL-B",
+      "status": "released",
+      "thumbnail": "",
+      "updated_at": "2026-04-01T14:32:40.193013"
+    }
+  ],
+  "export_version": "2.0",
+  "export_date": "2026-04-03T11:18:35.334Z",
+  "export_sections": [
+    "report_templates",
+    "tags"
+  ]
+}

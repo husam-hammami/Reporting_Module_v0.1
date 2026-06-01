@@ -44,7 +44,8 @@ def _get_release_branch():
             return f.read().strip()
     except FileNotFoundError:
         pass
-    return os.environ.get('RELEASE_BRANCH', 'main')
+    default = 'Salalah_Mill_B' if os.environ.get('HERCULES_DESKTOP') else 'main'
+    return os.environ.get('RELEASE_BRANCH', default)
 
 
 def _branch_slug(branch):
@@ -78,6 +79,15 @@ def _fetch_releases():
     ctx = _ssl_context()
     with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
         return json.loads(resp.read().decode('utf-8'))
+
+
+@updates_bp.route('/settings/version', methods=['GET'])
+def get_version():
+    """Return the current app version and branch (lightweight, no GitHub call)."""
+    return jsonify({
+        'version': _get_local_version(),
+        'branch': _get_release_branch(),
+    }), 200
 
 
 @updates_bp.route('/settings/updates/check', methods=['GET'])

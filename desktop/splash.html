@@ -42,13 +42,24 @@
       margin: 0 auto;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .close-btn {
+      position: absolute; top: 12px; right: 16px;
+      background: none; border: none; color: #6b7f94; font-size: 20px;
+      cursor: pointer; -webkit-app-region: no-drag; line-height: 1;
+      padding: 4px 8px; border-radius: 4px;
+    }
+    .close-btn:hover { color: #e1e8f0; background: rgba(255,255,255,0.1); }
   </style>
 </head>
 <body>
-  <div class="card">
+  <div class="card" style="position:relative;">
+    <button class="close-btn" onclick="window.close()" title="Close">&times;</button>
     <h1>Hercules Reporting Module</h1>
-    <p>Starting services...</p>
+    <p id="status">Starting services...</p>
     <div class="spinner"></div>
+    <div id="progress-bar" style="display:none; width:80%; height:4px; background:#1e2d40; border-radius:2px; margin:16px auto 0;">
+      <div id="progress-fill" style="height:100%; width:0%; background:#3b82f6; border-radius:2px; transition:width 0.3s;"></div>
+    </div>
   </div>
 </body>
 </html>

@@ -49,8 +49,8 @@ export default function StatusWidget({ config, tagValues }) {
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '10px',
-      padding: '8px 12px',
+      gap: '8px',
+      padding: '4px 8px',
       height: '100%',
     }}>
       {/* Status circle */}

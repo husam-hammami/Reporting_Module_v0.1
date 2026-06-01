@@ -1,18 +1,25 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPen, FaPrint, FaExpand, FaCompress, FaFilePdf, FaImage } from 'react-icons/fa';
 import { Tooltip } from '@mui/material';
 import { motion, useReducedMotion } from 'framer-motion';
-import { exportAsPNG, exportAsPDF } from '../../utils/exportReport';
+import { captureElement, exportAsPNG, exportAsPDFFromCanvases, printCanvases } from '../../utils/exportReport';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
-import { useReportCanvas, useAvailableTags, collectWidgetTagNames } from '../../Hooks/useReportBuilder';
+import { useReportCanvas, useAvailableTags, collectWidgetTagNames, collectDataPanelScopedHistorianRequests } from '../../Hooks/useReportBuilder';
+import {
+  groupDataPanelScopedHistorianRequests,
+  fetchDataPanelScopedHistorianValues,
+} from './utils/dataPanelTimeScope';
+import TabSelector from '../../Components/ui/TabSelector';
 import { useTagHistory } from '../../Hooks/useTagHistory';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from './widgets/WidgetRenderer';
 import axios from '../../API/axios';
 import { useSocket } from '../../Context/SocketContext';
 import { useEmulator } from '../../Context/EmulatorContext';
-import { useThumbnailCapture } from './ThumbnailCaptureContext';
+import { ThumbnailCaptureContext, useThumbnailCapture } from './ThumbnailCaptureContext';
 import LiveDataIndicator from '../../Components/Common/LiveDataIndicator';
+import { ReportTableTabLinkProvider } from './context/ReportTableTabLinkContext';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -20,15 +27,16 @@ import './reportBuilderTheme.css';
 
 const GRID_COLS_DEFAULT = 12;
 const GRID_ROW_H_DEFAULT = 40;
-const GRID_MARGIN = [8, 8];
-const GRID_PADDING = [12, 12];
+const GRID_MARGIN = [6, 6];
+const GRID_PADDING = [8, 8];
 
 export default function ReportBuilderPreview() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { template, widgets, loading } = useReportCanvas(id);
+  const { template, widgets, loading, dashboardTabs, activeTabId, allTabsWidgets, switchDashboardTab } = useReportCanvas(id);
   const { tags: availableTags } = useAvailableTags();
   const [liveTagValues, setLiveTagValues] = useState({});
+  const [liveScopedTagValues, setLiveScopedTagValues] = useState({});
   const [lastDataUpdate, setLastDataUpdate] = useState(Date.now());
   const [fullscreen, setFullscreen] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -62,7 +70,28 @@ export default function ReportBuilderPreview() {
     e.preventDefault();
   }, []);
 
-  const usedTagNames = useMemo(() => collectWidgetTagNames(widgets), [widgets]);
+  const usedTagNames = useMemo(() => collectWidgetTagNames(allTabsWidgets || widgets), [allTabsWidgets, widgets]);
+
+  useEffect(() => {
+    const ws = allTabsWidgets || widgets;
+    let cancelled = false;
+    const run = async () => {
+      const scopedReqs = collectDataPanelScopedHistorianRequests(ws, new Date());
+      if (scopedReqs.length === 0) {
+        if (!cancelled) setLiveScopedTagValues({});
+        return;
+      }
+      const groups = groupDataPanelScopedHistorianRequests(scopedReqs);
+      const scopedValues = await fetchDataPanelScopedHistorianValues(axios, groups);
+      if (!cancelled) setLiveScopedTagValues(scopedValues);
+    };
+    run();
+    const scopedInterval = setInterval(run, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(scopedInterval);
+    };
+  }, [allTabsWidgets, widgets]);
 
   useEffect(() => {
     if (usedTagNames.length === 0) return;
@@ -99,7 +128,7 @@ export default function ReportBuilderPreview() {
 
   const tagValues = useMemo(() => {
     if (emulatorOn && emulatorValues) {
-      const base = { ...emulatorValues };
+      const base = { ...emulatorValues, ...liveScopedTagValues };
       const t = Date.now() / 1000;
       for (const tag of usedTagNames) {
         if (tag && !(tag in base)) {
@@ -108,8 +137,8 @@ export default function ReportBuilderPreview() {
       }
       return base;
     }
-    return { ...liveTagValues };
-  }, [liveTagValues, emulatorOn, emulatorValues, usedTagNames]);
+    return { ...liveTagValues, ...liveScopedTagValues };
+  }, [liveTagValues, liveScopedTagValues, emulatorOn, emulatorValues, usedTagNames]);
 
   useEffect(() => {
     if (emulatorOn && emulatorValues) {
@@ -119,20 +148,127 @@ export default function ReportBuilderPreview() {
 
   const tagHistory = useTagHistory(usedTagNames, tagValues);
 
-  const handlePrint = () => window.print();
+  const captureDashboardCanvases = useCallback(async (el) => {
+    const multi = dashboardTabs?.enabled && Array.isArray(dashboardTabs.tabs) && dashboardTabs.tabs.length > 1;
+    if (!multi) {
+      return [await captureElement(el)];
+    }
+    const originalId = activeTabId;
+    const out = [];
+    try {
+      for (const tab of dashboardTabs.tabs) {
+        flushSync(() => {
+          switchDashboardTab(tab.id, { skipDirty: true });
+          setExporting(true);
+        });
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        out.push(await captureElement(el));
+      }
+    } finally {
+      if (originalId) {
+        flushSync(() => {
+          switchDashboardTab(originalId, { skipDirty: true });
+          setExporting(true);
+        });
+      }
+    }
+    return out;
+  }, [dashboardTabs, activeTabId, switchDashboardTab]);
 
-  const handleExportPDF = async () => {
-    setExporting(true);
+  const handlePrintReport = async () => {
+    flushSync(() => setExporting(true));
     try {
       const el = document.getElementById('report-print-section');
-      await exportAsPDF(el, template?.name || 'report');
+      if (!el) return;
+      el.classList.add('rb-pdf-export');
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      try {
+        const canvases = await captureDashboardCanvases(el);
+        printCanvases(canvases, template?.name || 'Report');
+      } finally {
+        el.classList.remove('rb-pdf-export');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+        }
+      }
+    } finally { setExporting(false); }
+  };
+
+  const handleExportPDF = async () => {
+    flushSync(() => setExporting(true));
+    try {
+      const el = document.getElementById('report-print-section');
+      if (!el) return;
+      el.classList.add('rb-pdf-export');
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const previewPageMode = template?.layout_config?.grid?.pageMode || 'a4';
+      try {
+        const canvases = await captureDashboardCanvases(el);
+        await exportAsPDFFromCanvases(canvases, template?.name || 'report', { pageMode: previewPageMode, orientation: 'auto' });
+      } finally {
+        el.classList.remove('rb-pdf-export');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+        }
+      }
     } finally { setExporting(false); }
   };
   const handleExportPNG = async () => {
-    setExporting(true);
+    flushSync(() => setExporting(true));
     try {
       const el = document.getElementById('report-print-section');
-      await exportAsPNG(el, template?.name || 'report');
+      el.classList.add('rb-pdf-export');
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      try {
+        await exportAsPNG(el, template?.name || 'report');
+      } finally {
+        el.classList.remove('rb-pdf-export');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+        }
+      }
     } finally { setExporting(false); }
   };
 
@@ -149,6 +285,15 @@ export default function ReportBuilderPreview() {
   const gridCols = template?.layout_config?.grid?.cols ?? GRID_COLS_DEFAULT;
   const gridRowH = template?.layout_config?.grid?.rowHeight ?? GRID_ROW_H_DEFAULT;
   const pageMode = template?.layout_config?.grid?.pageMode || 'a4';
+  const dashboardHeaderCfg = template?.layout_config?.dashboardHeader;
+  const dashboardHeader = {
+    bg: 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
+    color: '#ffffff',
+    showLogo: true,
+    title: template?.name || 'Dashboard',
+    titleSize: 14,
+    ...dashboardHeaderCfg,
+  };
 
   const layout = useMemo(
     () =>
@@ -268,10 +413,12 @@ export default function ReportBuilderPreview() {
               }}
             >
               <button
-                onClick={handlePrint}
-                className="w-full text-left px-3 py-2 flex items-center gap-2 rounded-t-lg"
+                type="button"
+                onClick={() => { void handlePrintReport(); }}
+                disabled={exporting}
+                className="w-full text-left px-3 py-2 flex items-center gap-2 rounded-t-lg disabled:opacity-50"
                 style={{ fontSize: 'var(--rb-font-sm)', color: 'var(--rb-text)', transition: 'background var(--rb-transition-fast) ease' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rb-accent-subtle)'; }}
+                onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'var(--rb-accent-subtle)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <FaPrint style={{ fontSize: '10px', color: 'var(--rb-text-muted)' }} /> Print
@@ -301,6 +448,18 @@ export default function ReportBuilderPreview() {
         </div>
       </div>
 
+      {/* Dashboard Tabs (preview) */}
+      {dashboardTabs?.enabled && Array.isArray(dashboardTabs.tabs) && dashboardTabs.tabs.length > 1 && (
+        <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0 print:hidden" style={{ borderBottom: '1px solid var(--rb-border)', background: 'var(--rb-surface)' }}>
+          <TabSelector
+            tabs={dashboardTabs.tabs.map(t => ({ id: t.id, label: t.label }))}
+            activeId={activeTabId}
+            onChange={switchDashboardTab}
+            size="sm"
+          />
+        </div>
+      )}
+
       {/* Preview body */}
       <div
         ref={scrollContainerRef}
@@ -310,17 +469,27 @@ export default function ReportBuilderPreview() {
       >
         <motion.div
           id="report-print-section"
-          className={`w-full mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}
+          className="w-full mx-auto"
+          style={pageMode === 'a4' ? { maxWidth: 1220 } : {}}
           {...pageEntrance}
         >
-          {/* Compact report header */}
-          <div className="mb-1 print:mb-2 px-4 pt-3">
-            <h1 className="rb-title" style={{ fontSize: 'var(--rb-font-lg)' }}>
-              {template?.name || 'Report'}
-            </h1>
-            <p className="rb-caption mt-0.5">
-              Generated: {new Date().toLocaleString()}
-            </p>
+          <ThumbnailCaptureContext.Provider value={exporting}>
+          <ReportTableTabLinkProvider>
+          {/* Unified dashboard header bar */}
+          <div
+            className="flex items-center px-4 py-2 mx-2 mt-1 mb-1 rounded-md"
+            style={{
+              background: dashboardHeader.bg,
+              color: dashboardHeader.color,
+              minHeight: 36,
+            }}
+          >
+            {dashboardHeader.showLogo !== false && (
+              <img src="/api/branding/logo" alt="" style={{ height: 24, width: 'auto', borderRadius: 3, marginRight: 10 }} onError={(e) => { e.target.style.display = 'none'; }} />
+            )}
+            <span style={{ fontSize: dashboardHeader.titleSize, fontWeight: 700 }}>
+              {dashboardHeader.title || template?.name || 'Dashboard'}
+            </span>
           </div>
 
           {/* Widgets grid */}
@@ -347,12 +516,12 @@ export default function ReportBuilderPreview() {
                 rowHeight={gridRowH}
                 margin={GRID_MARGIN}
                 containerPadding={GRID_PADDING}
-                compactType={null}
-                allowOverlap={true}
+                compactType="vertical"
+                allowOverlap={false}
                 isDraggable={false}
                 isResizable={false}
                 static
-                useCSSTransforms={true}
+                useCSSTransforms={false}
               >
                 {layout.map((item) => {
                   const widget = widgetMap.get(item.i);
@@ -364,20 +533,25 @@ export default function ReportBuilderPreview() {
                     : CARDLESS_WIDGET_TYPES.has(wt)
                       ? widget.config?.showCard === true
                       : widget.config?.showCard !== false;
+                  const csMap = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top','holographic':'rb-card-holographic'};
                   const cardClass = isInvisible
                     ? 'overflow-visible flex flex-col min-h-0'
                     : showCard
-                      ? 'rounded rb-widget-card overflow-hidden flex flex-col'
+                      ? `rounded rb-widget-card overflow-hidden flex flex-col ${csMap[widget.config?.cardStyle] || ''}`
                       : 'overflow-hidden flex flex-col min-h-0 p-0.5';
                   return (
                     <div
                       key={item.i}
                       className={`${cardClass} flex flex-col min-h-0 relative`}
+                      style={{ '--widget-color': widget.config?.color || undefined }}
                     >
                       <WidgetRenderer
                         widget={widget}
+                        widgetId={widget.id}
                         tagValues={tagValues}
                         isPreview
+                        isSelected={false}
+                        tags={availableTags}
                         tagHistory={tagHistory}
                       />
                       {widget.config?.showSeparator && (
@@ -394,6 +568,8 @@ export default function ReportBuilderPreview() {
               </GridLayout>
             </div>
           )}
+          </ReportTableTabLinkProvider>
+          </ThumbnailCaptureContext.Provider>
         </motion.div>
       </div>
     </div>

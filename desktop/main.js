@@ -47,6 +47,12 @@ const PG_PORT = 5435;
 const PG_DB = 'dynamic_db_hercules';
 const GRACE_PERIOD_DAYS = 7;
 
+// ─── OTA Update Config ──────────────────────────────────────────────────────
+const GITHUB_REPO = 'husam-hammami/Reporting_Module_v0.1';
+const GITHUB_RELEASES_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
+const VERSION_FILE = path.join(RESOURCES_DIR, 'version.txt');
+const BRANCH_FILE = path.join(RESOURCES_DIR, 'release_branch.txt');
+
 let mainWindow = null;
 let splashWindow = null;
 let wizardWindow = null;
@@ -54,7 +60,12 @@ let tray = null;
 let backendProcess = null;
 let backendRestarts = 0;
 let pgStarted = false;
+let otaInProgress = false;
+let lastUserActivity = Date.now();
+let liveOtaInterval = null;
 const MAX_BACKEND_RESTARTS = 3;
+const OTA_POLL_INTERVAL = 5 * 60 * 1000; // check every 5 minutes
+const IDLE_THRESHOLD = 60 * 1000;         // 60 seconds of no interaction
 
 // ─── Machine ID (must match backend/machine_id.py exactly) ──────────────────
 function getMachineId() {
@@ -244,8 +255,8 @@ function startPostgres() {
   console.log(`[Electron] Starting PostgreSQL on port ${PG_PORT}...`);
   spawn(PG_CTL, ['-D', PG_DATA_DIR, '-o', `-p ${PG_PORT}`, '-l', path.join(APPDATA_DIR, 'pg.log'), 'start'], {
     stdio: 'ignore',
-    detached: true,
-  }).unref();
+    windowsHide: true,
+  });
   pgStarted = true;
 }
 
@@ -338,6 +349,15 @@ function runInitDb() {
       'add_tag_history_archive_unique_universal.sql',
       'add_license_machine_info.sql',
       'add_site_and_license_name.sql',
+      'create_distribution_rules_table.sql',
+      'add_archive_granularity.sql',
+      'create_report_execution_log.sql',
+      'add_must_change_password.sql',
+      'create_hercules_ai_tables.sql',
+      'add_ai_summary_to_distribution.sql',
+      'add_license_module_entitlements.sql',
+      'add_order_tracking_to_report_templates.sql',
+      'add_distribution_content_mode.sql',
     ];
 
     for (const file of migrationOrder) {
@@ -417,6 +437,7 @@ function startBackend() {
     cwd: path.dirname(BACKEND_EXE),
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
   });
 
   backendProcess.stdout.on('data', (d) => console.log(`[Backend] ${d.toString().trim()}`));
@@ -464,6 +485,420 @@ function stopBackend() {
   backendProcess = null;
 }
 
+// ─── OTA Auto-Update ────────────────────────────────────────────────────────
+function getLocalVersion() {
+  for (const f of [VERSION_FILE, path.join(BACKEND_DIR, 'version.txt')]) {
+    try {
+      if (fs.existsSync(f)) return fs.readFileSync(f, 'utf-8').trim();
+    } catch { /* try next */ }
+  }
+  return '0.0.0';
+}
+
+function getReleaseBranch() {
+  for (const f of [BRANCH_FILE, path.join(BACKEND_DIR, 'release_branch.txt')]) {
+    try {
+      if (fs.existsSync(f)) return fs.readFileSync(f, 'utf-8').trim();
+    } catch { /* try next */ }
+  }
+  return process.env.RELEASE_BRANCH || 'Salalah_Mill_B';
+}
+
+function parseVersion(v) {
+  const m = String(v).match(/(\d+)\.(\d+)\.(\d+)/);
+  return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])] : [0, 0, 0];
+}
+
+function isNewer(remote, local) {
+  const r = parseVersion(remote);
+  const l = parseVersion(local);
+  for (let i = 0; i < 3; i++) {
+    if (r[i] > l[i]) return true;
+    if (r[i] < l[i]) return false;
+  }
+  return false;
+}
+
+function updateSplashStatus(message, percent) {
+  if (!splashWindow || splashWindow.isDestroyed()) return;
+  const safeMsg = message.replace(/'/g, "\\'");
+  splashWindow.webContents.executeJavaScript(
+    `document.getElementById('status').textContent='${safeMsg}';`
+  ).catch(() => {});
+  if (typeof percent === 'number') {
+    splashWindow.webContents.executeJavaScript(
+      `document.getElementById('progress-bar').style.display='block';` +
+      `document.getElementById('progress-fill').style.width='${Math.round(percent)}%';`
+    ).catch(() => {});
+  } else {
+    splashWindow.webContents.executeJavaScript(
+      `document.getElementById('progress-bar').style.display='none';`
+    ).catch(() => {});
+  }
+}
+
+function httpsGetJSON(url) {
+  const https = require('https');
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, {
+      headers: { 'User-Agent': 'HerculesDesktop/1.0', 'Accept': 'application/vnd.github+json' },
+      timeout: 15000,
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch { reject(new Error('Invalid JSON from GitHub')); }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+  });
+}
+
+function downloadFile(url, dest, onProgress) {
+  const https = require('https');
+  return new Promise((resolve, reject) => {
+    let redirects = 0;
+    const follow = (u) => {
+      https.get(u, { headers: { 'User-Agent': 'HerculesDesktop/1.0' }, timeout: 120000 }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          if (++redirects > 5) { reject(new Error('Too many redirects')); return; }
+          follow(res.headers.location);
+          return;
+        }
+        if (res.statusCode !== 200) {
+          reject(new Error(`Download failed: HTTP ${res.statusCode}`));
+          return;
+        }
+        const total = parseInt(res.headers['content-length'] || '0', 10);
+        let downloaded = 0;
+        const file = fs.createWriteStream(dest);
+        res.on('data', (chunk) => {
+          downloaded += chunk.length;
+          file.write(chunk);
+          if (total > 0 && onProgress) onProgress((downloaded / total) * 100);
+        });
+        res.on('end', () => {
+          file.end(() => {
+            if (total > 0 && downloaded < total) {
+              reject(new Error(`Incomplete download: ${downloaded}/${total} bytes`));
+            } else {
+              resolve();
+            }
+          });
+        });
+        res.on('error', (e) => { file.end(); reject(e); });
+      }).on('error', reject).on('timeout', function() { this.destroy(); reject(new Error('Download timeout')); });
+    };
+    follow(url);
+  });
+}
+
+function killExistingBackend() {
+  try {
+    execSync('taskkill /IM hercules-backend.exe /F', { stdio: 'pipe', timeout: 10000 });
+    console.log('[OTA] Killed existing hercules-backend.exe processes');
+  } catch { /* none running */ }
+}
+
+async function checkAndApplyUpdate() {
+  const localVer = getLocalVersion();
+  const branch = getReleaseBranch();
+  const slug = branch.replace(/\//g, '-').toLowerCase();
+  const prefix = slug + '-v';
+
+  console.log(`[OTA] Current version: ${localVer}, branch: ${branch} (${slug})`);
+  updateSplashStatus('Checking for updates...');
+
+  let releases;
+  try {
+    releases = await httpsGetJSON(`${GITHUB_RELEASES_URL}?per_page=20`);
+  } catch (err) {
+    console.warn('[OTA] Cannot reach GitHub (offline?):', err.message);
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+
+  if (!Array.isArray(releases)) {
+    console.warn('[OTA] Unexpected releases response');
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+
+  // Find the latest release matching our branch
+  let bestRelease = null;
+  let bestVersion = localVer;
+  for (const rel of releases) {
+    if (!rel.tag_name || !rel.tag_name.startsWith(prefix)) continue;
+    const ver = rel.tag_name.substring(prefix.length);
+    if (isNewer(ver, bestVersion)) {
+      bestVersion = ver;
+      bestRelease = rel;
+    }
+  }
+
+  if (!bestRelease) {
+    console.log('[OTA] Already up to date.');
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+
+  // Find the .zip OTA asset
+  const zipAsset = (bestRelease.assets || []).find(a => a.name.endsWith('.zip'));
+  if (!zipAsset) {
+    console.warn('[OTA] No .zip asset found in release', bestRelease.tag_name);
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+
+  console.log(`[OTA] Update available: ${localVer} → ${bestVersion}`);
+  otaInProgress = true;
+  updateSplashStatus(`Downloading update v${bestVersion}...`, 0);
+
+  const tmpZip = path.join(os.tmpdir(), zipAsset.name);
+  try {
+    await downloadFile(zipAsset.browser_download_url, tmpZip, (pct) => {
+      updateSplashStatus(`Downloading update v${bestVersion}... ${Math.round(pct)}%`, pct);
+    });
+  } catch (err) {
+    console.error('[OTA] Download failed:', err.message);
+    otaInProgress = false;
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+
+  updateSplashStatus('Installing update...');
+
+  // Kill any running backend before replacing files
+  killExistingBackend();
+
+  const backupDir = BACKEND_DIR + '_backup';
+  try {
+    // Remove old backup if exists
+    if (fs.existsSync(backupDir)) {
+      fs.rmSync(backupDir, { recursive: true, force: true });
+    }
+
+    // Backup current backend
+    if (fs.existsSync(BACKEND_DIR)) {
+      fs.renameSync(BACKEND_DIR, backupDir);
+      console.log('[OTA] Backed up current backend');
+    }
+
+    // Extract zip — the zip contains a backend/ folder at root
+    execSync(
+      `powershell -NoProfile -Command "Expand-Archive -Path '${tmpZip}' -DestinationPath '${RESOURCES_DIR}' -Force"`,
+      { stdio: 'pipe', timeout: 120000 }
+    );
+    console.log('[OTA] Extracted update');
+
+    // Verify extraction worked
+    if (!fs.existsSync(BACKEND_EXE)) {
+      throw new Error('Backend exe not found after extraction');
+    }
+
+    // Write new version
+    fs.writeFileSync(VERSION_FILE, bestVersion, 'utf-8');
+    console.log(`[OTA] Updated version file to ${bestVersion}`);
+
+    // Clean up backup and temp zip
+    if (fs.existsSync(backupDir)) {
+      fs.rmSync(backupDir, { recursive: true, force: true });
+    }
+    try { fs.unlinkSync(tmpZip); } catch { /* ignore */ }
+
+    console.log(`[OTA] Successfully updated to v${bestVersion}`);
+    otaInProgress = false;
+    updateSplashStatus(`Updated to v${bestVersion}!`);
+    return bestVersion;
+
+  } catch (err) {
+    console.error('[OTA] Install failed, rolling back:', err.message);
+    // Rollback: remove partial extraction, restore backup
+    if (fs.existsSync(BACKEND_DIR) && fs.existsSync(backupDir)) {
+      try { fs.rmSync(BACKEND_DIR, { recursive: true, force: true }); } catch { /* ignore */ }
+    }
+    if (fs.existsSync(backupDir)) {
+      try { fs.renameSync(backupDir, BACKEND_DIR); } catch { /* critical failure */ }
+    }
+    try { fs.unlinkSync(tmpZip); } catch { /* ignore */ }
+    otaInProgress = false;
+    updateSplashStatus('Starting services...');
+    return null;
+  }
+}
+
+// ─── Live OTA (background polling + idle-aware restart) ─────────────────────
+
+/**
+ * Check for update silently (no splash, no UI). Returns release info or null.
+ */
+async function checkForUpdateSilently() {
+  if (otaInProgress) return null;
+  const localVer = getLocalVersion();
+  const branch = getReleaseBranch();
+  const slug = branch.replace(/\//g, '-').toLowerCase();
+  const prefix = slug + '-v';
+
+  let releases;
+  try {
+    releases = await httpsGetJSON(`${GITHUB_RELEASES_URL}?per_page=10`);
+  } catch { return null; }
+
+  if (!Array.isArray(releases)) return null;
+
+  let bestRelease = null;
+  let bestVersion = localVer;
+  for (const rel of releases) {
+    if (!rel.tag_name || !rel.tag_name.startsWith(prefix)) continue;
+    const ver = rel.tag_name.substring(prefix.length);
+    if (isNewer(ver, bestVersion)) {
+      bestVersion = ver;
+      bestRelease = rel;
+    }
+  }
+
+  if (!bestRelease) return null;
+
+  const zipAsset = (bestRelease.assets || []).find(a => a.name.endsWith('.zip'));
+  if (!zipAsset) return null;
+
+  return { version: bestVersion, zipUrl: zipAsset.browser_download_url, zipName: zipAsset.name };
+}
+
+/**
+ * Download, extract, and restart — called only when idle.
+ */
+async function applyUpdateAndRestart(updateInfo) {
+  if (otaInProgress) return;
+  otaInProgress = true;
+  console.log(`[LiveOTA] Applying update to v${updateInfo.version}...`);
+
+  const tmpZip = path.join(os.tmpdir(), updateInfo.zipName);
+  try {
+    // Download silently (no splash)
+    await downloadFile(updateInfo.zipUrl, tmpZip, (pct) => {
+      console.log(`[LiveOTA] Downloading... ${Math.round(pct)}%`);
+    });
+
+    // Stop the running backend
+    stopBackend();
+    killExistingBackend();
+
+    // Backup + extract (same logic as startup OTA)
+    const backupDir = BACKEND_DIR + '_backup';
+    if (fs.existsSync(backupDir)) {
+      fs.rmSync(backupDir, { recursive: true, force: true });
+    }
+    if (fs.existsSync(BACKEND_DIR)) {
+      fs.renameSync(BACKEND_DIR, backupDir);
+    }
+
+    execSync(
+      `powershell -NoProfile -Command "Expand-Archive -Path '${tmpZip}' -DestinationPath '${RESOURCES_DIR}' -Force"`,
+      { stdio: 'pipe', timeout: 120000 }
+    );
+
+    if (!fs.existsSync(BACKEND_EXE)) {
+      throw new Error('Backend exe not found after extraction');
+    }
+
+    fs.writeFileSync(VERSION_FILE, updateInfo.version, 'utf-8');
+
+    // Clean up
+    if (fs.existsSync(backupDir)) {
+      fs.rmSync(backupDir, { recursive: true, force: true });
+    }
+    try { fs.unlinkSync(tmpZip); } catch { /* ignore */ }
+
+    console.log(`[LiveOTA] Updated to v${updateInfo.version}. Restarting backend...`);
+
+    // Restart backend
+    backendRestarts = 0;
+    startBackend();
+    await waitForBackend();
+
+    // Reload the main window to pick up new frontend
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('ota-updated', updateInfo.version);
+      mainWindow.reload();
+    }
+
+    otaInProgress = false;
+    console.log(`[LiveOTA] v${updateInfo.version} is live.`);
+
+  } catch (err) {
+    console.error('[LiveOTA] Update failed, rolling back:', err.message);
+    const backupDir = BACKEND_DIR + '_backup';
+    if (fs.existsSync(BACKEND_DIR) && fs.existsSync(backupDir)) {
+      try { fs.rmSync(BACKEND_DIR, { recursive: true, force: true }); } catch { /* */ }
+    }
+    if (fs.existsSync(backupDir)) {
+      try { fs.renameSync(backupDir, BACKEND_DIR); } catch { /* */ }
+    }
+    try { fs.unlinkSync(tmpZip); } catch { /* */ }
+
+    // Restart backend from backup
+    backendRestarts = 0;
+    try { startBackend(); await waitForBackend(); } catch { /* */ }
+
+    otaInProgress = false;
+  }
+}
+
+/**
+ * Start periodic background OTA check. Called after app is fully loaded.
+ */
+function startLiveOTA() {
+  if (liveOtaInterval) return;
+  console.log('[LiveOTA] Background update check enabled (every 5 min, restart when idle).');
+
+  liveOtaInterval = setInterval(async () => {
+    if (otaInProgress) return;
+
+    const updateInfo = await checkForUpdateSilently();
+    if (!updateInfo) return;
+
+    console.log(`[LiveOTA] Update found: v${updateInfo.version}. Waiting for idle...`);
+
+    // Wait for idle before applying
+    const waitForIdle = () => {
+      const idleCheck = setInterval(async () => {
+        const idleMs = Date.now() - lastUserActivity;
+        if (idleMs >= IDLE_THRESHOLD && !otaInProgress) {
+          clearInterval(idleCheck);
+          console.log(`[LiveOTA] User idle for ${Math.round(idleMs / 1000)}s. Applying update...`);
+          await applyUpdateAndRestart(updateInfo);
+        }
+      }, 10000); // check every 10 seconds
+
+      // Give up after 30 minutes of waiting for idle
+      setTimeout(() => clearInterval(idleCheck), 30 * 60 * 1000);
+    };
+
+    waitForIdle();
+  }, OTA_POLL_INTERVAL);
+}
+
+/**
+ * Track user activity in the main window for idle detection.
+ */
+function trackUserActivity() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  // Track mouse/keyboard events via the web contents
+  mainWindow.webContents.on('before-input-event', () => {
+    lastUserActivity = Date.now();
+  });
+
+  // Also track window focus
+  mainWindow.on('focus', () => { lastUserActivity = Date.now(); });
+
+  // Track mouse movement via IPC (optional, the input event covers keyboard + clicks)
+  console.log('[LiveOTA] User activity tracking enabled.');
+}
+
 // ─── Windows ─────────────────────────────────────────────────────────────────
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
@@ -472,6 +907,17 @@ function createSplashWindow() {
     webPreferences: { nodeIntegration: false, contextIsolation: true },
   });
   splashWindow.loadFile(path.join(__dirname, 'splash.html'));
+  splashWindow.on('close', (e) => {
+    if (otaInProgress) e.preventDefault();
+  });
+  // Fallback: auto-destroy splash after 15s
+  setTimeout(() => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      console.warn('[Electron] Splash timeout — force destroying');
+      splashWindow.destroy();
+      splashWindow = null;
+    }
+  }, 15000);
 }
 
 function createMainWindow() {
@@ -486,12 +932,30 @@ function createMainWindow() {
   });
   mainWindow.loadURL(`http://127.0.0.1:${BACKEND_PORT}`);
   mainWindow.once('ready-to-show', () => {
-    if (splashWindow) { splashWindow.close(); splashWindow = null; }
+    if (splashWindow && !splashWindow.isDestroyed()) { splashWindow.destroy(); splashWindow = null; }
     mainWindow.maximize();
     mainWindow.show();
   });
   mainWindow.on('close', (e) => {
-    if (tray) { e.preventDefault(); mainWindow.hide(); }
+    e.preventDefault();
+    if (tray) {
+      mainWindow.hide();
+    } else {
+      const choice = require('electron').dialog.showMessageBoxSync(mainWindow, {
+        type: 'warning',
+        buttons: ['Minimize', 'Quit'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Hercules Reporting Module',
+        message: 'Closing will stop PLC polling and report distribution.\nMinimize instead?',
+      });
+      if (choice === 1) {
+        mainWindow.removeAllListeners('close');
+        app.quit();
+      } else {
+        mainWindow.minimize();
+      }
+    }
   });
 }
 
@@ -613,6 +1077,24 @@ ipcMain.handle('save-config', async (_event, config) => {
   }
 });
 
+// ─── IPC: Restart for OTA update ─────────────────────────────────────────────
+ipcMain.handle('restart-for-update', async () => {
+  console.log('[Electron] Restart requested for update...');
+  stopBackend();
+  stopPostgres();
+  app.relaunch();
+  app.exit(0);
+});
+
+// ─── IPC: Clean restart (from UI) ───────────────────────────────────────────
+ipcMain.handle('restart-app', async () => {
+  console.log('[Electron] Clean restart requested by user...');
+  stopBackend();
+  stopPostgres();
+  app.relaunch();
+  app.exit(0);
+});
+
 // ─── Setup wizard ────────────────────────────────────────────────────────────
 function showSetupWizard() {
   return new Promise((resolve) => {
@@ -667,6 +1149,15 @@ app.on('ready', async () => {
     // 3. Show splash
     createSplashWindow();
 
+    // 3.5. OTA auto-update (before starting backend — no locked files)
+    try {
+      const updatedVer = await checkAndApplyUpdate();
+      if (updatedVer) console.log(`[Electron] Updated to v${updatedVer}`);
+    } catch (err) {
+      console.warn('[Electron] OTA check failed (continuing):', err.message);
+    }
+    updateSplashStatus('Starting services...');
+
     // 4. Port checks
     const pgFree = await isPortFree(PG_PORT);
     const backendFree = await isPortFree(BACKEND_PORT);
@@ -703,6 +1194,10 @@ app.on('ready', async () => {
     createTray();
     startPeriodicLicenseCheck();
 
+    // 8. Start live OTA (background polling + idle-aware auto-restart)
+    trackUserActivity();
+    startLiveOTA();
+
   } catch (err) {
     console.error('[Electron] Startup error:', err);
     dialog.showErrorBox('Startup Error', err.message);
@@ -716,5 +1211,6 @@ app.on('before-quit', () => {
 });
 
 app.on('window-all-closed', () => {
+  if (otaInProgress) return; // Don't quit during OTA update
   if (!tray) app.quit();
 });

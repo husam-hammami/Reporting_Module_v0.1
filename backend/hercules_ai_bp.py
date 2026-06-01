@@ -4,16 +4,19 @@ Hercules AI Blueprint — Phase 1
 Tag profiling, classification, config management, and preview summary.
 """
 
+import base64
 import json
 import logging
 import re
 import sys
 from contextlib import closing
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from psycopg2.extras import RealDictCursor
+
+import ai_prompts
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +35,10 @@ def _ensure_tables():
     try:
         get_conn = _get_db_connection()
         conn = get_conn()
-        conn.autocommit = True
-        with conn.cursor() as cur:
+        # Get the real psycopg2 connection (not the PooledConnection wrapper)
+        actual = conn._conn if hasattr(conn, '_conn') else conn
+        actual.autocommit = True
+        with actual.cursor() as cur:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS hercules_ai_tag_profiles (
                     id SERIAL PRIMARY KEY,
@@ -64,7 +69,7 @@ def _ensure_tables():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_hai_profiles_line ON hercules_ai_tag_profiles(line_name)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_hai_profiles_reviewed ON hercules_ai_tag_profiles(is_reviewed)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_hai_profiles_tracked ON hercules_ai_tag_profiles(is_tracked)")
-            # Triggers — ignore if already exist
+            # Triggers — ignore if already exist (each in its own savepoint so failures don't abort)
             for tbl in ('hercules_ai_tag_profiles', 'hercules_ai_config'):
                 try:
                     cur.execute(f"""
@@ -73,9 +78,12 @@ def _ensure_tables():
                             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
                     """)
                 except Exception:
-                    pass  # trigger already exists
+                    pass  # trigger already exists or function missing — non-critical
             # distribution column
-            cur.execute("ALTER TABLE distribution_rules ADD COLUMN IF NOT EXISTS include_ai_summary BOOLEAN DEFAULT false")
+            try:
+                cur.execute("ALTER TABLE distribution_rules ADD COLUMN IF NOT EXISTS include_ai_summary BOOLEAN DEFAULT false")
+            except Exception:
+                pass  # table may not exist yet
         conn.close()
         _tables_ensured = True
         logger.info("Hercules AI tables ensured.")
@@ -110,6 +118,7 @@ _CONFIG_DEFAULTS = {
     'llm_model': {'value': 'claude-opus-4-6'},
     'local_server_url': {'value': 'http://localhost:1234/v1'},
     'local_model': {'value': ''},
+    'electricity_tariff_omr_per_kwh': {'value': 0.025},
 }
 
 
@@ -455,6 +464,13 @@ def scan_reports():
                             WHERE id = %s
                         """, (prof['id'],))
 
+            # Auto-clean stale deleted profiles older than 30 days
+            cur.execute("""
+                DELETE FROM hercules_ai_tag_profiles
+                WHERE data_status = 'deleted' AND source = 'auto'
+                  AND updated_at < NOW() - INTERVAL '30 days'
+            """)
+
             # Revival: tags re-added
             for tag_name, prof in existing.items():
                 if prof['data_status'] == 'deleted' and tag_name in all_tags:
@@ -585,6 +601,26 @@ def bulk_update_profiles():
         actual.commit()
 
     return jsonify({'updated': updated})
+
+
+@hercules_ai_bp.route('/hercules-ai/profiles/bulk', methods=['DELETE'])
+@login_required
+def bulk_delete_profiles():
+    """Permanently delete profiles by ID list."""
+    data = request.get_json()
+    ids = data.get('ids', [])
+    if not ids:
+        return jsonify({'error': 'No IDs provided'}), 400
+
+    get_conn = _get_db_connection()
+    with closing(get_conn()) as conn:
+        actual = conn._conn if hasattr(conn, '_conn') else conn
+        cur = actual.cursor()
+        cur.execute("DELETE FROM hercules_ai_tag_profiles WHERE id = ANY(%s)", (ids,))
+        deleted = cur.rowcount
+        actual.commit()
+
+    return jsonify({'deleted': deleted})
 
 
 @hercules_ai_bp.route('/hercules-ai/profiles/<int:profile_id>', methods=['PUT'])
@@ -786,32 +822,38 @@ def preview_summary():
 
         # Build context from profiles
         cur.execute("""
-            SELECT tag_name, label, tag_type, line_name
+            SELECT tag_name, label, tag_type, line_name, evidence
             FROM hercules_ai_tag_profiles
             WHERE tag_name = ANY(%s) AND is_tracked = true
         """, (list(chosen_tags),))
-        profile_map = {r['tag_name']: r for r in cur.fetchall()}
+        profile_map = {}
+        for r in cur.fetchall():
+            evidence = r.get('evidence') or {}
+            if isinstance(evidence, str):
+                evidence = json.loads(evidence)
+            r['unit'] = evidence.get('unit', '')
+            profile_map[r['tag_name']] = r
 
         actual.commit()
 
-    # Build structured data table
+    # Build structured data table with aggregation context
     data_rows = []
-    for tag_name in sorted(chosen_tags):
+    for key, value in tag_data.items():
+        if '::' in key:
+            agg_prefix, tag_name = key.split('::', 1)
+        else:
+            tag_name = key
+            agg_prefix = 'last'
         prof = profile_map.get(tag_name, {})
-        # Check plain and namespaced keys
-        value = tag_data.get(tag_name)
-        if value is None:
-            for k, v in tag_data.items():
-                if k.endswith('::' + tag_name):
-                    value = v
-                    break
-        if value is None:
-            value = 'N/A'
-
+        if not prof:
+            continue
+        unit = prof.get('unit', '')
         data_rows.append(
             f"{prof.get('label', tag_name) or tag_name} | "
             f"{prof.get('tag_type', 'unknown')} | "
+            f"{unit} | "
             f"{value} | "
+            f"{agg_prefix} | "
             f"{prof.get('line_name', '')}"
         )
 
@@ -822,33 +864,25 @@ def preview_summary():
     time_from = from_dt.strftime('%Y-%m-%d %H:%M')
     time_to = to_dt.strftime('%Y-%m-%d %H:%M')
 
-    prompt = f"""You summarize production data for plant managers. Be extremely concise.
+    # Extract report structure context
+    from distribution_engine import _extract_report_context
+    report_context = _extract_report_context({chosen_template['name']: lc})
 
-Report: {chosen_template['name']}
-Period: {time_from} to {time_to}
-
-Data (Label | Type | Value | Line):
-{structured_data}
-
-Output format — use EXACTLY this structure:
-**{chosen_template['name']}** — {{one-line verdict: running normally / reduced output / line down / no data}}
-
-• **Production**: {{key totals with values, or "No data recorded"}}
-• **Status**: {{equipment on/off states, only if notable}}
-• **Alerts**: {{zero counters, unusual values — or "None"}}
-
-Rules:
-- Maximum 4 bullet points. No bullet longer than 15 words.
-- Only cite numbers from the data above. Never calculate or infer.
-- N/A values mean no data was recorded — say "no data", don't speculate why.
-- Skip any bullet that has nothing useful to report.
-- No paragraphs. No filler. No recommendations."""
+    prompt = ai_prompts.build_single_report_prompt(
+        report_name=chosen_template['name'],
+        time_from=time_from,
+        time_to=time_to,
+        structured_data=structured_data,
+        report_context=report_context,
+    )
 
     try:
         import ai_provider
-        summary = ai_provider.generate(prompt, ai_config)
+        summary = ai_provider.generate(prompt, ai_config, timeout=30)
         if not summary:
-            return jsonify({'error': 'Could not generate summary. Check your provider settings.'}), 400
+            logger.warning("Preview summary returned empty — provider: %s, model: %s",
+                           ai_config.get('ai_provider'), ai_config.get('llm_model'))
+            return jsonify({'error': 'Could not generate summary. Check your provider settings and API key.'}), 400
         return jsonify({
             'summary': summary,
             'report_name': chosen_template['name'],
@@ -858,10 +892,1032 @@ Rules:
         logger.warning("Preview summary failed: %s", e)
         err_msg = str(e)
         if 'authentication' in err_msg.lower() or 'api key' in err_msg.lower() or '401' in err_msg:
-            return jsonify({'error': 'Could not generate summary. Check your API key.'}), 400
+            return jsonify({'error': 'Invalid API key. Please re-enter your key and test the connection.'}), 400
         if 'timeout' in err_msg.lower() or 'timed out' in err_msg.lower():
-            return jsonify({'error': 'Summary generation timed out. Try again.'}), 504
+            return jsonify({'error': 'Summary generation timed out. Try again or use a faster model (Haiku).'}), 504
+        if 'not_found' in err_msg.lower() or 'model' in err_msg.lower():
+            return jsonify({'error': f'Model error: {err_msg}'}), 400
         return jsonify({'error': f'Could not generate summary: {err_msg}'}), 500
+
+
+def _fmt_trend_val(val, unit=''):
+    """Format a numeric value for trend display (e.g. 1234567 -> '1,234.6K')."""
+    if val is None or val == 'N/A':
+        return 'N/A'
+    try:
+        v = float(val)
+        if v >= 1_000_000:
+            s = f'{v/1_000_000:,.1f}M'
+        elif v >= 1_000:
+            s = f'{v/1_000:,.1f}K'
+        else:
+            s = f'{v:,.0f}'
+        return f'{s} {unit}'.strip() if unit else s
+    except (ValueError, TypeError):
+        return str(val)
+
+
+def _safe_float(val):
+    """Safely convert a value to float, returning None on failure."""
+    if val is None or val == 'N/A':
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
+def _humanize_tag_name(tag_name):
+    """Convert raw PLC tag name to readable label.
+
+    MilB_C32_Total_Kwh → C32 Total Kwh
+    B1_Deopt_Emptying → B1 Deopt Emptying
+    """
+    name = re.sub(r'^(?:Mil(?:l)?[_ ]?[A-Z]?[_ ]?)', '', tag_name)
+    name = name.replace('_', ' ').strip()
+    parts = name.split()
+    result = []
+    for p in parts:
+        if p.isupper() or re.match(r'^[A-Z]\d', p):
+            result.append(p)
+        else:
+            result.append(p.capitalize())
+    return ' '.join(result) or tag_name
+
+
+def _collect_tag_data_for_period(report_ids, from_dt, to_dt):
+    """Shared helper: load templates, fetch current + previous period tag data.
+
+    Returns a dict on success:
+        {
+            'templates': list of template rows,
+            'all_tag_data': dict of {tag_key: value} for current period,
+            'prev_tag_data': dict of {tag_key: value} for previous period,
+            'report_names': list of report name strings,
+            'report_map': list of {id, name},
+            'all_layout_configs': dict of {name: layout_config},
+            'profile_map': dict of {tag_name: profile_row},
+            'ai_config': dict from hercules_ai_config,
+            'prev_from': datetime, 'prev_to': datetime,
+        }
+    On error returns a tuple (error_message, http_status_code).
+    """
+    from distribution_engine import extract_all_tags, _fetch_tag_data_multi_agg
+
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor(cursor_factory=RealDictCursor)
+
+            config = _get_config(cur)
+            if not config.get('setup_completed'):
+                return ('Complete AI setup first', 400)
+
+            ai_config = _get_raw_config(cur)
+
+            # Load templates
+            if report_ids and isinstance(report_ids, list) and len(report_ids) > 0:
+                cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE id = ANY(%s) AND is_active = true",
+                            (report_ids,))
+            else:
+                cur.execute("SELECT id, name, layout_config FROM report_builder_templates WHERE is_active = true ORDER BY name")
+            templates = cur.fetchall()
+
+            if not templates:
+                return ('No active report templates found', 400)
+
+            actual.commit()
+    except Exception as e:
+        logger.exception("_collect_tag_data: failed to load config/templates: %s", e)
+        return (f'Failed to load data: {e}', 500)
+
+    # Previous period (same duration shifted back)
+    period_duration = to_dt - from_dt
+    prev_to = from_dt
+    prev_from = prev_to - period_duration
+
+    try:
+        all_tag_data = {}
+        prev_tag_data = {}
+        all_layout_configs = {}
+        report_names = []
+        report_map = []
+        for tpl in templates:
+            tpl_name = tpl.get('name') or f"Report_{tpl.get('id', '?')}"
+            try:
+                lc = tpl.get('layout_config')
+                if not lc:
+                    logger.debug("_collect_tag_data: skipping '%s' — no layout_config", tpl_name)
+                    continue
+                if isinstance(lc, str):
+                    try:
+                        lc = json.loads(lc)
+                    except (json.JSONDecodeError, TypeError):
+                        logger.debug("_collect_tag_data: skipping '%s' — invalid JSON", tpl_name)
+                        continue
+                if not isinstance(lc, dict) or not lc:
+                    logger.debug("_collect_tag_data: skipping '%s' — layout_config is %s", tpl_name, type(lc))
+                    continue
+                tags = extract_all_tags(lc)
+                if not tags:
+                    continue
+                # Current period
+                td = _fetch_tag_data_multi_agg(lc, tags, from_dt, to_dt)
+                all_tag_data.update(td)
+                # Previous period
+                ptd = _fetch_tag_data_multi_agg(lc, tags, prev_from, prev_to)
+                prev_tag_data.update(ptd)
+                all_layout_configs[tpl_name] = lc
+                report_names.append(tpl_name)
+                report_map.append({'id': tpl['id'], 'name': tpl_name})
+            except Exception as tpl_err:
+                logger.warning("_collect_tag_data: error processing template '%s': %s", tpl_name, tpl_err, exc_info=True)
+                continue
+
+        if not report_names:
+            return ('Selected reports have no data or configuration. Try different reports.', 400)
+
+        # Load profiles
+        raw_tags = set()
+        for k in all_tag_data:
+            raw_tags.add(k.split('::', 1)[1] if '::' in k else k)
+
+        profile_map = {}
+        if raw_tags:
+            get_conn2 = _get_db_connection()
+            with closing(get_conn2()) as conn2:
+                actual2 = conn2._conn if hasattr(conn2, '_conn') else conn2
+                cur2 = actual2.cursor(cursor_factory=RealDictCursor)
+                cur2.execute("""SELECT tag_name, label, tag_type, line_name, evidence
+                               FROM hercules_ai_tag_profiles
+                               WHERE tag_name = ANY(%s) AND is_tracked = true""",
+                             (list(raw_tags),))
+                for r in cur2.fetchall():
+                    evidence = r.get('evidence') or {}
+                    if isinstance(evidence, str):
+                        evidence = json.loads(evidence)
+                    r['unit'] = evidence.get('unit', '')
+                    profile_map[r['tag_name']] = r
+                actual2.commit()
+
+        # Fetch 4-period trend for counter tags (production metrics)
+        trend_data = {}  # {tag_name: {period_idx: value}}
+        counter_tags = [
+            tn for tn, p in profile_map.items()
+            if p.get('tag_type') == 'counter'
+        ]
+
+        if counter_tags:
+            for i in range(2, 5):  # periods 2, 3, 4 (period 1 = prev_tag_data)
+                p_to = from_dt - period_duration * (i - 1)
+                p_from = p_to - period_duration
+                try:
+                    for tpl in templates:
+                        lc = tpl.get('layout_config') or tpl.get('lc')
+                        if not lc:
+                            continue
+                        if isinstance(lc, str):
+                            lc = json.loads(lc)
+                        tags_in = extract_all_tags(lc)
+                        relevant = [t for t in tags_in if t in counter_tags]
+                        if relevant:
+                            vals = _fetch_tag_data_multi_agg(lc, relevant, p_from, p_to)
+                            for key, val in (vals or {}).items():
+                                tag_name = key.split('::')[-1] if '::' in key else key
+                                agg = key.split('::')[0] if '::' in key else 'last'
+                                if agg == 'delta' and tag_name in counter_tags:
+                                    if tag_name not in trend_data:
+                                        trend_data[tag_name] = {}
+                                    trend_data[tag_name][i] = val
+                except Exception as e:
+                    logger.warning("Trend fetch for period %d failed: %s", i, e)
+
+        return {
+            'templates': templates,
+            'all_tag_data': all_tag_data,
+            'prev_tag_data': prev_tag_data,
+            'report_names': report_names,
+            'report_map': report_map,
+            'all_layout_configs': all_layout_configs,
+            'profile_map': profile_map,
+            'ai_config': ai_config,
+            'prev_from': prev_from,
+            'prev_to': prev_to,
+            'trend_data': trend_data,
+            'counter_tags': counter_tags,
+        }
+    except Exception as e:
+        logger.exception("_collect_tag_data: failed to collect tag data: %s", e)
+        return (f'Failed to collect data: {e}', 500)
+
+
+# =============================================================================
+# Structured-briefing helpers (Plan 1 — Phase B)
+# =============================================================================
+
+def _known_assets_from_profiles(profile_map):
+    """Derive the set of valid asset names from tag profiles (line_name)."""
+    assets = set()
+    for p in (profile_map or {}).values():
+        ln = (p.get('line_name') or '').strip()
+        if ln:
+            assets.add(ln)
+    return assets
+
+
+def _build_equipment_strip(all_tag_data, profile_map):
+    """Build the equipment strip: up to 10 boolean-tagged assets."""
+    items = []
+    seen_lines = set()
+    now_iso = datetime.now().isoformat()
+    for key, val in (all_tag_data or {}).items():
+        tag_name = key.split('::')[-1] if '::' in key else key
+        prof = (profile_map or {}).get(tag_name) or {}
+        if prof.get('tag_type') != 'boolean':
+            continue
+        line_name = (prof.get('line_name') or '').strip()
+        if not line_name or line_name in seen_lines:
+            continue
+        seen_lines.add(line_name)
+
+        is_on = False
+        try:
+            if isinstance(val, bool):
+                is_on = val
+            elif isinstance(val, (int, float)):
+                is_on = val > 0
+            elif val is not None:
+                is_on = str(val).strip().lower() in ('true', '1', 'on')
+        except Exception:
+            is_on = False
+
+        status = 'ok' if is_on else 'idle'
+        asset_short = (line_name[:4] or 'ASSET').upper()
+        items.append({
+            'asset_short': asset_short,
+            'asset_name': line_name,
+            'status': status,
+            'last_change': now_iso,
+        })
+        if len(items) >= 10:
+            break
+    return items
+
+
+def _build_production_ring(templates, all_tag_data, from_dt, to_dt):
+    """Return production-target ring data, or None if we have no target.
+
+    First ship: we do not have a server-side target registry. Return None so
+    the UI hides the ring gracefully.
+    """
+    return None
+
+
+def _build_timeline(templates, from_dt, to_dt):
+    """Build the timeline strip: order_change events from dynamic_orders table
+    + shift boundaries from shifts_config. OK to return empty events[] if the
+    query fails; UI handles empty gracefully.
+    """
+    events = []
+    shifts = []
+
+    # ── Events: dynamic_orders ──────────────────────────────────────────
+    try:
+        get_conn = _get_db_connection()
+        with closing(get_conn()) as conn:
+            actual = conn._conn if hasattr(conn, '_conn') else conn
+            cur = actual.cursor(cursor_factory=RealDictCursor)
+            # Guard: table may not exist in all deployments
+            cur.execute("""
+                SELECT to_regclass('public.dynamic_orders') AS tbl
+            """)
+            row = cur.fetchone()
+            if row and row.get('tbl'):
+                cur.execute("""
+                    SELECT order_name, status, start_time, end_time
+                    FROM dynamic_orders
+                    WHERE (start_time BETWEEN %s AND %s)
+                       OR (end_time BETWEEN %s AND %s)
+                    ORDER BY COALESCE(start_time, end_time) ASC
+                    LIMIT 16
+                """, (from_dt, to_dt, from_dt, to_dt))
+                for r in cur.fetchall() or []:
+                    ts = r.get('start_time') or r.get('end_time')
+                    if not ts:
+                        continue
+                    events.append({
+                        'timestamp': ts.isoformat() if hasattr(ts, 'isoformat') else str(ts),
+                        'category': 'order_change',
+                        'title': (r.get('order_name') or 'Order change'),
+                        'description': f"status={r.get('status') or 'n/a'}",
+                    })
+            actual.commit()
+    except Exception as e:
+        logger.warning("_build_timeline: dynamic_orders query failed (non-blocking): %s", e)
+
+    # ── Shifts ──────────────────────────────────────────────────────────
+    try:
+        import shifts_config as _shifts_cfg
+        cfg = _shifts_cfg.get_shifts_config() or {}
+        shift_defs = cfg.get('shifts') or []
+
+        # Project shift boundaries across the period
+        day_cursor = from_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_day = to_dt.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        while day_cursor <= end_day and len(shifts) < 32:
+            for s in shift_defs:
+                try:
+                    sh, sm = [int(p) for p in (s.get('start') or '00:00').split(':')[:2]]
+                    eh, em = [int(p) for p in (s.get('end') or '00:00').split(':')[:2]]
+                except Exception:
+                    continue
+                start_dt = day_cursor.replace(hour=sh, minute=sm)
+                end_dt = day_cursor.replace(hour=eh, minute=em)
+                if end_dt <= start_dt:
+                    end_dt += timedelta(days=1)
+                # Keep only boundaries that touch our window
+                if end_dt < from_dt or start_dt > to_dt:
+                    continue
+                shifts.append({
+                    'start': start_dt.isoformat(),
+                    'end': end_dt.isoformat(),
+                    'label': s.get('name') or '',
+                })
+            day_cursor += timedelta(days=1)
+    except Exception as e:
+        logger.warning("_build_timeline: shifts_config read failed (non-blocking): %s", e)
+
+    # Rule 4: truncate events to 16
+    return {'events': events[:16], 'shifts': shifts}
+
+
+def _derive_overview_markdown(sanitised):
+    """Build a short markdown overview from status_hero + top 3 attention_items.
+
+    Used to populate the legacy `overview` field so distribution_engine and
+    the old HerculesAISetup.jsx:534 rendering path keep working.
+    """
+    try:
+        sh = sanitised.get('status_hero') or {}
+        verdict = sh.get('verdict') or 'Briefing ready'
+        lines = [f"**Plant Status** — {verdict}"]
+        items = (sanitised.get('attention_items') or [])[:3]
+        for it in items:
+            asset = it.get('asset', '')
+            headline = it.get('headline', '')
+            bullet = f"• **{asset}**: {headline}" if asset else f"• {headline}"
+            lines.append(bullet)
+        if not items:
+            lines.append("• **Alerts**: None")
+        return '\n\n'.join(lines)
+    except Exception as e:
+        logger.warning("_derive_overview_markdown failed: %s", e)
+        return '**Plant Status** — Briefing ready'
+
+
+def _derive_reports_from_assets(assets, report_map):
+    """Build the legacy `reports: [{id, name, summary}]` list by iterating
+    assets and mapping related_report_ids back to the report registry."""
+    report_by_id = {r['id']: r for r in (report_map or []) if r.get('id') is not None}
+    out = []
+    for a in (assets or []):
+        name = a.get('name', '')
+        notes = a.get('notes') or []
+        summary_parts = []
+        if notes:
+            summary_parts.extend(f"• {n}" for n in notes[:3])
+        hmetrics = a.get('headline_metrics') or []
+        for m in hmetrics[:2]:
+            label = m.get('label') or ''
+            value = m.get('value')
+            unit = m.get('unit') or ''
+            if value is not None:
+                summary_parts.append(f"• {label}: {value} {unit}".rstrip())
+        summary_text = '\n'.join(summary_parts) or f"Status: {a.get('status', 'ok')}"
+        related = a.get('related_report_ids') or []
+        if related:
+            # Emit one row per related report id (keeps old UI happy)
+            for rid in related:
+                r = report_by_id.get(rid)
+                out.append({
+                    'id': rid,
+                    'name': r['name'] if r else name,
+                    'summary': summary_text,
+                })
+        else:
+            out.append({'id': None, 'name': name, 'summary': summary_text})
+    return out
+
+
+def _call_llm_json(prompt_bundle, ai_config, known_assets, period_from,
+                   period_to, max_tokens=2000, timeout=45):
+    """Call the LLM with the JSON-mode prompt, parse + validate, and retry once
+    on validation failure. Returns a sanitised dict (never raises).
+    """
+    import ai_provider
+
+    def _single_call(bundle, call_timeout=None):
+        try:
+            return ai_provider.generate(
+                bundle['user'], ai_config,
+                timeout=call_timeout or timeout,
+                max_tokens=max_tokens,
+                system=bundle.get('system'),
+            )
+        except Exception as e:
+            logger.warning("_call_llm_json: provider raised %s", e)
+            return None
+
+    def _parse_json(raw_text):
+        if not raw_text:
+            return None, 'empty response'
+        s = raw_text.strip()
+        # Strip markdown code fences if the model wrapped the output
+        if s.startswith('```'):
+            s = re.sub(r'^```(?:json)?\s*', '', s)
+            s = re.sub(r'\s*```\s*$', '', s)
+        # Extract the outermost JSON object
+        first = s.find('{')
+        last = s.rfind('}')
+        if first == -1 or last == -1 or last <= first:
+            return None, 'no JSON object found'
+        try:
+            return json.loads(s[first:last + 1]), None
+        except Exception as e:
+            return None, f'JSON parse failed: {e}'
+
+    raw = _single_call(prompt_bundle)
+    parsed, parse_err = _parse_json(raw)
+    errs = ai_prompts.validate_insights_schema(parsed) if parsed is not None else [parse_err or 'no parse']
+
+    if errs:
+        logger.warning("LLM JSON validation failed on first try: %s", errs[:3])
+        # Retry once with the error fed back
+        retry_bundle = dict(prompt_bundle)
+        retry_bundle['user'] = (
+            prompt_bundle['user']
+            + '\n\nYour previous output failed validation:\n'
+            + '\n'.join(f'- {e}' for e in errs[:5])
+            + '\nReturn a new JSON object that fixes these issues.'
+        )
+        raw2 = _single_call(retry_bundle, call_timeout=30)  # shorter retry
+        parsed2, parse_err2 = _parse_json(raw2)
+        errs2 = ai_prompts.validate_insights_schema(parsed2) if parsed2 is not None else [parse_err2 or 'no parse']
+        if not errs2:
+            parsed = parsed2
+        else:
+            logger.warning("LLM JSON validation failed on retry too: %s — using stub", errs2[:3])
+            parsed = ai_prompts.minimal_insights_stub()
+
+    sanitised = ai_prompts.sanitize_insights_payload(
+        parsed, known_assets, period_from, period_to
+    )
+    return sanitised
+
+
+def _assemble_insights_response(sanitised, computed, period, meta):
+    """Merge the sanitised LLM output with server-computed fields into the
+    final /insights response dict. Does NOT include legacy fields — those
+    are appended by the endpoint after calling this.
+    """
+    # data_age_minutes: how old is the newest data point (best-effort 0)
+    data_age_minutes = 0
+    try:
+        to_dt = datetime.fromisoformat(period['to'].replace('Z', '+00:00')).replace(tzinfo=None)
+        delta = datetime.now() - to_dt
+        data_age_minutes = max(0, int(delta.total_seconds() // 60))
+    except Exception:
+        data_age_minutes = 0
+
+    status_hero = dict(sanitised.get('status_hero') or {})
+    status_hero.setdefault('level', 'warn')
+    status_hero.setdefault('verdict', 'Briefing ready')
+    status_hero['data_age_minutes'] = data_age_minutes
+
+    # Ensure attention_items carry the period-scoped drill object
+    cleaned_attn = []
+    for it in (sanitised.get('attention_items') or []):
+        entry = dict(it)
+        drill = dict(entry.get('drill') or {})
+        drill.setdefault('from', period.get('from', ''))
+        drill.setdefault('to', period.get('to', ''))
+        entry['drill'] = drill
+        cleaned_attn.append(entry)
+
+    # Ensure every asset has full_metrics + normalised notes
+    cleaned_assets = []
+    for a in (sanitised.get('assets') or []):
+        a2 = dict(a)
+        a2.setdefault('headline_metrics', [])
+        a2.setdefault('full_metrics', list(a2['headline_metrics']))
+        a2.setdefault('notes', [])
+        a2.setdefault('related_report_ids', [])
+        cleaned_assets.append(a2)
+
+    response = {
+        'schema_version': 3,
+        'generated_at': datetime.now().isoformat(),
+        'period': period,
+        'status_hero': status_hero,
+        'attention_items': cleaned_attn,
+        'assets': cleaned_assets,
+        'equipment_strip': computed.get('equipment_strip') or [],
+        'meta': meta,
+    }
+
+    ring = computed.get('production_ring')
+    if ring:
+        response['production_ring'] = ring
+    timeline = computed.get('timeline')
+    if timeline and timeline.get('events'):
+        response['timeline'] = timeline
+
+    return response
+
+
+@hercules_ai_bp.route('/hercules-ai/insights', methods=['POST'])
+@login_required
+def generate_insights():
+    """Generate AI insights for selected reports and time range.
+
+    Body: { report_ids?: int[], from: ISO8601, to: ISO8601 }
+    Returns: InsightsResponse (see Frontend/src/Pages/HerculesAI/schemas.ts)
+             plus backward-compat fields (overview, reports, tags_analyzed,
+             kpi, comparison). If ?format=markdown is set, returns only the
+             legacy markdown-compatible fields for the distribution engine.
+    """
+    data = request.get_json() or {}
+    from_str = data.get('from')
+    to_str = data.get('to')
+    if not from_str or not to_str:
+        return jsonify({'error': 'from and to are required'}), 400
+
+    try:
+        from_dt = datetime.fromisoformat(from_str.replace('Z', '+00:00')).replace(tzinfo=None)
+        to_dt = datetime.fromisoformat(to_str.replace('Z', '+00:00')).replace(tzinfo=None)
+    except (ValueError, TypeError) as e:
+        return jsonify({'error': f'Invalid date format: {e}'}), 400
+
+    collected = _collect_tag_data_for_period(data.get('report_ids'), from_dt, to_dt)
+    if isinstance(collected, tuple):
+        return jsonify({'error': collected[0]}), collected[1]
+
+    templates = collected['templates']
+    all_tag_data = collected['all_tag_data']
+    prev_tag_data = collected['prev_tag_data']
+    report_names = collected['report_names']
+    report_map = collected['report_map']
+    all_layout_configs = collected['all_layout_configs']
+    profile_map = collected['profile_map']
+    ai_config = collected['ai_config']
+    prev_from = collected['prev_from']
+    prev_to = collected['prev_to']
+    trend_data = collected.get('trend_data', {})
+    counter_tags = collected.get('counter_tags', [])
+
+    # Compute KPI score (no LLM, fast)
+    try:
+        import ai_kpi_scorer
+        tariff = float(ai_config.get('electricity_tariff_omr_per_kwh', 0.025))
+        kpi = ai_kpi_scorer.compute_kpi_score(
+            tag_data=all_tag_data,
+            prev_tag_data=prev_tag_data,
+            profiles=profile_map,
+            tariff_omr_per_kwh=tariff,
+        )
+    except Exception as e:
+        logger.warning("KPI scoring failed: %s", e)
+        kpi = None
+
+    # Build text rows for the LLM prompt
+    data_rows = []
+    for key, value in all_tag_data.items():
+        if '::' in key:
+            agg_prefix, tag_name = key.split('::', 1)
+        else:
+            tag_name = key
+            agg_prefix = 'last'
+        prof = profile_map.get(tag_name)
+        prev_val = prev_tag_data.get(key, 'N/A')
+        unit = prof.get('unit', '') if prof else ''
+        # Compute change percentage server-side
+        change_pct = 'N/A'
+        if prev_val not in ('N/A', None, ''):
+            try:
+                now_f = float(value)
+                prev_f = float(prev_val)
+                if prev_f != 0:
+                    change_pct = f"{((now_f - prev_f) / prev_f * 100):+.1f}%"
+                elif now_f != 0:
+                    change_pct = '+inf'
+            except (ValueError, TypeError):
+                pass
+        label = (prof.get('label') or tag_name) if prof else tag_name
+        ttype = prof.get('tag_type', 'unknown') if prof else 'unknown'
+        line = prof.get('line_name', '') if prof else ''
+        data_rows.append(
+            f"{label} | {ttype} | {unit} | {value} | {prev_val} | {change_pct} | {agg_prefix} | {line}"
+        )
+
+    if not data_rows:
+        return jsonify({'error': 'No tag data available for the selected period'}), 400
+
+    # Build structured comparison data for frontend table
+    # Only show meaningful values: deltas (production), rates, and key booleans
+    # Skip raw counter readings (last aggregation on counters = cumulative, not useful)
+    comparison_rows = []
+    for key, val in all_tag_data.items():
+        tag_name = key.split('::')[-1] if '::' in key else key
+        agg = key.split('::')[0] if '::' in key else 'last'
+        prof = profile_map.get(tag_name, {})
+        tag_type = prof.get('tag_type', '')
+
+        # Filter: only deltas (production amounts), rates, percentages, and booleans
+        if tag_type == 'counter' and agg != 'delta':
+            continue  # skip raw meter readings
+        if tag_type in ('unknown', 'id_selector', 'setpoint'):
+            continue  # skip non-actionable tags
+
+        label = prof.get('label') or tag_name
+        unit = prof.get('unit', '')
+        line = prof.get('line_name', '')
+        prev_val = prev_tag_data.get(key)
+
+        now_f = _safe_float(val)
+        prev_f = _safe_float(prev_val)
+        change = None
+        if now_f is not None and prev_f is not None and prev_f != 0:
+            change = round(((now_f - prev_f) / prev_f) * 100, 1)
+
+        comparison_rows.append({
+            'label': label,
+            'type': tag_type,
+            'unit': unit,
+            'line': line,
+            'aggregation': agg,
+            'current': round(now_f, 2) if now_f is not None else None,
+            'previous': round(prev_f, 2) if prev_f is not None else None,
+            'change_pct': change,
+        })
+
+    # Sort: counters (delta) first, then rates, then by absolute change
+    comparison_rows.sort(key=lambda r: (
+        0 if r['type'] == 'counter' else 1 if r['type'] == 'rate' else 2,
+        -(abs(r['change_pct']) if r['change_pct'] is not None else 0)
+    ))
+
+    from distribution_engine import _extract_report_context
+    report_context = _extract_report_context(all_layout_configs)
+
+    # Limit to 40 rows for insights
+    structured_data = '\n'.join(data_rows[:40])
+    time_from = from_dt.strftime('%Y-%m-%d %H:%M')
+    time_to = to_dt.strftime('%Y-%m-%d %H:%M')
+    prev_from_str = prev_from.strftime('%Y-%m-%d %H:%M')
+    prev_to_str = prev_to.strftime('%Y-%m-%d %H:%M')
+
+    # Determine comparison label based on period duration
+    period_duration = to_dt - from_dt
+    cmp_label = ai_prompts.resolve_comparison_label(period_duration)
+
+    # Build trend summary for counter tags (oldest -> newest over 5 periods)
+    trend_lines = []
+    for tag_name in counter_tags:
+        if tag_name not in trend_data or len(trend_data[tag_name]) < 2:
+            continue
+        profile = profile_map.get(tag_name, {})
+        label = profile.get('label') or tag_name
+        unit = profile.get('unit', '')
+
+        # Build period values: [oldest(4), 3, 2, prev(1), current]
+        vals = []
+        for period_idx in [4, 3, 2]:
+            v = trend_data[tag_name].get(period_idx)
+            vals.append(_fmt_trend_val(v, unit))
+
+        # Add previous period value (period 1)
+        prev_key = f'delta::{tag_name}'
+        prev_v = prev_tag_data.get(prev_key, prev_tag_data.get(tag_name))
+        vals.append(_fmt_trend_val(prev_v, unit))
+
+        # Add current period value
+        curr_key = f'delta::{tag_name}'
+        curr_v = all_tag_data.get(curr_key, all_tag_data.get(tag_name))
+        vals.append(_fmt_trend_val(curr_v, unit))
+
+        # Determine trend direction from numeric values
+        numeric_vals = [_safe_float(v) for v in [
+            trend_data[tag_name].get(4), trend_data[tag_name].get(3),
+            trend_data[tag_name].get(2), prev_v, curr_v
+        ] if _safe_float(v) is not None]
+
+        direction = ''
+        if len(numeric_vals) >= 3:
+            if all(numeric_vals[j] >= numeric_vals[j + 1] for j in range(len(numeric_vals) - 1)):
+                direction = '[declining]'
+            elif all(numeric_vals[j] <= numeric_vals[j + 1] for j in range(len(numeric_vals) - 1)):
+                direction = '[rising]'
+            else:
+                direction = '[fluctuating]'
+
+        trend_lines.append(f"{label}: {' -> '.join(vals)} {direction}")
+
+    trend_summary = '\n'.join(trend_lines) if trend_lines else ''
+
+    # ── Legacy markdown pathway (distribution engine, old UI) ───────────
+    if request.args.get('format') == 'markdown':
+        prompt = ai_prompts.build_insights_prompt(
+            report_names=[t['name'] for t in templates],
+            time_from=time_from,
+            time_to=time_to,
+            cmp_label=cmp_label,
+            prev_from_str=prev_from_str,
+            prev_to_str=prev_to_str,
+            structured_data=structured_data,
+            report_context=report_context,
+            trend_summary=trend_summary,
+        )
+        try:
+            import ai_provider
+            result = ai_provider.generate(
+                prompt, ai_config, timeout=45,
+                max_tokens=min(700 + 150 * len(templates), 2000)
+            )
+            if not result:
+                return jsonify({'error': 'Could not generate insights. Check your provider settings.'}), 400
+
+            overview = ''
+            report_summaries = []
+            parts = result.split('---REPORT:')
+            overview = parts[0].strip()
+            for part in parts[1:]:
+                lines = part.strip().split('\n', 1)
+                rname = lines[0].replace('---', '').strip()
+                rsummary = lines[1].strip() if len(lines) > 1 else ''
+                if not rsummary:
+                    continue
+                matched = next((r for r in report_map if r['name'].lower() == rname.lower()), None)
+                report_summaries.append({
+                    'id': matched['id'] if matched else None,
+                    'name': matched['name'] if matched else rname,
+                    'summary': rsummary,
+                })
+
+            return jsonify({
+                'overview': overview,
+                'reports': report_summaries,
+                'period': {'from': from_str, 'to': to_str},
+                'tags_analyzed': len(data_rows),
+                'kpi': kpi,
+                'comparison': comparison_rows[:15],
+            })
+        except Exception as e:
+            logger.warning("Insights (markdown) generation failed: %s", e)
+            err_msg = str(e)
+            if 'authentication' in err_msg.lower() or '401' in err_msg:
+                return jsonify({'error': 'Invalid API key. Please check your provider settings.'}), 400
+            if 'timeout' in err_msg.lower():
+                return jsonify({'error': 'Analysis timed out. Try a shorter time range or fewer reports.'}), 504
+            return jsonify({'error': f'Insights failed: {err_msg}'}), 500
+
+    # ── New JSON-mode pathway (primary) ─────────────────────────────────
+    try:
+        known_assets = _known_assets_from_profiles(profile_map)
+
+        # Compute structured fields server-side
+        production_ring = _build_production_ring(templates, all_tag_data, from_dt, to_dt)
+        timeline = _build_timeline(templates, from_dt, to_dt)
+        equipment_strip = _build_equipment_strip(all_tag_data, profile_map)
+
+        # Build JSON-mode prompt
+        prompt_bundle = ai_prompts.build_insights_prompt_json(
+            report_names=[t['name'] for t in templates],
+            time_from=time_from,
+            time_to=time_to,
+            cmp_label=cmp_label,
+            prev_from_str=prev_from_str,
+            prev_to_str=prev_to_str,
+            structured_data=structured_data,
+            known_assets=known_assets,
+            report_context=report_context,
+            trend_summary=trend_summary,
+        )
+
+        # Call LLM with JSON mode (retry-once-on-failure inside)
+        sanitised = _call_llm_json(
+            prompt_bundle, ai_config, known_assets,
+            period_from=from_str, period_to=to_str,
+            max_tokens=min(900 + 200 * len(templates), 2500),
+            timeout=90,
+        )
+
+        # Assemble final response
+        period = {'from': from_str, 'to': to_str, 'label': cmp_label}
+        meta = {
+            'model': ai_config.get('llm_model', 'unknown'),
+            'prompt_version': ai_prompts.INSIGHTS_PROMPT_VERSION,
+            'tokens_in': 0,
+            'tokens_out': 0,
+            'source_report_ids': [r['id'] for r in report_map if r.get('id') is not None],
+        }
+        response = _assemble_insights_response(
+            sanitised,
+            {
+                'production_ring': production_ring,
+                'timeline': timeline,
+                'equipment_strip': equipment_strip,
+            },
+            period=period,
+            meta=meta,
+        )
+
+        # ── Inject report_ids into attention_items + assets for "Open" button ──
+        name_to_id = {r['name'].lower(): r['id'] for r in report_map if r.get('id')}
+        for item in response.get('attention_items', []):
+            asset = (item.get('asset') or '').lower()
+            drill = item.get('drill') or {}
+            if not drill.get('report_id'):
+                # Match asset name to any report name (fuzzy)
+                for rname, rid in name_to_id.items():
+                    if asset in rname or rname in asset:
+                        drill['report_id'] = rid
+                        break
+                item['drill'] = drill
+        for asset in response.get('assets', []):
+            name = (asset.get('name') or '').lower()
+            if not asset.get('related_report_ids'):
+                for rname, rid in name_to_id.items():
+                    if name in rname or rname in name:
+                        asset['related_report_ids'] = [rid]
+                        break
+
+        # ── Backward-compat fields (derived; no second LLM call) ────────
+        response['overview'] = _derive_overview_markdown(sanitised)
+        response['reports'] = _derive_reports_from_assets(sanitised.get('assets') or [], report_map)
+        response['tags_analyzed'] = len(data_rows)
+        response['kpi'] = kpi
+        response['comparison'] = comparison_rows[:15]
+
+        return jsonify(response)
+
+    except Exception as e:
+        logger.warning("Insights generation failed: %s", e)
+        err_msg = str(e)
+        if 'authentication' in err_msg.lower() or '401' in err_msg:
+            return jsonify({'error': 'Invalid API key. Please check your provider settings.'}), 400
+        if 'timeout' in err_msg.lower():
+            return jsonify({'error': 'Analysis timed out. Try a shorter time range or fewer reports.'}), 504
+        return jsonify({'error': f'Insights failed: {err_msg}'}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/preview-charts', methods=['POST'])
+@login_required
+def preview_charts():
+    """Generate chart previews for selected reports and time range.
+
+    Body: { report_ids?: int[], from: ISO8601, to: ISO8601 }
+    Returns: { charts: [{ title: str, image_base64: str }] }
+    """
+    data = request.get_json() or {}
+    from_str = data.get('from')
+    to_str = data.get('to')
+    if not from_str or not to_str:
+        return jsonify({'error': 'from and to are required'}), 400
+
+    try:
+        from_dt = datetime.fromisoformat(from_str.replace('Z', '+00:00')).replace(tzinfo=None)
+        to_dt = datetime.fromisoformat(to_str.replace('Z', '+00:00')).replace(tzinfo=None)
+    except (ValueError, TypeError) as e:
+        return jsonify({'error': f'Invalid date format: {e}'}), 400
+
+    collected = _collect_tag_data_for_period(data.get('report_ids'), from_dt, to_dt)
+    if isinstance(collected, tuple):
+        return jsonify({'error': collected[0]}), collected[1]
+
+    try:
+        import ai_chart_generator
+    except ImportError:
+        return jsonify({'error': 'Chart generation not available (matplotlib not installed)'}), 500
+
+    try:
+        charts = ai_chart_generator.generate_charts_safe(
+            collected['all_tag_data'],
+            collected['prev_tag_data'],
+            collected['profile_map'],
+            collected['report_names'],
+            from_dt, to_dt,
+        )
+
+        result = []
+        for chart in charts:
+            img_bytes = chart.get('image_bytes')
+            if not img_bytes:
+                continue
+            result.append({
+                'title': chart.get('title', ''),
+                'image_base64': base64.b64encode(img_bytes).decode('ascii'),
+            })
+
+        return jsonify({'charts': result})
+
+    except Exception as e:
+        logger.exception("Chart preview failed: %s", e)
+        return jsonify({'error': f'Chart generation failed: {e}'}), 500
+
+
+@hercules_ai_bp.route('/hercules-ai/chart-data', methods=['POST'])
+@login_required
+def chart_data():
+    """Return raw chart data for frontend Chart.js rendering.
+
+    Body: { report_ids?: int[], from: ISO8601, to: ISO8601 }
+    Returns: { production: {...}, equipment: {...}, rates: {...} }
+    """
+    data = request.get_json() or {}
+    from_str = data.get('from')
+    to_str = data.get('to')
+    if not from_str or not to_str:
+        return jsonify({'error': 'from and to are required'}), 400
+
+    try:
+        from_dt = datetime.fromisoformat(from_str.replace('Z', '+00:00')).replace(tzinfo=None)
+        to_dt = datetime.fromisoformat(to_str.replace('Z', '+00:00')).replace(tzinfo=None)
+    except (ValueError, TypeError) as e:
+        return jsonify({'error': f'Invalid date format: {e}'}), 400
+
+    collected = _collect_tag_data_for_period(data.get('report_ids'), from_dt, to_dt)
+    if isinstance(collected, tuple):
+        return jsonify({'error': collected[0]}), collected[1]
+
+    all_tag_data = collected['all_tag_data']
+    prev_tag_data = collected['prev_tag_data']
+    profiles = collected['profile_map']
+
+    production = {'labels': [], 'current': [], 'previous': [], 'units': []}
+    equipment = {'labels': [], 'states': []}
+    rates = {'labels': [], 'current': [], 'previous': [], 'units': []}
+
+    for key, val in all_tag_data.items():
+        tag_name = key.split('::')[-1] if '::' in key else key
+        agg = key.split('::')[0] if '::' in key else 'last'
+        profile = profiles.get(tag_name, {})
+        tag_type = profile.get('tag_type', 'unknown')
+        label = profile.get('label') or _humanize_tag_name(tag_name)
+        unit = profile.get('unit', '')
+        prev_val = prev_tag_data.get(key)
+
+        if tag_type == 'counter' and agg == 'delta':
+            production['labels'].append(label)
+            production['current'].append(_safe_float(val))
+            production['previous'].append(_safe_float(prev_val))
+            production['units'].append(unit)
+        elif tag_type == 'boolean':
+            equipment['labels'].append(label)
+            v = val
+            if isinstance(v, bool):
+                equipment['states'].append(v)
+            elif isinstance(v, (int, float)):
+                equipment['states'].append(v > 0)
+            else:
+                equipment['states'].append(str(v).lower() in ('true', '1', 'on'))
+        elif tag_type == 'rate':
+            rates['labels'].append(label)
+            rates['current'].append(_safe_float(val))
+            rates['previous'].append(_safe_float(prev_val))
+            rates['units'].append(unit)
+
+    # Sort production by current value descending, top 8
+    if production['labels']:
+        combined = sorted(
+            zip(production['labels'], production['current'],
+                production['previous'], production['units']),
+            key=lambda x: abs(x[1] or 0), reverse=True)[:8]
+        production = {
+            'labels': [c[0] for c in combined],
+            'current': [c[1] or 0 for c in combined],
+            'previous': [c[2] or 0 for c in combined],
+            'units': [c[3] for c in combined],
+        }
+
+    # Same for rates
+    if rates['labels']:
+        combined = sorted(
+            zip(rates['labels'], rates['current'],
+                rates['previous'], rates['units']),
+            key=lambda x: abs(x[1] or 0), reverse=True)[:8]
+        rates = {
+            'labels': [c[0] for c in combined],
+            'current': [c[1] or 0 for c in combined],
+            'previous': [c[2] or 0 for c in combined],
+            'units': [c[3] for c in combined],
+        }
+
+    return jsonify({
+        'production': production if production['labels'] else None,
+        'equipment': equipment if equipment['labels'] else None,
+        'rates': rates if rates['labels'] else None,
+    })
 
 
 @hercules_ai_bp.route('/hercules-ai/test-connection', methods=['POST'])

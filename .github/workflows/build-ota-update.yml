@@ -1,10 +1,10 @@
 name: Build Full Installer
 
 on:
-  # Manual trigger from GitHub Actions tab — pick the branch to build
   workflow_dispatch:
-  # Or push a version tag like: git tag release-v1.0.50 && git push --tags
   push:
+    branches:
+      - Salalah_Mill_B
     tags:
       - '*-v*'
 
@@ -25,6 +25,7 @@ jobs:
         run: |
           # Handle both branch pushes (refs/heads/...) and tag pushes (refs/tags/...)
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            # Tag push: extract branch name from tag (e.g. salalah_mill_b-v1.0.42 -> Salalah_Mill_B)
             TAG_NAME="${GITHUB_REF##refs/tags/}"
             BRANCH_SLUG=$(echo "$TAG_NAME" | sed 's/-v[0-9].*//')
             BRANCH="$BRANCH_SLUG"
@@ -70,6 +71,8 @@ jobs:
         run: |
           echo "${{ steps.version.outputs.version }}" > backend/version.txt
           echo "${{ steps.version.outputs.branch }}" > backend/release_branch.txt
+          echo "${{ steps.version.outputs.version }}" > desktop/version.txt
+          echo "${{ steps.version.outputs.branch }}" > desktop/release_branch.txt
 
       # ── Step 2: Build backend exe with PyInstaller ───────────────
       - name: Install Python dependencies
@@ -85,11 +88,8 @@ jobs:
           cd backend
           python -m PyInstaller hercules.spec --noconfirm
 
-      - name: Build launcher exe
-        shell: bash
-        run: |
-          pip install pyinstaller
-          python -m PyInstaller launcher.spec --noconfirm
+      # NOTE: launcher.exe build removed — Electron is the primary desktop entry point.
+      # launcher.py is kept in repo for legacy/dev use but is no longer built by CI.
 
       # ── Step 3: Download portable PostgreSQL ─────────────────────
       - name: Download portable PostgreSQL 17

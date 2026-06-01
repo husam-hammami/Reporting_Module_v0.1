@@ -17,17 +17,69 @@ logger = logging.getLogger(__name__)
 
 mappings_bp = Blueprint('mappings_bp', __name__)
 
+# PostgreSQL clusters/databases with WIN1252 encoding reject Unicode such as U+2192 (→).
+# Prefer readable ASCII replacements; then coerce anything left with cp1252 replace.
+_WIN1252_SAFE_TRANSLATE = str.maketrans({
+    '\u2192': '->',
+    '\u2190': '<-',
+    '\u2194': '<->',
+    '\u2014': '--',
+    '\u2013': '-',
+    '\u2018': "'",
+    '\u2019': "'",
+    '\u201c': '"',
+    '\u201d': '"',
+    '\u2026': '...',
+    '\u00a0': ' ',
+})
+
+
+def _coerce_string_for_win1252_db(s):
+    """Make text storable on WIN1252 PostgreSQL; harmless on UTF-8 databases."""
+    if s is None:
+        return None
+    if not isinstance(s, str):
+        s = str(s)
+    s = s.translate(_WIN1252_SAFE_TRANSLATE)
+    try:
+        s.encode('cp1252')
+        return s
+    except UnicodeEncodeError:
+        out = s.encode('cp1252', errors='replace').decode('cp1252')
+        if out != s:
+            logger.debug(
+                'Coerced non-CP1252 text for DB storage: %r -> %r',
+                s[:120],
+                out[:120],
+            )
+        return out
+
+
+def _sanitize_lookup_for_db(lookup):
+    """Recursively sanitize string keys/values in lookup JSON for WIN1252-safe storage."""
+    if isinstance(lookup, dict):
+        out = {}
+        for k, v in lookup.items():
+            nk = _coerce_string_for_win1252_db(str(k)) if k is not None else ''
+            out[nk] = _sanitize_lookup_for_db(v)
+        return out
+    if isinstance(lookup, list):
+        return [_sanitize_lookup_for_db(x) for x in lookup]
+    if isinstance(lookup, str):
+        return _coerce_string_for_win1252_db(lookup)
+    return lookup
+
 
 def _get_db_connection():
-    """Helper function to get database connection, avoiding circular imports"""
+    """Resolve get_db_connection without re-importing app (avoids double app.py load on python app.py)."""
     import sys
-    if 'app' in sys.modules:
-        app_module = sys.modules['app']
-        get_db_connection = getattr(app_module, 'get_db_connection', None)
-        if get_db_connection is None:
-            raise ImportError("get_db_connection not found in app module")
-        return get_db_connection
-    raise ImportError("app module not loaded")
+    for mod_name in ('app', '__main__'):
+        mod = sys.modules.get(mod_name)
+        if mod is not None:
+            fn = getattr(mod, 'get_db_connection', None)
+            if fn is not None:
+                return fn
+    raise RuntimeError('Could not get database connection function (expected app or __main__)')
 
 
 def _ensure_table_exists(cursor):
@@ -135,9 +187,9 @@ def create_mapping():
         if not data:
             return jsonify({'status': 'error', 'message': 'No data received'}), 400
 
-        name = (data.get('name') or '').strip()
-        input_tag = (data.get('input_tag') or '').strip()
-        output_tag_name = (data.get('output_tag_name') or '').strip()
+        name = _coerce_string_for_win1252_db((data.get('name') or '').strip())
+        input_tag = _coerce_string_for_win1252_db((data.get('input_tag') or '').strip())
+        output_tag_name = _coerce_string_for_win1252_db((data.get('output_tag_name') or '').strip())
 
         if not name:
             return jsonify({'status': 'error', 'message': 'Name is required'}), 400
@@ -149,9 +201,12 @@ def create_mapping():
         lookup = data.get('lookup', {})
         if isinstance(lookup, str):
             lookup = json.loads(lookup)
+        lookup = _sanitize_lookup_for_db(lookup)
 
         description = (data.get('description') or '').strip() or None
-        fallback = (data.get('fallback') or 'Unknown').strip()
+        if description:
+            description = _coerce_string_for_win1252_db(description)
+        fallback = _coerce_string_for_win1252_db((data.get('fallback') or 'Unknown').strip())
         is_active = data.get('is_active', True)
         output_type = (data.get('output_type') or 'text').strip()
         if output_type not in ('text', 'tag_value'):
@@ -195,9 +250,9 @@ def update_mapping(mapping_id):
         if not data:
             return jsonify({'status': 'error', 'message': 'No data received'}), 400
 
-        name = (data.get('name') or '').strip()
-        input_tag = (data.get('input_tag') or '').strip()
-        output_tag_name = (data.get('output_tag_name') or '').strip()
+        name = _coerce_string_for_win1252_db((data.get('name') or '').strip())
+        input_tag = _coerce_string_for_win1252_db((data.get('input_tag') or '').strip())
+        output_tag_name = _coerce_string_for_win1252_db((data.get('output_tag_name') or '').strip())
 
         if not name:
             return jsonify({'status': 'error', 'message': 'Name is required'}), 400
@@ -209,9 +264,12 @@ def update_mapping(mapping_id):
         lookup = data.get('lookup', {})
         if isinstance(lookup, str):
             lookup = json.loads(lookup)
+        lookup = _sanitize_lookup_for_db(lookup)
 
         description = (data.get('description') or '').strip() or None
-        fallback = (data.get('fallback') or 'Unknown').strip()
+        if description:
+            description = _coerce_string_for_win1252_db(description)
+        fallback = _coerce_string_for_win1252_db((data.get('fallback') or 'Unknown').strip())
         is_active = data.get('is_active', True)
         output_type = (data.get('output_type') or 'text').strip()
         if output_type not in ('text', 'tag_value'):
@@ -322,7 +380,13 @@ def migrate_from_local():
             imported = 0
             skipped = 0
             for m in data:
-                name = (m.get('name') or '').strip()
+                if not isinstance(m, dict):
+                    skipped += 1
+                    continue
+
+                raw_name = m.get('name')
+                name = (str(raw_name).strip() if raw_name is not None else '')
+                name = _coerce_string_for_win1252_db(name)
                 if not name:
                     skipped += 1
                     continue
@@ -334,20 +398,34 @@ def migrate_from_local():
                     continue
 
                 lookup = m.get('lookup', {})
+                if lookup is None:
+                    lookup = {}
                 if isinstance(lookup, str):
                     lookup = json.loads(lookup)
+                if not isinstance(lookup, (dict, list)):
+                    lookup = {}
+                lookup = _sanitize_lookup_for_db(lookup)
+
+                output_type = (m.get('output_type') or 'text')
+                if isinstance(output_type, str):
+                    output_type = output_type.strip() or 'text'
+                else:
+                    output_type = 'text'
+                if output_type not in ('text', 'tag_value'):
+                    output_type = 'text'
 
                 cursor.execute("""
-                    INSERT INTO mappings (name, description, input_tag, output_tag_name, lookup, fallback, is_active)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO mappings (name, description, input_tag, output_tag_name, lookup, fallback, is_active, output_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     name,
-                    (m.get('description') or '').strip() or None,
-                    (m.get('input_tag') or '').strip(),
-                    (m.get('output_tag_name') or '').strip(),
+                    _coerce_string_for_win1252_db((m.get('description') or '').strip()) or None,
+                    _coerce_string_for_win1252_db((m.get('input_tag') or '').strip()),
+                    _coerce_string_for_win1252_db((m.get('output_tag_name') or '').strip()),
                     json.dumps(lookup),
-                    (m.get('fallback') or 'Unknown').strip(),
-                    m.get('is_active', True)
+                    _coerce_string_for_win1252_db((m.get('fallback') or 'Unknown').strip()),
+                    bool(m.get('is_active', True)),
+                    output_type,
                 ))
                 imported += 1
 

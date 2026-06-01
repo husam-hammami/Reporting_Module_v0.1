@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
-import { Menu, LogOut, Moon, Sun, User, Activity } from 'lucide-react';
+import { Menu, LogOut, Moon, Sun, User, Activity, RefreshCw } from 'lucide-react';
 import HerculesNewLogo from '../../Assets/Hercules_New.png';
 import AsmLogo from '../../Assets/Asm_Logo.png';
 import { NavbarContext } from '../../Context/NavbarContext';
@@ -146,7 +146,16 @@ function Navbar({ isBlueprint = false }) {
                         <p className="text-sm font-bold text-[#f0f4f8]">{auth.username}</p>
                         <p className="text-[11px] text-[#8899ab] font-medium tracking-wide uppercase mt-0.5">{auth.role}</p>
                       </div>
-                      <div className="p-1.5">
+                      <div className="p-1.5 space-y-0.5">
+                        {window.hercules?.restartApp && (
+                          <button
+                            onClick={() => { setMenuOpen(false); window.hercules.restartApp(); }}
+                            className="w-full text-left px-3 py-2 text-xs font-semibold text-[#8899ab] hover:bg-cyan-500/10 hover:text-cyan-400 rounded-lg transition-colors flex items-center gap-2.5"
+                          >
+                            <RefreshCw size={16} />
+                            Restart App
+                          </button>
+                        )}
                         <button
                           onClick={() => { setMenuOpen(false); logout(); }}
                           className="w-full text-left px-3 py-2 text-xs font-semibold text-[#8899ab] hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-colors flex items-center gap-2.5"

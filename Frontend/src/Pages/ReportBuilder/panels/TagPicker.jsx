@@ -30,7 +30,7 @@ export default function TagPicker({ tags, value, onChange, placeholder = 'Select
           tagName: tag.tag_name,
           displayName: tag.display_name || tag.tag_name,
           unit: tag.unit || '',
-          decimals: tag.decimal_places ?? 1,
+          decimals: tag.decimal_places ?? (['INT', 'DINT', 'BOOL'].includes(tag.data_type) ? 0 : 2),
         }]);
       }
     } else {

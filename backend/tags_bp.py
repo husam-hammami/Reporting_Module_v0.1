@@ -610,9 +610,22 @@ def update_tag(tag_name):
             else:
                 activation_value = activation_value if activation_value else None
             
+            # Resolve new tag_name (allow rename)
+            new_tag_name = data.get('tag_name', tag_name) or tag_name
+            new_tag_name = new_tag_name.strip()
+            if not new_tag_name:
+                new_tag_name = tag_name
+
+            # If name changed, check for duplicates
+            if new_tag_name != tag_name:
+                cursor.execute("SELECT 1 FROM tags WHERE tag_name = %s", (new_tag_name,))
+                if cursor.fetchone():
+                    return jsonify({'status': 'error', 'message': f'Tag name "{new_tag_name}" already exists'}), 409
+
             # Update tag
             cursor.execute("""
                 UPDATE tags SET
+                    tag_name = %s,
                     display_name = %s,
                     source_type = %s,
                     db_number = %s,
@@ -635,6 +648,7 @@ def update_tag(tag_name):
                 WHERE tag_name = %s
                 RETURNING id
             """, (
+                new_tag_name,
                 data.get('display_name', existing_dict.get('display_name')),
                 source_type,
                 db_number,
@@ -675,20 +689,21 @@ def update_tag(tag_name):
             
             conn.commit()
 
-            logger.info(f"Updated tag: {tag_name} (ID: {tag_id})")
+            rename_msg = f" (renamed from {tag_name})" if new_tag_name != tag_name else ""
+            logger.info(f"Updated tag: {new_tag_name} (ID: {tag_id}){rename_msg}")
 
             # Auto-register in emulator if demo mode is active
             try:
                 from demo_mode import get_demo_mode
                 if get_demo_mode():
                     from plc_data_source import register_tag_in_emulator
-                    register_tag_in_emulator(tag_name, source_type, db_number, offset, data_type, data.get('unit', ''))
+                    register_tag_in_emulator(new_tag_name, source_type, db_number, offset, data_type, data.get('unit', ''))
             except Exception as emu_err:
                 logger.debug("Emulator auto-register on update skipped: %s", emu_err)
 
             return jsonify({
                 'status': 'success',
-                'message': f'Tag "{tag_name}" updated successfully'
+                'message': f'Tag "{new_tag_name}" updated successfully'
             })
     
     except Exception as e:
@@ -722,6 +737,33 @@ def delete_tag(tag_name):
     
     except Exception as e:
         logger.error(f"Error deleting tag: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@tags_bp.route('/tags/bulk-delete', methods=['POST'])
+def bulk_delete_tags():
+    """Bulk soft-delete tags by tag_name list"""
+    try:
+        data = request.get_json()
+        tag_names = data.get('tag_names', [])
+        if not tag_names or not isinstance(tag_names, list):
+            return jsonify({'status': 'error', 'message': 'tag_names array is required'}), 400
+
+        get_db_connection_func = _get_db_connection()
+        with closing(get_db_connection_func()) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE tags SET is_active = false WHERE tag_name = ANY(%s) AND is_active = true",
+                (tag_names,)
+            )
+            deleted = cursor.rowcount
+            conn.commit()
+
+            logger.info(f"Bulk deleted {deleted} tags")
+            return jsonify({'status': 'success', 'deleted': deleted})
+
+    except Exception as e:
+        logger.error(f"Error bulk deleting tags: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 

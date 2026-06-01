@@ -1,20 +1,38 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaChevronLeft, FaPrint, FaExpand, FaCompress, FaClock, FaFilePdf, FaImage } from 'react-icons/fa';
-import { exportAsPNG, exportAsPDF } from '../../utils/exportReport';
+import { captureElement, exportAsPNG, exportAsPDFFromCanvases, printCanvases } from '../../utils/exportReport';
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
-import { useReportCanvas, useReportTemplates, useAvailableTags, collectWidgetTagNames, collectWidgetTagAggregations } from '../../Hooks/useReportBuilder';
+import {
+  useReportCanvas,
+  useReportTemplates,
+  useAvailableTags,
+  collectWidgetTagNames,
+  collectWidgetTagAggregations,
+  collectDataPanelScopedHistorianRequests,
+} from '../../Hooks/useReportBuilder';
+import {
+  groupDataPanelScopedHistorianRequests,
+  fetchDataPanelScopedHistorianValues,
+} from '../ReportBuilder/utils/dataPanelTimeScope';
 import { useTagHistory } from '../../Hooks/useTagHistory';
 import { useEmulator } from '../../Context/EmulatorContext';
 import { useSocket } from '../../Context/SocketContext';
 import WidgetRenderer, { CARDLESS_WIDGET_TYPES, INVISIBLE_WRAPPER_TYPES } from '../ReportBuilder/widgets/WidgetRenderer';
+import TabSelector from '../../Components/ui/TabSelector';
 import ReportThumbnail from '../ReportBuilder/ReportThumbnail';
+import { ReportTableTabLinkProvider } from '../ReportBuilder/context/ReportTableTabLinkContext';
+import { ThumbnailCaptureContext } from '../ReportBuilder/ThumbnailCaptureContext';
 import ReportListingPage from '../../Components/Reports/ReportListingPage';
 import PaginatedReportView from './PaginatedReportViewer';
 import TimePeriodTabs, { VIEWER_TABS } from './TimePeriodTabs';
 import useTimePeriod from '../../Hooks/useTimePeriod';
+import AiInsightsPanel, { AiDrawer } from './AiInsightsPanel';
+import ActionsPanel from './ActionsPanel';
 import '../ReportBuilder/reportBuilderTheme.css';
 import axios from '../../API/axios';
+import { downloadReportTemplateExcel } from '../../utils/downloadReportTemplateExcel';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -38,7 +56,7 @@ function timeAgo(iso) {
 
 const GRID_COLS_DEFAULT = 12;
 const GRID_ROW_H_DEFAULT = 40;
-const GRID_MARGIN = [12, 12];
+const GRID_MARGIN = [6, 6];
 const GRID_PADDING = [0, 0];
 
 
@@ -127,7 +145,7 @@ function ReportList({ onSelect, filterType }) {
    ══════════════════════════════════════════════════════════════════ */
 
 function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) {
-  const { template, widgets, loading } = useReportCanvas(reportId);
+  const { template, widgets, loading, dashboardTabs, activeTabId, allTabsWidgets, switchDashboardTab } = useReportCanvas(reportId);
   const { tags } = useAvailableTags();
   const { tagValues: emulatorValues, enabled: emulatorOn } = useEmulator();
   const { socket } = useSocket();
@@ -150,6 +168,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   const [liveTagValues, setLiveTagValues] = useState({});
   const [liveError, setLiveError] = useState(null);
   const [historicalTagValues, setHistoricalTagValues] = useState({});
+  const [liveScopedTagValues, setLiveScopedTagValues] = useState({});
   const [historicalTagHistory, setHistoricalTagHistory] = useState(null);
   const [historicalLoading, setHistoricalLoading] = useState(false);
   const [historicalError, setHistoricalError] = useState(null);
@@ -178,8 +197,8 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     e.preventDefault();
   }, []);
 
-  const usedTagNames = useMemo(() => collectWidgetTagNames(widgets), [widgets]);
-  const tagAggregations = useMemo(() => collectWidgetTagAggregations(widgets), [widgets]);
+  const usedTagNames = useMemo(() => collectWidgetTagNames(allTabsWidgets || widgets), [allTabsWidgets, widgets]);
+  const tagAggregations = useMemo(() => collectWidgetTagAggregations(allTabsWidgets || widgets), [allTabsWidgets, widgets]);
 
   React.useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -269,11 +288,18 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
           )
         );
 
+        const merged = {};
+        results.forEach((data) => Object.assign(merged, data));
+
+        const scopedReqs = collectDataPanelScopedHistorianRequests(
+          allTabsWidgets || widgets,
+          dateRange.to,
+        );
+        const scopedGroups = groupDataPanelScopedHistorianRequests(scopedReqs);
+        const scopedValues = await fetchDataPanelScopedHistorianValues(axios, scopedGroups);
+
         if (!cancelled) {
-          // Merge all results into a single object
-          const merged = {};
-          results.forEach((data) => Object.assign(merged, data));
-          setHistoricalTagValues(merged);
+          setHistoricalTagValues({ ...merged, ...scopedValues });
           setHistoricalLoading(false);
         }
       } catch (err) {
@@ -287,7 +313,34 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
 
     fetchHistorical();
     return () => { cancelled = true; };
-  }, [timePeriod.tab, usedTagNames, tagAggregations, dateRange]);
+  }, [timePeriod.tab, usedTagNames, tagAggregations, dateRange, allTabsWidgets, widgets]);
+
+  // Live mode: Data Panel fields with their own time scope use historian (rolling window ending at now).
+  React.useEffect(() => {
+    if (timePeriod.tab !== 'live') {
+      setLiveScopedTagValues({});
+      return;
+    }
+    const ws = allTabsWidgets || widgets;
+    let cancelled = false;
+    const run = async () => {
+      const anchor = new Date();
+      const scopedReqs = collectDataPanelScopedHistorianRequests(ws, anchor);
+      if (scopedReqs.length === 0) {
+        if (!cancelled) setLiveScopedTagValues({});
+        return;
+      }
+      const groups = groupDataPanelScopedHistorianRequests(scopedReqs);
+      const scopedValues = await fetchDataPanelScopedHistorianValues(axios, groups);
+      if (!cancelled) setLiveScopedTagValues(scopedValues);
+    };
+    run();
+    const interval = setInterval(run, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [timePeriod.tab, allTabsWidgets, widgets]);
 
   // Historical mode: fetch time-series data for chart widgets.
   // Charts need arrays of {t, v} per tag (not single aggregated values).
@@ -351,10 +404,10 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
 
   const tagValues = useMemo(() => {
     if (timePeriod.tab !== 'live') return historicalTagValues;
-    const base = { ...liveTagValues };
+    const base = { ...liveTagValues, ...liveScopedTagValues };
     if (emulatorOn && emulatorValues) Object.assign(base, emulatorValues);
     return base;
-  }, [timePeriod.tab, liveTagValues, emulatorOn, emulatorValues, historicalTagValues]);
+  }, [timePeriod.tab, liveTagValues, liveScopedTagValues, emulatorOn, emulatorValues, historicalTagValues]);
 
   const liveTagHistory = useTagHistory(usedTagNames, tagValues);
   // In historical mode, prefer backend time-series data for charts (full timeframe);
@@ -373,50 +426,164 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
     return liveTagHistory;
   }, [timePeriod.tab, liveTagHistory, historicalTagHistory]);
 
+  const captureDashboardCanvases = useCallback(async (el) => {
+    const multi = dashboardTabs?.enabled && Array.isArray(dashboardTabs.tabs) && dashboardTabs.tabs.length > 1;
+    if (!multi) {
+      return [await captureElement(el)];
+    }
+    const originalId = activeTabId;
+    const out = [];
+    try {
+      for (const tab of dashboardTabs.tabs) {
+        flushSync(() => {
+          switchDashboardTab(tab.id, { skipDirty: true });
+          setExporting(true);
+        });
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        out.push(await captureElement(el));
+      }
+    } finally {
+      if (originalId) {
+        flushSync(() => {
+          switchDashboardTab(originalId, { skipDirty: true });
+          setExporting(true);
+        });
+      }
+    }
+    return out;
+  }, [dashboardTabs, activeTabId, switchDashboardTab]);
+
   const handleExportPDF = async () => {
-    setExporting(true);
+    flushSync(() => setExporting(true));
     try {
       const el = document.getElementById('report-print-section');
-      // Add PDF-export class for optimized styling during capture
+      if (!el) return;
       el.classList.add('rb-pdf-export');
+      if (pageMode === 'a4') el.classList.add('rb-pdf-export-a4-dashboard');
 
-      // For tabular mode: temporarily remove max-width constraint and expand container
       const scrollContainer = scrollContainerRef.current;
       const prevScrollOverflow = scrollContainer?.style.overflow;
       const prevScrollHeight = scrollContainer?.style.height;
       const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
       const prevScrollFlex = scrollContainer?.style.flex;
+      const prevScrollOpacity = scrollContainer?.style.opacity;
       if (scrollContainer) {
         scrollContainer.style.overflow = 'visible';
         scrollContainer.style.height = 'auto';
         scrollContainer.style.maxHeight = 'none';
         scrollContainer.style.flex = 'none';
+        if (historicalLoading) scrollContainer.style.opacity = '1';
       }
 
-      // Wait a frame for styles to apply
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-      await exportAsPDF(el, template?.name || 'report', {
-        pageMode,
-        orientation: viewMode === 'tabular' ? 'landscape' : 'auto',
-      });
+      try {
+        const canvases = await captureDashboardCanvases(el);
+        await exportAsPDFFromCanvases(canvases, template?.name || 'report', {
+          pageMode,
+          orientation: viewMode === 'tabular' ? 'landscape' : 'auto',
+        });
+      } finally {
+        el.classList.remove('rb-pdf-export', 'rb-pdf-export-a4-dashboard');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+          scrollContainer.style.opacity = prevScrollOpacity || '';
+        }
+      }
+    } finally { setExporting(false); }
+  };
 
-      // Restore original styles
-      el.classList.remove('rb-pdf-export');
+  const handlePrintReport = async () => {
+    flushSync(() => setExporting(true));
+    try {
+      const el = document.getElementById('report-print-section');
+      if (!el) return;
+      el.classList.add('rb-pdf-export');
+      if (pageMode === 'a4') el.classList.add('rb-pdf-export-a4-dashboard');
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      const prevScrollOpacity = scrollContainer?.style.opacity;
       if (scrollContainer) {
-        scrollContainer.style.overflow = prevScrollOverflow || '';
-        scrollContainer.style.height = prevScrollHeight || '';
-        scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
-        scrollContainer.style.flex = prevScrollFlex || '';
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+        if (historicalLoading) scrollContainer.style.opacity = '1';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      try {
+        const canvases = await captureDashboardCanvases(el);
+        printCanvases(canvases, template?.name || 'Report');
+      } finally {
+        el.classList.remove('rb-pdf-export', 'rb-pdf-export-a4-dashboard');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+          scrollContainer.style.opacity = prevScrollOpacity || '';
+        }
       }
     } finally { setExporting(false); }
   };
   const handleExportPNG = async () => {
-    setExporting(true);
+    flushSync(() => setExporting(true));
     try {
       const el = document.getElementById('report-print-section');
-      await exportAsPNG(el, template?.name || 'report');
+      el.classList.add('rb-pdf-export');
+      if (pageMode === 'a4') el.classList.add('rb-pdf-export-a4-dashboard');
+      const scrollContainer = scrollContainerRef.current;
+      const prevScrollOverflow = scrollContainer?.style.overflow;
+      const prevScrollHeight = scrollContainer?.style.height;
+      const prevScrollMaxHeight = scrollContainer?.style.maxHeight;
+      const prevScrollFlex = scrollContainer?.style.flex;
+      const prevScrollOpacity = scrollContainer?.style.opacity;
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.height = 'auto';
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.flex = 'none';
+        if (historicalLoading) scrollContainer.style.opacity = '1';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      try {
+        await exportAsPNG(el, template?.name || 'report');
+      } finally {
+        el.classList.remove('rb-pdf-export', 'rb-pdf-export-a4-dashboard');
+        if (scrollContainer) {
+          scrollContainer.style.overflow = prevScrollOverflow || '';
+          scrollContainer.style.height = prevScrollHeight || '';
+          scrollContainer.style.maxHeight = prevScrollMaxHeight || '';
+          scrollContainer.style.flex = prevScrollFlex || '';
+          scrollContainer.style.opacity = prevScrollOpacity || '';
+        }
+      }
     } finally { setExporting(false); }
+  };
+
+  const handleExportExcel = async () => {
+    flushSync(() => setExporting(true));
+    try {
+      const from = timePeriod?.from?.toISOString?.() || '';
+      const to = timePeriod?.to?.toISOString?.() || '';
+      const safe = (template?.name || 'report').replace(/[^\w\-]/g, '_');
+      await downloadReportTemplateExcel(reportId, {
+        from,
+        to,
+        fallbackFilename: `${safe}.xlsx`,
+      });
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      window.alert(err?.message || 'Excel export failed');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const toggleFullscreen = () => {
@@ -438,6 +605,16 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   const gridCols = template?.layout_config?.grid?.cols ?? GRID_COLS_DEFAULT;
   const gridRowH = template?.layout_config?.grid?.rowHeight ?? GRID_ROW_H_DEFAULT;
   const pageMode = template?.layout_config?.grid?.pageMode || 'a4';
+  const dashboardHeaderCfg = template?.layout_config?.dashboardHeader;
+  // Unified chrome bar is always active for dashboard reports.
+  // dashboardHeaderCfg provides optional overrides (bg, color, logo, title).
+  const dashboardHeader = {
+    bg: 'linear-gradient(135deg, #0f1b2d 0%, #1a3a5c 100%)',
+    color: '#ffffff',
+    showLogo: true,
+    title: template?.name || 'Dashboard',
+    ...dashboardHeaderCfg,
+  };
 
   const layout = useMemo(
     () =>
@@ -468,15 +645,30 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
   return (
     <div className="rb-report-viewer-outer flex flex-col h-[calc(100vh-80px)] bg-transparent">
       {/* ── Toolbar: back + report selector (centered) | actions ── */}
-      <div className="bg-white/90 dark:bg-[#0a1525] backdrop-blur-sm border-b border-[#e3e9f0] dark:border-gray-700 px-4 py-3 flex items-center gap-4 flex-shrink-0 print:hidden">
+      <div
+        className="backdrop-blur-sm border-b border-transparent px-3 py-1.5 flex items-center gap-3 flex-shrink-0 print:hidden"
+        style={{
+          background: dashboardHeader.bg,
+          color: dashboardHeader.color,
+        }}
+      >
         {/* Left: back */}
-        <button onClick={onBack} className="p-2 rounded-md text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors flex-shrink-0">
-          <FaChevronLeft size={14} />
+        <button onClick={onBack} className="p-1.5 rounded-md transition-colors flex-shrink-0 text-white/70 hover:text-white hover:bg-white/10">
+          <FaChevronLeft size={12} />
         </button>
+        {/* Dashboard title + logo inline */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {dashboardHeader.showLogo !== false && (
+            <img src="/api/branding/logo" alt="" style={{ height: 22, width: 'auto', borderRadius: 3 }} onError={(e) => { e.target.style.display = 'none'; }} />
+          )}
+          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>
+            {dashboardHeader.title || template?.name || 'Dashboard'}
+          </span>
+        </div>
 
         {/* Center: report tab bar or name + date/time */}
         <div className="flex items-center gap-3 flex-1 justify-center min-w-0">
-          {siblingReports?.length > 1 ? (
+          {siblingReports?.length > 1 && (
             <div className="flex items-center gap-1 overflow-x-auto max-w-full">
               {siblingReports.map((r) => (
                 <button
@@ -492,12 +684,21 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                 </button>
               ))}
             </div>
-          ) : (
-            <span className="text-[14px] font-semibold text-[#2a3545] dark:text-[#e1e8f0] truncate">{template?.name || 'Report'}</span>
           )}
-          <span className="text-[12px] font-medium text-[#8898aa] whitespace-nowrap tabular-nums hidden sm:inline" title="Current date and time">
-            {now.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })} · {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </span>
+          <TimePeriodTabs
+            tabs={VIEWER_TABS}
+            activeTab={timePeriod.tab}
+            onTabChange={tpActions.setTab}
+            customFrom={timePeriod.customFrom}
+            customTo={timePeriod.customTo}
+            onCustomFrom={tpActions.setCustomFrom}
+            onCustomTo={tpActions.setCustomTo}
+            shiftsConfig={shiftsConfig}
+            selectedShift={timePeriod.selectedShift}
+            onShiftChange={tpActions.setShift}
+            compact
+            variant="dark"
+          />
         </div>
 
         {/* Right: view toggle + fullscreen + print */}
@@ -520,15 +721,15 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
               </button>
             </div>
           )}
-          <button onClick={toggleFullscreen} className="p-2 rounded-lg text-[#6b7f94] hover:text-brand hover:bg-brand-subtle transition-colors border border-transparent hover:border-[#e3e9f0]" title="Fullscreen">
+          <button onClick={toggleFullscreen} className="p-2 rounded-lg transition-colors border border-transparent text-white/70 hover:text-white hover:bg-white/10" title="Fullscreen">
             {fullscreen ? <FaCompress size={14} /> : <FaExpand size={14} />}
           </button>
           <div className="relative group">
-            <button className="inline-flex items-center gap-2 px-3 py-2 text-[12px] font-semibold rounded-lg bg-brand hover:bg-brand-hover text-white transition-colors">
+            <button className="inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold rounded-lg transition-colors bg-white/15 hover:bg-white/25 text-white border border-white/20">
               <FaPrint size={12} /> {exporting ? 'Exporting...' : 'Export'}
             </button>
             <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              <button onClick={() => window.print()} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg flex items-center gap-2">
+              <button type="button" onClick={() => { void handlePrintReport(); }} disabled={exporting} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg flex items-center gap-2 disabled:opacity-50">
                 <FaPrint className="text-[10px]" /> Print
               </button>
               <button onClick={handleExportPDF} disabled={exporting} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50">
@@ -538,12 +739,10 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                 <FaImage className="text-[10px]" /> Export PNG
               </button>
               <button
-                onClick={() => {
-                  const from = timePeriod?.from?.toISOString?.() || '';
-                  const to = timePeriod?.to?.toISOString?.() || '';
-                  window.open(`/api/report-builder/templates/${reportId}/export?format=xlsx&from=${from}&to=${to}`, '_blank');
-                }}
-                className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg flex items-center gap-2"
+                type="button"
+                onClick={() => { void handleExportExcel(); }}
+                disabled={exporting}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg flex items-center gap-2 disabled:opacity-50"
               >
                 <FaFilePdf className="text-[10px]" /> Export Excel
               </button>
@@ -552,62 +751,20 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         </div>
       </div>
 
-      {/* ── Time period tabs ── */}
-      <TimePeriodTabs
-        tabs={VIEWER_TABS}
-        activeTab={timePeriod.tab}
-        onTabChange={tpActions.setTab}
-        customFrom={timePeriod.customFrom}
-        customTo={timePeriod.customTo}
-        onCustomFrom={tpActions.setCustomFrom}
-        onCustomTo={tpActions.setCustomTo}
-        shiftsConfig={shiftsConfig}
-        selectedShift={timePeriod.selectedShift}
-        onShiftChange={tpActions.setShift}
-      />
+      {/* ── Dashboard tabs (viewer) — centered below chrome bar ── */}
+      {dashboardTabs?.enabled && Array.isArray(dashboardTabs.tabs) && dashboardTabs.tabs.length > 1 && (
+        <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0 print:hidden border-b border-[#e3e9f0] dark:border-gray-700 bg-white dark:bg-[#0d1117]">
+          <TabSelector
+            tabs={dashboardTabs.tabs.map(t => ({ id: t.id, label: t.label }))}
+            activeId={activeTabId}
+            onChange={switchDashboardTab}
+            size="sm"
+          />
+        </div>
+      )}
 
-      {/* ── Status indicator — single persistent div, bg cross-fades via transition-colors ── */}
-      {(() => {
-        let bg, dot, msg;
-        if (timePeriod.tab === 'live') {
-          if (liveError) {
-            bg  = 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30';
-            dot = <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0" />;
-            msg = <span className="text-[11px] font-medium text-[#ef4444]">{liveError}</span>;
-          } else if (emulatorOn || Object.keys(liveTagValues).length > 0) {
-            bg  = 'bg-[#ecfdf5] dark:bg-[#0d2e1f] border-[#a7f3d0] dark:border-[#065f46]';
-            dot = <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse flex-shrink-0" />;
-            msg = <span className="text-[11px] font-medium text-[#059669]">{emulatorOn ? 'Live (Emulator)' : 'Live'}</span>;
-          } else {
-            bg  = 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30';
-            dot = <FaClock size={9} className="text-[#d97706] flex-shrink-0" />;
-            msg = <span className="text-[11px] font-medium text-[#d97706]">Waiting for live data…</span>;
-          }
-        } else if (historicalLoading) {
-          bg  = 'bg-[#eff6ff] dark:bg-[#0c1a2e] border-[#93c5fd]/30';
-          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse flex-shrink-0" />;
-          msg = <span className="text-[11px] font-medium text-[#3b82f6]">Loading historical data…</span>;
-        } else if (historicalError) {
-          bg  = 'bg-[#fef2f2] dark:bg-[#1a0c0c] border-[#fca5a5]/30';
-          dot = <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0" />;
-          msg = <span className="text-[11px] font-medium text-[#ef4444]">{historicalError}</span>;
-        } else if (Object.keys(historicalTagValues).length > 0) {
-          bg  = 'bg-[#f0f9ff] dark:bg-[#0c1e2e] border-[#7dd3fc]/30';
-          dot = <FaClock size={9} className="text-[#0284c7] flex-shrink-0" />;
-          msg = <span className="text-[11px] font-medium text-[#0284c7]">
-            Historical — {dateRange?.from?.toLocaleDateString?.()} {dateRange?.from?.toLocaleTimeString?.(undefined, {hour:'2-digit',minute:'2-digit'})} to {dateRange?.to?.toLocaleDateString?.()} {dateRange?.to?.toLocaleTimeString?.(undefined, {hour:'2-digit',minute:'2-digit'})} ({Object.keys(historicalTagValues).length} tags)
-          </span>;
-        } else {
-          bg  = 'bg-[#fffbeb] dark:bg-[#1a1800] border-[#fcd34d]/30';
-          dot = <FaClock size={9} className="text-[#d97706] flex-shrink-0" />;
-          msg = <span className="text-[11px] font-medium text-[#d97706]">No historical data for this period</span>;
-        }
-        return (
-          <div className={`border-b px-4 py-1.5 flex items-center gap-2 print:hidden transition-colors duration-300 ${bg}`}>
-            {dot}{msg}
-          </div>
-        );
-      })()}
+      {/* AI drawer for full-mode dashboards */}
+      {pageMode !== 'a4' && <AiDrawer tagValues={tagValues} />}
 
       {/* ── Report content: full width; scrollable with mouse wheel ── */}
       <div
@@ -622,7 +779,22 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
         }}
         onWheelCapture={handleWheelCapture}
       >
-        <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'max-w-[1200px]' : 'max-w-full'}`}>
+        {/* A4 mode: fixed side panels flush with chrome bar */}
+        {pageMode === 'a4' && (
+          <>
+            <div className="hidden xl:block" style={{ width: 200, position: 'fixed', left: 'var(--sidebar-width, 220px)', top: 0, bottom: 0, zIndex: 30, background: '#0f1b2d', borderRight: '1px solid rgba(255,255,255,0.06)', overflow: 'auto', paddingTop: 48 }}>
+              <AiInsightsPanel tagValues={tagValues} />
+            </div>
+            <div className="hidden xl:block" style={{ width: 200, position: 'fixed', right: 0, top: 0, bottom: 0, zIndex: 30, background: '#0f1b2d', borderLeft: '1px solid rgba(255,255,255,0.06)', overflow: 'auto', paddingTop: 48 }}>
+              <ActionsPanel reportId={reportId} onExportPDF={handleExportPDF} onExportPNG={handleExportPNG} onPrint={handlePrintReport} onToggleFullscreen={toggleFullscreen} />
+            </div>
+          </>
+        )}
+        <ReportTableTabLinkProvider>
+        <ThumbnailCaptureContext.Provider value={exporting}>
+        <div id="report-print-section" className={`w-full min-w-0 mx-auto ${pageMode === 'a4' ? 'xl:pl-[200px] xl:pr-[200px]' : ''} max-w-full print:px-0 print:pl-0 print:pr-0`}>
+          {/* Dashboard header bar is rendered in the unified chrome toolbar above */}
+
           {!(Array.isArray(widgets) && widgets.length > 0) ? (
             <div className="text-center py-16 text-[12px] text-[#6b7f94] dark:text-[#8898aa]">No widgets in this report.</div>
           ) : viewMode === 'tabular' ? (
@@ -650,7 +822,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                   return (
                     <div key={widget.id} className={`${showCard ? 'rb-widget-card rounded-lg' : ''}`}>
                       <div className="overflow-x-auto">
-                        <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
+                        <WidgetRenderer widget={widget} widgetId={widget.id} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
                       </div>
                       {showPagination && (
                         <div className="rb-tabular-pagination flex items-center justify-between px-4 py-2.5 border-t border-[#e3e9f0] dark:border-gray-700 bg-white/60 dark:bg-[#0a1525]/60">
@@ -696,14 +868,15 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
 
                 // Non-table widgets: render inline at natural size
                 const minH = wt === 'chart' || wt === 'barchart' ? '300px' : wt === 'gauge' || wt === 'silo' ? '200px' : 'auto';
+                const csMap = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top','holographic':'rb-card-holographic'};
                 const cardClass = isInvisible
                   ? ''
                   : showCard
-                    ? 'rounded-lg rb-widget-card overflow-hidden'
+                    ? `rounded-lg rb-widget-card overflow-hidden ${csMap[widget.config?.cardStyle] || ''}`
                     : 'overflow-hidden';
                 return (
                   <div key={widget.id} className={cardClass} style={{ minHeight: minH }}>
-                    <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
+                    <WidgetRenderer widget={widget} widgetId={widget.id} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
                   </div>
                 );
               })}
@@ -712,7 +885,7 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             /* ══ Grid View — original react-grid-layout rendering ══ */
             <div
               ref={containerRef}
-              className="report-builder rb-canvas-perspective rb-layout-readonly pt-3 pb-6 px-6"
+              className={`report-builder rb-canvas-perspective rb-layout-readonly ${dashboardHeader ? 'pt-0 pb-3' : 'pt-3 pb-6'} px-1`}
               style={{ minHeight: '100%', width: '100%', boxSizing: 'border-box' }}
             >
               <GridLayout
@@ -723,12 +896,12 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                 rowHeight={gridRowH}
                 margin={GRID_MARGIN}
                 containerPadding={GRID_PADDING}
-                compactType={null}
-                allowOverlap={true}
+                compactType="vertical"
+                allowOverlap={false}
                 isDraggable={false}
                 isResizable={false}
                 static
-                useCSSTransforms={true}
+                useCSSTransforms={false}
               >
                 {layout.map((item) => {
                   const widget = widgetMap.get(item.i);
@@ -740,14 +913,15 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
                     : CARDLESS_WIDGET_TYPES.has(wt)
                       ? widget.config?.showCard === true
                       : widget.config?.showCard !== false;
+                  const csMap2 = {'borderless':'rb-card-borderless','glass':'rb-card-glass','accent-top':'rb-card-accent-top','holographic':'rb-card-holographic'};
                   const cardClass = isInvisible
                     ? 'overflow-visible flex flex-col min-h-0'
                     : showCard
-                      ? 'rounded-lg rb-widget-card overflow-hidden flex flex-col'
+                      ? `rounded-lg rb-widget-card overflow-hidden flex flex-col ${csMap2[widget.config?.cardStyle] || ''}`
                       : 'overflow-hidden flex flex-col min-h-0 p-0.5';
                   return (
-                    <div key={item.i} className={`${cardClass} flex flex-col min-h-0 relative`}>
-                      <WidgetRenderer widget={widget} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
+                    <div key={item.i} className={`${cardClass} flex flex-col min-h-0 relative`} style={{ '--widget-color': widget.config?.color || undefined }}>
+                      <WidgetRenderer widget={widget} widgetId={widget.id} tagValues={tagValues} isPreview={true} isSelected={false} tags={tags} tagHistory={tagHistory} />
                       {widget.config?.showSeparator && (
                         <div
                           className="absolute left-0 right-0 bottom-0 pointer-events-none"
@@ -763,6 +937,8 @@ function SingleReportView({ reportId, onBack, siblingReports, onSelectReport }) 
             </div>
           )}
         </div>
+        </ThumbnailCaptureContext.Provider>
+        </ReportTableTabLinkProvider>
       </div>
     </div>
   );

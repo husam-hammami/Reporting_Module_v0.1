@@ -35,18 +35,27 @@ CLOUD_MODELS = {
 }
 
 
-def generate(prompt, config, timeout=None):
+def generate(prompt, config, timeout=None, max_tokens=None, system=None):
     """Generate text from the configured AI provider.
+
+    Args:
+        prompt: User message text
+        config: AI config dict with provider, model, API key etc.
+        timeout: Request timeout in seconds
+        max_tokens: Maximum output tokens
+        system: Optional system message (used by Anthropic's system parameter)
     Returns text string or None on failure.
     """
     provider = config.get('ai_provider', 'cloud')
     if provider == 'local':
-        return _generate_local(prompt, config, timeout or 30)
+        # Local providers don't support system param — concatenate
+        full_prompt = f"{system}\n\n{prompt}" if system else prompt
+        return _generate_local(full_prompt, config, timeout or 30, max_tokens=max_tokens)
     else:
-        return _generate_cloud(prompt, config, timeout or 10)
+        return _generate_cloud(prompt, config, timeout or 10, max_tokens=max_tokens, system=system)
 
 
-def _generate_cloud(prompt, config, timeout):
+def _generate_cloud(prompt, config, timeout, max_tokens=None, system=None):
     """Call Claude API."""
     anthropic = _get_anthropic()
     if not anthropic:
@@ -59,17 +68,21 @@ def _generate_cloud(prompt, config, timeout):
     model = config.get('llm_model', 'claude-opus-4-6')
     try:
         client = anthropic.Anthropic(api_key=api_key, timeout=timeout)
-        response = client.messages.create(
-            model=model, max_tokens=500,
-            messages=[{"role": "user", "content": prompt}]
-        )
+        kwargs = {
+            'model': model,
+            'max_tokens': max_tokens or 700,
+            'messages': [{"role": "user", "content": prompt}],
+        }
+        if system:
+            kwargs['system'] = system
+        response = client.messages.create(**kwargs)
         return response.content[0].text
     except Exception as e:
         logger.warning("Claude API call failed: %s", e)
         return None
 
 
-def _generate_local(prompt, config, timeout):
+def _generate_local(prompt, config, timeout, max_tokens=None):
     """Call LM Studio (OpenAI-compatible API)."""
     base_url = config.get('local_server_url', 'http://localhost:1234/v1')
     model = config.get('local_model', '')
@@ -82,7 +95,7 @@ def _generate_local(prompt, config, timeout):
             response = client.chat.completions.create(
                 model=model or "local-model",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=500
+                max_tokens=max_tokens or 700
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -96,7 +109,7 @@ def _generate_local(prompt, config, timeout):
             json={
                 "model": model or "local-model",
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 500,
+                "max_tokens": max_tokens or 700,
             },
             timeout=timeout
         )

@@ -100,6 +100,8 @@ export default function TimePeriodTabs({
   shiftsConfig = null,
   selectedShift = '',
   onShiftChange,
+  compact = false,
+  variant = 'default',
 }) {
   const [customOpen, setCustomOpen] = useState(false);
   const showShift  = activeTab === 'shift';
@@ -113,7 +115,7 @@ export default function TimePeriodTabs({
   return (
     <div className="flex flex-col print:hidden">
       {/* ── Tab row ── */}
-      <div className="flex items-center px-4 py-2 bg-white/90 dark:bg-[#0a1525] border-b border-[#e3e9f0] dark:border-[#1e293b]">
+      <div className={compact ? 'flex items-center' : 'flex items-center px-4 py-2 bg-white/90 dark:bg-[#0a1525] border-b border-[#e3e9f0] dark:border-[#1e293b]'}>
         <TabSelector
           tabs={tabs}
           activeId={activeTab}
@@ -121,6 +123,7 @@ export default function TimePeriodTabs({
             onTabChange(id);
             if (id === 'custom') setCustomOpen(true);
           }}
+          variant={variant}
         />
       </div>
 
