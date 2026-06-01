@@ -1,8 +1,9 @@
 """
 License module entitlements — Digital Twin and Hercules AI per machine.
 
-Resolves features from (in order): in-memory cache, local licenses row,
-Electron license_cache.json, cloud api.herculesv2.app license/status.
+Resolves features from (in order): in-memory cache, Electron license_cache.json,
+cloud api.herculesv2.app license/status, local licenses row.
+Avoids spawning PowerShell when Electron cache already has features + machine_id.
 """
 
 import json
@@ -17,9 +18,10 @@ from datetime import date, datetime
 logger = logging.getLogger(__name__)
 
 LICENSE_SERVER = os.environ.get('HERCULES_LICENSE_SERVER', 'https://api.herculesv2.app')
-CACHE_TTL_SEC = 60
+CACHE_TTL_SEC = 300
 
 _CACHE = {'at': 0.0, 'features': None, 'source': 'default'}
+_FILE_CACHE = {'at': 0.0, 'data': None}
 
 _LICENSE_COLS = (
     'status', 'expiry', 'enable_digital_twin', 'enable_atlas_ai'
@@ -57,29 +59,56 @@ def features_from_license_row(row):
     }
 
 
-def _read_electron_cache():
+def _load_license_cache_file():
+    """Read Electron license_cache.json once per few seconds (no subprocess)."""
+    now = time.time()
+    if _FILE_CACHE['data'] is not None and (now - _FILE_CACHE['at']) < 30:
+        return _FILE_CACHE['data']
+
     path = _license_cache_path()
-    if not os.path.isfile(path):
+    data = None
+    if os.path.isfile(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.debug('license cache read failed: %s', e)
+
+    _FILE_CACHE['at'] = now
+    _FILE_CACHE['data'] = data
+    return data
+
+
+def _read_electron_cache():
+    data = _load_license_cache_file()
+    if not data or data.get('status') != 'approved':
         return None
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        if data.get('status') != 'approved':
+    expiry = data.get('expiry')
+    if expiry:
+        expiry_date = datetime.strptime(str(expiry)[:10], '%Y-%m-%d').date()
+        if expiry_date < date.today():
             return None
-        expiry = data.get('expiry')
-        if expiry:
-            expiry_date = datetime.strptime(str(expiry)[:10], '%Y-%m-%d').date()
-            if expiry_date < date.today():
-                return None
-        feats = data.get('features')
-        if isinstance(feats, dict):
-            return {
-                'digital_twin': bool(feats.get('digital_twin', False)),
-                'atlas_ai': bool(feats.get('atlas_ai', False)),
-            }
-    except Exception as e:
-        logger.debug('license cache read failed: %s', e)
+    feats = data.get('features')
+    if isinstance(feats, dict):
+        return {
+            'digital_twin': bool(feats.get('digital_twin', False)),
+            'atlas_ai': bool(feats.get('atlas_ai', False)),
+        }
     return None
+
+
+def _machine_id_without_powershell():
+    """Prefer machine_id from Electron cache; fall back to cached get_machine_id() once."""
+    data = _load_license_cache_file()
+    if data:
+        mid = (data.get('machine_id') or '').strip()
+        if mid:
+            return mid
+    try:
+        from machine_id import get_machine_id
+        return get_machine_id()
+    except Exception:
+        return None
 
 
 def _fetch_cloud_status(machine_id):
@@ -158,17 +187,13 @@ def get_entitlements(force_refresh=False):
         _CACHE = {'at': now, 'features': feats, 'source': 'dev'}
         return feats, 'dev'
 
-    try:
-        from machine_id import get_machine_id
-        machine_id = get_machine_id()
-    except Exception:
-        machine_id = None
-
+    # Fast path: Electron wrote features at startup (no PowerShell).
     cached = _read_electron_cache()
     if cached is not None:
         _CACHE = {'at': now, 'features': cached, 'source': 'cache'}
         return cached, 'cache'
 
+    machine_id = _machine_id_without_powershell()
     if machine_id:
         cloud = _fetch_cloud_status(machine_id)
         if cloud is not None:
@@ -196,5 +221,6 @@ def is_digital_twin_enabled():
 
 
 def invalidate_entitlements_cache():
-    global _CACHE
+    global _CACHE, _FILE_CACHE
     _CACHE = {'at': 0.0, 'features': None, 'source': 'default'}
+    _FILE_CACHE = {'at': 0.0, 'data': None}

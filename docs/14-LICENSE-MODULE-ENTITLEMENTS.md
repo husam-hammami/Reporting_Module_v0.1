@@ -82,7 +82,7 @@ Used by the React app:
 1. **Electron** (`desktop/main.js`) — `POST` register on startup → saves `features` in `%APPDATA%/Hercules/license_cache.json`.
 2. **React** — `GET /api/license/entitlements` after login → hides nav items and blocks routes.
 3. **Backend** — `/api/hercules-ai/*` returns **403** if `atlas_ai` is disabled.
-4. **Refresh** — entitlements reload on window focus and every 10 minutes; customer can restart app after portal change for immediate effect.
+4. **Refresh** — entitlements reload on login and every 10 minutes (not on window focus — avoids PowerShell flash loop on Windows). Restart the app after portal changes for immediate effect.
 
 ## Deploy order
 

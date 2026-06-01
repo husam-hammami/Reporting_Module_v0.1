@@ -43,15 +43,11 @@ export function FeatureProvider({ children }) {
     refresh(false);
   }, [refresh]);
 
+  // Periodic refresh only — do NOT refresh on window focus (caused PowerShell flash loop).
   useEffect(() => {
     if (!auth) return undefined;
     const interval = setInterval(() => refresh(false), 10 * 60 * 1000);
-    const onFocus = () => refresh(true);
-    window.addEventListener('focus', onFocus);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
-    };
+    return () => clearInterval(interval);
   }, [auth, refresh]);
 
   return (
